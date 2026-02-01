@@ -1,0 +1,202 @@
+Zikaron Data Quality Research PRD
+=================================
+Generated: 2026-01-26T02:12:11Z
+
+Stories: 95 (75 RESEARCH + 20 AUDIT)
+Status: Ready for Ralph execution
+
+Model: kiro (configured in ~/.config/ralphtools/config.json)
+
+## Iteration 1 - RESEARCH-001: Research data quality: Read-input, Edit-input, Write-input
+- Model: opus
+- Extracted 5+ samples each of Read-input, Edit-input, Write-input from JSONL files
+- Analyzed searchability value of each content type
+- Created 3 research papers in docs.local/research/RESEARCH-001/
+- Key findings:
+  - Read-input: Score 2.6/5 - MINIMIZE (just metadata, keep file paths as metadata)
+  - Edit-input: Score 4.0/5 - TRANSFORM (highest value! contains problem-solving patterns)
+  - Write-input: Score 2.5/5 - MINIMIZE + DEDUPLICATE (mostly boilerplate configs)
+
+### Learnings
+- Edit-input contains the richest content for search (actual code changes with context)
+- Write-input has high redundancy (batch file creation, repeated configs)
+- Content-addressable storage pattern works well for deduplication
+
+
+## Iteration 2 - RESEARCH-002: Research data quality: Bash-input, Grep-input, Glob-input
+- Model: opus
+- Completed Paper 3 (Glob-input) - the remaining work from a partial iteration
+- Analyzed 8 unique Glob-input samples from JSONL files
+- Key findings:
+  - Glob-input: Score 2.5/5 - MINIMIZE (metadata only)
+  - Patterns are structural (file search), not semantic content
+  - Low embedding value - better stored as metadata fields
+  - Navigation breadcrumbs, not primary search content
+
+### Learnings
+- Glob patterns show WHERE Claude was looking, not WHAT was found
+- Extract component/file names from patterns for searchable concepts
+- Link to Glob-output for richer context (results are more valuable than inputs)
+
+
+## Iteration 3 - RESEARCH-003: Research data quality: Task-input, WebFetch-input, WebSearch-input
+- Model: opus
+- Extracted and analyzed samples of Task-input, WebFetch-input, WebSearch-input
+- Created 3 research papers in docs.local/research/RESEARCH-003/
+- Key findings:
+  - Task-input: Score 4.8/5 - KEEP + STRUCTURE (rich intent, subagent prompts, verification criteria)
+  - WebFetch-input: Score 3.6/5 - MINIMIZE + SELECTIVE KEEP (URL classification matters)
+  - WebSearch-input: Score 4.7/5 - KEEP + CATEGORIZE (pure intent, compact, highly searchable)
+
+### Learnings
+- Task prompts show *intent* not just results - very valuable for "what was Claude trying to find?"
+- WebFetch URLs are often ephemeral (preview links, private docs) - classify and selectively keep
+- WebSearch queries are highest value - compact, full of concepts, show investigation threads
+- Subagent types (Explore vs general-purpose) are searchable metadata
+- Debugging searches ("not working", "fix") are particularly valuable patterns
+
+
+## Iteration 4 - RESEARCH-005: Research data quality: AskUserQuestion-input, Skill-input, KillShell-input
+- Model: kiro
+- Extracted and analyzed samples of AskUserQuestion-input, Skill-input, KillShell-input
+- Created 3 research papers in docs.local/research/RESEARCH-005/
+- Key findings:
+  - AskUserQuestion-input: Score 4.0/5 - KEEP + STRUCTURE (rich decision context, technical depth)
+  - Skill-input: Score 3.3/5 - MINIMIZE + SELECTIVE KEEP (simple calls low value, detailed args high value)
+  - KillShell-input: Score 1.0/5 - STRIP (zero semantic content, just random shell IDs)
+
+### Learnings
+- AskUserQuestion inputs capture decision-making processes - what options were considered and why
+- Skill inputs show bimodal distribution: simple invocations worthless, complex ones extremely valuable
+- KillShell inputs are pure infrastructure with no search value - should be stripped entirely
+- Decision context (questions + options) more valuable than just final implementation choices
+
+
+## Iteration 6 - RESEARCH-006: Research data quality: Read-result, Bash-result, Grep-result
+- Model: kiro
+- Extracted and analyzed 5+ samples each of Read-result, Bash-result, and Grep-result from JSONL files
+- Created 3 research papers in docs.local/research/RESEARCH-006/
+- Key findings:
+  - Read-result: Score 3.2/5 - TRANSFORM (bimodal: high-value code files vs low-value operational messages)
+  - Bash-result: Score 3.8/5 - TRANSFORM (excellent for debugging, rich error context, but many empty outputs)
+  - Grep-result: Score 2.8/5 - TRANSFORM (powerful when successful with line numbers, but 80% empty results)
+
+### Learnings
+- Tool results show clear bimodal distributions: high semantic value vs operational noise
+- Read-result contains the richest file content but needs filtering of confirmations/empty results
+- Bash-result is invaluable for debugging scenarios - captures real-world error patterns and solutions
+- Grep-result provides excellent code discovery when successful, but failed searches dominate the dataset
+- All three types benefit from TRANSFORM approach: keep semantic content, strip operational noise, enhance with metadata
+
+## Iteration 7 - RESEARCH-007: Research data quality: Glob-result, Task-result, WebFetch-result
+- Model: kiro
+- Extracted and analyzed 5+ samples each of Glob-result, Task-result, and WebFetch-result
+- Created 3 research papers in docs.local/research/RESEARCH-007/
+- Key findings:
+  - Glob-result: Score 3.4/5 - TRANSFORM (high value for architecture discovery, filter node_modules)
+  - Task-result: Score 4.6/5 - KEEP + STRUCTURE (highest value! contains problem-solving processes)
+  - WebFetch-result: Score 3.0/5 - TRANSFORM + SELECTIVE KEEP (variable quality, filter errors)
+
+### Learnings
+- Task results contain the most valuable content for search - actual reasoning and decision-making processes
+- Glob results reveal project architecture but need node_modules filtering
+- WebFetch results require content-aware processing due to high variability in quality
+- All three types benefit from metadata extraction for enhanced searchability
+
+
+
+## Iteration 8 - RESEARCH-008: Research data quality: WebSearch-result, LSP-result, Error-result
+- Model: kiro
+- Extracted and analyzed samples of WebSearch-result, LSP-result, and Error-result from JSONL files
+- Created 3 research papers in docs.local/research/RESEARCH-008/
+- Key findings:
+  - WebSearch-result: Score 4.0/5 - TRANSFORM (rich structured data with queries, titles, URLs - goldmine for search)
+  - LSP-result: Score 4.2/5 - TRANSFORM (bimodal: errors low value, successful results extremely high semantic value)
+  - Error-result: Score 4.0/5 - TRANSFORM (debugging gold mine with error messages, file paths, solutions)
+
+### Learnings
+- WebSearch results capture user intent and technical solutions perfectly - query strings are search gold
+- LSP results when successful contain richest semantic code information (locations, types, relationships)
+- Error results are invaluable for debugging - preserve exact error text and actionable hints
+- All three types benefit from TRANSFORM approach: keep semantic content, strip operational noise
+
+
+## Iteration 9 - RESEARCH-009: Research data quality: Truncated-result, assistant-explanation, assistant-code
+- Model: kiro
+- Extracted and analyzed samples of Truncated-result, assistant-explanation, assistant-code from JSONL files
+- Created 3 research papers in docs.local/research/RESEARCH-009/
+- Key findings:
+  - Truncated-result: Score 2.4/5 - TRANSFORM (bimodal: high-value partial content vs pure truncation notices)
+  - assistant-explanation: Score 3.6/5 - KEEP + STRUCTURE (curated reasoning, problem-solving processes)
+  - assistant-code: Score 4.2/5 - KEEP + STRUCTURE (highest value! concrete implementations and solutions)
+
+### Learnings
+- Truncated results often contain valuable content before truncation point - preserve partial content
+- Assistant explanations are "thinking out loud" - preserve conversational reasoning flow
+- Assistant code is curated and contextual - shows actual solutions rather than just descriptions
+- All three types benefit from structural preservation rather than transformation
+
+
+## Iteration 10 - RESEARCH-010: Research data quality: assistant-json, user-question, user-code
+- Model: kiro
+- Extracted and analyzed 5+ samples each of assistant-json, user-question, and user-code from JSONL files
+- Created 3 research papers in docs.local/research/RESEARCH-010/
+- Key findings:
+  - assistant-json: Score 3.2/5 - TRANSFORM (selective preservation with enhancement)
+  - user-question: Score 3.8/5 - KEEP + STRUCTURE (preserve high-value questions with enhanced structure)
+  - user-code: Score 4.2/5 - KEEP + STRUCTURE (preserve high-value code with enhanced semantic structure)
+
+### Learnings
+- User-code contains the richest semantic content for search (implementations, patterns, architecture)
+- User-questions capture requirements, constraints, and decision-making processes
+- Assistant-json shows tool usage patterns but needs filtering of metadata vs semantic content
+- All three types benefit from structural preservation rather than simple transformation
+- Code content has highest search value due to complete implementations and technical patterns
+
+## Iteration 11 - RESEARCH-011: Research data quality: user-error, system-prompt, system-reminder
+- Model: kiro
+- Extracted and analyzed 5+ samples each of user-error, system-prompt, and system-reminder from JSONL files
+- Created 3 research papers in docs.local/research/RESEARCH-011/
+- Key findings:
+  - user-error: Score 4.2/5 - KEEP + STRUCTURE (excellent debugging value with error codes, stack traces, solutions)
+  - system-prompt: Score 4.2/5 - KEEP + STRUCTURE (high value agent configurations, workflows, task specifications)
+  - system-reminder: Score 3.0/5 - MINIMIZE + SELECTIVE KEEP (bimodal: high-value session summaries vs low-value status messages)
+
+### Learnings
+- User-error content is invaluable for debugging scenarios - contains specific error codes, stack traces, and system details
+- System-prompt content captures agent roles, workflows, and validation criteria - highly searchable for similar configurations
+- System-reminder content varies greatly: session continuity summaries are valuable, but simple status messages are noise
+- All three types benefit from content-based filtering and metadata extraction for enhanced searchability
+- Error messages with stack traces and file paths are particularly valuable for finding similar technical issues
+
+
+## Iteration 12 - RESEARCH-012: Research data quality: progress-message, summary-message, empty-content
+- Model: kiro
+- Analyzed 3 content types: progress-message, summary-message, empty-content
+- Created 3 research papers in docs.local/research/RESEARCH-012/
+- Key findings:
+  - progress-message: Score 1.4/5 - STRIP (operational metadata with no semantic value)
+  - summary-message: Score 4.6/5 - KEEP + STRUCTURE (highest value! condensed problem-solution patterns)
+  - empty-content: Score 1.0/5 - STRIP (pure noise, degrades index quality)
+
+### Learnings
+- Summary messages are goldmine content - already curated and contain rich semantic patterns
+- Progress and empty content should be aggressively filtered to maintain index quality
+- Content-based filtering is essential for meaningful search results
+- Bimodal distribution: high-value curated content vs low-value operational noise
+
+
+## Iteration 13 - RESEARCH-013: Research data quality: single-word, very-long, binary-encoded
+- Model: kiro
+- Analyzed 3 content types: single-word, very-long, binary-encoded
+- Created 3 research papers in docs.local/research/RESEARCH-013/
+- Key findings:
+  - single-word: Score 1.2/5 - STRIP (operational confirmations with no semantic value)
+  - very-long: Score 3.8/5 - TRANSFORM (bimodal: rich content vs size constraints, needs intelligent chunking)
+  - binary-encoded: Score 1.7/5 - MINIMIZE (visual/binary data, extract metadata only)
+
+### Learnings
+- Single-word responses are predominantly operational noise that should be stripped entirely
+- Very-long content contains the richest information but requires sophisticated processing strategies
+- Binary-encoded content needs metadata extraction while removing unsearchable encoded data
+- Content size and format significantly impact search value and processing requirements
