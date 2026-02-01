@@ -1,0 +1,16 @@
+{
+  "id": "RS-004",
+  "title": "Research Night Shift Automation Patterns",
+  "description": "Research patterns for autonomous AI night work: task selection heuristics, PR quality gates, safe rollback patterns, progress reporting. Find ways to make Night Shift more reliable and productive.",
+  "acceptanceCriteria": [
+    {"text": "WebSearch: autonomous AI agent task prioritization 2026", "checked": true},
+    {"text": "WebSearch: automated PR quality gates best practices", "checked": true},
+    {"text": "WebSearch: safe rollback patterns for automated code changes", "checked": true},
+    {"text": "Document findings in docs.local/research/night-shift-patterns.md", "checked": true},
+    {"text": "List 3-5 specific improvements for Night Shift reliability", "checked": true}
+  ],
+  "passes": true,
+  "completedAt": "2026-02-01T04:49:02.646Z",
+  "completedBy": "kiro",
+  "blockedBy": null
+}

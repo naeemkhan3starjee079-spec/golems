@@ -1,0 +1,18 @@
+{
+  "name": "golems-zikaron",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "bot": "bun run src/telegram-bot.ts",
+    "n8n": "npx n8n",
+    "test": "bun test src/__tests__/",
+    "test:archiver": "bun test src/__tests__/session-archiver.test.ts",
+    "archive": "bun run src/session-archiver.ts",
+    "archive:execute": "bun run src/session-archiver.ts --execute",
+    "validate": "bun run src/validation-service.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.72.1",
+    "grammy": "^1.21.1"
+  }
+}

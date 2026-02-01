@@ -1,0 +1,17 @@
+{
+  "id": "RS-001",
+  "title": "Research Telegram Interactive Features",
+  "description": "Web search for advanced Telegram bot features we could add to GolemsZikaron: voice messages with Whisper transcription, conversation threads, message reactions, scheduled/proactive messages, rich media handling.",
+  "acceptanceCriteria": [
+    {"text": "WebSearch: grammY voice message handling patterns", "checked": true},
+    {"text": "WebSearch: Telegram bot conversation threading API", "checked": true},
+    {"text": "WebSearch: Telegram scheduled messages and proactive notifications", "checked": true},
+    {"text": "WebSearch: Telegram inline mode for quick actions", "checked": true},
+    {"text": "Document findings in docs.local/research/telegram-features.md with code snippets", "checked": true},
+    {"text": "Rate each feature: implementation effort (1-5) vs user value (1-5)", "checked": true}
+  ],
+  "passes": true,
+  "completedAt": "2026-02-01T04:42:01.496Z",
+  "completedBy": "kiro",
+  "blockedBy": null
+}

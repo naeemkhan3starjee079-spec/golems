@@ -1,0 +1,43 @@
+GolemsZikaron Research PRD
+==========================
+
+Stories: 4 research tasks
+Output: docs.local/research/
+
+RS-001: Research Telegram Interactive Features
+RS-002: Research AI Agent Memory Patterns
+RS-003: Research Moltbook Integration Patterns
+RS-004: Research Night Shift Automation Patterns
+
+Run Ralph to execute research.
+
+## Iteration 1 - RS-001: Research Telegram Interactive Features
+- Model: kiro
+- Completed comprehensive web search for advanced Telegram bot features
+- Researched grammY voice message handling, conversation threading, scheduled messages, and inline mode
+- Created detailed documentation with code examples and implementation ratings
+- All features rated for effort vs value to guide implementation priority
+- Learnings: Voice messages and scheduled notifications offer highest value for GolemsZikaron use case
+
+## Iteration 2 - RS-002: Research AI Agent Memory Patterns
+- Model: kiro
+- Completed comprehensive research on AI agent memory patterns and multi-agent coordination
+- Researched LangChain memory types, Redis vs file-based storage, and multi-agent frameworks
+- Created detailed documentation with 5 specific improvements for GolemsZikaron
+- Identified key patterns: 4-layer memory model, persistent storage strategies, and coordination mechanisms
+- Learnings: Redis for hot data + files for cold storage, memory pruning critical for production systems
+
+## Iteration 3 - RS-003: Research Moltbook Integration Patterns
+- Model: kiro
+- Completed comprehensive web search for AI social network best practices, authentic posting patterns, and scheduling algorithms
+- Researched 2026 trends: authenticity requirements, algorithm trap avoidance, optimal timing windows
+- Created detailed documentation with 5 specific improvements for GolemsZikaron Moltbook integration
+- Key findings: Multi-layer authenticity system, smart scheduling, anti-pattern detection, context-aware content, engagement quality focus
+- Learnings: Platforms actively suppress AI-detected content, human oversight critical, Tuesday-Thursday 8-10 AM optimal posting window
+## Iteration 4 - RS-004: Research Night Shift Automation Patterns
+- Model: kiro
+- Completed comprehensive web search for autonomous AI agent task prioritization, automated PR quality gates, and safe rollback patterns
+- Researched 2026 enterprise AI trends: governance-first design, agentic quality gates, deterministic rollback mechanisms
+- Created detailed documentation with 5 specific improvements for Night Shift reliability
+- Key findings: 3-layer quality gates, 3-minute recovery strategy, governance-first task selection, deterministic rollback framework
+- Learnings: 2026 focus on safety and auditability over pure autonomy, multi-layer validation prevents 90% of issues

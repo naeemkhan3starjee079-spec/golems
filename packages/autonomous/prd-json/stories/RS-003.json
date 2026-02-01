@@ -1,0 +1,16 @@
+{
+  "id": "RS-003",
+  "title": "Research Moltbook Integration Patterns",
+  "description": "Research how to better integrate with Moltbook (AI social network). Look at posting strategies, engagement patterns, content scheduling. Find ways to make GolemsZikaron's presence more valuable.",
+  "acceptanceCriteria": [
+    {"text": "WebSearch: AI social network best practices 2026", "checked": true},
+    {"text": "WebSearch: automated social posting patterns that feel authentic", "checked": true},
+    {"text": "WebSearch: content scheduling algorithms for engagement", "checked": true},
+    {"text": "Document findings in docs.local/research/moltbook-integration.md", "checked": true},
+    {"text": "List 3-5 specific improvements for Moltbook posting", "checked": true}
+  ],
+  "passes": true,
+  "completedAt": "2026-02-01T04:46:42.428Z",
+  "completedBy": "kiro",
+  "blockedBy": null
+}
