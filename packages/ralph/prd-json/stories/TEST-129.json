@@ -1,0 +1,24 @@
+{
+  "id": "TEST-129",
+  "title": "Test: Notify System Implementation",
+  "description": "Write tests for notify system based on US-129 research and MP-129 implementation. Verify notifications work as designed.",
+  "acceptanceCriteria": [
+    {"text": "Read US-129 research: docs.local/research/US-129-notify-system.md", "checked": false},
+    {"text": "Read MP-129 implementation in ralph-ui/src/runner/notify.ts", "checked": false},
+    {"text": "Use /context7 to look up testing patterns for HTTP/curl mocking", "checked": false},
+    {"text": "Write bun/tests/notify.test.ts", "checked": false},
+    {"text": "Test: buildTopic() returns correct format 'prefix-project-notify'", "checked": false},
+    {"text": "Test: sendNotification() builds correct curl args", "checked": false},
+    {"text": "Test: priority validation (low, default, high, urgent)", "checked": false},
+    {"text": "Test: [NTFY] log output format", "checked": false},
+    {"text": "Run: bun test bun/tests/notify.test.ts - document any failures", "checked": false},
+    {"text": "Direct curl test: send to etanheys-ralph-claude-golem-notify, verify delivery", "checked": false},
+    {"text": "Write test report to docs.local/research/TEST-129-results.md", "checked": false},
+    {"text": "If tests fail: document what MP-129 needs to fix", "checked": false},
+    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": false},
+    {"text": "Commit: test: TEST-129 notify system tests", "checked": false}
+  ],
+  "storyType": "test",
+  "blockedBy": "MP-129",
+  "passes": false
+}

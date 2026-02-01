@@ -1,0 +1,187 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://ralphtools.dev/schemas/config.schema.json",
+  "title": "ralphtools config",
+  "description": "Configuration for ralphtools autonomous coding loop",
+  "type": "object",
+  "required": ["modelStrategy"],
+
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference for editor validation"
+    },
+
+    "schemaVersion": {
+      "type": "string",
+      "description": "Config schema version (auto-managed)",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+
+    "lastRalphVersion": {
+      "type": "string",
+      "description": "Last Ralph version that ran (auto-managed)",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+
+    "modelStrategy": {
+      "enum": ["single", "smart"],
+      "description": "single = one model for all, smart = route by task type"
+    },
+
+    "defaultModel": {
+      "$ref": "#/$defs/model",
+      "description": "Model to use when modelStrategy is 'single'"
+    },
+
+    "unknownTaskType": {
+      "$ref": "#/$defs/model",
+      "description": "Fallback model for unrecognized story prefixes (default: sonnet)"
+    },
+
+    "models": {
+      "type": "object",
+      "description": "Model assignment per task type (when modelStrategy is 'smart')",
+      "properties": {
+        "US": { "$ref": "#/$defs/model", "description": "User Stories - feature implementation" },
+        "V": { "$ref": "#/$defs/model", "description": "Verification - browser/visual checks" },
+        "TEST": { "$ref": "#/$defs/model", "description": "Testing - E2E test creation" },
+        "BUG": { "$ref": "#/$defs/model", "description": "Bug fixes - debugging" },
+        "AUDIT": { "$ref": "#/$defs/model", "description": "Audits - security/code review" }
+      },
+      "additionalProperties": { "$ref": "#/$defs/model" }
+    },
+
+    "parallelVerification": {
+      "type": "boolean",
+      "description": "Run multiple agents in parallel for V-* stories",
+      "default": false
+    },
+
+    "parallelAgents": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Number of parallel agents for verification",
+      "default": 2
+    },
+
+    "notifications": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean", "default": false },
+        "ntfyTopic": { "type": "string", "description": "ntfy.sh topic name" },
+        "events": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/notificationEvent" },
+          "description": "Which events trigger notifications"
+        }
+      }
+    },
+
+    "defaults": {
+      "type": "object",
+      "properties": {
+        "maxIterations": { "type": "integer", "minimum": 1, "default": 50 },
+        "sleepSeconds": { "type": "integer", "minimum": 0, "default": 2 }
+      }
+    },
+
+    "secrets": {
+      "type": "object",
+      "properties": {
+        "provider": {
+          "enum": ["file", "1password"],
+          "description": "Where to load secrets from",
+          "default": "file"
+        },
+        "vault": {
+          "type": "string",
+          "description": "1Password vault name (if provider is 1password)"
+        }
+      }
+    },
+
+    "pricing": {
+      "type": "object",
+      "description": "Cost per million tokens for each model (USD). Used for --estimate and cost tracking.",
+      "additionalProperties": { "$ref": "#/$defs/modelPricing" },
+      "default": {
+        "haiku": { "input": 1, "output": 5 },
+        "sonnet": { "input": 3, "output": 15 },
+        "opus": { "input": 15, "output": 75 },
+        "gemini-flash": { "input": 0.075, "output": 0.30 },
+        "gemini-pro": { "input": 1.25, "output": 5 }
+      }
+    },
+
+    "costEstimation": {
+      "type": "object",
+      "description": "Settings for cost estimation",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Show cost estimate before running",
+          "default": false
+        },
+        "avgTokensPerStory": {
+          "type": "object",
+          "description": "Average token usage per story type (for estimation)",
+          "properties": {
+            "input": { "type": "integer", "default": 50000 },
+            "output": { "type": "integer", "default": 10000 }
+          }
+        },
+        "warnThreshold": {
+          "type": "number",
+          "description": "Warn if estimated cost exceeds this (USD)",
+          "default": 10
+        }
+      }
+    }
+  },
+
+  "$defs": {
+    "model": {
+      "anyOf": [
+        {
+          "enum": ["haiku", "sonnet", "opus", "gemini-flash", "gemini-pro", "kiro"],
+          "description": "Known models with editor autocomplete"
+        },
+        {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*$",
+          "description": "Custom model identifier"
+        }
+      ]
+    },
+
+    "taskType": {
+      "anyOf": [
+        { "enum": ["US", "V", "TEST", "BUG", "AUDIT"] },
+        { "type": "string", "pattern": "^[A-Z][A-Z0-9]*$" }
+      ]
+    },
+
+    "notificationEvent": {
+      "enum": [
+        "iteration_complete",
+        "story_complete",
+        "all_complete",
+        "blocked",
+        "all_blocked",
+        "error"
+      ]
+    },
+
+    "modelPricing": {
+      "type": "object",
+      "description": "Cost per million tokens (USD)",
+      "properties": {
+        "input": { "type": "number", "minimum": 0 },
+        "output": { "type": "number", "minimum": 0 }
+      },
+      "required": ["input", "output"]
+    }
+  }
+}

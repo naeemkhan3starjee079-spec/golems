@@ -1,0 +1,46 @@
+name: Update Homebrew Formula
+
+on:
+  repository_dispatch:
+    types: [release-published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v1.4.0)'
+        required: true
+
+jobs:
+  update-formula:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${{ github.event.client_payload.version }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Download and get SHA256
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          curl -sL "https://github.com/EtanHey/ralphtools/archive/refs/tags/${VERSION}.tar.gz" -o release.tar.gz
+          SHA256=$(shasum -a 256 release.tar.gz | cut -d' ' -f1)
+          echo "SHA256=${SHA256}" >> $GITHUB_ENV
+
+      - name: Update formula
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          sed -i '' "s|url \".*\"|url \"https://github.com/EtanHey/ralphtools/archive/refs/tags/${VERSION}.tar.gz\"|" Formula/ralphtools.rb
+          sed -i '' "s|sha256 \".*\"|sha256 \"${SHA256}\"|" Formula/ralphtools.rb
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/ralphtools.rb
+          git commit -m "Update ralphtools to ${{ steps.version.outputs.version }}"
+          git push

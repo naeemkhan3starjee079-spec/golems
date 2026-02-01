@@ -1,0 +1,26 @@
+{
+  "id": "AUDIT-001",
+  "title": "Skill Usage Audit: Path & Context Confusion",
+  "description": "Systemic audit of golem-powers skills. Claude gets confused between skill install dir (~/.claude/commands/), repo source dir (claude-golem/skills/), and cwd. Need consistent pattern for invoking skills and their scripts. Use /context7 at each step to research best practices.",
+  "acceptanceCriteria": [
+    {"text": "Use /context7 to research Claude Code skill invocation patterns", "checked": true, "completedAt": "2026-01-26T12:05:30.000Z"},
+    {"text": "Document the three contexts: skill install dir, repo source dir, user's cwd", "checked": true, "completedAt": "2026-01-26T12:06:15.000Z"},
+    {"text": "Grep all skills for relative paths: ./scripts, ./prd-json, ./ patterns", "checked": true, "completedAt": "2026-01-26T12:07:45.000Z"},
+    {"text": "Use /context7 to research shell script path resolution best practices", "checked": true, "completedAt": "2026-01-26T12:08:30.000Z"},
+    {"text": "List each affected skill with its specific path issues", "checked": true, "completedAt": "2026-01-26T12:09:15.000Z"},
+    {"text": "Use /context7 to research how other CLI tools handle script locations", "checked": true, "completedAt": "2026-01-26T12:10:45.000Z"},
+    {"text": "Design standard: Option A (relative to SKILL.md), B (repo /scripts/), or C (env vars)", "checked": true, "completedAt": "2026-01-26T12:11:30.000Z"},
+    {"text": "Document chosen standard in contexts/skill-authoring.md (create if needed)", "checked": true, "completedAt": "2026-01-26T12:12:15.000Z"},
+    {"text": "Update /writing-skills skill with path standard", "checked": true, "completedAt": "2026-01-26T12:13:30.000Z"},
+    {"text": "Fix /prd-manager to follow the standard (highest priority)", "checked": true, "completedAt": "2026-01-26T12:14:15.000Z"},
+    {"text": "Create MP story for fixing remaining skills systematically", "checked": true, "completedAt": "2026-01-26T12:15:00.000Z"},
+    {"text": "Typecheck passes", "checked": true, "completedAt": "2026-01-26T12:15:45.000Z"},
+    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": true, "completedAt": "2026-01-26T12:16:00.000Z"},
+    {"text": "Commit: fix: AUDIT-001 establish skill path standards", "checked": true, "completedAt": "2026-01-26T12:16:30.000Z"}
+  ],
+  "storyType": "audit",
+  "passes": true,
+  "completedAt": "2026-01-26T12:16:30.000Z",
+  "completedBy": "kiro",
+  "notes": "COMPREHENSIVE FINDINGS:\n\n1. WHAT CLAUDE RECEIVES:\n   When skill loads, Claude sees: 'Base directory for this skill: /path/to/skill'\n   This path IS provided but Claude doesn't always use it.\n\n2. WHAT WORKS:\n   ~/.claude/commands/golem-powers/prd-manager/scripts/run.sh --action=stats\n   Result: Works (full path)\n\n3. WHAT FAILS:\n   ./scripts/run.sh --action=stats\n   Result: 'no such file' (cwd is repo root, not skill dir)\n\n4. SMART SCRIPTS (example: ralph-commit):\n   Walks up from cwd to find prd-json/ directory\n   Works from any subdirectory\n\n5. DUMB SCRIPTS (example: prd-manager):\n   Uses PRD_DIR=${PRD_DIR:-./prd-json}\n   Only works if cwd has prd-json/ OR PRD_DIR is set\n\n6. SKILLS WITH execute: FRONTMATTER:\n   coderabbit, context7, create-pr, prd-manager, test-plan, etc.\n   All use relative 'scripts/foo.sh' - assumed relative to skill dir\n\n7. THE FIX OPTIONS:\n   A) Claude always prefixes with 'Base directory' path\n   B) Scripts detect their own location via BASH_SOURCE\n   C) Scripts walk up to find project markers (prd-json/, package.json)\n\n8. SPECIFIC TO CLAUDE-GOLEM REPO:\n   This repo HAS skills/ directory locally AND prd-json/\n   Other repos only have prd-json/, not skills/\n   Confusion may be repo-specific where skill source exists alongside PRD"
+}

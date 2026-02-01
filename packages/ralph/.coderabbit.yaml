@@ -1,0 +1,72 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# CodeRabbit configuration for ralphtools
+# Docs: https://docs.coderabbit.ai/reference/configuration
+
+language: "en-US"
+
+# Knowledge base settings
+knowledge_base:
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - "CLAUDE.md"
+      - "docs.local/learnings/*.md"
+  learnings:
+    scope: "auto"
+
+# Review settings
+reviews:
+  # Chill profile = fewer nitpicks, focus on real issues
+  profile: "chill"
+
+  # Path-specific instructions
+  path_instructions:
+    # Main ralph.zsh file
+    - path: "ralph.zsh"
+      instructions: |
+        This is intentionally a single-file design. Do not suggest:
+        - Splitting into modules
+        - POSIX compatibility (it's ZSH-specific)
+        - Shorter functions (CLI tools have long functions)
+        Focus on: logic bugs, security issues, error handling.
+
+    # Test files
+    - path: "tests/**"
+      instructions: |
+        Test functions use test_ prefix convention.
+        Focus on test coverage and assertions, not style.
+        ZSH test syntax is intentional.
+
+    # Skills
+    - path: "skills/**/*.md"
+      instructions: |
+        Skills use SKILL.md (not README.md).
+        Check for: clear instructions, valid workflow references, correct paths.
+
+    # PRD/Stories (ephemeral, less strict)
+    - path: "prd-json/**"
+      instructions: |
+        These are ephemeral state files, not permanent code.
+        Only flag: invalid JSON, missing required fields.
+        Don't flag: story content, priority choices, acceptance criteria wording.
+
+    # TypeScript/Bun code
+    - path: "**/*.ts"
+      instructions: |
+        Using Bun runtime. Check for:
+        - Type safety
+        - Proper error handling
+        - No unused imports
+
+    # Config files
+    - path: "**/*.json"
+      instructions: |
+        Validate JSON syntax only. Don't suggest restructuring.
+
+  # Exclude from reviews
+  path_filters:
+    - "!**/node_modules/**"
+    - "!**/.git/**"
+    - "!**/dist/**"
+    - "!progress.txt"
+    - "!claude.scratchpad.md"

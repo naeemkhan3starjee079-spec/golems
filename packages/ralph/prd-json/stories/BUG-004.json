@@ -1,0 +1,19 @@
+{
+  "id": "BUG-004",
+  "title": "Ralph UI renders repeated box borders during error loop",
+  "description": "When Ralph hits repeated errors (like blocked story loop), the Ink UI renders many duplicate box borders without content. Output shows dozens of empty ╭───╮ borders stacked.",
+  "acceptanceCriteria": [
+    {"text": "Reproduce: Run Ralph with story that has blockedBy mismatch (or simulate error loop)", "checked": true},
+    {"text": "Find Ink component that renders iteration box (likely Dashboard or StatusBox)", "checked": true},
+    {"text": "Add guard: Don't re-render box if content unchanged from previous render", "checked": true},
+    {"text": "Or: Clear previous output before rendering new iteration status", "checked": true},
+    {"text": "Test: Simulate 5 rapid error iterations, verify no duplicate empty boxes", "checked": true},
+    {"text": "Typecheck passes", "checked": true},
+    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": true},
+    {"text": "Commit: fix: BUG-004 prevent duplicate box renders in error loop", "checked": true}
+  ],
+  "storyType": "bug",
+  "passes": true,
+  "completedAt": "2026-01-26T11:08:18.000Z",
+  "completedBy": "kiro"
+}

@@ -1,0 +1,96 @@
+{
+  "$schema": "https://ralph.dev/schemas/iteration-rules.schema.json",
+  "version": "1.0",
+  "rules": {
+    "oneStoryPerIteration": {
+      "description": "Complete exactly ONE user story, then STOP",
+      "critical": true
+    },
+    "typecheckMandatory": {
+      "description": "Run typecheck BEFORE marking complete",
+      "critical": true
+    },
+    "verifyVisually": {
+      "description": "MUST use MCP tools to verify before marking UI story complete",
+      "critical": true,
+      "requirement": "Do NOT claim 'verified in browser' without actual MCP tool evidence",
+      "tools": {
+        "screenshots": [
+          "mcp__browser-tools__takeScreenshot",
+          "mcp__claude-in-chrome__computer action='screenshot'"
+        ],
+        "interaction": [
+          "mcp__claude-in-chrome__computer action='left_click'",
+          "mcp__claude-in-chrome__form_input",
+          "mcp__claude-in-chrome__navigate"
+        ],
+        "debugging": [
+          "mcp__browser-tools__getConsoleLogs",
+          "mcp__browser-tools__getConsoleErrors",
+          "mcp__browser-tools__getNetworkErrors"
+        ],
+        "pageReading": [
+          "mcp__claude-in-chrome__read_page",
+          "mcp__claude-in-chrome__find"
+        ]
+      },
+      "howTo": [
+        "1. Navigate to the test URL using mcp__claude-in-chrome__navigate",
+        "2. Take a screenshot to see current state",
+        "3. Interact with UI (click buttons, toggle modes) using MCP tools",
+        "4. Check console logs for errors using mcp__browser-tools__getConsoleLogs",
+        "5. Take final screenshot showing the verified state",
+        "6. Only then mark 'Verify in browser' criterion as checked"
+      ],
+      "antiPatterns": [
+        "Saying 'Browser verification confirmed' without using any MCP tool",
+        "Claiming visual verification without a screenshot",
+        "Skipping console error checks"
+      ]
+    },
+    "noBatching": {
+      "description": "Each story is a SEPARATE iteration",
+      "critical": true
+    },
+    "verificationMandatory": {
+      "description": "Must execute ALL V-* verification stories",
+      "critical": true
+    },
+    "updateCheckboxes": {
+      "description": "Update story JSON IMMEDIATELY after completing EACH criterion",
+      "critical": true,
+      "jsonMode": {
+        "action": "Set acceptanceCriteria[n].checked = true IMMEDIATELY after completing that criterion",
+        "final": "Set passes = true when ALL criteria checked"
+      },
+      "howTo": [
+        "1. Complete a criterion (e.g., run curl, verify output)",
+        "2. IMMEDIATELY edit the story JSON to set that criterion's checked = true",
+        "3. Continue to next criterion",
+        "4. Repeat until all criteria done",
+        "5. Set passes = true only after ALL criteria are checked"
+      ],
+      "rationale": "Incremental updates let users monitor progress during long iterations"
+    },
+    "commitStateChanges": {
+      "description": "Commit after marking checkboxes",
+      "why": [
+        "Git history is the audit trail",
+        "Next Ralph instance needs updated state",
+        "Without commits, infinite loops occur"
+      ]
+    }
+  },
+  "styling": {
+    "noInlineColors": {
+      "description": "Use Tailwind preset tokens, never arbitrary hex",
+      "bad": "bg-[#E9EFFD]",
+      "good": "bg-primary-50"
+    },
+    "noArbitraryPixels": {
+      "description": "Use Tailwind scale or @theme CSS variables",
+      "bad": "gap-[17px]",
+      "good": "gap-4"
+    }
+  }
+}
