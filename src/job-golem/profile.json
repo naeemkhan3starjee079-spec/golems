@@ -1,0 +1,88 @@
+{
+  "name": "Etan Joseph Heyman",
+  "location": "Rehovot, Israel",
+  "targetLocation": "Israel",
+  "yearsExperience": 3,
+  "roles": [
+    "Software Engineer",
+    "Full Stack Engineer",
+    "Full Stack Developer",
+    "Frontend Engineer",
+    "Frontend Developer",
+    "Front End Developer",
+    "React Developer",
+    "Web Developer"
+  ],
+  "primarySkills": [
+    "TypeScript",
+    "JavaScript",
+    "React",
+    "Next.js",
+    "Node.js",
+    "Tailwind CSS"
+  ],
+  "secondarySkills": [
+    "Svelte",
+    "React Native",
+    "MongoDB",
+    "Convex",
+    "Redux",
+    "MySQL",
+    "REST APIs",
+    "Socket.io"
+  ],
+  "integrations": [
+    "Vapi.ai",
+    "Twilio",
+    "Google Maps API",
+    "Cloudinary",
+    "i18n",
+    "Anthropic SDK",
+    "grammy"
+  ],
+  "languages": {
+    "Hebrew": "native",
+    "English": "near-native",
+    "Spanish": "intermediate"
+  },
+  "keywords": [
+    "developer",
+    "engineer",
+    "react",
+    "next.js",
+    "nextjs",
+    "typescript",
+    "frontend",
+    "front-end",
+    "full stack",
+    "fullstack",
+    "backend",
+    "back-end",
+    "node",
+    "javascript",
+    "web developer",
+    "software",
+    "svelte",
+    "tailwind",
+    "mobile",
+    "junior",
+    "mid-level"
+  ],
+  "excludeCompanies": [],
+  "excludeKeywords": [
+    "senior architect",
+    "staff engineer",
+    "principal",
+    "director",
+    "team lead",
+    "tech lead",
+    "head of",
+    "vp of",
+    "manager",
+    "10+ years",
+    "8+ years",
+    "7+ years",
+    "6+ years"
+  ],
+  "resumePath": "/Users/etanheyman/Downloads/Etan Heymans Resume october 2025.pdf"
+}
