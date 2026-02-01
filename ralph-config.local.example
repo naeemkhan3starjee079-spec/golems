@@ -1,0 +1,49 @@
+# Ralph Configuration
+# Copy this file to ralph-config.local and customize for your setup.
+# ralph-config.local is gitignored and will not be committed.
+#
+# Usage: cp ralph-config.local.example ralph-config.local
+#        Then edit ralph-config.local with your preferences.
+
+# ═══════════════════════════════════════════════════════════════════
+# NOTIFICATIONS (ntfy.sh)
+# ═══════════════════════════════════════════════════════════════════
+# Base topic for notifications. Used when running ralph without app mode.
+# Get the ntfy app and subscribe to this topic to receive notifications.
+# export RALPH_NTFY_TOPIC="my-ralph-notifications"
+
+# Pattern for app-specific topics. Available variables:
+#   {project} - project directory name
+#   {app} - app name (expo, public, admin, etc.)
+# export RALPH_NTFY_TOPIC_PATTERN="{project}-{app}"
+
+# ═══════════════════════════════════════════════════════════════════
+# MODEL PREFERENCES
+# ═══════════════════════════════════════════════════════════════════
+# Default model to use (opus or sonnet)
+# export RALPH_DEFAULT_MODEL="opus"
+
+# ═══════════════════════════════════════════════════════════════════
+# ITERATION DEFAULTS
+# ═══════════════════════════════════════════════════════════════════
+# Default maximum iterations
+# export RALPH_MAX_ITERATIONS=10
+
+# Default sleep between iterations (seconds)
+# export RALPH_SLEEP_SECONDS=2
+
+# ═══════════════════════════════════════════════════════════════════
+# APP MODE - VALID APP NAMES
+# ═══════════════════════════════════════════════════════════════════
+# Space-separated list of valid app names for monorepo mode.
+# These are the apps in your apps/ directory.
+# export RALPH_VALID_APPS="frontend backend mobile expo public admin"
+
+# ═══════════════════════════════════════════════════════════════════
+# PATHS (usually don't need to change)
+# ═══════════════════════════════════════════════════════════════════
+# Directory containing Ralph configuration
+# export RALPH_CONFIG_DIR="$HOME/.config/ralphtools"
+
+# Directory for Claude Code skills/commands
+# export CLAUDE_COMMANDS_DIR="$HOME/.claude/commands"

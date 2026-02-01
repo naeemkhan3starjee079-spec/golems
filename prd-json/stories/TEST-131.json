@@ -1,0 +1,17 @@
+{
+  "id": "TEST-131",
+  "title": "Test: Ink UI Rendering Stability",
+  "description": "Write tests to verify UI rendering stability fixes from MP-131.",
+  "acceptanceCriteria": [
+    {"text": "Read MP-131 implementation changes", "checked": false},
+    {"text": "Write render count test: Dashboard doesn't exceed N renders per update", "checked": false},
+    {"text": "Write state stability test: rapid state changes don't cause flickering", "checked": false},
+    {"text": "Document test approach in docs.local/research/TEST-131-results.md", "checked": false},
+    {"text": "All new tests pass", "checked": false},
+    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": false},
+    {"text": "Commit: test: TEST-131 ink ui rendering stability tests", "checked": false}
+  ],
+  "storyType": "test",
+  "blockedBy": "MP-131",
+  "passes": false
+}

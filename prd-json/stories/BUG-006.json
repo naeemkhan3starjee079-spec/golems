@@ -1,0 +1,21 @@
+{
+  "id": "BUG-006",
+  "title": "Auto-unblock stories when their blocker completes",
+  "description": "When a story completes, any stories blocked by it should auto-move from blocked to pending. Currently this requires manual intervention.",
+  "acceptanceCriteria": [
+    {"text": "Find completeStory() in prd.ts", "checked": true},
+    {"text": "After marking story complete, scan blocked array for stories with blockedBy === completedStoryId", "checked": true},
+    {"text": "For each match: remove blockedBy from story file, move from blocked to pending array", "checked": true},
+    {"text": "Log: '[PRD] Auto-unblocked {storyId} (blocker {completedId} done)'", "checked": true},
+    {"text": "Update nextStory if pending was empty before unblock", "checked": true},
+    {"text": "Test: Complete a story, verify dependent story moves to pending", "checked": true},
+    {"text": "Test: Verify chain reaction (A blocks B blocks C, complete A, both B and C eventually unblock)", "checked": true},
+    {"text": "Typecheck passes", "checked": true},
+    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": true},
+    {"text": "Commit: fix: BUG-006 auto-unblock stories when blocker completes", "checked": true}
+  ],
+  "storyType": "bug",
+  "passes": true,
+  "completedAt": "2026-01-26T11:16:49.843Z",
+  "completedBy": "kiro"
+}
