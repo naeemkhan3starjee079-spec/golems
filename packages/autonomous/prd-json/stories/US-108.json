@@ -12,8 +12,8 @@
     {"text": "User signs up for Soltome and adds credentials", "checked": true},
     {"text": "Verify /forage works with Soltome credentials", "checked": true},
     {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": true},
-    {"text": "Commit: feat: US-108 /forage command with Soltome integration", "checked": false}
+    {"text": "Commit: feat: US-108 /forage command with Soltome integration", "checked": true}
   ],
-  "passes": false,
+  "passes": true,
   "blockedBy": null
 }
