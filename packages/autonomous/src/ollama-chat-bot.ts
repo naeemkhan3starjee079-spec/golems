@@ -204,21 +204,41 @@ export async function notifyUser(chatId: number, message: string) {
   }
 }
 
-// Start the bot with retry on 409 conflict
-async function startBot(retries = 3) {
+// Graceful shutdown handler
+async function shutdown(signal: string) {
+  console.log(`\n[Bot] Received ${signal}, shutting down gracefully...`);
+  try {
+    await bot.stop();
+    console.log("[Bot] Stopped successfully");
+    process.exit(0);
+  } catch (error) {
+    console.error("[Bot] Error during shutdown:", error);
+    process.exit(1);
+  }
+}
+
+// Register signal handlers for clean shutdown
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
+
+// Start the bot with exponential backoff retry on 409 conflict
+async function startBot(maxAttempts = 4) {
   console.log("🤖 OllamaChat bot starting...");
   console.log(`   Model: ${DEFAULT_MODEL}`);
   console.log(`   Ollama: ${OLLAMA_HOST}`);
 
-  for (let i = 0; i < retries; i++) {
+  for (let i = 0; i < maxAttempts; i++) {
     try {
       await bot.start();
       console.log("✅ OllamaChat bot running");
       return;
     } catch (err: any) {
-      if (err?.error_code === 409 && i < retries - 1) {
-        console.log(`[Bot] 409 conflict, waiting 10s before retry ${i + 2}/${retries}...`);
-        await new Promise(r => setTimeout(r, 10000));
+      if (err?.error_code === 409 && i < maxAttempts - 1) {
+        // Exponential backoff: 30s, 60s, 120s
+        const delaySeconds = 30 * Math.pow(2, i);
+        console.log(`[Bot] 409 conflict detected - previous instance still active`);
+        console.log(`[Bot] Waiting ${delaySeconds}s before retry ${i + 2}/${maxAttempts}...`);
+        await new Promise(r => setTimeout(r, delaySeconds * 1000));
       } else {
         throw err;
       }

@@ -41,3 +41,14 @@ Run Ralph to execute research.
 - Created detailed documentation with 5 specific improvements for Night Shift reliability
 - Key findings: 3-layer quality gates, 3-minute recovery strategy, governance-first task selection, deterministic rollback framework
 - Learnings: 2026 focus on safety and auditability over pure autonomy, multi-layer validation prevents 90% of issues
+
+## Iteration 5 - BUG-101: Fix OllamaChat Bot 409 Telegram Conflict
+- Model: sonnet
+- Root cause: Grammy bot was restarting too fast when launchd restarts, causing 409 conflict with Telegram API
+- Fixed with three changes:
+  1. Added SIGTERM and SIGINT signal handlers that call bot.stop() for graceful shutdown
+  2. Implemented exponential backoff for 409 conflicts: 30s, 60s, 120s (changed from 10s flat retry)
+  3. Adjusted retry count to 4 attempts to allow all 3 backoff delays to execute
+- CodeRabbit caught off-by-one error in retry logic (loop needed 4 iterations not 3 to get 3 waits)
+- All tests passed: signal handlers work correctly, exponential backoff implemented, bot responds to SIGTERM
+- Learnings: grammy's bot.start() blocks indefinitely (as designed), signal handlers critical for launchd-managed services, CodeRabbit prevents subtle off-by-one bugs
