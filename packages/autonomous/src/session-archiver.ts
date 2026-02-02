@@ -447,24 +447,49 @@ async function main(): Promise<void> {
   let totalFailed = 0;
 
   for (const project of projects) {
-    // Find unique activity days (not sessions, DAYS of work)
-    const activityDays = new Set<string>();
-    for (const session of project.sessions) {
-      const dayKey = session.mtime.toISOString().slice(0, 10); // YYYY-MM-DD
-      activityDays.add(dayKey);
+    // Check if project source directory still exists (orphan detection)
+    const isOrphan = !existsSync(project.decodedPath);
+
+    let toArchive: SessionInfo[];
+    let keptCount: number;
+    let sortedDays: string[] = [];
+    let cutoffDay: string | null = null;
+
+    if (isOrphan) {
+      // ORPHAN PROJECT: Archive ALL sessions (project no longer exists)
+      toArchive = project.sessions;
+      keptCount = 0;
+      console.log(`\nProject: ${project.projectId} [ORPHANED - archiving all]`);
+      console.log(`  Path: ${project.decodedPath} (no longer exists)`);
+      console.log(`  Archiving ALL ${toArchive.length} sessions`);
+    } else {
+      // ACTIVE PROJECT: Keep last N days of activity
+      // Find unique activity days (not sessions, DAYS of work)
+      const activityDays = new Set<string>();
+      for (const session of project.sessions) {
+        const dayKey = session.mtime.toISOString().slice(0, 10); // YYYY-MM-DD
+        activityDays.add(dayKey);
+      }
+
+      // Sort days descending (newest first) and find cutoff
+      sortedDays = Array.from(activityDays).sort().reverse();
+      cutoffDay = sortedDays[Math.min(sessionsToKeep - 1, sortedDays.length - 1)];
+
+      // Keep sessions from the last N days of activity, archive the rest
+      toArchive = project.sessions.filter(s => {
+        const sessionDay = s.mtime.toISOString().slice(0, 10);
+        return sessionDay < cutoffDay;
+      });
+
+      keptCount = project.sessions.length - toArchive.length;
+
+      console.log(`\nProject: ${project.projectId}`);
+      console.log(`  Path: ${project.decodedPath}`);
+      console.log(`  Activity: ${sortedDays.length} days, keeping ${Math.min(sortedDays.length, sessionsToKeep)} days (${keptCount} sessions), archiving ${toArchive.length} sessions`);
+      if (toArchive.length > 0 && cutoffDay) {
+        console.log(`  Cutoff: ${cutoffDay} (archiving sessions before this date)`);
+      }
     }
-
-    // Sort days descending (newest first) and find cutoff
-    const sortedDays = Array.from(activityDays).sort().reverse();
-    const cutoffDay = sortedDays[Math.min(sessionsToKeep - 1, sortedDays.length - 1)];
-
-    // Keep sessions from the last N days of activity, archive the rest
-    const toArchive = project.sessions.filter(s => {
-      const sessionDay = s.mtime.toISOString().slice(0, 10);
-      return sessionDay < cutoffDay;
-    });
-
-    const keptCount = project.sessions.length - toArchive.length;
 
     totalSessions += project.sessions.length;
     totalToArchive += toArchive.length;
@@ -474,13 +499,6 @@ async function main(): Promise<void> {
       if (s.hasSubdir && s.subdirPath) {
         totalSizeToArchive += getDirSize(s.subdirPath);
       }
-    }
-
-    console.log(`\nProject: ${project.projectId}`);
-    console.log(`  Path: ${project.decodedPath}`);
-    console.log(`  Activity: ${sortedDays.length} days, keeping ${Math.min(sortedDays.length, sessionsToKeep)} days (${keptCount} sessions), archiving ${toArchive.length} sessions`);
-    if (toArchive.length > 0) {
-      console.log(`  Cutoff: ${cutoffDay} (archiving sessions before this date)`);
     }
 
     if (toArchive.length > 0) {
