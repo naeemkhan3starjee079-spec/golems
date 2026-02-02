@@ -1,6 +1,6 @@
 # Available Skills
 
-> Auto-generated: 2026-02-02T20:37:32Z
+> Auto-generated: 2026-02-02T21:43:40Z
 > Regenerate: ~/.claude/scripts/generate-skill-index.sh
 
 ## Skills

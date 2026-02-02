@@ -4,6 +4,7 @@ import { readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 import { getPendingDrafts, approveDraft, rejectDraft, type Draft } from "./post-generator";
 import { createPost as postToSoltome } from "./soltome-client";
+import { logEvent, getRecentEvents, formatEventsForClaude } from "./event-log";
 
 // Mac notification helper
 async function notify(title: string, message: string) {
@@ -90,6 +91,15 @@ async function askClaude(
       mkdirSync(BOT_WORKING_DIR, { recursive: true });
     }
 
+    // Inject recent events into system prompt so Claude knows what happened
+    const recentEvents = await getRecentEvents(24);
+    const eventSummary = formatEventsForClaude(recentEvents);
+    const soulContent = getSystemPromptContent();
+    const systemPrompt = `${soulContent}
+
+## While You Were Down
+${eventSummary}`;
+
     // Use --continue to resume from last conversation in this directory
     // This gives us memory across messages!
     const args = [
@@ -97,7 +107,7 @@ async function askClaude(
       "--dangerously-skip-permissions",
       "--print",
       "--continue",  // Continue from last conversation in cwd
-      "--system-prompt", getSystemPromptContent(),
+      "--system-prompt", systemPrompt,
       prompt,
     ];
 
@@ -443,9 +453,12 @@ bot.command("approve", async (ctx) => {
   await handleApproval(ctx, num);
 });
 
-bot.command("skip", (ctx) => {
+bot.command("skip", async (ctx) => {
   const drafts = getPendingDrafts();
-  drafts.forEach((d) => rejectDraft(d.id));
+  for (const d of drafts) {
+    rejectDraft(d.id);
+    await logEvent("draft_rejected", { title: d.title, id: d.id, reason: "skipped" }, "claudegolem");
+  }
   ctx.reply(`⏭️ Skipped ${drafts.length} drafts.`);
 });
 
@@ -467,12 +480,22 @@ async function handleApproval(ctx: any, num: number) {
     return;
   }
 
+  // Log draft approval event
+  await logEvent("draft_approved", { title: draft.title, id: draftId }, "claudegolem");
+
   ctx.reply(`✅ Approved: "${draft.title}"\n\nPosting to Soltome...`);
 
   // Post to Soltome (uses API key from state.soltomeApiKey or env)
   const result = await postToSoltome(draft.title, draft.content);
 
   if (result.success) {
+    // Log successful Soltome post event
+    await logEvent("soltome_post", {
+      title: draft.title,
+      postId: result.postId,
+      creditsUsed: 2,
+      creditsRemaining: result.newBalance,
+    }, "claudegolem");
     ctx.reply(`🎉 Posted to Soltome! (${result.newBalance} credits left)`);
   } else {
     ctx.reply(`⚠️ Failed to post: ${result.error}`);
@@ -504,11 +527,20 @@ bot.callbackQuery(/^approve:/, async (ctx) => {
   const draft = approveDraft(draftId);
 
   if (draft) {
+    // Log draft approval event
+    await logEvent("draft_approved", { title: draft.title, id: draftId }, "claudegolem");
     await ctx.editMessageText(`✅ Approved: "${draft.title}"`);
 
     // Post to Soltome
     const result = await postToSoltome(draft.title, draft.content);
     if (result.success) {
+      // Log successful Soltome post event
+      await logEvent("soltome_post", {
+        title: draft.title,
+        postId: result.postId,
+        creditsUsed: 2,
+        creditsRemaining: result.newBalance,
+      }, "claudegolem");
       await ctx.answerCallbackQuery({ text: `Posted to Soltome!` });
     } else {
       await ctx.answerCallbackQuery({ text: `Failed: ${result.error}` });
@@ -521,7 +553,11 @@ bot.callbackQuery(/^approve:/, async (ctx) => {
 // Reject all drafts
 bot.callbackQuery("reject-all", async (ctx) => {
   const drafts = getPendingDrafts();
-  drafts.forEach(d => rejectDraft(d.id));
+  for (const d of drafts) {
+    rejectDraft(d.id);
+    // Log draft rejection event
+    await logEvent("draft_rejected", { title: d.title, id: d.id }, "claudegolem");
+  }
   await ctx.editMessageText(`❌ Rejected ${drafts.length} drafts.`);
   await ctx.answerCallbackQuery();
 });
@@ -628,7 +664,10 @@ bot.on("message:text", async (ctx) => {
 
   if (text.toLowerCase() === "skip all" || text.toLowerCase() === "skip") {
     const drafts = getPendingDrafts();
-    drafts.forEach((d) => rejectDraft(d.id));
+    for (const d of drafts) {
+      rejectDraft(d.id);
+      await logEvent("draft_rejected", { title: d.title, id: d.id, reason: "skipped" }, "claudegolem");
+    }
     ctx.reply(`⏭️ Skipped ${drafts.length} drafts.`);
     return;
   }

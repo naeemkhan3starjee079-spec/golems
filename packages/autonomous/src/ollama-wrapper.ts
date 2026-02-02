@@ -93,3 +93,8 @@ export const forEmailGolem = {
   runOllama: (prompt: string) => runOllama(prompt, "email-golem"),
   runOllamaJSON: <T>(prompt: string) => runOllamaJSON<T>(prompt, "email-golem"),
 };
+
+export const forSoltome = {
+  runOllama: (prompt: string) => runOllama(prompt, "soltome-learner"),
+  runOllamaJSON: <T>(prompt: string) => runOllamaJSON<T>(prompt, "soltome-learner"),
+};

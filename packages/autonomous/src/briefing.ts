@@ -6,7 +6,7 @@
  * - Night Shift PRs (if created)
  * - 24h Email digest (urgent, job updates, payments)
  * - Monthly subscription summary (on 1st of month)
- * - Moltbook learnings
+ * - Soltome activity (posts, credits)
  * - Draft posts ready for approval
  */
 
@@ -20,6 +20,7 @@ import {
   getSubscriptionSummary,
 } from "./email-golem/db-client";
 import type { Email, SubscriptionSummary } from "./email-golem/types";
+import { getRecentEvents, type GolemEvent } from "./event-log";
 
 const HOME = process.env.HOME || "/Users/etanheyman";
 const STATE_FILE = join(HOME, ".golems-zikaron/state.json");
@@ -185,6 +186,53 @@ function isFirstOfMonth(): boolean {
   return new Date().getDate() === 1;
 }
 
+/**
+ * Get Soltome activity from event log (last 24h)
+ */
+async function getSoltomeActivity(): Promise<{
+  posts: GolemEvent[];
+  creditsRemaining: number | null;
+}> {
+  const events = await getRecentEvents(24);
+  const soltomePosts = events.filter((e) => e.type === "soltome_post");
+
+  // Get most recent credits balance
+  let creditsRemaining: number | null = null;
+  for (const post of soltomePosts) {
+    if (post.data.creditsRemaining !== undefined) {
+      creditsRemaining = post.data.creditsRemaining;
+      break; // Most recent first
+    }
+  }
+
+  return { posts: soltomePosts, creditsRemaining };
+}
+
+/**
+ * Format Soltome activity section for Telegram
+ */
+function formatSoltomeActivity(activity: {
+  posts: GolemEvent[];
+  creditsRemaining: number | null;
+}): string {
+  if (activity.posts.length === 0) {
+    return "";
+  }
+
+  let msg = "📢 *Soltome Activity*\n";
+
+  for (const post of activity.posts.slice(0, 3)) {
+    const title = post.data.title || "(untitled)";
+    msg += `   → "${title.slice(0, 35)}..."\n`;
+  }
+
+  if (activity.creditsRemaining !== null) {
+    msg += `💰 Credits: ${activity.creditsRemaining} remaining\n`;
+  }
+
+  return msg + "\n";
+}
+
 async function sendBriefing() {
   console.log("☀️ Generating morning briefing...\n");
 
@@ -241,9 +289,16 @@ async function sendBriefing() {
     }
   }
 
-  // Learnings Section
+  // Soltome Activity Section (posts from last 24h)
+  const soltomeActivity = await getSoltomeActivity();
+  if (soltomeActivity.posts.length > 0) {
+    msg += formatSoltomeActivity(soltomeActivity);
+    msg += separator;
+  }
+
+  // Learnings Section (from pattern learning)
   if (learnings && learnings.posts.length > 0) {
-    msg += `*${learnings.posts.length} Moltbook finds* saved\n\n`;
+    msg += `*${learnings.posts.length} pattern examples* saved\n\n`;
   }
 
   // Drafts Section - count + categorize by topic
