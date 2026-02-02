@@ -13,10 +13,20 @@ import { join } from "path";
 import { fetchPosts, type SoltomePost } from "./soltome-client";
 import { runOllamaJSON, runOllama } from "./ollama-wrapper";
 
-const HOME = process.env.HOME || "/Users/etanheyman";
-const DEFAULT_DATA_DIR = join(HOME, "Gits/golems-zikaron/data");
-const DEFAULT_TRAINING_FILE = join(DEFAULT_DATA_DIR, "soltome-training.json");
-const DEFAULT_PATTERNS_FILE = join(DEFAULT_DATA_DIR, "soltome-patterns.json");
+function getHome(): string {
+  const home = process.env.HOME;
+  if (!home) {
+    throw new Error("HOME environment variable is not set. Cannot determine data directory.");
+  }
+  return home;
+}
+
+function getDefaultDataDir(): string {
+  return join(getHome(), "Gits/golems-zikaron/data");
+}
+
+const DEFAULT_TRAINING_FILE = join(getDefaultDataDir(), "soltome-training.json");
+const DEFAULT_PATTERNS_FILE = join(getDefaultDataDir(), "soltome-patterns.json");
 
 // Training data extends SoltomePost with quality score
 export interface TrainingPost extends SoltomePost {
@@ -180,8 +190,11 @@ export async function extractPatterns(
     return bScore - aScore;
   });
 
-  const topPosts = sorted.slice(0, 10);
-  const bottomPosts = sorted.slice(-3);
+  // Prevent overlap when dataset is small
+  const topCount = Math.min(10, sorted.length);
+  const topPosts = sorted.slice(0, topCount);
+  const bottomStart = Math.max(topCount, sorted.length - 3);
+  const bottomPosts = sorted.slice(bottomStart);
 
   const examples = topPosts
     .map(
@@ -408,11 +421,14 @@ export function getTopExamples(count = 5, dataDir?: string): string[] {
 
 /**
  * Get Zikaron communication style guide (owner's style)
+ *
+ * Uses ZIKARON_STYLE_PATH env var or falls back to stable symlink path
  */
 export function getZikaronStyle(): string {
-  const ZIKARON_STYLE = join(HOME, "Gits/zikaron/data/archives/style-2026-01-31-2121/master-style-guide.md");
+  const stylePath = process.env.ZIKARON_STYLE_PATH ||
+    join(getHome(), "Gits/zikaron/data/archives/current-style/master-style-guide.md");
   try {
-    const content = readFileSync(ZIKARON_STYLE, "utf-8");
+    const content = readFileSync(stylePath, "utf-8");
     // Extract just the DO's section for brevity
     const dosMatch = content.match(/## \*\*2\. DO'S.*?(?=## \*\*3\.)/s);
     return dosMatch ? dosMatch[0].slice(0, 1000) : "";

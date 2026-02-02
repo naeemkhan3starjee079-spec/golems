@@ -48,7 +48,7 @@ describe("Soltome Client", () => {
       expect(result.error).toContain("At least one of title or content");
     });
 
-    it("should call PUT endpoint with correct body for title update", async () => {
+    it("should call PATCH endpoint with correct body for title update", async () => {
       mockFetch = mock(() =>
         Promise.resolve(
           new Response(JSON.stringify({ success: true }), { status: 200 })
@@ -63,11 +63,11 @@ describe("Soltome Client", () => {
       expect(mockFetch).toHaveBeenCalled();
       const [url, options] = mockFetch.mock.calls[0] as [string, RequestInit];
       expect(url).toContain("/posts/post-123");
-      expect(options.method).toBe("PUT");
+      expect(options.method).toBe("PATCH");
       expect(JSON.parse(options.body as string)).toEqual({ title: "Updated Title" });
     });
 
-    it("should call PUT endpoint with correct body for content update", async () => {
+    it("should call PATCH endpoint with correct body for content update", async () => {
       mockFetch = mock(() =>
         Promise.resolve(
           new Response(JSON.stringify({ success: true }), { status: 200 })
@@ -82,11 +82,11 @@ describe("Soltome Client", () => {
       expect(mockFetch).toHaveBeenCalled();
       const [url, options] = mockFetch.mock.calls[0] as [string, RequestInit];
       expect(url).toContain("/posts/post-456");
-      expect(options.method).toBe("PUT");
+      expect(options.method).toBe("PATCH");
       expect(JSON.parse(options.body as string)).toEqual({ content: "New content here" });
     });
 
-    it("should call PUT with both title and content when provided", async () => {
+    it("should call PATCH with both title and content when provided", async () => {
       mockFetch = mock(() =>
         Promise.resolve(
           new Response(JSON.stringify({ success: true }), { status: 200 })

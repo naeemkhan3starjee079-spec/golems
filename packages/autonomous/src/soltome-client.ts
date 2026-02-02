@@ -186,9 +186,9 @@ export async function editPost(
   if (updates.content?.trim()) body.content = updates.content.trim();
 
   try {
-    // Try PUT first (some APIs prefer it for updates)
+    // PATCH is the primary method, PUT also accepted as alias (per docs)
     const resp = await soltomeRequest(`/posts/${cleanPostId}`, {
-      method: "PUT",
+      method: "PATCH",
       body: JSON.stringify(body),
     });
 
