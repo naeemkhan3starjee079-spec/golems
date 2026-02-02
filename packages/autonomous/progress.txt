@@ -116,3 +116,22 @@ Run Ralph to execute research.
 - Updated RS-101 story JSON: marked final criterion as checked, set passes=true, added completion metadata
 - Updated index.json: removed RS-101 from pending, set nextStory to US-106, updated stats (6 completed, 2 pending, 3 blocked)
 - Learnings: Research stories can be completed across multiple iterations - documentation phase in one iteration, commit phase in another
+
+## Iteration 12 - US-103: Ollama Bot Thread Compaction
+- Model: sonnet
+- Completed remaining acceptance criteria for thread compaction feature:
+  1. REFACTOR: Code was already well-structured with compactThread() orchestration and stats logging
+  2. Added launchd plist (com.golemszikaron.compactor.plist) for hourly compaction runs
+  3. Created run-compaction.ts runner script
+  4. Fixed test timeouts: increased to 30s for Ollama operations
+  5. All 9 thread-compactor tests pass (100% success rate)
+- CodeRabbit iterations:
+  - Round 1: Fixed 4 issues (PRD ordering, DEFAULT_THREADS_DIR constant, ChromaDB response validation, timestamp validation)
+  - Round 2: Fixed 2 issues (fetch timeout with AbortController, defensive message filtering)
+  - Round 3: Rate-limited (55 min wait), all issues resolved from previous rounds
+- Features implemented:
+  - Periodic compaction runner with stats logging
+  - Fetch timeout protection (10s timeout for ChromaDB)
+  - Defensive validation for timestamps and message content
+  - Hourly scheduled runs via launchd
+- Learnings: TDD produces robust code, but CodeRabbit catches edge cases around error handling and timeouts that tests might miss

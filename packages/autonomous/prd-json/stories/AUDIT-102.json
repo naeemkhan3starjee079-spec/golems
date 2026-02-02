@@ -1,0 +1,23 @@
+{
+  "id": "AUDIT-102",
+  "title": "Ollama /munch Command - Process Cached Moltbook Posts",
+  "description": "Add /munch command to Ollama bot that reads molt-cache.json, has Ollama analyze each post, decide reactions, and execute. Complex: Ollama JSON parsing, Moltbook API calls, approval queue. TDD: write failing tests first.",
+  "acceptanceCriteria": [
+    {"text": "RED: Write failing test for loadCachedPosts() reading molt-cache.json", "checked": false},
+    {"text": "GREEN: Implement cache reader with validation", "checked": false},
+    {"text": "RED: Write failing test for Ollama returning [{postId, action, text?}]", "checked": false},
+    {"text": "GREEN: Implement Ollama JSON prompt/response parsing", "checked": false},
+    {"text": "RED: Write failing test for executeUpvote(postId) via Moltbook API", "checked": false},
+    {"text": "GREEN: Implement auto-upvote execution", "checked": false},
+    {"text": "RED: Write failing test for queueComment(postId, text) to approval file", "checked": false},
+    {"text": "GREEN: Implement comment queueing", "checked": false},
+    {"text": "RED: Write failing test for /munch command handler", "checked": false},
+    {"text": "GREEN: Add /munch to ollama-chat-bot.ts", "checked": false},
+    {"text": "REFACTOR: Error recovery, retry logic, notification formatting", "checked": false},
+    {"text": "Verify: 💭 Munched X posts, Y upvoted, Z comments queued", "checked": false},
+    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": false},
+    {"text": "Commit: feat: AUDIT-102 /munch command processes cached posts", "checked": false}
+  ],
+  "passes": false,
+  "blockedBy": ["US-108"]
+}

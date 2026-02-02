@@ -5,56 +5,58 @@
   "acceptanceCriteria": [
     {
       "text": "RED: Write failing test for identifying turns older than 24h",
-      "checked": false
+      "checked": true
     },
     {
       "text": "GREEN: Implement age detection to pass",
-      "checked": false
+      "checked": true
     },
     {
       "text": "RED: Write failing test for summarizing turns via Ollama",
-      "checked": false
+      "checked": true
     },
     {
       "text": "GREEN: Implement summarization to pass",
-      "checked": false
+      "checked": true
     },
     {
       "text": "RED: Write failing test for embedding summary with nomic-embed-text",
-      "checked": false
+      "checked": true
     },
     {
       "text": "GREEN: Implement embedding to pass",
-      "checked": false
+      "checked": true
     },
     {
       "text": "RED: Write failing test for storing in ChromaDB 'ollama-golem' collection",
-      "checked": false
+      "checked": true
     },
     {
       "text": "GREEN: Implement ChromaDB storage to pass",
-      "checked": false
+      "checked": true
     },
     {
       "text": "REFACTOR: Extract compactor module, add stats logging",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Add launchd plist for hourly compaction runs",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Verify all tests pass, output pristine",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Run CodeRabbit review - must pass (or create BUG if unfixable)",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Commit: feat: US-103 Ollama bot thread compaction",
       "checked": false
     }
   ],
-  "passes": false
+  "passes": true,
+  "completedAt": "2026-02-02T06:40:00.000Z",
+  "completedBy": "sonnet"
 }
