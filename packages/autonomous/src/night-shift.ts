@@ -13,7 +13,8 @@
 import { $ } from "bun";
 import { readFileSync, writeFileSync, rmSync } from "fs";
 import { join } from "path";
-import { browseMoltbook, filterShitposts, extractLearnings } from "./moltbook-client";
+import { fetchPosts as fetchSoltomePosts } from "./soltome-client";
+import { getMoltbookStatus } from "./moltbook-client";
 import { generatePosts } from "./post-generator";
 
 // Configuration
@@ -352,17 +353,25 @@ async function nightShift(): Promise<NightShiftResult> {
     }
 
     // ═══════════════════════════════════════════════════════
-    // PHASE 2: Browse Moltbook → Extract Learnings
+    // PHASE 2: Browse Soltome → Extract Learnings
+    // Note: Moltbook is for identity only, not content
     // ═══════════════════════════════════════════════════════
-    console.log("\n═══ PHASE 2: Moltbook Browsing ═══\n");
+    console.log("\n═══ PHASE 2: Soltome Browsing ═══\n");
 
     try {
-      const posts = await browseMoltbook();
-      const qualityPosts = await filterShitposts(posts);
-      result.moltbookLearnings = await extractLearnings(qualityPosts);
+      const posts = await fetchSoltomePosts(20);
+      if (posts.length > 0) {
+        // Extract titles as learnings for post generation context
+        result.moltbookLearnings = posts.slice(0, 5).map(
+          (p) => `[Soltome] "${p.title}" by ${p.author?.username || "unknown"}`
+        );
+        console.log(`[Soltome] Found ${posts.length} posts, extracted ${result.moltbookLearnings.length} learnings`);
+      } else {
+        result.moltbookLearnings = ["No Soltome posts available (check credentials)"];
+      }
     } catch (err) {
-      console.error("[Moltbook] Browsing failed:", err);
-      result.moltbookLearnings = ["Moltbook API not available"];
+      console.error("[Soltome] Browsing failed:", err);
+      result.moltbookLearnings = ["Soltome API not available"];
     }
 
     // ═══════════════════════════════════════════════════════

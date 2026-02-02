@@ -1,18 +1,18 @@
 {
   "id": "US-108",
-  "title": "GolemsZikaron /forage Command - Collect Moltbook Posts",
-  "description": "Add /forage command to GolemsZikaron that fetches recent Moltbook posts and saves to ~/.golems-zikaron/molt-cache.json for Ollama to process later. TDD: write failing tests first.",
+  "title": "GolemsZikaron /forage Command - Collect Platform Posts",
+  "description": "Add /forage command that fetches posts from AI agent platforms (Soltome). Pivoted from Moltbook (identity-only, no posts API) to Soltome (credit-based discussion platform).",
   "acceptanceCriteria": [
-    {"text": "RED: Write failing test for fetchMoltbookPosts() returns [{id, title, author, submolt, content, url}]", "checked": false},
-    {"text": "GREEN: Implement API fetch with proper structure", "checked": false},
-    {"text": "RED: Write failing test for saveToCacheFile(posts)", "checked": false},
-    {"text": "GREEN: Save to molt-cache.json with metadata (timestamp, count)", "checked": false},
-    {"text": "RED: Write failing test for /forage command handler", "checked": false},
-    {"text": "GREEN: Add /forage to telegram-bot.ts", "checked": false},
-    {"text": "REFACTOR: Error handling, notification formatting", "checked": false},
-    {"text": "Verify: 🌾 X posts harvested from Y submolts", "checked": false},
-    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": false},
-    {"text": "Commit: feat: US-108 /forage command collects Moltbook posts", "checked": false}
+    {"text": "Create soltome-client.ts with Supabase auth", "checked": true},
+    {"text": "Update forage.ts to use Soltome instead of broken Moltbook API", "checked": true},
+    {"text": "Update moltbook-client.ts to clarify it's identity-only", "checked": true},
+    {"text": "Update night-shift.ts to use Soltome for learnings", "checked": true},
+    {"text": "Update tests for new platform-agnostic structure", "checked": true},
+    {"text": "Create Soltome skill in golem-powers", "checked": true},
+    {"text": "User signs up for Soltome and adds credentials", "checked": true},
+    {"text": "Verify /forage works with Soltome credentials", "checked": true},
+    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": true},
+    {"text": "Commit: feat: US-108 /forage command with Soltome integration", "checked": false}
   ],
   "passes": false,
   "blockedBy": null

@@ -1,0 +1,13 @@
+{
+  "id": "BUG-104",
+  "title": "Moltbook API Endpoint Does Not Exist",
+  "description": "The /api/v1/m/{submolt}/posts endpoint returns 404. Moltbook requires OpenClaw agent platform for API access. Need to either contact @mattprd for custom API access or use OpenClaw. Blocks US-108 /forage command.",
+  "acceptanceCriteria": [
+    {"text": "Research: Determine how to access Moltbook posts (OpenClaw vs custom API)", "checked": false},
+    {"text": "Either: Set up OpenClaw agent OR get custom API access from @mattprd", "checked": false},
+    {"text": "Update forage.ts with working API endpoint", "checked": false},
+    {"text": "Commit: fix: BUG-104 resolve Moltbook API access", "checked": false}
+  ],
+  "passes": false,
+  "blockedBy": null
+}

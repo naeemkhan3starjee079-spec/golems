@@ -381,6 +381,19 @@ bot.command("surf", async (ctx) => {
   }
 });
 
+// Forage command - collect Moltbook posts
+bot.command("forage", async (ctx) => {
+  await ctx.reply("🌾 Foraging for posts...");
+  try {
+    const { handleForageCommand } = await import("./forage");
+    const cacheFile = join(HOME, ".golems-zikaron/molt-cache.json");
+    const result = await handleForageCommand(cacheFile);
+    await ctx.reply(result?.message || "No forage results available");
+  } catch (err) {
+    await ctx.reply(`❌ Forage failed: ${err}`);
+  }
+});
+
 // Draft approval commands with inline keyboard
 bot.command("drafts", async (ctx) => {
   const drafts = getPendingDrafts();
