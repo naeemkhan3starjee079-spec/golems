@@ -73,7 +73,12 @@ services:
 networks:
   ollama-internal:
     driver: bridge
-    internal: true  # No external network access
+    # Security: Ollama has internet but NO credentials
+    # - No git config/SSH keys mounted
+    # - No Supabase/database creds
+    # - No API keys (add Moltbook key to env if needed)
+    # - Code access is read-only (except songscript for writing)
+    # - Night Shift on host reviews and commits Ollama's work
   ollama-host:
     driver: bridge  # Allows host port mapping
 
