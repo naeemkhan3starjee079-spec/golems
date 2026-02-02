@@ -1,0 +1,17 @@
+{
+  "id": "US-107",
+  "title": "Ralph Uses Rich Telegram Formatting",
+  "description": "Use Telegram's HTML/MarkdownV2 for prettier notifications. Take inspiration from ralph-ui dashboard layout: PRD status box, story progress bars, criteria checklist. Mirror the terminal UI in Telegram format.",
+  "acceptanceCriteria": [
+    {"text": "RED: Write failing test for formatPRDStatus() returning HTML table", "checked": false},
+    {"text": "GREEN: Implement HTML table: story | status | model", "checked": false},
+    {"text": "RED: Write failing test for formatUnblockInfo() with bullet list", "checked": false},
+    {"text": "GREEN: Implement bullet list for unblocked/blocked stories", "checked": false},
+    {"text": "REFACTOR: Update notification sender to use parse_mode: HTML", "checked": false},
+    {"text": "Verify rich formatting renders correctly in Telegram", "checked": false},
+    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": false},
+    {"text": "Commit: feat: US-107 Ralph uses rich Telegram formatting", "checked": false}
+  ],
+  "passes": false,
+  "blockedBy": ["US-106", "RS-101"]
+}
