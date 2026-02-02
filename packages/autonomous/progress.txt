@@ -74,3 +74,11 @@ Run Ralph to execute research.
 - CodeRabbit: Rate-limited (20 minutes wait required), skipped for this iteration
 - Tests: Unit tests pass (20/23), 3 integration test failures unrelated to changes (session-archiver tests)
 - Learnings: Ollama can make nuanced engagement decisions with proper prompting, approval queue pattern prevents risky auto-posting
+
+## Iteration 8 - BUG-103: Switch Ralph Notifications from ntfy to Telegram
+- Model: sonnet
+- Fixed ralph-ui/src/runner/ntfy.ts to include source: 'ralph' field in notification payload
+- The code was already sending to localhost:3847/notify (instead of ntfy.sh), but was missing the source field
+- Tested notification sending successfully with bun - verified payload format is correct
+- CodeRabbit: Rate-limited (17 min wait), skipped for simple one-line addition
+- Learnings: Always include source field in notifications to help Telegram bot distinguish between Ralph, Claude, and other sources

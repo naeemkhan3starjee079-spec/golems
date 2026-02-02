@@ -8,8 +8,10 @@
     {"text": "Send JSON: {title, body, source:'ralph', priority}", "checked": true},
     {"text": "Test: ralph sends notification on story complete", "checked": true},
     {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": true},
-    {"text": "Commit: fix: BUG-103 switch Ralph to Telegram notifications", "checked": false}
+    {"text": "Commit: fix: BUG-103 switch Ralph to Telegram notifications", "checked": true}
   ],
-  "passes": false,
-  "blockedBy": null
+  "passes": true,
+  "blockedBy": null,
+  "completedAt": "2026-02-02T05:01:12.000Z",
+  "completedBy": "sonnet"
 }
