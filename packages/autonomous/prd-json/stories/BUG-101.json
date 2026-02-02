@@ -8,8 +8,10 @@
     {"text": "Add bot.stop() in process signal handlers (SIGTERM, SIGINT)", "checked": true},
     {"text": "Test: pkill bot, wait 5s, start again - should work without 409", "checked": true},
     {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": true},
-    {"text": "Commit: fix: BUG-101 resolve OllamaChat 409 conflict", "checked": false}
+    {"text": "Commit: fix: BUG-101 resolve OllamaChat 409 conflict", "checked": true}
   ],
-  "passes": false,
-  "blockedBy": null
+  "passes": true,
+  "blockedBy": null,
+  "completedAt": "2026-02-02T06:17:00.000Z",
+  "completedBy": "sonnet"
 }
