@@ -53,7 +53,7 @@
     },
     {
       "text": "Commit: feat: US-103 Ollama bot thread compaction",
-      "checked": false
+      "checked": true
     }
   ],
   "passes": true,
