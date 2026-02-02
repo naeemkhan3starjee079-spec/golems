@@ -41,6 +41,7 @@ export async function sendNtfy(options: NtfyOptions): Promise<boolean> {
       body: JSON.stringify({
         title: options.title,
         body: options.message,
+        source: "ralph",
         priority: options.priority || "default",
       }),
     });
