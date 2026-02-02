@@ -81,9 +81,9 @@ async function askClaude(message: string): Promise<string> {
     const proc = Bun.spawn([
       "/Users/etanheyman/.local/bin/claude",
       "--dangerously-skip-permissions",
-      "--resume", CHAT_SESSION_ID,  // Master Golem session persists across restarts
+      "--print",  // Non-interactive mode (can't use --resume with -p)
       "--system-prompt", getSystemPromptContent(),  // Read SOUL.md content
-      "-p", prompt
+      prompt
     ], {
       cwd: GITS,
       stdout: "pipe",
@@ -100,6 +100,13 @@ async function askClaude(message: string): Promise<string> {
     clearTimeout(timeout);
 
     const output = await new Response(proc.stdout).text();
+    const stderr = await new Response(proc.stderr).text();
+    if (stderr) {
+      console.error("[Claude] stderr:", stderr.slice(0, 200));
+    }
+    if (!output.trim()) {
+      console.warn("[Claude] Empty stdout, exit code:", proc.exitCode);
+    }
     return output.trim() || "No response.";
   } catch (error) {
     console.error("Claude error:", error);
