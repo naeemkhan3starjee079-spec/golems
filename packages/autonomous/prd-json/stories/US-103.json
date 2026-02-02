@@ -1,0 +1,22 @@
+{
+  "id": "US-103",
+  "title": "Ollama Bot Thread Compaction",
+  "description": "Implement periodic compaction of old thread turns into summaries. Use Ollama to summarize, embed with nomic-embed-text, store in ChromaDB. TDD: write failing tests first.",
+  "acceptanceCriteria": [
+    {"text": "RED: Write failing test for identifying turns older than 24h", "checked": false},
+    {"text": "GREEN: Implement age detection to pass", "checked": false},
+    {"text": "RED: Write failing test for summarizing turns via Ollama", "checked": false},
+    {"text": "GREEN: Implement summarization to pass", "checked": false},
+    {"text": "RED: Write failing test for embedding summary with nomic-embed-text", "checked": false},
+    {"text": "GREEN: Implement embedding to pass", "checked": false},
+    {"text": "RED: Write failing test for storing in ChromaDB 'ollama-golem' collection", "checked": false},
+    {"text": "GREEN: Implement ChromaDB storage to pass", "checked": false},
+    {"text": "REFACTOR: Extract compactor module, add stats logging", "checked": false},
+    {"text": "Add launchd plist for hourly compaction runs", "checked": false},
+    {"text": "Verify all tests pass, output pristine", "checked": false},
+    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": false},
+    {"text": "Commit: feat: US-103 Ollama bot thread compaction", "checked": false}
+  ],
+  "passes": false,
+  "blockedBy": ["US-102"]
+}

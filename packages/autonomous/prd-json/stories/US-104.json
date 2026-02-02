@@ -1,0 +1,21 @@
+{
+  "id": "US-104",
+  "title": "Ollama Bot Context Loading",
+  "description": "Before each Ollama response, load relevant context: SOUL.md personality, recent thread summary from ChromaDB, last 5 raw turns. TDD: write failing tests first.",
+  "acceptanceCriteria": [
+    {"text": "RED: Write failing test for loading SOUL.md content", "checked": false},
+    {"text": "GREEN: Implement SOUL.md loader to pass", "checked": false},
+    {"text": "RED: Write failing test for querying ChromaDB for thread summaries", "checked": false},
+    {"text": "GREEN: Implement ChromaDB query to pass", "checked": false},
+    {"text": "RED: Write failing test for combining SOUL + summary + last 5 turns", "checked": false},
+    {"text": "GREEN: Implement context assembly to pass", "checked": false},
+    {"text": "RED: Write failing test for token counting and 4k limit warning", "checked": false},
+    {"text": "GREEN: Implement token counting to pass", "checked": false},
+    {"text": "REFACTOR: Integrate with ollama-chat-bot.ts processWithOllama()", "checked": false},
+    {"text": "Verify all tests pass, output pristine", "checked": false},
+    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": false},
+    {"text": "Commit: feat: US-104 Ollama bot context loading", "checked": false}
+  ],
+  "passes": false,
+  "blockedBy": ["US-103"]
+}

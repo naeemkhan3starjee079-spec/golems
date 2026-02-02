@@ -1,0 +1,21 @@
+{
+  "id": "US-102",
+  "title": "Ollama Bot Thread Storage Foundation",
+  "description": "Create thread storage system for Ollama bot conversations. Each conversation is saved to a JSONL file, separate from user's Zikaron data. TDD: write failing tests first.",
+  "acceptanceCriteria": [
+    {"text": "RED: Write failing test for append(threadId, msg) - should create file if not exists", "checked": false},
+    {"text": "GREEN: Implement append() minimal code to pass", "checked": false},
+    {"text": "RED: Write failing test for getRecent(threadId, n) - returns last N entries", "checked": false},
+    {"text": "GREEN: Implement getRecent() minimal code to pass", "checked": false},
+    {"text": "RED: Write failing test for listThreads() - returns all thread IDs", "checked": false},
+    {"text": "GREEN: Implement listThreads() minimal code to pass", "checked": false},
+    {"text": "RED: Write failing test for malformed JSONL recovery", "checked": false},
+    {"text": "GREEN: Implement recovery logic to pass", "checked": false},
+    {"text": "REFACTOR: Extract ThreadStore class, add error logging", "checked": false},
+    {"text": "Verify all tests pass, output pristine", "checked": false},
+    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": false},
+    {"text": "Commit: feat: US-102 Ollama bot thread storage foundation", "checked": false}
+  ],
+  "passes": false,
+  "blockedBy": null
+}

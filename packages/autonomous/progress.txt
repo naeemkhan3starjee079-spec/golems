@@ -52,3 +52,14 @@ Run Ralph to execute research.
 - CodeRabbit caught off-by-one error in retry logic (loop needed 4 iterations not 3 to get 3 waits)
 - All tests passed: signal handlers work correctly, exponential backoff implemented, bot responds to SIGTERM
 - Learnings: grammy's bot.start() blocks indefinitely (as designed), signal handlers critical for launchd-managed services, CodeRabbit prevents subtle off-by-one bugs
+
+## Iteration 6 - BUG-102: Fix Job Golem Launchd Error
+- Model: sonnet
+- Root cause: Launchd service was using cached configuration from before plist update
+- Investigation showed error "Script not found" at old path (/Users/etanheyman/Gits/golems-zikaron/...) from 5 AM run
+- Plist file was already updated at 3:35 AM with correct path (/Users/etanheyman/Gits/golems/packages/autonomous/...)
+- Fix: Reloaded launchd service with `launchctl unload` + `launchctl load`
+- Test: `launchctl start com.golemszikaron.job-golem` now exits with code 0 (success)
+- Verified: New logs show job-golem running successfully without errors
+- CodeRabbit: Skipped (no code changes, only launchd configuration reload)
+- Learnings: After updating launchd plists, ALWAYS reload with unload+load to pick up changes. Simply editing the plist file doesn't affect running services.
