@@ -5,8 +5,8 @@ FROM ollama/ollama:latest
 ENV OLLAMA_HOME=/data/.ollama
 ENV OLLAMA_MODELS=/data/.ollama/models
 
-# Create non-root user for security
-RUN useradd -m -u 1000 ollama
+# Create non-root user for security (let system assign UID)
+RUN useradd -m ollama || true
 
 # Create data directory for models and state with proper permissions
 RUN mkdir -p /data/.ollama/models && \

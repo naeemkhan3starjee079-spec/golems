@@ -10,7 +10,7 @@ import { join } from "path";
 import { randomUUID } from "crypto";
 
 const OLLAMA_URL = process.env.OLLAMA_URL || "http://127.0.0.1:11434";
-const MODEL = process.env.OLLAMA_MODEL || "qwen3-coder";
+const MODEL = process.env.OLLAMA_MODEL || "qwen3-coder-64k";
 const VALIDATION_DIR =
   process.env.VALIDATION_DIR || `${process.env.HOME}/.golems-zikaron/validation-queue`;
 

@@ -763,8 +763,8 @@ function repoGolem() {
     fi
 
     # Source ralph libraries (always re-source secrets for updates)
-    source \"\$HOME/Gits/claude-golem/lib/ralph-secrets.zsh\"
-    [[ -z \"\$RALPH_REGISTRY_FILE\" ]] && source \"\$HOME/Gits/claude-golem/lib/ralph-registry.zsh\"
+    source \"\$HOME/.config/ralphtools/lib/ralph-secrets.zsh\"
+    [[ -z \"\$RALPH_REGISTRY_FILE\" ]] && source \"\$HOME/.config/ralphtools/lib/ralph-registry.zsh\"
 
     _ralph_setup_mcps '$mcps_json' '$lowercase_name'
     _ralph_setup_secrets '$lowercase_name'
@@ -1169,10 +1169,10 @@ CONFIGEOF
   return 0
 }
 
-# golemOpenCode - Launch OpenCode for claude-golem project (convenience function)
+# golemOpenCode - Launch OpenCode for golems project (convenience function)
 function golemOpenCode() {
-  cd "$HOME/Gits/claude-golem" || return 1
-  echo "OpenCode: Claude Golem ($(pwd))"
+  cd "$HOME/Gits/golems" || return 1
+  echo "OpenCode: Golems Monorepo ($(pwd))"
   opencode "$@"
 }
 
