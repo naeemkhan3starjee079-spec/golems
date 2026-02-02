@@ -72,7 +72,7 @@ async function sendTelegram(message: string) {
   }
 
   try {
-    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -81,8 +81,15 @@ async function sendTelegram(message: string) {
         parse_mode: "Markdown",
       }),
     });
+
+    if (!res.ok) {
+      const body = await res.text();
+      console.error(`[Telegram] API error ${res.status}: ${body}`);
+    } else {
+      console.log(`[Telegram] Sent: ${message.slice(0, 50)}...`);
+    }
   } catch (err) {
-    console.error("[Telegram] Failed to send:", err);
+    console.error("[Telegram] Network error:", err);
   }
 }
 
@@ -240,6 +247,16 @@ Remember: Small wins compound. One improvement tonight, another tomorrow. 🌙`;
       console.log("[Claude] No commits made");
       return { success: false, improvement };
     }
+
+    // Check if there are actual file changes (not just empty commits)
+    const diffStat = await $`cd ${worktreePath} && git diff --stat origin/main...HEAD 2>/dev/null || git diff --stat origin/master...HEAD 2>/dev/null || echo ""`.text();
+
+    if (!diffStat.trim() || diffStat.includes("0 insertions") && diffStat.includes("0 deletions")) {
+      console.log("[Claude] No actual file changes - skipping PR creation");
+      return { success: false, improvement: "No file changes made" };
+    }
+
+    console.log(`[Git] Changes: ${diffStat.trim().split('\n').pop()}`);
 
     // Push and create draft PR
     console.log("[Git] Pushing branch...");

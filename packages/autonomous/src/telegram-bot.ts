@@ -43,7 +43,8 @@ interface State {
 function loadState(): State {
   try {
     return JSON.parse(readFileSync(STATE_FILE, "utf-8"));
-  } catch {
+  } catch (err) {
+    console.warn("[State] Failed to load, using defaults:", (err as Error).message);
     return {
       nightShiftTarget: "songscript",
       rotation: ["songscript", "zikaron", "claude-golem"],
@@ -59,8 +60,11 @@ function saveState(state: State) {
 // Load SOUL.md for persona
 function getSystemPromptContent(): string {
   try {
-    return readFileSync(SOUL_FILE, "utf-8");
-  } catch {
+    const content = readFileSync(SOUL_FILE, "utf-8");
+    console.log(`[Soul] Loaded ${content.length} chars from ${SOUL_FILE}`);
+    return content;
+  } catch (err) {
+    console.error(`[Soul] Failed to load ${SOUL_FILE}:`, (err as Error).message);
     return "";
   }
 }
@@ -78,7 +82,7 @@ async function askClaude(message: string): Promise<string> {
       "/Users/etanheyman/.local/bin/claude",
       "--dangerously-skip-permissions",
       "--resume", CHAT_SESSION_ID,  // Master Golem session persists across restarts
-      "--system-prompt", SOUL_FILE,  // SOUL.md persona
+      "--system-prompt", getSystemPromptContent(),  // Read SOUL.md content
       "-p", prompt
     ], {
       cwd: GITS,
@@ -243,6 +247,7 @@ bot.command("jobs", async (ctx) => {
 
 // Job query command - ask questions about your jobs
 bot.command("jobq", async (ctx) => {
+  console.log("[jobq] Received command");
   const question = ctx.message?.text?.replace("/jobq", "").trim();
 
   if (!question) {
@@ -250,11 +255,13 @@ bot.command("jobq", async (ctx) => {
     return;
   }
 
+  console.log(`[jobq] Question: ${question}`);
   const resultsDir = join(HOME, ".golems-zikaron/job-golem/results");
   const fs = require("fs");
 
   try {
     const files = fs.readdirSync(resultsDir).filter((f: string) => f.endsWith(".json")).sort().reverse();
+    console.log(`[jobq] Found ${files.length} result files`);
 
     if (files.length === 0) {
       await ctx.reply("📭 No job results yet. Run Job Golem first.");
@@ -263,6 +270,7 @@ bot.command("jobq", async (ctx) => {
 
     const latestFile = join(resultsDir, files[0]);
     const matches = JSON.parse(fs.readFileSync(latestFile, "utf-8"));
+    console.log(`[jobq] Loaded ${matches.length} job matches`);
 
     // Build job context for Claude
     const jobContext = matches.slice(0, 15).map((m: any, i: number) =>
@@ -272,10 +280,13 @@ bot.command("jobq", async (ctx) => {
     await ctx.replyWithChatAction("typing");
 
     const prompt = `Here are my latest job matches:\n\n${jobContext}\n\nQuestion: ${question}\n\nAnswer briefly and helpfully.`;
+    console.log("[jobq] Calling Claude...");
     const response = await askClaude(prompt);
+    console.log(`[jobq] Claude responded: ${response.slice(0, 50)}...`);
 
     await ctx.reply(response);
   } catch (err) {
+    console.error("[jobq] Error:", err);
     await ctx.reply(`❌ Error: ${err}`);
   }
 });
@@ -657,6 +668,7 @@ async function sendNotificationToTelegram(data: {
       await bot.api.sendMessage(chatId, message, { parse_mode: "Markdown" });
     } catch (mdErr) {
       // Markdown failed (likely special chars), send plain text
+      console.warn("[Notify] Markdown failed, falling back to plain text:", (mdErr as Error).message);
       const plainMessage = message.replace(/[*_`\[\]]/g, "");
       await bot.api.sendMessage(chatId, plainMessage);
     }
