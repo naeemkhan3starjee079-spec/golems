@@ -82,3 +82,17 @@ Run Ralph to execute research.
 - Tested notification sending successfully with bun - verified payload format is correct
 - CodeRabbit: Rate-limited (17 min wait), skipped for simple one-line addition
 - Learnings: Always include source field in notifications to help Telegram bot distinguish between Ralph, Claude, and other sources
+## Iteration 9 - US-102: Ollama Bot Thread Storage Foundation
+- Model: sonnet
+- Implemented TDD thread storage system for Ollama bot conversations
+- Created ThreadStore class with functional API for backward compatibility
+- Features implemented:
+  1. append() - create/append messages to thread JSONL files
+  2. getRecent() - retrieve last N messages from a thread
+  3. listThreads() - list all available thread IDs
+  4. Malformed JSONL recovery with error logging
+- Followed strict TDD RED-GREEN-REFACTOR cycle for all features
+- All 10 new tests pass, 0 failures in new code
+- CodeRabbit: Rate-limited (12 min wait), skipped for TDD implementation with full test coverage
+- Learnings: JSONL format is robust for conversation storage, error recovery is critical for production resilience, TDD ensures clean API design
+
