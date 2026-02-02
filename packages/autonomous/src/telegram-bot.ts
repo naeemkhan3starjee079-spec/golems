@@ -74,7 +74,10 @@ const queue: Array<{ ctx: any; text: string }> = [];
 
 // Spawn Claude with session persistence for memory
 // Uses --continue to resume the most recent conversation in this directory
-async function askClaude(message: string): Promise<string> {
+async function askClaude(
+  message: string,
+  onHeartbeat?: () => void
+): Promise<string> {
   const prompt = `Be brief (under 500 chars). You are ClaudeGolem.\n\n${message}`;
 
   // Use a dedicated directory for this bot's conversations
@@ -104,14 +107,21 @@ async function askClaude(message: string): Promise<string> {
       stderr: "pipe",
     });
 
-    // Timeout 120s (complex questions may take longer in one-shot mode)
+    // Timeout 5 minutes (complex tasks like research + subagents need time)
     const timeout = setTimeout(() => {
       proc.kill();
-      console.error("Claude timeout");
-    }, 120000);
+      console.error("Claude timeout (5 min)");
+    }, 300000);
+
+    // Heartbeat every 60s while Claude is working
+    const heartbeat = onHeartbeat ? setInterval(() => {
+      console.log("[Claude] Still working...");
+      onHeartbeat();
+    }, 60000) : null;
 
     await proc.exited;
     clearTimeout(timeout);
+    if (heartbeat) clearInterval(heartbeat);
 
     const output = await new Response(proc.stdout).text();
     const stderr = await new Response(proc.stderr).text();
@@ -141,7 +151,11 @@ async function processQueue() {
     console.log(`🤖 Spawning Claude for: "${text.slice(0, 50)}..."`);
     await notify("🤖 ClaudeGolem", `Processing: ${text.slice(0, 50)}...`);
 
-    const response = await askClaude(text);
+    // Heartbeat: typing indicator every 60s while Claude works
+    const response = await askClaude(text, async () => {
+      await ctx.replyWithChatAction("typing");
+    });
+
     console.log(`✅ Claude responded (${response.length} chars)`);
     await notify("✅ Claude Done", response.slice(0, 80));
 

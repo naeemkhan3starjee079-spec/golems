@@ -4,7 +4,13 @@
 
 ---
 
-## Recent Changes (2026-02-01)
+## Recent Changes (2026-02-02)
+
+### ClaudeGolem Timeout & Heartbeat
+- **Timeout: 5 minutes** (was 2 min) - complex tasks need time
+- **Typing heartbeat** every 60s while Claude works
+- **Acknowledge pattern** (SOUL.md) - Claude says "Got it. I'll do X, Y, Z." before complex tasks
+- This prevents "No response." on research/subagent tasks
 
 ### Session Architecture
 - **Master Golem** uses `--resume telegram-chat` - single persistent session for all chat
@@ -253,13 +259,94 @@ Research conducted via Ralph (gitignored, local only):
 
 ---
 
-## Supabase (EmailGolem)
+## 📧 EmailGolem (Email Triage)
+
+Smart email triage that runs every 10 minutes via launchd.
+
+### What It Does
+
+1. **Polls Gmail** via OAuth2 API
+2. **Scores emails 1-10** using Ollama (qwen2.5-coder:32b)
+3. **Alerts immediately** on score 10 (interviews, payment failures)
+4. **Morning digest** of job updates in briefing.ts
+5. **Tracks subscriptions** for monthly spending reports
+
+### Scoring System
+
+| Score | Action | Examples |
+|-------|--------|----------|
+| 10 | Telegram NOW | Interview, payment failed, urgent deadline |
+| 7-9 | Morning briefing | Job status, recruiter message |
+| 5-6 | Monthly tracking | Subscription receipts |
+| 1-4 | Ignore | Newsletters, promos, spam |
+
+### Files
+
+```
+src/email-golem/
+├── index.ts           # Main loop (CLI: --dry-run, --max=N)
+├── gmail-client.ts    # Gmail API wrapper
+├── scorer.ts          # Ollama scoring + categories
+├── db-client.ts       # Supabase + offline queue
+├── types.ts           # TypeScript interfaces
+├── CONTEXT.md         # Agent documentation
+└── README.md          # Setup + troubleshooting
+```
+
+### Control Panel
+
+```bash
+# Dry run (safe)
+bun run src/email-golem/index.ts --dry-run
+
+# Full run
+bun run src/email-golem/index.ts
+
+# Enable scheduler (every 10 min)
+launchctl load ~/Library/LaunchAgents/com.golemszikaron.email-golem.plist
+
+# Disable scheduler
+launchctl unload ~/Library/LaunchAgents/com.golemszikaron.email-golem.plist
+
+# View logs
+tail -f /tmp/golemszikaron-email-golem.log
+```
+
+### Environment Variables
+
+```bash
+# Gmail OAuth
+GMAIL_CLIENT_ID=...
+GMAIL_CLIENT_SECRET=...
+GMAIL_REFRESH_TOKEN=...
+
+# Supabase
+SUPABASE_URL=...
+SUPABASE_ANON_KEY=...
+```
+
+### State Files
+
+| Path | Purpose |
+|------|---------|
+| `~/.golems-zikaron/state.json` | lastEmailCheck, processedEmailIds |
+| `~/.golems-zikaron/offline-queue.json` | Queued items when offline |
+
+### Integration Points
+
+- **Notifications:** POST to `localhost:3847/notify` (requires telegram-bot running)
+- **Briefing:** `briefing.ts` imports `getRecentEmails()`, `getSubscriptionSummary()`
+- **Offline resilience:** All Supabase calls queue locally on failure
+
+---
+
+## Supabase
 
 **Context:** See `~/.claude/contexts/tech/supabase.md` for full guidelines.
 
 **Project:** `mkijzwkuubtfjqcemorx` (etanheyman.com)
 
-**Tables (email-golem):**
+**Tables (EmailGolem):**
 - `emails` - scored emails with categories
 - `subscriptions` - tracked services (Netflix, etc.)
 - `payments` - payment events for monthly digest
