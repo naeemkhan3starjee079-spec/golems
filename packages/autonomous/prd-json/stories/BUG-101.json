@@ -1,0 +1,15 @@
+{
+  "id": "BUG-101",
+  "title": "Fix OllamaChat Bot 409 Telegram Conflict",
+  "description": "OllamaChat bot keeps crashing with 409 Conflict error. The grammy bot.start() conflicts when launchd restarts too fast. Need to either: (a) add exponential backoff retry, (b) use bot.stop() before exit, or (c) disable KeepAlive and use manual restart.",
+  "acceptanceCriteria": [
+    {"text": "Read src/ollama-chat-bot.ts and understand the startup flow", "checked": false},
+    {"text": "Add proper error handling for 409 conflict with 30s+ delay before retry", "checked": false},
+    {"text": "Add bot.stop() in process signal handlers (SIGTERM, SIGINT)", "checked": false},
+    {"text": "Test: pkill bot, wait 5s, start again - should work without 409", "checked": false},
+    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": false},
+    {"text": "Commit: fix: BUG-101 resolve OllamaChat 409 conflict", "checked": false}
+  ],
+  "passes": false,
+  "blockedBy": null
+}
