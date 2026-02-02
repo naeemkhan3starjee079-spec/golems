@@ -3,7 +3,7 @@ import { $ } from "bun";
 import { readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 import { getPendingDrafts, approveDraft, rejectDraft, type Draft } from "./post-generator";
-import { postToMoltbook } from "./moltbook-client";
+import { createPost as postToSoltome } from "./soltome-client";
 
 // Mac notification helper
 async function notify(title: string, message: string) {
@@ -382,30 +382,14 @@ bot.command("repos", (ctx) => {
   ctx.reply(`📁 ${state.rotation.map(r => `\`${r}\``).join(" • ")}`, { parse_mode: "Markdown" });
 });
 
-// Surf command - trigger manual Moltbook surfing
+// Surf command - disabled for now
 bot.command("surf", async (ctx) => {
-  await ctx.reply("🏄 Starting Moltbook surfing session...");
-  try {
-    const { surfMoltbook, getPendingApprovals } = await import("./ollama-moltbook-surfer");
-    await surfMoltbook();
-    const pending = getPendingApprovals();
-    await ctx.reply(`✅ Surfing complete!\n\nPending approvals: ${pending.length}`);
-  } catch (err) {
-    await ctx.reply(`❌ Surfing failed: ${err}`);
-  }
+  await ctx.reply("🏄 Surfing disabled - feature being reworked");
 });
 
-// Forage command - collect Moltbook posts
+// Forage command - disabled for now
 bot.command("forage", async (ctx) => {
-  await ctx.reply("🌾 Foraging for posts...");
-  try {
-    const { handleForageCommand } = await import("./forage");
-    const cacheFile = join(HOME, ".golems-zikaron/molt-cache.json");
-    const result = await handleForageCommand(cacheFile);
-    await ctx.reply(result?.message || "No forage results available");
-  } catch (err) {
-    await ctx.reply(`❌ Forage failed: ${err}`);
-  }
+  await ctx.reply("🌾 Foraging disabled - feature being reworked");
 });
 
 // Draft approval commands with inline keyboard
@@ -469,24 +453,15 @@ async function handleApproval(ctx: any, num: number) {
     return;
   }
 
-  ctx.reply(`✅ Approved: "${draft.title}"\n\nPosting to Moltbook...`);
+  ctx.reply(`✅ Approved: "${draft.title}"\n\nPosting to Soltome...`);
 
-  // Post to Moltbook if API key is set
-  if (state.moltbookApiKey) {
-    const success = await postToMoltbook(
-      state.moltbookApiKey,
-      draft.submolt || "todayilearned",
-      draft.title,
-      draft.content
-    );
+  // Post to Soltome (uses API key from state.soltomeApiKey or env)
+  const result = await postToSoltome(draft.title, draft.content);
 
-    if (success) {
-      ctx.reply(`🎉 Posted to m/${draft.submolt}!`);
-    } else {
-      ctx.reply(`⚠️ Failed to post. Check Moltbook API key.`);
-    }
+  if (result.success) {
+    ctx.reply(`🎉 Posted to Soltome! (${result.newBalance} credits left)`);
   } else {
-    ctx.reply(`⚠️ No Moltbook API key. Set with /setmoltkey YOUR_KEY`);
+    ctx.reply(`⚠️ Failed to post: ${result.error}`);
   }
 }
 
@@ -517,22 +492,12 @@ bot.callbackQuery(/^approve:/, async (ctx) => {
   if (draft) {
     await ctx.editMessageText(`✅ Approved: "${draft.title}"`);
 
-    // Post to Moltbook if API key is set
-    const state = loadState();
-    if (state.moltbookApiKey) {
-      const success = await postToMoltbook(
-        state.moltbookApiKey,
-        draft.submolt || "todayilearned",
-        draft.title,
-        draft.content
-      );
-      if (success) {
-        await ctx.answerCallbackQuery({ text: `Posted to m/${draft.submolt}!` });
-      } else {
-        await ctx.answerCallbackQuery({ text: "Failed to post to Moltbook" });
-      }
+    // Post to Soltome
+    const result = await postToSoltome(draft.title, draft.content);
+    if (result.success) {
+      await ctx.answerCallbackQuery({ text: `Posted to Soltome!` });
     } else {
-      await ctx.answerCallbackQuery({ text: "Approved (no Moltbook key)" });
+      await ctx.answerCallbackQuery({ text: `Failed: ${result.error}` });
     }
   } else {
     await ctx.answerCallbackQuery({ text: "Draft not found" });

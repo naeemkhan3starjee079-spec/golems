@@ -8,7 +8,7 @@
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import { join } from "path";
-import { browseMoltbook, type MoltbookPost } from "./moltbook-client";
+import { fetchPosts as browseSoltome, type SoltomePost } from "./soltome-client";
 import { forMoltbook, getEmbedding, batchEmbed, findSimilar } from "./ollama-wrapper";
 
 const HOME = process.env.HOME || "/Users/etanheyman";
@@ -78,9 +78,9 @@ function savePatterns(patterns: LearnedPatterns) {
 }
 
 /**
- * Convert MoltbookPost to TrainingPost with engagement score
+ * Convert SoltomePost to TrainingPost with engagement score
  */
-function toTrainingPost(post: MoltbookPost): TrainingPost {
+function toTrainingPost(post: SoltomePost): TrainingPost {
   return {
     id: post.id,
     title: post.title,
@@ -241,8 +241,8 @@ export async function learnFromMoltbook(): Promise<LearnedPatterns> {
   console.log(`[Data] Loaded ${existing.length} existing posts`);
 
   // Fetch fresh posts
-  console.log("[Fetch] Browsing Moltbook...");
-  const freshPosts = await browseMoltbook();
+  console.log("[Fetch] Browsing Soltome...");
+  const freshPosts = await browseSoltome();
 
   if (freshPosts.length === 0) {
     console.log("[Fetch] No posts fetched (API may be down)");

@@ -14,7 +14,7 @@
  * 4. Run: bun run src/ollama-chat-bot.ts
  */
 
-import { Bot, Context } from "grammy";
+import { Bot, Context, Keyboard } from "grammy";
 import { Ollama } from "ollama";
 
 // Configuration
@@ -107,11 +107,19 @@ async function processWithOllama(chatId: number, prompt: string): Promise<string
     const history = getHistory(chatId);
     const contextMessages = history.slice(-CONTEXT_WINDOW_MESSAGES * 2);
 
+    // Build system prompt that explicitly mentions the conversation history
+    const historyCount = contextMessages.length;
+    const systemContent = historyCount > 0
+      ? `You are a helpful AI assistant chatting via Telegram. Be concise.
+
+IMPORTANT: You have FULL ACCESS to the conversation history shown above. The previous ${historyCount} messages are YOUR conversation with this user. When asked about "my last message" or "what did I say", refer to the user messages in the history above. DO NOT say you don't have access to past conversations - you DO have access, it's shown above.`
+      : "You are a helpful AI assistant chatting via Telegram. Be concise but helpful.";
+
     const messages = [
       // System prompt for context
       {
         role: "system" as const,
-        content: "You are a helpful AI assistant chatting via Telegram. Be concise but helpful. You have conversation memory - you can reference previous messages in this chat."
+        content: systemContent
       },
       // Previous conversation context
       ...contextMessages.map(msg => ({
@@ -121,6 +129,9 @@ async function processWithOllama(chatId: number, prompt: string): Promise<string
       // Current message
       { role: "user" as const, content: prompt }
     ];
+
+    // Debug log
+    console.log(`[Ollama] Sending ${messages.length} messages (${historyCount} from history)`);
 
     const response = await ollama.chat({
       model: DEFAULT_MODEL,
@@ -160,6 +171,13 @@ async function processQueue() {
   isProcessing = false;
 }
 
+// Persistent reply keyboard
+const mainKeyboard = new Keyboard()
+  .text("💾 Memory").text("🧹 Clear").row()
+  .text("📊 Status").text("🤖 Models").row()
+  .resized()
+  .persistent();
+
 // Command handlers
 bot.command("start", async (ctx) => {
   if (!isAuthorized(ctx)) {
@@ -168,7 +186,7 @@ bot.command("start", async (ctx) => {
   }
 
   await ctx.reply(`
-🤖 *OllamaChat Bot*
+🤖 *OllamaGolem*
 
 I'm connected to Ollama (${DEFAULT_MODEL}).
 
@@ -183,7 +201,7 @@ I'm connected to Ollama (${DEFAULT_MODEL}).
 Or just send me any message and I'll respond!
 
 💾 *Memory:* I remember our conversation (last ${CONTEXT_WINDOW_MESSAGES} messages).
-  `, { parse_mode: "Markdown" });
+  `, { parse_mode: "Markdown", reply_markup: mainKeyboard });
 });
 
 bot.command("status", async (ctx) => {
@@ -256,6 +274,39 @@ bot.on("message:text", async (ctx) => {
 
   const text = ctx.message.text;
   if (text.startsWith("/")) return; // Skip commands
+
+  // Handle keyboard button presses
+  if (text === "💾 Memory") {
+    const history = getHistory(ctx.chat.id);
+    const messageCount = history.length;
+    const oldestTime = history.length > 0 ? history[0].timestamp.toLocaleString() : "N/A";
+    await ctx.reply(`💾 *Memory Stats*\nMessages: ${messageCount}\nContext: Last ${CONTEXT_WINDOW_MESSAGES}\nOldest: ${oldestTime}`, { parse_mode: "Markdown" });
+    return;
+  }
+  if (text === "🧹 Clear") {
+    clearHistory(ctx.chat.id);
+    await ctx.reply("🧹 Conversation history cleared!");
+    return;
+  }
+  if (text === "📊 Status") {
+    try {
+      const tags = await ollama.list();
+      await ctx.reply(`✅ Ollama running\nModel: ${DEFAULT_MODEL}\nAvailable: ${tags.models.length}`);
+    } catch (e) {
+      await ctx.reply(`❌ Ollama error: ${e}`);
+    }
+    return;
+  }
+  if (text === "🤖 Models") {
+    try {
+      const tags = await ollama.list();
+      const modelList = tags.models.map(m => `• ${m.name}`).join("\n");
+      await ctx.reply(`*Models:*\n${modelList}`, { parse_mode: "Markdown" });
+    } catch (e) {
+      await ctx.reply("Error fetching models");
+    }
+    return;
+  }
 
   if (isProcessing) {
     messageQueue.push({

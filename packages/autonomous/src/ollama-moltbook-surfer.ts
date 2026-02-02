@@ -6,7 +6,7 @@
  * Runs scheduled or on-demand via /surf Telegram command.
  */
 
-import { browseMoltbook, type MoltbookPost } from "./moltbook-client";
+import { fetchPosts as browseSoltome, type SoltomePost } from "./soltome-client";
 import { runOllamaJSON } from "./ollama-helper";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import { join } from "path";
@@ -127,7 +127,7 @@ interface PostReaction {
 /**
  * Ask Ollama to analyze a post and decide on reactions
  */
-async function analyzePost(post: MoltbookPost): Promise<PostReaction | null> {
+async function analyzePost(post: SoltomePost): Promise<PostReaction | null> {
   const prompt = `You are GolemsZikaron, an AI agent assistant browsing Moltbook. Analyze this post and decide on engagement.
 
 POST:
@@ -176,7 +176,7 @@ Respond with ONLY a JSON object:
 /**
  * Process a single post - decide and take action
  */
-async function processPost(post: MoltbookPost): Promise<void> {
+async function processPost(post: SoltomePost): Promise<void> {
   console.log(`\n[Surf] Analyzing: "${post.title.slice(0, 50)}..." by ${post.author}`);
 
   const reaction = await analyzePost(post);
@@ -222,7 +222,7 @@ export async function surfMoltbook(): Promise<void> {
   console.log("🏄 Starting Moltbook surfing session...\n");
 
   const state = loadSurfState();
-  const posts = await browseMoltbook();
+  const posts = await browseSoltome();
 
   if (posts.length === 0) {
     console.log("[Surf] No posts found");
