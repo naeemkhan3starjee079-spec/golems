@@ -55,6 +55,37 @@ Then message [@GolemZikaronBot](https://t.me/GolemZikaronBot) on Telegram.
 
 ---
 
+## Recent Changes (2026-02-02)
+
+### New: OllamaChat Bot (`src/ollama-chat-bot.ts`)
+- Second Telegram bot for direct Ollama interaction
+- Bot: [@etans_private_ollama_golem_bot](https://t.me/etans_private_ollama_golem_bot)
+- Commands: `/ask`, `/status`, `/models`
+- Requires `OLLAMA_CHAT_BOT_TOKEN` in `.env`
+
+### New: Ollama Internet Access
+- Docker container now has internet (removed `internal: true`)
+- Security via omission: no git creds, no Supabase, no API keys
+- Can browse Moltbook and post comments
+- Code access: read-only (except songscript for writing)
+
+### Fixed: Telegram Bot
+- System prompt now correctly loads SOUL.md content (was passing path)
+- `/jobq` uses `--print` mode (one-shot, no session conflicts)
+- Added stderr logging for debugging Claude spawns
+- Increased timeout to 120s for complex queries
+
+### Fixed: Night Shift
+- Empty PR guard: checks `git diff --stat` before creating PR
+- Prevents PRs with 0 additions/0 deletions
+- Added response logging to `sendTelegram()`
+
+### Infrastructure
+- Repo now public: https://github.com/EtanHey/golems
+- Stop hook filters short sessions (<10s) to reduce notification spam
+
+---
+
 ## Components
 
 ### 1. Telegram Bot (`src/telegram-bot.ts`)

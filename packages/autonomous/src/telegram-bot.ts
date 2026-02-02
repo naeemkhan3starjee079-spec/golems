@@ -90,11 +90,11 @@ async function askClaude(message: string): Promise<string> {
       stderr: "pipe",
     });
 
-    // Timeout 60s
+    // Timeout 120s (complex questions may take longer in one-shot mode)
     const timeout = setTimeout(() => {
       proc.kill();
       console.error("Claude timeout");
-    }, 60000);
+    }, 120000);
 
     await proc.exited;
     clearTimeout(timeout);
