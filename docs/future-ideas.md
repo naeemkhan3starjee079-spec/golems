@@ -353,7 +353,45 @@ Same but:
 
 ---
 
-## 8. Open Questions (For Later)
+## 9. Zikaron Optimization - Deduplicate Redundant Contexts
+
+### Problem
+Zikaron indexer runs continuously and hammers Ollama with embedding requests (500%+ CPU).
+Much of the content being indexed is redundant:
+- Same CLAUDE.md copied to multiple locations
+- Shared contexts duplicated across packages
+- Similar conversations indexed multiple times
+
+### Proposed Solutions
+
+#### A. Content Deduplication
+- Hash content before indexing
+- Skip if hash already exists in index
+- Store hash → embedding mapping for reuse
+
+#### B. Incremental Indexing
+- Track last-indexed timestamp per file
+- Only re-index files modified since last run
+- Use filesystem watcher more intelligently (debounce)
+
+#### C. Scheduled Indexing
+- Don't run continuously
+- Run on schedule (e.g., every 2 hours, or after Night Shift)
+- Run on-demand when user searches
+
+#### D. Context Deduplication at Source
+- Single source of truth for shared contexts (`golems/contexts/`)
+- Symlinks instead of copies
+- Zikaron excludes symlink targets if source already indexed
+
+### Implementation Priority
+1. **Quick win**: Hash-based dedup (skip already-indexed content)
+2. **Medium**: Scheduled indexing instead of continuous
+3. **Longer**: Proper context management with symlinks
+
+---
+
+## 10. Open Questions (For Later)
 
 1. **Authentication**: Should dashboard require auth? Or just local-only?
 2. **Multi-device sync**: If on multiple devices, where's state?
@@ -363,7 +401,7 @@ Same but:
 
 ---
 
-## 8. Decision Log
+## 11. Decision Log
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
