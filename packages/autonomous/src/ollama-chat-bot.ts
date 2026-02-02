@@ -204,9 +204,29 @@ export async function notifyUser(chatId: number, message: string) {
   }
 }
 
-// Start the bot
-console.log("🤖 OllamaChat bot starting...");
-console.log(`   Model: ${DEFAULT_MODEL}`);
-console.log(`   Ollama: ${OLLAMA_HOST}`);
+// Start the bot with retry on 409 conflict
+async function startBot(retries = 3) {
+  console.log("🤖 OllamaChat bot starting...");
+  console.log(`   Model: ${DEFAULT_MODEL}`);
+  console.log(`   Ollama: ${OLLAMA_HOST}`);
 
-bot.start();
+  for (let i = 0; i < retries; i++) {
+    try {
+      await bot.start();
+      console.log("✅ OllamaChat bot running");
+      return;
+    } catch (err: any) {
+      if (err?.error_code === 409 && i < retries - 1) {
+        console.log(`[Bot] 409 conflict, waiting 10s before retry ${i + 2}/${retries}...`);
+        await new Promise(r => setTimeout(r, 10000));
+      } else {
+        throw err;
+      }
+    }
+  }
+}
+
+startBot().catch(err => {
+  console.error("[Bot] Failed to start:", err);
+  process.exit(1);
+});

@@ -26,7 +26,7 @@ const bot = new Bot(token);
 const HOME = process.env.HOME || "/Users/etanheyman";
 const GITS = join(HOME, "Gits");  // gitsClaude - access all repos
 const STATE_FILE = join(HOME, ".golems-zikaron/state.json");
-const SOUL_FILE = join(GITS, "golems-zikaron/SOUL.md");
+const SOUL_FILE = join(GITS, "golems/packages/autonomous/SOUL.md");
 
 // Session ID for Master Golem (persists across restarts)
 const CHAT_SESSION_ID = "telegram-chat";
