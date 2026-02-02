@@ -15,7 +15,7 @@ async function notify(title: string, message: string) {
   }
 }
 
-// GolemsZikaron Telegram Bot - On-Demand Claude Spawning
+// ClaudeGolem Telegram Bot - On-Demand Claude Spawning
 const token = process.env.TELEGRAM_BOT_TOKEN;
 if (!token) {
   throw new Error("TELEGRAM_BOT_TOKEN environment variable is required");
@@ -28,9 +28,7 @@ const GITS = join(HOME, "Gits");  // gitsClaude - access all repos
 const STATE_FILE = join(HOME, ".golems-zikaron/state.json");
 const SOUL_FILE = join(GITS, "golems/packages/autonomous/SOUL.md");
 
-// Session UUID for Master Golem (persists across restarts)
-// This allows --continue to resume from previous conversations
-const CHAT_SESSION_UUID = "11111111-1111-1111-1111-111111111111";
+// ClaudeGolem Telegram Bot - uses Claude Code CLI with conversation memory
 
 // State
 interface State {
@@ -74,35 +72,34 @@ function getSystemPromptContent(): string {
 let isProcessing = false;
 const queue: Array<{ ctx: any; text: string }> = [];
 
-// Track if this is the first message (need --session-id) or continuation (use --continue)
-let isFirstMessage = true;
-
 // Spawn Claude with session persistence for memory
+// Uses --continue to resume the most recent conversation in this directory
 async function askClaude(message: string): Promise<string> {
-  const prompt = `Be brief (under 500 chars). You are GolemsZikaron.\n\n${message}`;
+  const prompt = `Be brief (under 500 chars). You are ClaudeGolem.\n\n${message}`;
+
+  // Use a dedicated directory for this bot's conversations
+  const BOT_WORKING_DIR = join(HOME, ".golems-zikaron/claude-sessions");
 
   try {
-    // Build command args
+    // Ensure working directory exists
+    const { mkdirSync, existsSync } = await import("fs");
+    if (!existsSync(BOT_WORKING_DIR)) {
+      mkdirSync(BOT_WORKING_DIR, { recursive: true });
+    }
+
+    // Use --continue to resume from last conversation in this directory
+    // This gives us memory across messages!
     const args = [
       "/Users/etanheyman/.local/bin/claude",
       "--dangerously-skip-permissions",
       "--print",
+      "--continue",  // Continue from last conversation in cwd
+      "--system-prompt", getSystemPromptContent(),
+      prompt,
     ];
 
-    // First message: use fixed session ID so we can continue later
-    // Subsequent messages: use --continue to resume the session
-    if (isFirstMessage) {
-      args.push("--session-id", CHAT_SESSION_UUID);
-      args.push("--system-prompt", getSystemPromptContent());
-      isFirstMessage = false;
-    } else {
-      args.push("--continue");  // Continue from last message in this directory
-    }
-
-    args.push(prompt);
-
     const proc = Bun.spawn(args, {
-      cwd: GITS,
+      cwd: BOT_WORKING_DIR,  // Use dedicated dir for conversation continuity
       stdout: "pipe",
       stderr: "pipe",
     });
@@ -123,12 +120,6 @@ async function askClaude(message: string): Promise<string> {
     }
     if (!output.trim()) {
       console.warn("[Claude] Empty stdout, exit code:", proc.exitCode);
-      // If continue failed, try starting fresh
-      if (!isFirstMessage) {
-        console.log("[Claude] Retrying with fresh session...");
-        isFirstMessage = true;
-        return askClaude(message);
-      }
     }
     return output.trim() || "No response.";
   } catch (error) {
@@ -148,7 +139,7 @@ async function processQueue() {
     await ctx.replyWithChatAction("typing");
 
     console.log(`🤖 Spawning Claude for: "${text.slice(0, 50)}..."`);
-    await notify("🤖 GolemsZikaron", `Processing: ${text.slice(0, 50)}...`);
+    await notify("🤖 ClaudeGolem", `Processing: ${text.slice(0, 50)}...`);
 
     const response = await askClaude(text);
     console.log(`✅ Claude responded (${response.length} chars)`);
@@ -184,7 +175,7 @@ bot.command("start", (ctx) => {
   state.telegramChatId = ctx.chat.id;
   saveState(state);
 
-  ctx.reply(`🤖 *GolemsZikaron v5*
+  ctx.reply(`🤖 *ClaudeGolem v5*
 
 Master Golem + Night Shift workers.
 
@@ -758,7 +749,7 @@ Bun.serve({
 console.log(`📡 Notification server on port ${NOTIFY_PORT}`);
 
 // Start Telegram bot
-console.log("🤖 GolemsZikaron v5 (gitsClaude + SOUL.md + Notifications)");
+console.log("🤖 ClaudeGolem v5 (gitsClaude + SOUL.md + Notifications)");
 console.log("📍 Working dir:", GITS);
 
 bot.start({
