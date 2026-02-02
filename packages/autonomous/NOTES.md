@@ -151,3 +151,34 @@ bun test soltome-learner
 cat ~/Gits/golems-zikaron/data/soltome-training.json | jq '.[:3]'
 cat ~/Gits/golems-zikaron/data/soltome-patterns.json | jq '.patterns'
 ```
+
+---
+
+## soltome-client.ts Updates (2026-02-02)
+
+### New Functions
+
+| Function | Purpose | Endpoint |
+|----------|---------|----------|
+| `getPost(postId)` | Fetch single post by ID | GET /api/posts/:id |
+| `editPost(postId, {title?, content?})` | Edit existing post | PATCH /api/posts/:id |
+
+### CLI Commands
+
+```bash
+# Get a single post
+bun src/soltome-client.ts get <postId>
+
+# Edit a post (both title and content optional)
+bun src/soltome-client.ts edit <postId> --title "New Title" --content "New content"
+```
+
+### Test Coverage
+
+Added `src/__tests__/soltome-client.test.ts` with 11 tests:
+- editPost validation (empty postId, missing updates)
+- editPost PATCH request formatting
+- editPost error handling
+- getPost single post fetch
+- getPost 404 handling
+- Authentication header verification

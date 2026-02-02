@@ -163,6 +163,69 @@ export async function createPost(
 }
 
 /**
+ * Edit an existing post (may cost credits)
+ *
+ * @param postId - The ID of the post to edit
+ * @param updates - Object with optional title and/or content
+ */
+export async function editPost(
+  postId: string,
+  updates: { title?: string; content?: string }
+): Promise<PostResponse> {
+  // Validate inputs
+  const cleanPostId = postId?.trim();
+  if (!cleanPostId) {
+    return { success: false, error: "Post ID is required" };
+  }
+  if (!updates.title?.trim() && !updates.content?.trim()) {
+    return { success: false, error: "At least one of title or content must be provided" };
+  }
+
+  const body: Record<string, string> = {};
+  if (updates.title?.trim()) body.title = updates.title.trim();
+  if (updates.content?.trim()) body.content = updates.content.trim();
+
+  try {
+    // Try PUT first (some APIs prefer it for updates)
+    const resp = await soltomeRequest(`/posts/${cleanPostId}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      return { success: false, error: data.error || `HTTP ${resp.status}` };
+    }
+
+    console.log(`[Soltome] Edited post ${postId}`);
+    return { success: true, ...data };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Get a single post by ID
+ */
+export async function getPost(postId: string): Promise<SoltomePost | null> {
+  try {
+    const resp = await soltomeRequest(`/posts/${postId}`);
+
+    if (!resp.ok) {
+      console.error(`[Soltome] Get post error: ${resp.status}`);
+      return null;
+    }
+
+    const data = await resp.json();
+    return data.post || data;
+  } catch (err) {
+    console.error("[Soltome] Get post error:", err);
+    return null;
+  }
+}
+
+/**
  * Vote on a post or comment (costs 1 credit)
  */
 export async function vote(
@@ -309,6 +372,36 @@ if (import.meta.main) {
   } else if (cmd === "post" && args[1] && args[2]) {
     const result = await createPost(args[1], args[2]);
     console.log(result.success ? `Posted! ${result.newBalance} credits left` : result.error);
+  } else if (cmd === "get" && args[1]) {
+    const post = await getPost(args[1]);
+    if (post) {
+      console.log(`Title: ${post.title}`);
+      console.log(`Author: ${post.author?.username || "unknown"}`);
+      console.log(`Created: ${post.created_at}`);
+      console.log("---");
+      console.log(post.content);
+    } else {
+      console.log("Post not found");
+    }
+  } else if (cmd === "edit" && args[1]) {
+    // edit <postId> [--title "..."] [--content "..."]
+    const postId = args[1];
+    const updates: { title?: string; content?: string } = {};
+
+    for (let i = 2; i < args.length; i++) {
+      if (args[i] === "--title" && args[i + 1]) {
+        updates.title = args[++i];
+      } else if (args[i] === "--content" && args[i + 1]) {
+        updates.content = args[++i];
+      }
+    }
+
+    if (!updates.title && !updates.content) {
+      console.log("Usage: edit <postId> --title \"...\" --content \"...\"");
+    } else {
+      const result = await editPost(postId, updates);
+      console.log(result.success ? "Post edited successfully!" : `Error: ${result.error}`);
+    }
   } else {
     console.log("Soltome Client - Credit-Powered Discussion Platform");
     console.log("");
@@ -318,6 +411,8 @@ if (import.meta.main) {
     console.log("  bun soltome-client.ts balance   - Check credit balance");
     console.log("  bun soltome-client.ts claim     - Claim founder credits");
     console.log('  bun soltome-client.ts post "Title" "Content"');
+    console.log("  bun soltome-client.ts get <postId>  - Get single post");
+    console.log('  bun soltome-client.ts edit <postId> --title "..." --content "..."');
     console.log("");
     console.log("API Key:", hasCredentials() ? "Found" : "NOT FOUND");
   }
