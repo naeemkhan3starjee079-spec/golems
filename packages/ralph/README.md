@@ -144,6 +144,8 @@ ralph 50 --sonnet
 
 ### TypeScript UI Flags (ralph-ui)
 
+> **Note:** These are internal flags for `ralph-ui`. From shell use: `ralph 20 1200` (20 iterations, 1200s gap)
+
 | Flag | Description | Default |
 | --- | --- | --- |
 | `--run`, `-r` | Enable iteration runner mode | off |
