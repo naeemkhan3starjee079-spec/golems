@@ -337,3 +337,131 @@ const subs = await getSubscriptionSummary(client);
 - [x] Recent emails with time filter
 - [x] Recent emails with min score filter
 - [x] Error handling returns empty results
+
+---
+
+# Session C - Main Loop + Briefing
+
+## Session C Complete
+
+**Tests:** 11 pass
+**Files:**
+- `src/email-golem/index.ts` (main loop)
+- `src/__tests__/email-golem/index.test.ts`
+- `src/briefing.ts` (updated)
+- `launchd/com.golemszikaron.email-golem.plist`
+
+---
+
+## What Was Implemented
+
+### index.ts - Main Loop
+
+1. **`processEmails(options)`** - Main loop: fetch → score → save → notify
+2. **`processEmail(gmail, db, dryRun)`** - Process single email
+3. **CLI** with `--dry-run`, `--max=N`, `--help` flags
+4. **State management** - tracks `lastEmailCheck`, `processedEmailIds`
+5. **Deduplication** - skips already-processed emails
+6. **Notification** - sends to port 3847 if score >= 10
+
+### briefing.ts Updates
+
+1. **Email digest section** (24h):
+   - Urgent (already notified)
+   - Job updates
+   - Payments
+   - Summary line with counts
+
+2. **Monthly subscription summary** (on 1st of month):
+   - Active services with amounts
+   - Total monthly cost
+   - New/cancelled this month
+
+3. **Better formatting**:
+   - Unicode separators (━━━)
+   - Category emojis
+   - Telegram markdown (*bold*, _italic_, `code`, [links](url))
+
+### launchd Plist
+
+- `com.golemszikaron.email-golem.plist`
+- Runs every 10 minutes (600 seconds)
+- Logs to `/tmp/golemszikaron-email-golem.log`
+- Nice level 10 (low priority)
+
+---
+
+## Gaps / Questions for Docs Session
+
+### Gmail OAuth Setup
+- [ ] Document step-by-step OAuth setup in README
+- [ ] First-time auth flow needs manual run of `scripts/gmail-auth.ts`
+
+### Testing Without Gmail
+- [ ] How to run dry-run without valid Gmail credentials?
+- [ ] Need mock mode for development?
+
+### Subscription Tracking
+- [ ] `subscription_id` in payments table is always null
+- [ ] Payments not linked to subscriptions (needs lookup by service_name)
+- [ ] Consider: Supabase trigger to auto-link
+
+### Notification Server Dependency
+- [ ] Requires telegram-bot running on port 3847
+- [ ] Fails silently if server down (logs error, continues)
+- [ ] Document: Start telegram-bot before email-golem
+
+### State Management
+- [ ] Uses shared `~/.golems-zikaron/state.json`
+- [ ] EmailGolem adds: `lastEmailCheck`, `processedEmailIds`
+- [ ] processedEmailIds capped at 500 to prevent unbounded growth
+
+---
+
+## Known Limitations
+
+1. **Gmail API Quotas**: Not implemented: retry with backoff
+2. **Ollama Latency**: 300ms delay between emails (25s for 50 emails)
+3. **Subscription Detection**: Regex-based, may miss new services
+4. **Payment Extraction**: Simple `$X.XX` regex, limited formats
+
+---
+
+## Questions for Docs
+
+1. Add `/emails` Telegram command to view recent scores?
+2. Add `/check-email` skill for manual trigger?
+3. How to handle false positives (high score but not urgent)?
+4. Store email body for better scoring? (currently just snippet)
+
+---
+
+## Testing Commands
+
+```bash
+# Dry run (safe - no DB writes, no notifications)
+bun run src/email-golem/index.ts --dry-run
+
+# With max emails
+bun run src/email-golem/index.ts --dry-run --max=5
+
+# Run all email-golem tests
+bun test email-golem
+
+# Check launchd
+launchctl load ~/Library/LaunchAgents/com.golemszikaron.email-golem.plist
+launchctl list | grep email-golem
+tail -f /tmp/golemszikaron-email-golem.log
+```
+
+---
+
+## Verified Working
+
+- [x] Main loop compiles and runs (dry-run mode)
+- [x] Integration tests pass (11 tests)
+- [x] briefing.ts compiles with new imports
+- [x] launchd plist created
+- [x] State management works
+- [x] Deduplication works
+- [x] Category emojis in notifications

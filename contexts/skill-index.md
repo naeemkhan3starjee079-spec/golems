@@ -1,6 +1,6 @@
 # Available Skills
 
-> Auto-generated: 2026-02-01T02:33:48Z
+> Auto-generated: 2026-02-02T20:37:32Z
 > Regenerate: ~/.claude/scripts/generate-skill-index.sh
 
 ## Skills
@@ -19,13 +19,13 @@
 - /golem-powers:convex
 - /golem-powers:create-pr
 - /golem-powers:critique-waves
+- /golem-powers:email-golem
 - /golem-powers:example-bash
 - /golem-powers:example-typescript
 - /golem-powers:github-research
 - /golem-powers:github
 - /golem-powers:lsp
 - /golem-powers:notify
-- /golem-powers:ntfy
 - /golem-powers:obsidian
 - /golem-powers:prd-manager
 - /golem-powers:prd
@@ -33,6 +33,7 @@
 - /golem-powers:ralph-commit
 - /golem-powers:ralph-install
 - /golem-powers:skills
+- /golem-powers:soltome
 - /golem-powers:test-plan
 - /golem-powers:worktrees
 - /golem-powers:writing-skills

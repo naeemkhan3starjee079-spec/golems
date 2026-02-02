@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.golemszikaron.email-golem</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/etanheyman/.bun/bin/bun</string>
+        <string>/Users/etanheyman/Gits/golems/packages/autonomous/src/email-golem/index.ts</string>
+    </array>
+
+    <!-- Run every 10 minutes (600 seconds) -->
+    <key>StartInterval</key>
+    <integer>600</integer>
+
+    <key>StandardOutPath</key>
+    <string>/tmp/golemszikaron-email-golem.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/tmp/golemszikaron-email-golem.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HOME</key>
+        <string>/Users/etanheyman</string>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/Users/etanheyman/.bun/bin</string>
+    </dict>
+
+    <!-- Don't run immediately on load -->
+    <key>RunAtLoad</key>
+    <false/>
+
+    <!-- Process nice level - be kind to CPU -->
+    <key>Nice</key>
+    <integer>10</integer>
+</dict>
+</plist>

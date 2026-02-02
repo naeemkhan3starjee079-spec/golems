@@ -3,7 +3,9 @@
  * Morning Briefing - 8 AM summary of overnight work
  *
  * Compiles:
- * - Night Shift PR (if created)
+ * - Night Shift PRs (if created)
+ * - 24h Email digest (urgent, job updates, payments)
+ * - Monthly subscription summary (on 1st of month)
  * - Moltbook learnings
  * - Draft posts ready for approval
  */
@@ -12,6 +14,12 @@ import { readFileSync } from "fs";
 import { join } from "path";
 import { getPendingDrafts } from "./post-generator";
 import { sendTelegram } from "./night-shift";
+import {
+  createDbClient,
+  getRecentEmails,
+  getSubscriptionSummary,
+} from "./email-golem/db-client";
+import type { Email, SubscriptionSummary } from "./email-golem/types";
 
 const HOME = process.env.HOME || "/Users/etanheyman";
 const STATE_FILE = join(HOME, ".golems-zikaron/state.json");
@@ -53,6 +61,130 @@ function loadLearnings(): Learnings | null {
   }
 }
 
+/**
+ * Fetch 24h email digest from Supabase
+ */
+async function getEmailDigest(): Promise<{
+  urgent: Email[];
+  job: Email[];
+  payments: Email[];
+  total: number;
+} | null> {
+  try {
+    const db = createDbClient();
+    const emails = await getRecentEmails(db, 24, 5); // Last 24h, score >= 5
+
+    const urgent = emails.filter((e) => (e.score ?? 0) >= 10);
+    const job = emails.filter(
+      (e) => e.category === "job" && (e.score ?? 0) >= 7 && (e.score ?? 0) < 10
+    );
+    const payments = emails.filter((e) => e.category === "subscription");
+
+    return {
+      urgent,
+      job,
+      payments,
+      total: emails.length,
+    };
+  } catch (err) {
+    console.log("[Briefing] Could not fetch email digest:", err);
+    return null;
+  }
+}
+
+/**
+ * Format email digest section for Telegram
+ */
+function formatEmailDigest(digest: {
+  urgent: Email[];
+  job: Email[];
+  payments: Email[];
+  total: number;
+}): string {
+  let msg = "📧 *Emails (24h)*\n\n";
+
+  if (digest.urgent.length > 0) {
+    msg += "🔴 *Urgent* (already notified):\n";
+    for (const e of digest.urgent.slice(0, 3)) {
+      msg += `   → ${e.subject?.slice(0, 40) || "No subject"}...\n`;
+    }
+    msg += "\n";
+  }
+
+  if (digest.job.length > 0) {
+    msg += "💼 *Job Updates:*\n";
+    for (const e of digest.job.slice(0, 3)) {
+      msg += `   → ${e.subject?.slice(0, 40) || "No subject"}\n`;
+    }
+    msg += "\n";
+  }
+
+  if (digest.payments.length > 0) {
+    msg += "💳 *Payments:*\n";
+    for (const e of digest.payments.slice(0, 3)) {
+      msg += `   → ${e.subject?.slice(0, 40) || "No subject"}\n`;
+    }
+    msg += "\n";
+  }
+
+  // Summary line
+  const parts = [];
+  if (digest.job.length > 0) parts.push(`${digest.job.length} job updates`);
+  if (digest.urgent.length > 0) parts.push(`${digest.urgent.length} alerts`);
+  if (digest.payments.length > 0) parts.push(`${digest.payments.length} payments`);
+
+  if (parts.length > 0) {
+    msg += `_${parts.join(" • ")}_\n`;
+  } else {
+    msg += "_No notable emails_\n";
+  }
+
+  return msg;
+}
+
+/**
+ * Format subscription summary for Telegram (monthly)
+ */
+function formatSubscriptionSummary(summary: SubscriptionSummary): string {
+  const now = new Date();
+  const monthName = now.toLocaleString("en-US", { month: "long", year: "numeric" });
+
+  let msg = `💳 *Subscriptions Report - ${monthName}*\n\n`;
+
+  if (summary.services.length > 0) {
+    msg += "*Active Services:*\n";
+    for (const svc of summary.services) {
+      const amount = svc.amount ? `$${svc.amount.toFixed(2)}` : "???";
+      msg += `   → ${svc.name}: ${amount}\n`;
+    }
+    msg += `\n*Total:* \`$${summary.totalMonthly.toFixed(2)}/month\`\n`;
+  } else {
+    msg += "No tracked subscriptions\n";
+  }
+
+  if (summary.newThisMonth.length > 0) {
+    msg += "\n*Changes this month:*\n";
+    for (const name of summary.newThisMonth) {
+      msg += `✅ Added: ${name}\n`;
+    }
+  }
+
+  if (summary.cancelledThisMonth.length > 0) {
+    for (const name of summary.cancelledThisMonth) {
+      msg += `❌ Cancelled: ${name}\n`;
+    }
+  }
+
+  return msg;
+}
+
+/**
+ * Check if today is the 1st of the month
+ */
+function isFirstOfMonth(): boolean {
+  return new Date().getDate() === 1;
+}
+
 async function sendBriefing() {
   console.log("☀️ Generating morning briefing...\n");
 
@@ -61,7 +193,9 @@ async function sendBriefing() {
   const learnings = loadLearnings();
 
   // Build briefing - concise and useful
-  let msg = `☀️ Morning\n\n`;
+  let msg = `☀️ *Morning Briefing*\n\n`;
+
+  const separator = "━━━━━━━━━━━━━━━━━━━━━\n\n";
 
   // PR Section
   const prs = state.nightShiftPRs || [];
@@ -72,17 +206,39 @@ async function sendBriefing() {
   });
 
   if (recentPRs.length > 0) {
-    msg += `*${recentPRs.length} PR${recentPRs.length > 1 ? "s" : ""} overnight:*\n`;
+    msg += `🔧 *Night Shift*\n`;
+    msg += `→ ${recentPRs.length} PR${recentPRs.length > 1 ? "s" : ""}:`;
     recentPRs.forEach((pr) => {
-      msg += `→ ${pr.repo}: ${pr.url}\n`;
+      msg += ` [${pr.repo}](${pr.url})`;
     });
-    msg += `\n`;
+    msg += `\n\n`;
   } else if (state.lastPrUrl) {
     const repoMatch = state.lastPrUrl.match(/github\.com\/[^/]+\/([^/]+)/);
     const repoName = repoMatch ? repoMatch[1] : "repo";
-    msg += `*1 PR:* ${repoName}\n${state.lastPrUrl}\n\n`;
-  } else {
-    msg += `No PRs overnight\n\n`;
+    msg += `🔧 *Night Shift*\n→ 1 PR: [${repoName}](${state.lastPrUrl})\n\n`;
+  }
+
+  msg += separator;
+
+  // Email Digest Section (24h)
+  const emailDigest = await getEmailDigest();
+  if (emailDigest && emailDigest.total > 0) {
+    msg += formatEmailDigest(emailDigest);
+    msg += "\n" + separator;
+  }
+
+  // Monthly Subscription Summary (on 1st of month)
+  if (isFirstOfMonth()) {
+    try {
+      const db = createDbClient();
+      const subSummary = await getSubscriptionSummary(db);
+      if (subSummary.services.length > 0) {
+        msg += formatSubscriptionSummary(subSummary);
+        msg += "\n" + separator;
+      }
+    } catch (err) {
+      console.log("[Briefing] Could not fetch subscription summary:", err);
+    }
   }
 
   // Learnings Section
@@ -111,12 +267,12 @@ async function sendBriefing() {
       }
     });
 
-    msg += `*${drafts.length} drafts* → `;
+    msg += `📝 *Drafts:* ${drafts.length} ready\n`;
     const cats = Object.entries(categories).map(([k, v]) => `${v} ${k}`).join(", ");
-    msg += `${cats}\n`;
-    msg += `/drafts to review`;
+    msg += `→ ${cats}\n`;
+    msg += `_/drafts to review_`;
   } else {
-    msg += `No drafts 📭`;
+    msg += `📝 No drafts 📭`;
   }
 
   // Send
