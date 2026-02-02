@@ -2,7 +2,7 @@
  * OllamaChat Telegram Bot
  *
  * Direct Ollama interaction via Telegram - ask questions, get answers.
- * Ollama can also ping you with notifications.
+ * Now with conversation memory - the bot remembers context from recent messages.
  *
  * SETUP:
  * 1. Create bot via BotFather: https://t.me/BotFather
@@ -22,6 +22,10 @@ const BOT_TOKEN = process.env.OLLAMA_CHAT_BOT_TOKEN;
 const OLLAMA_HOST = process.env.OLLAMA_HOST || "http://localhost:11434";
 const DEFAULT_MODEL = process.env.OLLAMA_MODEL || "qwen3-coder-64k";
 const ALLOWED_USERS = (process.env.ALLOWED_TELEGRAM_USERS || "").split(",").filter(Boolean);
+
+// Memory configuration
+const MAX_HISTORY_MESSAGES = 20;  // Keep last 20 message pairs per chat
+const CONTEXT_WINDOW_MESSAGES = 10;  // Use last 10 for context
 
 if (!BOT_TOKEN) {
   console.error(`
@@ -47,6 +51,38 @@ if (!BOT_TOKEN) {
 const bot = new Bot(BOT_TOKEN);
 const ollama = new Ollama({ host: OLLAMA_HOST });
 
+// Conversation memory - per chat ID
+interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+  timestamp: Date;
+}
+const conversationHistory: Map<number, ChatMessage[]> = new Map();
+
+// Get or create conversation history for a chat
+function getHistory(chatId: number): ChatMessage[] {
+  if (!conversationHistory.has(chatId)) {
+    conversationHistory.set(chatId, []);
+  }
+  return conversationHistory.get(chatId)!;
+}
+
+// Add message to history and trim if needed
+function addToHistory(chatId: number, role: "user" | "assistant", content: string) {
+  const history = getHistory(chatId);
+  history.push({ role, content, timestamp: new Date() });
+
+  // Trim to max history
+  while (history.length > MAX_HISTORY_MESSAGES * 2) {
+    history.shift();
+  }
+}
+
+// Clear history for a chat
+function clearHistory(chatId: number) {
+  conversationHistory.set(chatId, []);
+}
+
 // Message queue for when Ollama is busy
 interface QueuedMessage {
   chatId: number;
@@ -64,14 +100,38 @@ function isAuthorized(ctx: Context): boolean {
   return ALLOWED_USERS.includes(userId) || ALLOWED_USERS.includes(username);
 }
 
-// Process message with Ollama
-async function processWithOllama(prompt: string): Promise<string> {
+// Process message with Ollama (includes conversation history for context)
+async function processWithOllama(chatId: number, prompt: string): Promise<string> {
   try {
+    // Build messages array with history for context
+    const history = getHistory(chatId);
+    const contextMessages = history.slice(-CONTEXT_WINDOW_MESSAGES * 2);
+
+    const messages = [
+      // System prompt for context
+      {
+        role: "system" as const,
+        content: "You are a helpful AI assistant chatting via Telegram. Be concise but helpful. You have conversation memory - you can reference previous messages in this chat."
+      },
+      // Previous conversation context
+      ...contextMessages.map(msg => ({
+        role: msg.role as "user" | "assistant",
+        content: msg.content
+      })),
+      // Current message
+      { role: "user" as const, content: prompt }
+    ];
+
     const response = await ollama.chat({
       model: DEFAULT_MODEL,
-      messages: [{ role: "user", content: prompt }],
+      messages,
       stream: false,
     });
+
+    // Store both user message and response in history
+    addToHistory(chatId, "user", prompt);
+    addToHistory(chatId, "assistant", response.message.content);
+
     return response.message.content;
   } catch (error) {
     console.error("Ollama error:", error);
@@ -87,7 +147,7 @@ async function processQueue() {
 
   while (messageQueue.length > 0) {
     const msg = messageQueue.shift()!;
-    const response = await processWithOllama(msg.text);
+    const response = await processWithOllama(msg.chatId, msg.text);
 
     try {
       await bot.api.sendMessage(msg.chatId, response, { parse_mode: "Markdown" });
@@ -117,8 +177,12 @@ I'm connected to Ollama (${DEFAULT_MODEL}).
 /model - Show current model
 /models - List available models
 /status - Check Ollama status
+/clear - Clear conversation history
+/memory - Show memory stats
 
 Or just send me any message and I'll respond!
+
+💾 *Memory:* I remember our conversation (last ${CONTEXT_WINDOW_MESSAGES} messages).
   `, { parse_mode: "Markdown" });
 });
 
@@ -151,6 +215,27 @@ bot.command("model", async (ctx) => {
   await ctx.reply(`Current model: ${DEFAULT_MODEL}`);
 });
 
+bot.command("clear", async (ctx) => {
+  if (!isAuthorized(ctx)) return;
+  clearHistory(ctx.chat.id);
+  await ctx.reply("🧹 Conversation history cleared. Starting fresh!");
+});
+
+bot.command("memory", async (ctx) => {
+  if (!isAuthorized(ctx)) return;
+  const history = getHistory(ctx.chat.id);
+  const messageCount = history.length;
+  const oldestTime = history.length > 0
+    ? history[0].timestamp.toLocaleString()
+    : "N/A";
+  await ctx.reply(`
+💾 *Memory Stats*
+Messages in history: ${messageCount}
+Context window: Last ${CONTEXT_WINDOW_MESSAGES} exchanges
+Oldest message: ${oldestTime}
+  `, { parse_mode: "Markdown" });
+});
+
 bot.command("ask", async (ctx) => {
   if (!isAuthorized(ctx)) return;
 
@@ -161,7 +246,7 @@ bot.command("ask", async (ctx) => {
   }
 
   await ctx.reply("🤔 Thinking...");
-  const response = await processWithOllama(question);
+  const response = await processWithOllama(ctx.chat.id, question);
   await ctx.reply(response);
 });
 
@@ -183,7 +268,7 @@ bot.on("message:text", async (ctx) => {
   }
 
   await ctx.reply("🤔 Thinking...");
-  const response = await processWithOllama(text);
+  const response = await processWithOllama(ctx.chat.id, text);
 
   try {
     await ctx.reply(response, { parse_mode: "Markdown" });

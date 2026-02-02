@@ -28,8 +28,9 @@ const GITS = join(HOME, "Gits");  // gitsClaude - access all repos
 const STATE_FILE = join(HOME, ".golems-zikaron/state.json");
 const SOUL_FILE = join(GITS, "golems/packages/autonomous/SOUL.md");
 
-// Session ID for Master Golem (persists across restarts)
-const CHAT_SESSION_ID = "telegram-chat";
+// Session UUID for Master Golem (persists across restarts)
+// This allows --continue to resume from previous conversations
+const CHAT_SESSION_UUID = "11111111-1111-1111-1111-111111111111";
 
 // State
 interface State {
@@ -73,18 +74,34 @@ function getSystemPromptContent(): string {
 let isProcessing = false;
 const queue: Array<{ ctx: any; text: string }> = [];
 
-// Spawn Claude - simple approach that works
+// Track if this is the first message (need --session-id) or continuation (use --continue)
+let isFirstMessage = true;
+
+// Spawn Claude with session persistence for memory
 async function askClaude(message: string): Promise<string> {
   const prompt = `Be brief (under 500 chars). You are GolemsZikaron.\n\n${message}`;
 
   try {
-    const proc = Bun.spawn([
+    // Build command args
+    const args = [
       "/Users/etanheyman/.local/bin/claude",
       "--dangerously-skip-permissions",
-      "--print",  // Non-interactive mode (can't use --resume with -p)
-      "--system-prompt", getSystemPromptContent(),  // Read SOUL.md content
-      prompt
-    ], {
+      "--print",
+    ];
+
+    // First message: use fixed session ID so we can continue later
+    // Subsequent messages: use --continue to resume the session
+    if (isFirstMessage) {
+      args.push("--session-id", CHAT_SESSION_UUID);
+      args.push("--system-prompt", getSystemPromptContent());
+      isFirstMessage = false;
+    } else {
+      args.push("--continue");  // Continue from last message in this directory
+    }
+
+    args.push(prompt);
+
+    const proc = Bun.spawn(args, {
       cwd: GITS,
       stdout: "pipe",
       stderr: "pipe",
@@ -106,6 +123,12 @@ async function askClaude(message: string): Promise<string> {
     }
     if (!output.trim()) {
       console.warn("[Claude] Empty stdout, exit code:", proc.exitCode);
+      // If continue failed, try starting fresh
+      if (!isFirstMessage) {
+        console.log("[Claude] Retrying with fresh session...");
+        isFirstMessage = true;
+        return askClaude(message);
+      }
     }
     return output.trim() || "No response.";
   } catch (error) {
