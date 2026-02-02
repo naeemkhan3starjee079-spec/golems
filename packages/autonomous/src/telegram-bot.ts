@@ -78,7 +78,7 @@ async function askClaude(message: string): Promise<string> {
   const prompt = `Be brief (under 500 chars). You are ClaudeGolem.\n\n${message}`;
 
   // Use a dedicated directory for this bot's conversations
-  const BOT_WORKING_DIR = join(HOME, ".golems-zikaron/claude-sessions");
+  const BOT_WORKING_DIR = join(HOME, "Gits");  // Run from ~/Gits to access all repos
 
   try {
     // Ensure working directory exists
