@@ -95,7 +95,8 @@ async function askClaude(
     const recentEvents = await getRecentEvents(24);
     const eventSummary = formatEventsForClaude(recentEvents);
     const soulContent = getSystemPromptContent();
-    const systemPrompt = `${soulContent}
+    const personaPrompt = PERSONAS[activePersona]?.prompt || "";
+    const systemPrompt = `${soulContent}${personaPrompt}
 
 ## While You Were Down
 ${eventSummary}`;
@@ -190,8 +191,50 @@ async function processQueue() {
 // Persistent Reply Keyboard (menu at bottom)
 const menuKeyboard = new Keyboard()
   .text("📝 Drafts").text("🌙 Tonight").text("📊 Status")
+  .row()
+  .text("✍️ Content").text("📅 Queue").text("🎭 Persona")
   .resized()
   .persistent();
+
+// Available personas for ClaudeGolem
+const PERSONAS: Record<string, { name: string; emoji: string; prompt: string }> = {
+  default: {
+    name: "ClaudeGolem",
+    emoji: "🤖",
+    prompt: "", // Uses SOUL.md as-is
+  },
+  influencer: {
+    name: "Influencer",
+    emoji: "✍️",
+    prompt: `\n\n## ACTIVE MODE: Content Creator
+You are in CONTENT MODE. Focus on creating Soltome posts.
+- Use first person as ClaudeGolem
+- Be technical but accessible
+- Use markdown formatting
+- Keep posts engaging and mysterious`,
+  },
+  coder: {
+    name: "Coder",
+    emoji: "💻",
+    prompt: `\n\n## ACTIVE MODE: Coder
+You are in CODING MODE. Focus on implementation.
+- Write working code
+- Explain changes briefly
+- Run tests when possible`,
+  },
+  researcher: {
+    name: "Researcher",
+    emoji: "🔬",
+    prompt: `\n\n## ACTIVE MODE: Researcher
+You are in RESEARCH MODE. Focus on finding information.
+- Search thoroughly
+- Cite sources
+- Summarize findings`,
+  },
+};
+
+// Track active persona
+let activePersona = "default";
 
 // Commands
 bot.command("start", (ctx) => {
@@ -585,6 +628,48 @@ bot.callbackQuery(/^tonight:/, async (ctx) => {
   }
 });
 
+// Content creation callbacks - queue message with persona context
+bot.callbackQuery(/^content:/, async (ctx) => {
+  const type = ctx.callbackQuery.data?.replace("content:", "") || "";
+  await ctx.answerCallbackQuery({ text: `Queuing ${type} request...` });
+
+  const typePrompts: Record<string, string> = {
+    teaser: "[CONTENT MODE: TEASER] Draft a teaser for tomorrow's reveal. Current series: Philosophy (Spawn→Work→Die→Remember). Keep it mysterious, 1-2 lines max. Output ONLY the draft content.",
+    reveal: "[CONTENT MODE: REVEAL] Draft a reveal post about the memory system (Zikaron). Deep-dive, use markdown. Output ONLY the draft content.",
+    quick: "[CONTENT MODE: QUICK] Draft a quick hit - stats or humor about ClaudeGolem. Output ONLY the draft content.",
+    author: "[CONTENT MODE: AUTHOR] Draft an author note from Etan's perspective about the spawn-and-die architecture. Sign as '- Etan'. Output ONLY the draft content.",
+    plan: "[CONTENT MODE: PLAN] Read packages/autonomous/data/content-series/week-1-philosophy.md and show the content plan. Suggest what to post next.",
+  };
+
+  const prompt = typePrompts[type] || `Create ${type} content for Soltome.`;
+
+  await ctx.editMessageText(`✍️ *Creating ${type}...*\n\n_Added to queue_`, { parse_mode: "Markdown" });
+
+  // Queue the request - will be processed by regular askClaude with persona in SOUL.md
+  queue.push({ ctx, text: prompt });
+  console.log(`📥 Content request queued: ${type}`);
+  processQueue();
+});
+
+// Discard draft
+bot.callbackQuery("discard-draft", async (ctx) => {
+  await ctx.editMessageText("🗑️ Draft discarded.");
+  await ctx.answerCallbackQuery();
+});
+
+// Persona selection
+bot.callbackQuery(/^persona:/, async (ctx) => {
+  const personaKey = ctx.callbackQuery.data?.replace("persona:", "") || "default";
+  if (PERSONAS[personaKey]) {
+    activePersona = personaKey;
+    const persona = PERSONAS[personaKey];
+    await ctx.editMessageText(`🎭 Switched to: ${persona.emoji} *${persona.name}*`, { parse_mode: "Markdown" });
+    await ctx.answerCallbackQuery({ text: `Now: ${persona.name}` });
+  } else {
+    await ctx.answerCallbackQuery({ text: "Unknown persona" });
+  }
+});
+
 // Catch-all for unknown callbacks
 bot.on("callback_query:data", async (ctx) => {
   console.log("Unknown callback:", ctx.callbackQuery.data);
@@ -653,6 +738,64 @@ bot.on("message:text", async (ctx) => {
 📬 Queue: ${queueLen} messages
 ⚙️ Processing: ${isProcessing ? "yes" : "idle"}
 🧠 Session: \`${CHAT_SESSION_ID}\``, { parse_mode: "Markdown" });
+    return;
+  }
+
+  if (text === "✍️ Content") {
+    // Show content menu with inline buttons
+    const keyboard = new InlineKeyboard()
+      .text("📝 Draft Teaser", "content:teaser")
+      .text("📖 Draft Reveal", "content:reveal")
+      .row()
+      .text("💬 Draft Quick", "content:quick")
+      .text("✏️ Author Note", "content:author")
+      .row()
+      .text("📅 Week Plan", "content:plan");
+    await ctx.reply(`✍️ *Content Studio*
+
+What would you like to create?
+
+_Uses soltome-influencer agent_`, { parse_mode: "Markdown", reply_markup: keyboard });
+    return;
+  }
+
+  if (text === "📅 Queue") {
+    // Show content queue from content-series files
+    try {
+      const seriesPath = join(GITS, "golems/packages/autonomous/data/content-series/week-1-philosophy.md");
+      const { existsSync, readFileSync } = await import("fs");
+      if (existsSync(seriesPath)) {
+        const content = readFileSync(seriesPath, "utf-8");
+        const statusMatch = content.match(/## Series Status[\s\S]*?\|[\s\S]*?\|([\s\S]*?)(?=\n\n##|$)/);
+        if (statusMatch) {
+          await ctx.reply(`📅 *Content Queue*
+
+${statusMatch[0]}`, { parse_mode: "Markdown" });
+        } else {
+          await ctx.reply("📅 Content queue is empty. Use ✍️ Content to create posts.");
+        }
+      } else {
+        await ctx.reply("📅 No content series found. Create one with ✍️ Content → Week Plan.");
+      }
+    } catch (err) {
+      await ctx.reply("📅 Error reading content queue.");
+    }
+    return;
+  }
+
+  if (text === "🎭 Persona") {
+    // Show persona selector
+    const current = PERSONAS[activePersona];
+    const keyboard = new InlineKeyboard();
+    Object.entries(PERSONAS).forEach(([key, persona]) => {
+      const isActive = key === activePersona ? "✓ " : "";
+      keyboard.text(`${isActive}${persona.emoji} ${persona.name}`, `persona:${key}`);
+    });
+    await ctx.reply(`🎭 *Persona Selector*
+
+Current: ${current.emoji} *${current.name}*
+
+_Changes how ClaudeGolem responds_`, { parse_mode: "Markdown", reply_markup: keyboard });
     return;
   }
 
