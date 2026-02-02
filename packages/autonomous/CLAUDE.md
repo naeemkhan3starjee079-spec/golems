@@ -208,7 +208,13 @@ golems-zikaron/
 │   ├── briefing.ts         # 8am morning summary
 │   ├── moltbook-client.ts  # Browse + filter shitposts
 │   ├── post-generator.ts   # Critique-waves (uses learned patterns)
-│   └── ollama-helper.ts    # Ollama spawn wrapper
+│   ├── ollama-helper.ts    # Ollama spawn wrapper
+│   ├── email-golem/        # Email triage + subscription tracking
+│   │   ├── index.ts        # Main entry (10min cron)
+│   │   ├── gmail-client.ts # Gmail API wrapper
+│   │   ├── scorer.ts       # Ollama scoring (urgent/job/subscription)
+│   │   └── db-client.ts    # Supabase + offline queue
+│   └── job-golem/          # Job board scraping
 ├── launchd/
 │   ├── *.plist             # macOS schedulers
 │   └── install.sh          # One-command setup
@@ -244,6 +250,44 @@ Research conducted via Ralph (gitignored, local only):
 | **Zikaron** | `~/Gits/zikaron/` | Memory layer, style analysis |
 | **Claude-Golem** | `~/Gits/claude-golem/` | Ralph autonomous loop |
 | **SongScript** | `~/Gits/songscript/` | Night Shift target (private) |
+
+---
+
+## Supabase (EmailGolem)
+
+**Context:** See `~/.claude/contexts/tech/supabase.md` for full guidelines.
+
+**Project:** `mkijzwkuubtfjqcemorx` (etanheyman.com)
+
+**Tables (email-golem):**
+- `emails` - scored emails with categories
+- `subscriptions` - tracked services (Netflix, etc.)
+- `payments` - payment events for monthly digest
+
+**Bun-specific client pattern:**
+```typescript
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_ANON_KEY!
+);
+
+// All calls must handle offline gracefully
+async function safeInsert(table: string, data: any) {
+  try {
+    const { error } = await supabase.from(table).insert(data);
+    if (error) throw error;
+    return { success: true };
+  } catch (err) {
+    // Queue for later sync
+    appendToLocalQueue({ table, data, timestamp: new Date() });
+    return { success: false, queued: true };
+  }
+}
+```
+
+**Migrations:** Create SQL files in `supabase/migrations/` before applying.
 
 ---
 

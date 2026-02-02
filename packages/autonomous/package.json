@@ -15,6 +15,7 @@
     "@anthropic-ai/sdk": "^0.72.1",
     "@supabase/supabase-js": "^2.49.1",
     "chromadb": "^3.2.2",
+    "googleapis": "^171.1.0",
     "grammy": "^1.21.1",
     "ollama": "^0.6.3"
   }
