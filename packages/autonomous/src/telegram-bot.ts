@@ -368,6 +368,19 @@ bot.command("repos", (ctx) => {
   ctx.reply(`📁 ${state.rotation.map(r => `\`${r}\``).join(" • ")}`, { parse_mode: "Markdown" });
 });
 
+// Surf command - trigger manual Moltbook surfing
+bot.command("surf", async (ctx) => {
+  await ctx.reply("🏄 Starting Moltbook surfing session...");
+  try {
+    const { surfMoltbook, getPendingApprovals } = await import("./ollama-moltbook-surfer");
+    await surfMoltbook();
+    const pending = getPendingApprovals();
+    await ctx.reply(`✅ Surfing complete!\n\nPending approvals: ${pending.length}`);
+  } catch (err) {
+    await ctx.reply(`❌ Surfing failed: ${err}`);
+  }
+});
+
 // Draft approval commands with inline keyboard
 bot.command("drafts", async (ctx) => {
   const drafts = getPendingDrafts();

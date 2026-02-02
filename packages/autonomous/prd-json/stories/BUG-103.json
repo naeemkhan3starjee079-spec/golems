@@ -1,0 +1,15 @@
+{
+  "id": "BUG-103",
+  "title": "Switch Ralph Notifications from ntfy to Telegram",
+  "description": "Ralph currently sends notifications via ntfy.sh. Switch to Telegram bot server at localhost:3847. Config already updated to use 'telegram' key instead of 'ntfyTopic'.",
+  "acceptanceCriteria": [
+    {"text": "Read ralph-ui/src/*.ts to find notification sending code", "checked": false},
+    {"text": "Update to POST to config.notifications.telegram URL", "checked": false},
+    {"text": "Send JSON: {title, body, source:'ralph', priority}", "checked": false},
+    {"text": "Test: ralph sends notification on story complete", "checked": false},
+    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": false},
+    {"text": "Commit: fix: BUG-103 switch Ralph to Telegram notifications", "checked": false}
+  ],
+  "passes": false,
+  "blockedBy": null
+}

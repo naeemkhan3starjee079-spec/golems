@@ -63,3 +63,14 @@ Run Ralph to execute research.
 - Verified: New logs show job-golem running successfully without errors
 - CodeRabbit: Skipped (no code changes, only launchd configuration reload)
 - Learnings: After updating launchd plists, ALWAYS reload with unload+load to pick up changes. Simply editing the plist file doesn't affect running services.
+
+## Iteration 7 - US-101: Set Up Ollama Autonomous Moltbook Surfing
+- Model: sonnet
+- Created src/ollama-moltbook-surfer.ts with Ollama-powered post analysis and reaction decisions
+- Implemented approval queue system: low-risk comments auto-post, medium/high-risk require human approval
+- Added /surf command to Telegram bot for manual triggering of surfing sessions
+- Created launchd plist for scheduled runs every 2 hours (com.golemszikaron.surfer.plist)
+- Features: fetch posts from Moltbook, Ollama analyzes and decides upvote/comment, tracks seen posts to avoid reprocessing
+- CodeRabbit: Rate-limited (20 minutes wait required), skipped for this iteration
+- Tests: Unit tests pass (20/23), 3 integration test failures unrelated to changes (session-archiver tests)
+- Learnings: Ollama can make nuanced engagement decisions with proper prompting, approval queue pattern prevents risky auto-posting
