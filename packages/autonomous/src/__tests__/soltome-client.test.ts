@@ -80,10 +80,12 @@ describe("Soltome Client", () => {
       await editPost("post-456", { content: "New content here" });
 
       expect(mockFetch).toHaveBeenCalled();
-      const [url, options] = mockFetch.mock.calls[0] as [string, RequestInit];
-      expect(url).toContain("/posts/post-456");
-      expect(options.method).toBe("PATCH");
-      expect(JSON.parse(options.body as string)).toEqual({ content: "New content here" });
+      // Get the last call since module caching may cause multiple calls across tests
+      const calls = mockFetch.mock.calls;
+      const lastCall = calls[calls.length - 1] as [string, RequestInit];
+      expect(lastCall[0]).toContain("/posts/post-456");
+      expect(lastCall[1].method).toBe("PATCH");
+      expect(JSON.parse(lastCall[1].body as string)).toEqual({ content: "New content here" });
     });
 
     it("should call PATCH with both title and content when provided", async () => {
