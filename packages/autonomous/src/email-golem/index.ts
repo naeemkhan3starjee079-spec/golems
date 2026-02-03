@@ -215,7 +215,8 @@ async function processEmail(
 async function processEmails(options: { dryRun?: boolean; maxEmails?: number } = {}) {
   const { dryRun = false, maxEmails = 20 } = options;
 
-  console.log("\n📧 EmailGolem - Starting...\n");
+  const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 19);
+  console.log(`\n[${timestamp}] 📧 EmailGolem - Starting...\n`);
 
   if (dryRun) {
     console.log("⚠️  DRY-RUN MODE - No changes will be made\n");
@@ -302,7 +303,8 @@ async function processEmails(options: { dryRun?: boolean; maxEmails?: number } =
     console.log("\n✓ State saved");
   }
 
-  console.log("\n📧 EmailGolem - Done!\n");
+  const endTime = new Date().toISOString().replace('T', ' ').slice(0, 19);
+  console.log(`\n[${endTime}] 📧 EmailGolem - Done!\n`);
 }
 
 /**

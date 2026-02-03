@@ -234,7 +234,8 @@ function formatSoltomeActivity(activity: {
 }
 
 async function sendBriefing() {
-  console.log("☀️ Generating morning briefing...\n");
+  const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 19);
+  console.log(`[${timestamp}] ☀️ Generating morning briefing...\n`);
 
   const state = loadState();
   const drafts = getPendingDrafts();
@@ -332,7 +333,8 @@ async function sendBriefing() {
 
   // Send
   await sendTelegram(msg);
-  console.log("✅ Briefing sent!\n");
+  const endTime = new Date().toISOString().replace('T', ' ').slice(0, 19);
+  console.log(`[${endTime}] ✅ Briefing sent!\n`);
   console.log(msg);
 
   // Clear overnight PRs after briefing (they've been reported)

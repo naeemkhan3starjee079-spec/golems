@@ -375,20 +375,21 @@ async function nightShift(): Promise<NightShiftResult> {
     }
 
     // ═══════════════════════════════════════════════════════
-    // PHASE 3: Generate Post Drafts (Critique-Waves)
+    // PHASE 3: Generate Post Drafts (DISABLED until aInfluencer)
     // ═══════════════════════════════════════════════════════
-    console.log("\n═══ PHASE 3: Post Generation ═══\n");
-
-    try {
-      const drafts = await generatePosts({
-        zikaronInfo: "Zikaron indexes Claude Code conversations for search/retrieval.",
-        claudeGolemInfo: "Ralph (claude-golem) runs autonomous coding loops.",
-        overnightLearnings: result.moltbookLearnings.join("\n"),
-      });
-      result.draftsGenerated = drafts.length;
-    } catch (err) {
-      console.error("[PostGen] Failed:", err);
-    }
+    console.log("\n═══ PHASE 3: Post Generation (SKIPPED - awaiting aInfluencer) ═══\n");
+    result.draftsGenerated = 0;
+    // TODO: Re-enable when aInfluencer is implemented
+    // try {
+    //   const drafts = await generatePosts({
+    //     zikaronInfo: "Zikaron indexes Claude Code conversations for search/retrieval.",
+    //     claudeGolemInfo: "Ralph (claude-golem) runs autonomous coding loops.",
+    //     overnightLearnings: result.moltbookLearnings.join("\n"),
+    //   });
+    //   result.draftsGenerated = drafts.length;
+    // } catch (err) {
+    //   console.error("[PostGen] Failed:", err);
+    // }
 
     // ═══════════════════════════════════════════════════════
     // PHASE 4: Send Summary
