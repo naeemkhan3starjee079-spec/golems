@@ -200,6 +200,56 @@ export async function fetchEmailsSince(
 }
 
 /**
+ * Search emails using Gmail query syntax.
+ *
+ * @param query - Gmail search query (e.g., "from:united.com confirmation", "subject:receipt")
+ * @param maxResults - Maximum number of emails to return (default: 20)
+ * @returns Array of matching emails
+ *
+ * @example
+ * // Find flight confirmations
+ * searchEmails("from:united.com confirmation")
+ * searchEmails("from:britishairways.com")
+ *
+ * // Find receipts
+ * searchEmails("subject:receipt after:2025/01/01")
+ */
+export async function searchEmails(
+  query: string,
+  maxResults: number = 20
+): Promise<GmailEmail[]> {
+  const gmail = getGmailClient();
+
+  const listResponse = await gmail.users.messages.list({
+    userId: "me",
+    maxResults,
+    q: query,
+  });
+
+  const messageIds = listResponse.data.messages;
+  if (!messageIds || messageIds.length === 0) {
+    return [];
+  }
+
+  const emails: GmailEmail[] = [];
+
+  for (const msg of messageIds) {
+    if (!msg.id) continue;
+
+    const fullMessage = await gmail.users.messages.get({
+      userId: "me",
+      id: msg.id,
+      format: "metadata",
+      metadataHeaders: ["From", "Subject", "Date"],
+    });
+
+    emails.push(parseEmail(fullMessage.data));
+  }
+
+  return emails;
+}
+
+/**
  * Reset the Gmail client (for testing).
  */
 export function resetGmailClient(): void {
