@@ -1,27 +1,19 @@
 FROM ollama/ollama:latest
 
-# Run as non-root for additional security
-# Note: Ollama needs to write to /root/.ollama by default, we'll override
-ENV OLLAMA_HOME=/data/.ollama
-ENV OLLAMA_MODELS=/data/.ollama/models
+# NOTE: Running as root for local dev simplicity.
+# The ollama base image changed and non-root setup was failing.
+# For production, consider adding non-root user with proper volume mounts.
 
-# Create non-root user for security
-RUN useradd -m -u 1000 ollama
-
-# Create data directory for models and state with proper permissions
-RUN mkdir -p /data/.ollama/models && \
-    chown -R ollama:ollama /data && \
-    chmod -R 750 /data
-
-# Switch to non-root user
-USER ollama
+# Environment for model storage
+ENV OLLAMA_HOME=/root/.ollama
+ENV OLLAMA_MODELS=/root/.ollama/models
 
 # Expose the API port
 EXPOSE 11434
 
-# Health check
+# Health check - use ollama binary directly (no curl needed)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:11434/api/tags || exit 1
+    CMD ollama list || exit 1
 
 # Default command
 CMD ["serve"]

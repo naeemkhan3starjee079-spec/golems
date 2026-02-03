@@ -12,7 +12,8 @@ import type { JobListing } from "./scraper";
 import { forJobGolem } from "../ollama-wrapper";
 
 const HOME = process.env.HOME || "/Users/etanheyman";
-const PROFILE_PATH = join(HOME, "Gits/golems-zikaron/src/job-golem/profile.json");
+// Profile now in consolidated monorepo location
+const PROFILE_PATH = join(HOME, "Gits/golems/packages/autonomous/src/job-golem/profile.json");
 
 export interface MatchResult {
   job: JobListing;
