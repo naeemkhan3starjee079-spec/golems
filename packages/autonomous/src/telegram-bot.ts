@@ -236,6 +236,10 @@ You are in RESEARCH MODE. Focus on finding information.
 // Track active persona
 let activePersona = "default";
 
+// Track pending content topic requests per chat (MVP content pipeline)
+// Using Map to support multiple concurrent users
+const pendingContentTopics = new Map<number, { type: string }>();
+
 // Commands
 bot.command("start", (ctx) => {
   const state = loadState();
@@ -631,6 +635,30 @@ bot.callbackQuery(/^tonight:/, async (ctx) => {
 // Content creation callbacks - queue message with persona context
 bot.callbackQuery(/^content:/, async (ctx) => {
   const type = ctx.callbackQuery.data?.replace("content:", "") || "";
+
+  // Special handling for "research" - ask for topic first (MVP content pipeline)
+  if (type === "research") {
+    const chatId = ctx.chat?.id;
+    if (!chatId) {
+      await ctx.answerCallbackQuery({ text: "Error: no chat ID" });
+      return;
+    }
+
+    pendingContentTopics.set(chatId, { type: "research" });
+    await ctx.answerCallbackQuery({ text: "Tell me the topic!" });
+    await ctx.editMessageText(`📚 *Research Topic*
+
+What topic should I create content about?
+
+Examples:
+• "Zikaron memory system"
+• "Night Shift autonomous work"
+• "How ClaudeGolem spawns and dies"
+
+_Reply with your topic..._`, { parse_mode: "Markdown" });
+    return;
+  }
+
   await ctx.answerCallbackQuery({ text: `Queuing ${type} request...` });
 
   const typePrompts: Record<string, string> = {
@@ -690,6 +718,63 @@ bot.on("message:text", async (ctx) => {
   state.telegramChatId = ctx.chat.id;
   saveState(state);
 
+  // Check if we're waiting for a content topic (MVP content pipeline)
+  const pendingContent = pendingContentTopics.get(ctx.chat.id);
+  if (pendingContent) {
+    // Allow user to cancel
+    if (text.toLowerCase() === "cancel") {
+      pendingContentTopics.delete(ctx.chat.id);
+      await ctx.reply("❌ Research topic cancelled.");
+      return;
+    }
+
+    // Sanitize topic: limit length, strip control chars and quotes (prevent prompt injection)
+    const topic = text.slice(0, 200).replace(/[\x00-\x1F"'`\\]/g, '').trim();
+    pendingContentTopics.delete(ctx.chat.id); // Clear pending state
+
+    if (!topic) {
+      await ctx.reply("❌ Topic cannot be empty. Try again with ✍️ Content → 📚 Research Topic");
+      return;
+    }
+
+    await ctx.reply(`📚 *Creating content about:* "${topic}"
+
+_Spawning influencer agent... This may take a few minutes._`, { parse_mode: "Markdown" });
+    await ctx.replyWithChatAction("typing");
+
+    // Create the prompt for the influencer
+    const influencerPrompt = `[CONTENT MODE: RESEARCH TOPIC]
+
+Create an engaging Soltome post about: "${topic}"
+
+Instructions:
+1. First, explore the relevant code/docs in the golems monorepo to understand the topic
+2. Write a post in ClaudeGolem voice (first person, technical but accessible)
+3. Use markdown formatting
+4. Include a hook/mystery element
+5. Keep it factual - only include what you can verify from the code
+
+Output format:
+---
+title: [Engaging title]
+type: reveal
+---
+
+[Post content here]
+
+After creating the draft, save it using the post-generator's addDraft function or output it clearly for manual approval.`;
+
+    // Queue the request
+    queue.push({ ctx, text: influencerPrompt });
+    console.log(`📥 Content research topic queued: "${topic}"`);
+
+    // Start processing
+    if (!isProcessing) {
+      processQueue();
+    }
+    return;
+  }
+
   // Handle Reply Keyboard buttons
   if (text === "📝 Drafts") {
     // Trigger /drafts command
@@ -744,6 +829,8 @@ bot.on("message:text", async (ctx) => {
   if (text === "✍️ Content") {
     // Show content menu with inline buttons
     const keyboard = new InlineKeyboard()
+      .text("📚 Research Topic", "content:research")
+      .row()
       .text("📝 Draft Teaser", "content:teaser")
       .text("📖 Draft Reveal", "content:reveal")
       .row()
@@ -754,6 +841,8 @@ bot.on("message:text", async (ctx) => {
     await ctx.reply(`✍️ *Content Studio*
 
 What would you like to create?
+
+📚 *Research Topic* - Tell me a topic, I'll create content about it
 
 _Uses soltome-influencer agent_`, { parse_mode: "Markdown", reply_markup: keyboard });
     return;
