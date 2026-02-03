@@ -33,7 +33,7 @@
 - Runs at 8am via launchd, or on-demand via /morning
 
 ### Night Shift
-- Now runs at **3am** (was 4am)
+- Runs at **4am**
 - Tracks multiple PRs in `state.nightShiftPRs[]` (array, not single URL)
 - Clears after morning briefing
 
@@ -59,7 +59,7 @@ Each golem has a distinct role and attribution in the event log:
 |-------|------|-------------|
 | **ClaudeGolem** | External face - chat, post, represent | `soltome_post`, `draft_approved`, `draft_rejected` |
 | **OllamaGolem** | Internal work - scoring, reviewing, patterns | `draft_scored`, `pattern_extracted` |
-| **NightShift** | Autonomous code improvements (3am) | `nightshift_pr` |
+| **NightShift** | Autonomous code improvements (4am) | `nightshift_pr` |
 | **EmailGolem** | Email triage and alerts | `email_alert` |
 | **JobGolem** | Job board scraping and matching | `job_match` |
 
@@ -93,7 +93,7 @@ pkill -f "bun.*telegram-bot"
 pgrep -fl "telegram-bot"
 ```
 
-### Night Shift (3am code improvements)
+### Night Shift (4am code improvements)
 ```bash
 # Run now (manual)
 cd ~/Gits/golems-zikaron && bun src/night-shift.ts
@@ -101,7 +101,7 @@ cd ~/Gits/golems-zikaron && bun src/night-shift.ts
 # Stop running
 pkill -f "night-shift"
 
-# Enable scheduled (launchd) - runs at 3am
+# Enable scheduled (launchd) - runs at 4am
 launchctl load ~/Library/LaunchAgents/com.golemszikaron.nightshift.plist
 
 # Disable scheduled
@@ -142,7 +142,7 @@ launchctl list | grep golems
 1. **Telegram Bot** - Chat with Claude, receive notifications, control Night Shift
 2. **Notification Server (port 3847)** - Replaces ntfy, receives Claude hook POSTs
 3. **Soltome Learner (2am)** - Scrape posts + stats → train on top performers
-4. **Night Shift (3am)** - Claude scans → implements → CodeRabbit review → PR
+4. **Night Shift (4am)** - Claude scans → implements → CodeRabbit review → PR
 5. **Post Generator** - Critique-waves: parallel gen → critique → refine → polish
 6. **Morning Briefing (8am)** - PR link + learnings + drafts for approval
 7. **Event Log** - Records golem actions for context injection at spawn
@@ -233,7 +233,7 @@ curl -X POST http://localhost:3847/notify \
 golems-zikaron/
 ├── src/
 │   ├── telegram-bot.ts     # Telegram bot + notification server (3847)
-│   ├── night-shift.ts      # 3am: Claude → CR review → PR
+│   ├── night-shift.ts      # 4am: Claude → CR review → PR
 │   ├── soltome-learner.ts  # 2am: Scrape posts, learn patterns
 │   ├── soltome-client.ts   # Soltome API client
 │   ├── event-log.ts        # Event log for ClaudeGolem memory
