@@ -40,6 +40,15 @@ interface State {
   telegramChatId: number | null;
   moltbookApiKey?: string;
   pendingDraftIds?: string[]; // Track which drafts were shown for approval
+  // Group with Topics support
+  groupChatId?: number;        // The group chat ID
+  topics?: {
+    chat?: number;             // 💬 Chat topic thread ID
+    alerts?: number;           // 🔔 Alerts topic thread ID
+    nightshift?: number;       // 🌙 Night Shift topic thread ID
+    email?: number;            // 📧 Email topic thread ID
+    jobs?: number;             // 🎯 Jobs topic thread ID
+  };
 }
 
 // ═══════════════════════════════════════════════════════
@@ -606,6 +615,68 @@ bot.command("morning", async (ctx) => {
   } catch (err) {
     ctx.reply(`❌ Briefing failed: ${err}`);
   }
+});
+
+// Setup command - configure group topics
+bot.command("setup", async (ctx) => {
+  const chatId = ctx.chat.id;
+  const threadId = ctx.message?.message_thread_id;
+  const chatType = ctx.chat.type;
+
+  // Must be run in a group
+  if (chatType !== "group" && chatType !== "supergroup") {
+    await ctx.reply("⚠️ Run /setup in a group with Topics enabled, not in DM.");
+    return;
+  }
+
+  const state = loadState();
+  state.groupChatId = chatId;
+
+  // Initialize topics if not exists
+  if (!state.topics) {
+    state.topics = {};
+  }
+
+  // Detect which topic this message was sent from
+  const topicArg = ctx.message?.text?.split(" ")[1]?.toLowerCase();
+
+  if (!topicArg) {
+    await ctx.reply(`🔧 *Group Setup*
+
+Run this command in each topic to register it:
+
+\`/setup chat\` - in 💬 Chat topic
+\`/setup alerts\` - in 🔔 Alerts topic
+\`/setup nightshift\` - in 🌙 Night Shift topic
+\`/setup email\` - in 📧 Email topic
+\`/setup jobs\` - in 🎯 Jobs topic
+
+Current config:
+• Group: ${state.groupChatId || "not set"}
+• Chat: ${state.topics?.chat || "not set"}
+• Alerts: ${state.topics?.alerts || "not set"}
+• Night Shift: ${state.topics?.nightshift || "not set"}
+• Email: ${state.topics?.email || "not set"}
+• Jobs: ${state.topics?.jobs || "not set"}`, { parse_mode: "Markdown" });
+    return;
+  }
+
+  // Save the topic thread ID
+  const validTopics = ["chat", "alerts", "nightshift", "email", "jobs"];
+  if (!validTopics.includes(topicArg)) {
+    await ctx.reply(`❌ Unknown topic: ${topicArg}\nValid: ${validTopics.join(", ")}`);
+    return;
+  }
+
+  if (!threadId) {
+    await ctx.reply(`⚠️ No thread ID detected. Make sure Topics are enabled in this group and you're in a topic (not General).`);
+    return;
+  }
+
+  (state.topics as any)[topicArg] = threadId;
+  saveState(state);
+
+  await ctx.reply(`✅ Registered **${topicArg}** topic (thread ${threadId})`, { parse_mode: "Markdown" });
 });
 
 // Job Golem - view matched jobs
@@ -1375,22 +1446,45 @@ _Changes how ClaudeGolem responds_`, { parse_mode: "Markdown", reply_markup: key
 // ═══════════════════════════════════════════════════════
 const NOTIFY_PORT = 3847;
 
-// Per-bot notification styles
-const BOT_STYLES: Record<string, { icon: string; format: (t: string, b: string) => string }> = {
+// Per-source notification styles and topic routing
+const SOURCE_CONFIG: Record<string, {
+  icon: string;
+  topic: keyof NonNullable<State["topics"]>;
+  format: (t: string, b: string) => string;
+}> = {
   claude: {
     icon: "🤖",
+    topic: "chat",
     format: (t, b) => `🤖 *${t}*\n${b}`,
   },
   ralph: {
     icon: "🔄",
+    topic: "alerts",
     format: (t, b) => `🔄 *Ralph*: ${t}\n\n${b}`,
   },
   nightshift: {
     icon: "🌙",
+    topic: "nightshift",
     format: (t, b) => `🌙 *Night Shift*\n${t}\n${b}`,
+  },
+  email: {
+    icon: "📧",
+    topic: "email",
+    format: (t, b) => `📧 *${t}*\n\n${b}`,
+  },
+  jobs: {
+    icon: "🎯",
+    topic: "jobs",
+    format: (t, b) => `🎯 *${t}*\n\n${b}`,
+  },
+  healthcheck: {
+    icon: "🏥",
+    topic: "alerts",
+    format: (t, b) => `🏥 *${t}*\n\n${b}`,
   },
   default: {
     icon: "📨",
+    topic: "alerts",
     format: (t, b) => `📨 *${t}*\n\n${b}`,
   },
 };
@@ -1399,31 +1493,51 @@ async function sendNotificationToTelegram(data: {
   title: string;
   body: string;
   priority?: string;
-  source?: string;  // claude, ralph, nightshift
+  source?: string;  // claude, ralph, nightshift, email, jobs, healthcheck
 }) {
   const state = loadState();
-  const chatId = state.telegramChatId;
+  const config = SOURCE_CONFIG[data.source || "default"] || SOURCE_CONFIG.default;
+  const priorityIcon = data.priority === "high" ? "🔔 " : "";
+  const message = priorityIcon + config.format(data.title, data.body);
+
+  // Determine where to send: group topic or DM fallback
+  let chatId: number | null = null;
+  let threadId: number | undefined = undefined;
+
+  if (state.groupChatId && state.topics) {
+    // Use group with topics
+    chatId = state.groupChatId;
+    threadId = state.topics[config.topic];
+    console.log(`[Notify] Routing to group ${chatId}, topic ${config.topic} (thread ${threadId})`);
+  } else if (state.telegramChatId) {
+    // Fallback to DM
+    chatId = state.telegramChatId;
+    console.log(`[Notify] Fallback to DM ${chatId}`);
+  }
 
   if (!chatId) {
     console.log("[Notify] No chat ID saved, skipping");
     return;
   }
 
-  const style = BOT_STYLES[data.source || "default"] || BOT_STYLES.default;
-  const priorityIcon = data.priority === "high" ? "🔔 " : "";
-  const message = priorityIcon + style.format(data.title, data.body);
-
   try {
     // Try Markdown first, fall back to plain text if it fails
+    const sendOptions: any = { parse_mode: "Markdown" };
+    if (threadId) {
+      sendOptions.message_thread_id = threadId;
+    }
+
     try {
-      await bot.api.sendMessage(chatId, message, { parse_mode: "Markdown" });
+      await bot.api.sendMessage(chatId, message, sendOptions);
     } catch (mdErr) {
       // Markdown failed (likely special chars), send plain text
       console.warn("[Notify] Markdown failed, falling back to plain text:", (mdErr as Error).message);
       const plainMessage = message.replace(/[*_`\[\]]/g, "");
-      await bot.api.sendMessage(chatId, plainMessage);
+      const plainOptions: any = {};
+      if (threadId) plainOptions.message_thread_id = threadId;
+      await bot.api.sendMessage(chatId, plainMessage, plainOptions);
     }
-    console.log(`[Notify] Sent: ${data.title}`);
+    console.log(`[Notify] Sent: ${data.title} → ${config.topic}`);
   } catch (err) {
     console.error("[Notify] Failed:", err);
   }

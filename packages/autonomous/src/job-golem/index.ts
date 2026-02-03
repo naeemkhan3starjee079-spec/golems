@@ -37,12 +37,12 @@ function getTelegramChatId(): number | null {
 }
 
 // Send Telegram notification
-async function sendTelegram(title: string, body: string) {
+async function sendTelegram(title: string, body: string, priority: "default" | "high" = "default") {
   try {
     await fetch(NOTIFY_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, body, source: "job-golem", priority: "default" }),
+      body: JSON.stringify({ title, body, source: "jobs", priority }),  // Routes to 🎯 Jobs topic
     });
   } catch (err) {
     console.error("[Telegram] Failed:", err);
@@ -52,28 +52,40 @@ async function sendTelegram(title: string, body: string) {
 // Format job matches for Telegram - consolidated in one message
 async function sendJobMatches(matches: MatchResult[]) {
   if (matches.length === 0) {
-    await sendTelegram("Job Golem", "No new matching jobs found.");
+    await sendTelegram("No Matches", "No new matching jobs found today.");
     return;
   }
 
-  // Build one consolidated message
-  const lines: string[] = [`🎯 ${matches.length} Job Matches\n`];
+  // High-scoring matches (8+) get highlighted
+  const hotMatches = matches.filter(m => m.score >= 8);
+  const goodMatches = matches.filter(m => m.score >= 6 && m.score < 8);
 
-  for (const match of matches.slice(0, 8)) {
+  // Build one consolidated message with context
+  const lines: string[] = [`*${matches.length} Job Matches Found*\n`];
+
+  // Show top matches with WHY they match
+  for (const match of matches.slice(0, 6)) {
     const emoji = match.score >= 8 ? "🔥" : match.score >= 7 ? "✨" : "👍";
-    const exp = (match.job as any).experience || "";
 
-    lines.push(`${emoji} ${match.score}/10 - ${match.job.title}`);
-    lines.push(`   ${match.job.company} | ${match.job.location}${exp ? ` | ${exp}` : ""}`);
-    lines.push(`   ${match.job.url}`);
+    lines.push(`${emoji} *${match.score}/10* - ${match.job.title}`);
+    lines.push(`📍 ${match.job.company} | ${match.job.location}`);
+    // Include the reason WHY this job matches
+    if (match.reason) {
+      lines.push(`💡 _${match.reason.slice(0, 80)}_`);
+    }
+    lines.push(`🔗 ${match.job.url}`);
     lines.push(""); // blank line between jobs
   }
 
-  if (matches.length > 8) {
-    lines.push(`+${matches.length - 8} more. Use /jobs to see all.`);
+  if (matches.length > 6) {
+    lines.push(`+${matches.length - 6} more. Use /jobs to see all.`);
   }
 
-  await sendTelegram("Job Golem Results", lines.join("\n"));
+  // High priority if we have hot matches
+  const priority = hotMatches.length > 0 ? "high" : "default";
+  const title = hotMatches.length > 0 ? `🔥 ${hotMatches.length} Hot Matches!` : "Job Matches";
+
+  await sendTelegram(title, lines.join("\n"), priority);
 }
 
 // Format job matches for Telegram (legacy - used for /jobs command)

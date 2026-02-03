@@ -87,7 +87,7 @@ async function sendNotification(title: string, body: string) {
       body: JSON.stringify({
         title,
         body,
-        source: "email-golem",
+        source: "email",  // Routes to 📧 Email topic
         priority: "high",
       }),
     });
@@ -164,11 +164,20 @@ async function processEmail(
       console.log(`     Queued for later sync`);
     }
 
-    // Notify if urgent
+    // Notify if urgent - with context!
     if (shouldNotifyImmediately(scored)) {
       const emoji = CATEGORY_EMOJIS[scored.category] || "📧";
-      const title = `${emoji} Urgent Email`;
-      const body = `${scored.category}: ${scored.subject.slice(0, 100)}`;
+      const title = `${emoji} ${scored.category.charAt(0).toUpperCase() + scored.category.slice(1)}`;
+
+      // Build descriptive body with WHY this matters
+      const fromName = scored.from.split("<")[0].trim() || scored.from;
+      const lines = [
+        `*From:* ${fromName}`,
+        `*Subject:* ${scored.subject.slice(0, 80)}`,
+        ``,
+        `*Why:* ${scored.reason}`,
+      ];
+      const body = lines.join("\n");
 
       await sendNotification(title, body);
       console.log(`     🔔 Notification sent!`);
