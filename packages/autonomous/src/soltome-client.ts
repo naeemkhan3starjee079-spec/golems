@@ -163,10 +163,13 @@ export async function createPost(
 }
 
 /**
- * Edit an existing post (may cost credits)
+ * Edit an existing post (free for author)
  *
  * @param postId - The ID of the post to edit
  * @param updates - Object with optional title and/or content
+ *
+ * Note: Soltome API requires title in PATCH requests.
+ * If only content is provided, we fetch the existing title first.
  */
 export async function editPost(
   postId: string,
@@ -181,12 +184,20 @@ export async function editPost(
     return { success: false, error: "At least one of title or content must be provided" };
   }
 
-  const body: Record<string, string> = {};
-  if (updates.title?.trim()) body.title = updates.title.trim();
-  if (updates.content?.trim()) body.content = updates.content.trim();
-
   try {
-    // PATCH is the primary method, PUT also accepted as alias (per docs)
+    // API requires title - fetch existing if not provided
+    let title = updates.title?.trim();
+    if (!title) {
+      const existingPost = await getPost(cleanPostId);
+      if (!existingPost) {
+        return { success: false, error: "Could not fetch existing post to get title" };
+      }
+      title = existingPost.title;
+    }
+
+    const body: Record<string, string> = { title };
+    if (updates.content?.trim()) body.content = updates.content.trim();
+
     const resp = await soltomeRequest(`/posts/${cleanPostId}`, {
       method: "PATCH",
       body: JSON.stringify(body),
@@ -195,7 +206,7 @@ export async function editPost(
     const data = await resp.json();
 
     if (!resp.ok) {
-      return { success: false, error: data.error || `HTTP ${resp.status}` };
+      return { success: false, error: data.error || data.message || `HTTP ${resp.status}` };
     }
 
     console.log(`[Soltome] Edited post ${postId}`);
