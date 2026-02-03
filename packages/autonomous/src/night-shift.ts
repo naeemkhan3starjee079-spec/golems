@@ -53,7 +53,7 @@ function getTelegramToken(): string {
   if (process.env.TELEGRAM_BOT_TOKEN) return process.env.TELEGRAM_BOT_TOKEN;
 
   try {
-    const envFile = readFileSync(join(HOME, "Gits/golems-zikaron/.env"), "utf-8");
+    const envFile = readFileSync(join(HOME, "Gits/golems/packages/autonomous/.env"), "utf-8");
     const match = envFile.match(/TELEGRAM_BOT_TOKEN=(.+)/);
     return match?.[1]?.trim() || "";
   } catch {
