@@ -126,6 +126,21 @@ launchctl load ~/Library/LaunchAgents/com.golems.learner.plist
 launchctl unload ~/Library/LaunchAgents/com.golems.learner.plist
 ```
 
+### Daily Healthcheck (9am)
+```bash
+# Run now (manual)
+cd ~/Gits/golems/packages/autonomous && bun src/healthcheck.ts
+
+# Enable scheduled (9am daily)
+launchctl load ~/Library/LaunchAgents/com.golemszikaron.healthcheck.plist
+
+# Disable scheduled
+launchctl unload ~/Library/LaunchAgents/com.golemszikaron.healthcheck.plist
+```
+
+**Checks:** Telegram bot, Notify server, Ollama, State file, Launchd jobs.
+**Report:** Sent to Telegram with status of each service.
+
 ### Check All Status
 ```bash
 # What's running?
