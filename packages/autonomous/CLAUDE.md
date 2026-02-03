@@ -52,7 +52,7 @@
 ### Telegram Topics (2026-02-03)
 - **Group with Topics** - Notifications routed to separate threads by type
 - **Topics configured:**
-  - 💬 Chat (thread 2) - ClaudeGolem interactive conversation
+  - 💬 General (no thread ID) - ClaudeGolem interactive conversation
   - 🔔 Alerts (thread 3) - CLI updates, commits, healthchecks
   - 🌙 Night Shift (thread 4) - Autonomous 4am work
   - 📧 Email (thread 5) - Urgent email alerts

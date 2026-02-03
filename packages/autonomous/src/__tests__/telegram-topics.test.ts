@@ -7,10 +7,11 @@
 import { describe, it, expect } from "bun:test";
 
 // Source to topic routing configuration (mirrors telegram-bot.ts)
-type TopicKey = "chat" | "alerts" | "nightshift" | "email" | "jobs";
+// Note: "claude" goes to "general" (no thread ID, uses General topic)
+type TopicKey = "general" | "alerts" | "nightshift" | "email" | "jobs";
 
 const SOURCE_TO_TOPIC: Record<string, TopicKey> = {
-  claude: "chat",
+  claude: "general",  // Goes to General topic (no thread ID)
   ralph: "alerts",
   nightshift: "nightshift",
   email: "email",
@@ -24,8 +25,8 @@ function getTopicForSource(source: string): TopicKey {
 }
 
 describe("Telegram Topics - Source Routing", () => {
-  it("should route claude to chat", () => {
-    expect(getTopicForSource("claude")).toBe("chat");
+  it("should route claude to general (no thread ID)", () => {
+    expect(getTopicForSource("claude")).toBe("general");
   });
 
   it("should route ralph to alerts", () => {
@@ -57,8 +58,8 @@ describe("Telegram Topics - Source Routing", () => {
 });
 
 describe("Telegram Topics - State Structure", () => {
+  // Note: "chat" removed - ClaudeGolem goes to General (no thread ID needed)
   interface TopicsState {
-    chat?: number;
     alerts?: number;
     nightshift?: number;
     email?: number;
@@ -67,14 +68,13 @@ describe("Telegram Topics - State Structure", () => {
 
   it("should have correct topics state structure", () => {
     const topics: TopicsState = {
-      chat: 2,
       alerts: 3,
       nightshift: 4,
       email: 5,
       jobs: 7,
     };
 
-    expect(topics.chat).toBe(2);
+    // Note: no "chat" - claude goes to General (no thread ID)
     expect(topics.alerts).toBe(3);
     expect(topics.nightshift).toBe(4);
     expect(topics.email).toBe(5);
@@ -83,11 +83,10 @@ describe("Telegram Topics - State Structure", () => {
 
   it("should handle partial topics configuration", () => {
     const topics: TopicsState = {
-      chat: 2,
       alerts: 3,
     };
 
-    expect(topics.chat).toBe(2);
+    expect(topics.alerts).toBe(3);
     expect(topics.nightshift).toBeUndefined();
   });
 
@@ -146,8 +145,8 @@ describe("Telegram Topics - Thread ID Selection", () => {
     topics?: TopicsState;
   }
 
+  // Note: "chat" removed - ClaudeGolem goes to General (no thread ID)
   interface TopicsState {
-    chat?: number;
     alerts?: number;
     nightshift?: number;
     email?: number;
@@ -159,9 +158,11 @@ describe("Telegram Topics - Thread ID Selection", () => {
     topicKey: TopicKey
   ): { chatId: number | null; threadId: number | undefined } {
     if (state.groupChatId && state.topics) {
+      // "general" means no thread ID (goes to General topic)
+      const threadId = topicKey === "general" ? undefined : state.topics[topicKey as keyof TopicsState];
       return {
         chatId: state.groupChatId,
-        threadId: state.topics[topicKey],
+        threadId,
       };
     }
     return {
@@ -175,7 +176,6 @@ describe("Telegram Topics - Thread ID Selection", () => {
       groupChatId: -100123456,
       telegramChatId: 5417751491,
       topics: {
-        chat: 2,
         alerts: 3,
       },
     };
@@ -183,6 +183,20 @@ describe("Telegram Topics - Thread ID Selection", () => {
     const dest = selectDestination(state, "alerts");
     expect(dest.chatId).toBe(-100123456);
     expect(dest.threadId).toBe(3);
+  });
+
+  it("should route claude (general) to group without thread ID", () => {
+    const state: State = {
+      groupChatId: -100123456,
+      telegramChatId: 5417751491,
+      topics: {
+        alerts: 3,
+      },
+    };
+
+    const dest = selectDestination(state, "general");
+    expect(dest.chatId).toBe(-100123456);
+    expect(dest.threadId).toBeUndefined();  // General = no thread ID
   });
 
   it("should fallback to DM when no group configured", () => {

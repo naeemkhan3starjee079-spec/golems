@@ -43,7 +43,7 @@ interface State {
   // Group with Topics support
   groupChatId?: number;        // The group chat ID
   topics?: {
-    chat?: number;             // 💬 Chat topic thread ID
+    // Note: "claude" source goes to General (no thread ID needed)
     alerts?: number;           // 🔔 Alerts topic thread ID
     nightshift?: number;       // 🌙 Night Shift topic thread ID
     email?: number;            // 📧 Email topic thread ID
@@ -645,15 +645,17 @@ bot.command("setup", async (ctx) => {
 
 Run this command in each topic to register it:
 
-\`/setup chat\` - in 💬 Chat topic
 \`/setup alerts\` - in 🔔 Alerts topic
 \`/setup nightshift\` - in 🌙 Night Shift topic
 \`/setup email\` - in 📧 Email topic
 \`/setup jobs\` - in 🎯 Jobs topic
 
+_Note: ClaudeGolem chat goes to General (no setup needed)_
+\`/setup jobs\` - in 🎯 Jobs topic
+
 Current config:
 • Group: ${state.groupChatId || "not set"}
-• Chat: ${state.topics?.chat || "not set"}
+• General: ClaudeGolem chat (no thread ID needed)
 • Alerts: ${state.topics?.alerts || "not set"}
 • Night Shift: ${state.topics?.nightshift || "not set"}
 • Email: ${state.topics?.email || "not set"}
@@ -662,9 +664,10 @@ Current config:
   }
 
   // Save the topic thread ID
-  const validTopics = ["chat", "alerts", "nightshift", "email", "jobs"];
+  // Note: "chat" removed - ClaudeGolem goes to General (no thread ID)
+  const validTopics = ["alerts", "nightshift", "email", "jobs"];
   if (!validTopics.includes(topicArg)) {
-    await ctx.reply(`❌ Unknown topic: ${topicArg}\nValid: ${validTopics.join(", ")}`);
+    await ctx.reply(`❌ Unknown topic: ${topicArg}\nValid: ${validTopics.join(", ")}\n\n_ClaudeGolem chat goes to General automatically_`, { parse_mode: "Markdown" });
     return;
   }
 
@@ -1447,14 +1450,15 @@ _Changes how ClaudeGolem responds_`, { parse_mode: "Markdown", reply_markup: key
 const NOTIFY_PORT = 3847;
 
 // Per-source notification styles and topic routing
+// Note: "claude" goes to General (no thread ID), others go to specific topics
 const SOURCE_CONFIG: Record<string, {
   icon: string;
-  topic: keyof NonNullable<State["topics"]>;
+  topic: keyof NonNullable<State["topics"]> | "general";  // "general" = no thread ID
   format: (t: string, b: string) => string;
 }> = {
   claude: {
     icon: "🤖",
-    topic: "chat",
+    topic: "general",  // Goes to General topic (no thread ID)
     format: (t, b) => `🤖 *${t}*\n${b}`,
   },
   ralph: {
@@ -1507,8 +1511,9 @@ async function sendNotificationToTelegram(data: {
   if (state.groupChatId && state.topics) {
     // Use group with topics
     chatId = state.groupChatId;
-    threadId = state.topics[config.topic];
-    console.log(`[Notify] Routing to group ${chatId}, topic ${config.topic} (thread ${threadId})`);
+    // "general" means no thread ID (goes to General topic)
+    threadId = config.topic === "general" ? undefined : state.topics[config.topic as keyof typeof state.topics];
+    console.log(`[Notify] Routing to group ${chatId}, topic ${config.topic} (thread ${threadId ?? "General"})`);
   } else if (state.telegramChatId) {
     // Fallback to DM
     chatId = state.telegramChatId;

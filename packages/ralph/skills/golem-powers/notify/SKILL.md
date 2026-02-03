@@ -23,11 +23,13 @@ notify "Title" "Body" "email"    # → 📧 Email
 | Source | Routes To | Used By |
 |--------|-----------|---------|
 | `alerts` | 🔔 Alerts | CLI sessions (default), Ralph |
-| `claude` | 💬 Chat | ClaudeGolem only (DO NOT use from CLI) |
+| `claude` | 💬 General | ClaudeGolem only (DO NOT use from CLI) |
 | `nightshift` | 🌙 Night Shift | Night Shift golem |
 | `email` | 📧 Email | EmailGolem |
 | `jobs` | 🎯 Jobs | JobGolem |
 | `healthcheck` | 🔔 Alerts | Daily healthcheck |
+
+_Note: ClaudeGolem chat goes to General (Telegram's default topic)_
 
 ## HTTP API (for TypeScript)
 
