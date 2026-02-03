@@ -1,6 +1,6 @@
 # Available Skills
 
-> Auto-generated: 2026-02-02T23:15:25Z
+> Auto-generated: 2026-02-03T11:21:05Z
 > Regenerate: ~/.claude/scripts/generate-skill-index.sh
 
 ## Skills
@@ -35,6 +35,7 @@
 - /golem-powers:skills
 - /golem-powers:soltome-influencer
 - /golem-powers:soltome
+- /golem-powers:tax-helper
 - /golem-powers:test-plan
 - /golem-powers:worktrees
 - /golem-powers:writing-skills
