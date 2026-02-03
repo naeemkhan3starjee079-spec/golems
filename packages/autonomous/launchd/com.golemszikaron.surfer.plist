@@ -29,6 +29,9 @@
         <string>/usr/local/bin:/usr/bin:/bin:/Users/etanheyman/.bun/bin:/opt/homebrew/bin</string>
     </dict>
 
+    <key>WorkingDirectory</key>
+    <string>/Users/etanheyman/Gits/golems/packages/autonomous</string>
+
     <key>RunAtLoad</key>
     <false/>
 </dict>

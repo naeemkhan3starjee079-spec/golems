@@ -42,6 +42,9 @@
     </dict>
 
     <!-- Don't run immediately on load -->
+    <key>WorkingDirectory</key>
+    <string>/Users/etanheyman/Gits/golems/packages/autonomous</string>
+
     <key>RunAtLoad</key>
     <false/>
 
