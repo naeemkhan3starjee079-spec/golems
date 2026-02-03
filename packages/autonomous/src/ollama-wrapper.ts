@@ -79,11 +79,6 @@ export const forJobGolem = {
   runOllamaJSON: <T>(prompt: string) => runOllamaJSON<T>(prompt, "job-golem"),
 };
 
-export const forMoltbook = {
-  runOllama: (prompt: string) => runOllama(prompt, "moltbook-learner"),
-  runOllamaJSON: <T>(prompt: string) => runOllamaJSON<T>(prompt, "moltbook-learner"),
-};
-
 export const forNightShift = {
   runOllama: (prompt: string) => runOllama(prompt, "night-shift"),
   runOllamaJSON: <T>(prompt: string) => runOllamaJSON<T>(prompt, "night-shift"),

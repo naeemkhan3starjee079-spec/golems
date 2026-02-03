@@ -38,7 +38,6 @@ interface State {
   nightShiftTarget: string;
   rotation: string[];
   telegramChatId: number | null;
-  moltbookApiKey?: string;
   pendingDraftIds?: string[]; // Track which drafts were shown for approval
   // Group with Topics support
   groupChatId?: number;        // The group chat ID
@@ -949,21 +948,6 @@ async function handleApproval(ctx: any, num: number) {
     ctx.reply(`⚠️ Failed to post: ${result.error}`);
   }
 }
-
-bot.command("setmoltkey", (ctx) => {
-  const key = ctx.message?.text?.split(" ").slice(1).join(" ");
-
-  if (!key) {
-    ctx.reply("Usage: /setmoltkey YOUR_MOLTBOOK_API_KEY");
-    return;
-  }
-
-  const state = loadState();
-  state.moltbookApiKey = key;
-  saveState(state);
-
-  ctx.reply("✅ Moltbook API key saved.");
-});
 
 // ═══════════════════════════════════════════════════════
 // Inline Keyboard Callback Handlers

@@ -2,8 +2,6 @@
  * Tests for /forage command - Platform Post Collection
  *
  * TDD approach: RED → GREEN → REFACTOR
- *
- * Note: Tests use Soltome now. Moltbook is identity-only (no posts API).
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
@@ -106,7 +104,7 @@ describe("Forage - handleForageCommand()", () => {
 });
 
 describe("ForagedPost interface", () => {
-  it("should accept both soltome and moltbook as platform values", () => {
+  it("should accept soltome as platform value", () => {
     const soltomePost: ForagedPost = {
       id: "1",
       title: "Test",
@@ -116,16 +114,6 @@ describe("ForagedPost interface", () => {
       url: "https://soltome.com/posts/1",
     };
 
-    const moltbookPost: ForagedPost = {
-      id: "2",
-      title: "Test",
-      author: "user",
-      platform: "moltbook",
-      content: "content",
-      url: "https://moltbook.com/m/general/2",
-    };
-
     expect(soltomePost.platform).toBe("soltome");
-    expect(moltbookPost.platform).toBe("moltbook");
   });
 });

@@ -1,11 +1,11 @@
 #!/usr/bin/env bun
 /**
- * Night Shift v3 - Autonomous 3am improvements + Moltbook
+ * Night Shift v3 - Autonomous 4am improvements + Soltome
  *
  * This script:
  * 1. Claude scans & implements improvement directly (no Ollama)
  * 2. Creates draft PR
- * 3. Browses Moltbook, filters shitposts
+ * 3. Browses Soltome for learnings
  * 4. Generates post drafts (critique-waves)
  * 5. Sends summary to Telegram
  */
@@ -14,7 +14,6 @@ import { $ } from "bun";
 import { readFileSync, writeFileSync, rmSync } from "fs";
 import { join } from "path";
 import { fetchPosts as fetchSoltomePosts } from "./soltome-client";
-import { getMoltbookStatus } from "./moltbook-client";
 import { generatePosts } from "./post-generator";
 
 // Configuration
@@ -98,7 +97,7 @@ interface NightShiftResult {
   repo: string;
   prUrl?: string;
   improvement?: string;
-  moltbookLearnings: string[];
+  soltomeLearnings: string[];
   draftsGenerated: number;
   success: boolean;
   error?: string;
@@ -306,7 +305,7 @@ async function nightShift(): Promise<NightShiftResult> {
 
   const result: NightShiftResult = {
     repo,
-    moltbookLearnings: [],
+    soltomeLearnings: [],
     draftsGenerated: 0,
     success: false,
   };
@@ -362,16 +361,16 @@ async function nightShift(): Promise<NightShiftResult> {
       const posts = await fetchSoltomePosts(20);
       if (posts.length > 0) {
         // Extract titles as learnings for post generation context
-        result.moltbookLearnings = posts.slice(0, 5).map(
+        result.soltomeLearnings = posts.slice(0, 5).map(
           (p) => `[Soltome] "${p.title}" by ${p.author?.username || "unknown"}`
         );
-        console.log(`[Soltome] Found ${posts.length} posts, extracted ${result.moltbookLearnings.length} learnings`);
+        console.log(`[Soltome] Found ${posts.length} posts, extracted ${result.soltomeLearnings.length} learnings`);
       } else {
-        result.moltbookLearnings = ["No Soltome posts available (check credentials)"];
+        result.soltomeLearnings = ["No Soltome posts available (check credentials)"];
       }
     } catch (err) {
       console.error("[Soltome] Browsing failed:", err);
-      result.moltbookLearnings = ["Soltome API not available"];
+      result.soltomeLearnings = ["Soltome API not available"];
     }
 
     // ═══════════════════════════════════════════════════════
@@ -384,7 +383,7 @@ async function nightShift(): Promise<NightShiftResult> {
     //   const drafts = await generatePosts({
     //     zikaronInfo: "Zikaron indexes Claude Code conversations for search/retrieval.",
     //     claudeGolemInfo: "Ralph (claude-golem) runs autonomous coding loops.",
-    //     overnightLearnings: result.moltbookLearnings.join("\n"),
+    //     overnightLearnings: result.soltomeLearnings.join("\n"),
     //   });
     //   result.draftsGenerated = drafts.length;
     // } catch (err) {
@@ -403,7 +402,7 @@ async function nightShift(): Promise<NightShiftResult> {
     await sendTelegram(
       `🌙 *Night Shift Complete*\n\n` +
         `🔧 PR: ${result.prUrl || "None created"}\n` +
-        `📚 Learnings: ${result.moltbookLearnings.length}\n` +
+        `📚 Learnings: ${result.soltomeLearnings.length}\n` +
         `📝 Drafts: ${result.draftsGenerated}\n\n` +
         `Full briefing at 8 AM.`
     );

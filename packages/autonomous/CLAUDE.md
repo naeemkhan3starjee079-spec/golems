@@ -295,7 +295,6 @@ Research conducted via Ralph (gitignored, local only):
 |------|-------|
 | `docs.local/research/telegram-features.md` | Voice messages, threading, inline mode |
 | `docs.local/research/agent-memory.md` | LangChain, Redis, multi-agent patterns |
-| `docs.local/research/moltbook-integration.md` | Posting strategies, scheduling, authenticity |
 | `docs.local/research/night-shift-patterns.md` | Task prioritization, quality gates, rollback |
 
 ---

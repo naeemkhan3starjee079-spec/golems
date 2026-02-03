@@ -23,7 +23,7 @@
 │             │                      │                        │
 │             │              ┌───────┴───────┐               │
 │             │              ▼               ▼               │
-│             │       [Moltbook]      [Night Shift]          │
+│             │       [Soltome]       [Night Shift]          │
 │             │                              │               │
 │             └──────────────┬───────────────┘               │
 │                            ▼                               │
@@ -84,21 +84,20 @@ ralph --prd path # Use specific PRD
 
 ### 3. GolemsZikaron (Telegram Bot)
 **Location**: `~/Gits/golems-zikaron`
-**Purpose**: Telegram bridge + Moltbook presence
+**Purpose**: Telegram bridge + Soltome presence
 
 **Features**:
 - Receives messages via Telegram
 - Routes to appropriate Claude session
-- Posts to Moltbook (AI social network)
-- Runs Night Shift (3am autonomous work)
+- Posts to Soltome (AI discussion platform)
+- Runs Night Shift (4am autonomous work)
 - Morning briefings (8am)
 
-**LaunchAgents** (6 total):
+**LaunchAgents** (5 total):
 - `com.golemszikaron.telegram` - Main bot (always on)
-- `com.golemszikaron.nightshift` - 3:00 AM
+- `com.golemszikaron.nightshift` - 4:00 AM
 - `com.golemszikaron.briefing` - 8:00 AM
 - `com.golemszikaron.job-golem` - 5:00 AM + 5:00 PM
-- `com.golemszikaron.moltbook-monitor` - Every hour
 - `com.golemszikaron.ollama` - Local LLM (always on)
 
 **State files**: `~/.golems-zikaron/`
@@ -108,8 +107,8 @@ ralph --prd path # Use specific PRD
 
 ---
 
-### 4. Moltbook Integration
-**What**: AI social network where bots post about their work
+### 4. Soltome Integration
+**What**: AI discussion platform (credit-based posting)
 **Access**: Via golems-zikaron
 
 **Persona**: Collaborative researcher + open source evangelist

@@ -1,6 +1,6 @@
 # Autonomous Bot System
 
-> Telegram bots + Night Shift + Job Golem + Moltbook presence for the Golem ecosystem.
+> Telegram bots + Night Shift + Job Golem + Soltome presence for the Golem ecosystem.
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────┐
@@ -25,7 +25,7 @@
 │                    └───────────────────┘                                  │
 │                                                                            │
 │  ┌─────────────────────────────────────────────────────────────────────┐  │
-│  │                        MOLTBOOK PIPELINE                            │  │
+│  │                        SOLTOME PIPELINE                             │  │
 │  │                                                                     │  │
 │  │  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐          │  │
 │  │  │   Learner    │───▶│  Generator   │───▶│   Approval   │          │  │
@@ -66,7 +66,7 @@ Then message [@GolemZikaronBot](https://t.me/GolemZikaronBot) on Telegram.
 ### New: Ollama Internet Access
 - Docker container now has internet (removed `internal: true`)
 - Security via omission: no git creds, no Supabase, no API keys
-- Can browse Moltbook and post comments
+- Can browse Soltome and post comments
 - Code access: read-only (except songscript for writing)
 
 ### Fixed: Telegram Bot
@@ -194,19 +194,18 @@ Searches Israeli job boards, matches against your profile, sends top matches.
 - `/jobs` - View job matches with pagination
 - `/jobq <question>` - Ask questions about your jobs
 
-### 4. Moltbook Integration
+### 4. Soltome Integration
 
-Autonomous social presence on the AI social network.
+Autonomous social presence on the AI discussion platform.
 
-#### Learner (`src/moltbook-learner.ts`) - 2am
+#### Learner (`src/soltome-learner.ts`) - 2am
 
 Runs BEFORE Night Shift to build training data:
 
-1. Browse submolts (todayilearned, debuggingwins, etc.)
+1. Browse Soltome posts
 2. Score posts with Ollama for quality
 3. Extract patterns from top performers
-4. Embed posts for semantic search
-5. Save to `data/learned-patterns.json`
+4. Save to `data/learned-patterns.json`
 
 #### Post Generator (`src/post-generator.ts`)
 
@@ -256,7 +255,7 @@ Runs BEFORE Night Shift to build training data:
 
 Concise summary sent to Telegram:
 - PR count and links from overnight
-- Moltbook learnings summary
+- Soltome learnings summary
 - Draft posts ready for approval (categorized)
 
 ---
@@ -273,7 +272,7 @@ Concise summary sent to Telegram:
 | `/drafts` | Show pending drafts with approve/reject buttons |
 | `/jobs` | View job matches with pagination |
 | `/jobq <question>` | Ask questions about jobs |
-| `/setmoltkey KEY` | Set Moltbook API key |
+| `/setsoltomekey KEY` | Set Soltome API key |
 
 **Reply Keyboard buttons** (persistent at bottom):
 - 📝 Drafts → triggers /drafts
@@ -302,7 +301,7 @@ Concise summary sent to Telegram:
 | File | Purpose |
 |------|---------|
 | `data/drafts.json` | Post drafts awaiting approval |
-| `data/moltbook-training.json` | Scraped posts + embeddings |
+| `data/soltome-training.json` | Scraped posts + patterns |
 | `data/learned-patterns.json` | Extracted patterns for drafting |
 | `~/.golems-zikaron/job-golem/results/` | Job search results |
 | `~/.golems-zikaron/job-golem/seen-jobs.json` | Already-seen job IDs |
@@ -314,7 +313,7 @@ Concise summary sent to Telegram:
 | Service | Time | LaunchAgent |
 |---------|------|-------------|
 | Telegram Bot | Always | `com.golemszikaron.telegram.plist` |
-| Moltbook Learner | 2am | `com.golems.learner.plist` |
+| Soltome Learner | 2am | `com.golems.learner.plist` |
 | Night Shift | 3am | `com.golemszikaron.nightshift.plist` |
 | Morning Briefing | 8am | `com.golemszikaron.briefing.plist` |
 | Job Golem | 5-7am/pm | (manual or cron) |
@@ -364,13 +363,13 @@ bun src/job-golem/index.ts
 SKIP_SECRETLV=1 bun src/job-golem/index.ts
 ```
 
-### Moltbook Learner
+### Soltome Learner
 ```bash
 # Run now
-bun src/moltbook-learner.ts
+bun src/soltome-learner.ts
 
-# Health check
-bun src/moltbook-client.ts health
+# Check balance
+bun src/soltome-client.ts balance
 ```
 
 ---
@@ -388,8 +387,8 @@ autonomous/
 │   │   ├── scraper.ts         # Board scraping
 │   │   ├── matcher.ts         # AI scoring
 │   │   └── profile.json       # Your preferences
-│   ├── moltbook-client.ts     # Browse + filter posts
-│   ├── moltbook-learner.ts    # 2am: Learn patterns
+│   ├── soltome-client.ts      # Soltome API client
+│   ├── soltome-learner.ts     # 2am: Learn patterns
 │   ├── post-generator.ts      # Critique-waves drafting
 │   ├── ollama-helper.ts       # Ollama spawn wrapper
 │   ├── ollama-wrapper.ts      # Embeddings + semantic search
@@ -401,7 +400,7 @@ autonomous/
 │   └── install.sh             # One-command setup
 ├── data/
 │   ├── drafts.json            # Pending post drafts
-│   ├── moltbook-training.json # Scraped posts + engagement
+│   ├── soltome-training.json  # Scraped posts + patterns
 │   └── learned-patterns.json  # Extracted patterns
 ├── docs/
 │   ├── SANDBOXED-OLLAMA.md    # Docker Ollama setup
@@ -419,7 +418,7 @@ autonomous/
 
 - **Token** stored in `.env` (gitignored)
 - **Night Shift** only touches allowed repos in rotation
-- **Moltbook posts** require human approval
+- **Soltome posts** require human approval
 - **No external skills** - only load from vetted `~/.claude/commands/golem-powers/`
 - **gitleaks** pre-commit hooks recommended
 
@@ -438,14 +437,14 @@ autonomous/
 A second Telegram bot for direct Ollama interaction:
 - User can chat directly with local Ollama
 - Messages queue if Ollama is busy
-- "Ollama has a life of its own" - autonomous Moltbook presence
+- "Ollama has a life of its own" - autonomous Soltome presence
 
 ### Dashboard (Planned)
 Web/widget/app for:
 - Job recommendations
 - Draft approval
 - Night Shift status
-- Moltbook analytics
+- Soltome analytics
 
 ### Validation Queue (In Progress)
 Sandboxed Ollama with Claude validation:
