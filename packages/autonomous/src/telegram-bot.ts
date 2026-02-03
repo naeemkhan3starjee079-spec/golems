@@ -1,10 +1,11 @@
 import { Bot, InlineKeyboard, Keyboard } from "grammy";
 import { $ } from "bun";
-import { readFileSync, writeFileSync } from "fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import { join } from "path";
 import { getPendingDrafts, approveDraft, rejectDraft, type Draft } from "./post-generator";
 import { createPost as postToSoltome } from "./soltome-client";
 import { logEvent, getRecentEvents, formatEventsForClaude } from "./event-log";
+import { runCursorResearch, runCursorVerification, getResearchPath, readResearch } from "./cursor-helper";
 
 // Mac notification helper
 async function notify(title: string, message: string) {
@@ -28,6 +29,7 @@ const HOME = process.env.HOME || "/Users/etanheyman";
 const GITS = join(HOME, "Gits");  // gitsClaude - access all repos
 const STATE_FILE = join(HOME, ".golems-zikaron/state.json");
 const SOUL_FILE = join(GITS, "golems/packages/autonomous/SOUL.md");
+const CHAT_SESSION_ID = "telegram-chat"; // Persistent session for conversation memory
 
 // ClaudeGolem Telegram Bot - uses Claude Code CLI with conversation memory
 
@@ -38,6 +40,331 @@ interface State {
   telegramChatId: number | null;
   moltbookApiKey?: string;
   pendingDraftIds?: string[]; // Track which drafts were shown for approval
+}
+
+// ═══════════════════════════════════════════════════════
+// CONTENT PIPELINE (A2)
+// ═══════════════════════════════════════════════════════
+
+// Content task state machine: created → researching → drafting → verifying → review → posted
+type ContentTaskStatus = "created" | "researching" | "drafting" | "verifying" | "review" | "posted" | "failed";
+
+interface ContentTask {
+  id: string;
+  topic: string;
+  repo: string;
+  status: ContentTaskStatus;
+  createdAt: string;
+  updatedAt: string;
+  researchPath?: string;
+  draftPath?: string;
+  verificationAttempts: number;
+  lastVerification?: {
+    confidence: number;
+    corrections: string[];
+  };
+  error?: string;
+}
+
+const TASKS_DIR = join(HOME, ".golems-zikaron/tasks");
+const DRAFTS_DIR = join(HOME, ".golems-zikaron/drafts");
+const MAX_VERIFICATION_ATTEMPTS = 2;
+const CONFIDENCE_THRESHOLD = 75;
+
+// Ensure directories exist
+function ensureContentDirs(): void {
+  if (!existsSync(TASKS_DIR)) mkdirSync(TASKS_DIR, { recursive: true });
+  if (!existsSync(DRAFTS_DIR)) mkdirSync(DRAFTS_DIR, { recursive: true });
+}
+
+/**
+ * Create a new content task
+ */
+function createContentTask(topic: string, repo: string = "golems/packages/autonomous"): ContentTask {
+  ensureContentDirs();
+  const id = `task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const task: ContentTask = {
+    id,
+    topic,
+    repo,
+    status: "created",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    verificationAttempts: 0,
+  };
+  saveContentTask(task);
+  console.log(`[ContentPipeline] Created task ${id}: ${topic}`);
+  return task;
+}
+
+function saveContentTask(task: ContentTask): void {
+  task.updatedAt = new Date().toISOString();
+  writeFileSync(join(TASKS_DIR, `${task.id}.json`), JSON.stringify(task, null, 2));
+}
+
+function loadContentTask(taskId: string): ContentTask | null {
+  const path = join(TASKS_DIR, `${taskId}.json`);
+  if (!existsSync(path)) return null;
+  try {
+    return JSON.parse(readFileSync(path, "utf-8"));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Run research phase using Cursor CLI
+ */
+async function runResearchPhase(taskId: string): Promise<boolean> {
+  const task = loadContentTask(taskId);
+  if (!task) return false;
+
+  task.status = "researching";
+  saveContentTask(task);
+
+  console.log(`[ContentPipeline] Starting research for: ${task.topic}`);
+
+  const researchPrompt = `Research "${task.topic}" in this codebase for a Soltome post.
+
+Use @codebase to find:
+1. Core files and entry points related to ${task.topic}
+2. Key functions, types, and data flow
+3. How it integrates with other systems
+4. Any interesting implementation details
+
+Output a comprehensive technical overview that can be used to write an engaging post.
+Include code snippets and file paths.`;
+
+  const result = await runCursorResearch(task.repo, task.topic, researchPrompt, { verbose: true });
+
+  if (result.success && result.outputPath) {
+    task.researchPath = result.outputPath;
+    task.status = "drafting";
+    saveContentTask(task);
+    console.log(`[ContentPipeline] Research complete: ${result.outputPath}`);
+    return true;
+  } else {
+    task.status = "failed";
+    task.error = result.error || "Research failed";
+    saveContentTask(task);
+    console.error(`[ContentPipeline] Research failed: ${task.error}`);
+    return false;
+  }
+}
+
+/**
+ * Run influencer phase - spawn Claude to write draft
+ */
+async function runInfluencerPhase(taskId: string): Promise<boolean> {
+  const task = loadContentTask(taskId);
+  if (!task || !task.researchPath) return false;
+
+  task.status = "drafting";
+  saveContentTask(task);
+
+  console.log(`[ContentPipeline] Starting influencer for: ${task.topic}`);
+
+  // Read research
+  const research = readResearch(task.repo, task.topic);
+  if (!research) {
+    task.status = "failed";
+    task.error = "Research file not found";
+    saveContentTask(task);
+    return false;
+  }
+
+  // Spawn Claude with influencer agent
+  const soulContent = getSystemPromptContent();
+  const draftPath = join(DRAFTS_DIR, `${task.id}.json`);
+
+  const influencerPrompt = `You are the soltome-influencer agent. Create an engaging post about "${task.topic}".
+
+## Research (use this as source material):
+${research.slice(0, 8000)}
+
+## Instructions:
+1. Write in ClaudeGolem voice (first person, technical but accessible)
+2. Create a compelling hook in the first line
+3. Use markdown formatting
+4. Include a CLAIMS section at the end with factual claims that can be verified
+
+## Output Format (JSON):
+{
+  "title": "Engaging title here",
+  "content": "Full post content here...",
+  "claims": [
+    "Claim 1 that can be verified against code",
+    "Claim 2 about specific files or functions"
+  ]
+}
+
+Output ONLY the JSON, no explanation.`;
+
+  const args = [
+    "/Users/etanheyman/.local/bin/claude",
+    "--dangerously-skip-permissions",
+    "--print",
+    "--system-prompt", soulContent,
+    influencerPrompt,
+  ];
+
+  try {
+    const proc = Bun.spawn(args, {
+      cwd: join(GITS, task.repo),
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+
+    const timeout = setTimeout(() => proc.kill(), 3 * 60 * 1000); // 3 min timeout
+    await proc.exited;
+    clearTimeout(timeout);
+
+    const output = await new Response(proc.stdout).text();
+
+    // Parse JSON from output
+    const jsonMatch = output.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      task.status = "failed";
+      task.error = "No JSON in influencer output";
+      saveContentTask(task);
+      return false;
+    }
+
+    const draft = JSON.parse(jsonMatch[0]);
+    writeFileSync(draftPath, JSON.stringify(draft, null, 2));
+    task.draftPath = draftPath;
+    task.status = "verifying";
+    saveContentTask(task);
+
+    console.log(`[ContentPipeline] Draft created: ${draftPath}`);
+    return true;
+  } catch (err) {
+    task.status = "failed";
+    task.error = `Influencer error: ${err}`;
+    saveContentTask(task);
+    return false;
+  }
+}
+
+/**
+ * Run verification phase using Cursor CLI
+ */
+async function runVerificationPhase(taskId: string): Promise<{ passed: boolean; confidence: number; corrections: string[] }> {
+  const task = loadContentTask(taskId);
+  if (!task || !task.draftPath || !task.researchPath) {
+    return { passed: false, confidence: 0, corrections: ["Task or paths missing"] };
+  }
+
+  task.status = "verifying";
+  task.verificationAttempts++;
+  saveContentTask(task);
+
+  console.log(`[ContentPipeline] Verification attempt ${task.verificationAttempts} for: ${task.topic}`);
+
+  const result = await runCursorVerification(task.draftPath, task.researchPath, { verbose: true });
+
+  if (!result.success) {
+    return { passed: false, confidence: 0, corrections: [result.error || "Verification failed"] };
+  }
+
+  task.lastVerification = {
+    confidence: result.confidence,
+    corrections: result.corrections,
+  };
+
+  if (result.confidence >= CONFIDENCE_THRESHOLD) {
+    task.status = "review";
+    saveContentTask(task);
+    console.log(`[ContentPipeline] Verification passed: ${result.confidence}%`);
+    return { passed: true, confidence: result.confidence, corrections: result.corrections };
+  }
+
+  // Check if we should retry
+  if (task.verificationAttempts < MAX_VERIFICATION_ATTEMPTS) {
+    task.status = "drafting"; // Loop back to influencer
+    saveContentTask(task);
+    console.log(`[ContentPipeline] Verification failed (${result.confidence}%), will retry`);
+  } else {
+    task.status = "review"; // Send to human review even if failed
+    saveContentTask(task);
+    console.log(`[ContentPipeline] Max attempts reached, sending to review`);
+  }
+
+  return { passed: false, confidence: result.confidence, corrections: result.corrections };
+}
+
+/**
+ * Handle verification result - loop back to influencer if needed
+ */
+async function handleVerificationResult(
+  taskId: string,
+  result: { passed: boolean; confidence: number; corrections: string[] }
+): Promise<void> {
+  const task = loadContentTask(taskId);
+  if (!task) return;
+
+  if (result.passed) {
+    // Ready for human review
+    console.log(`[ContentPipeline] Task ${taskId} ready for review`);
+    return;
+  }
+
+  if (task.verificationAttempts < MAX_VERIFICATION_ATTEMPTS && task.status === "drafting") {
+    // Loop back: run influencer with corrections
+    console.log(`[ContentPipeline] Looping back to influencer with ${result.corrections.length} corrections`);
+
+    // Update the research file with corrections for next influencer run
+    // (The influencer will read this and adjust)
+    await runInfluencerPhase(taskId);
+    const verifyResult = await runVerificationPhase(taskId);
+    await handleVerificationResult(taskId, verifyResult);
+  }
+}
+
+/**
+ * Run the full content pipeline for a topic
+ */
+async function runContentPipeline(
+  topic: string,
+  repo: string,
+  onProgress: (status: string) => Promise<void>
+): Promise<ContentTask> {
+  // 1. Create task
+  const task = createContentTask(topic, repo);
+  await onProgress(`📋 Task created: ${task.id.slice(0, 12)}`);
+
+  // 2. Research phase
+  await onProgress(`🔬 Researching "${topic}"...`);
+  const researchOk = await runResearchPhase(task.id);
+  if (!researchOk) {
+    await onProgress(`❌ Research failed: ${task.error}`);
+    return loadContentTask(task.id) || task;
+  }
+
+  // 3. Influencer phase
+  await onProgress(`✍️ Drafting post...`);
+  const draftOk = await runInfluencerPhase(task.id);
+  if (!draftOk) {
+    await onProgress(`❌ Draft failed: ${loadContentTask(task.id)?.error}`);
+    return loadContentTask(task.id) || task;
+  }
+
+  // 4. Verification phase
+  await onProgress(`🔍 Verifying claims...`);
+  const verifyResult = await runVerificationPhase(task.id);
+
+  // 5. Handle result (may loop)
+  await handleVerificationResult(task.id, verifyResult);
+
+  const finalTask = loadContentTask(task.id) || task;
+
+  if (finalTask.status === "review") {
+    await onProgress(`✅ Ready for review! Confidence: ${finalTask.lastVerification?.confidence || 0}%`);
+  } else if (finalTask.status === "failed") {
+    await onProgress(`❌ Pipeline failed: ${finalTask.error}`);
+  }
+
+  return finalTask;
 }
 
 function loadState(): State {
@@ -685,6 +1012,111 @@ bot.callbackQuery("discard-draft", async (ctx) => {
   await ctx.answerCallbackQuery();
 });
 
+// ═══════════════════════════════════════════════════════
+// Content Pipeline Callbacks (A2)
+// ═══════════════════════════════════════════════════════
+
+// Approve pipeline draft
+bot.callbackQuery(/^pipeline-approve:/, async (ctx) => {
+  const taskId = ctx.callbackQuery.data?.replace("pipeline-approve:", "") || "";
+  const task = loadContentTask(taskId);
+
+  if (!task || !task.draftPath) {
+    await ctx.answerCallbackQuery({ text: "Task not found" });
+    return;
+  }
+
+  try {
+    const draftContent = JSON.parse(readFileSync(task.draftPath, "utf-8"));
+
+    // Post to Soltome
+    await ctx.editMessageText(`✅ Approved! Posting to Soltome...`);
+
+    const result = await postToSoltome(draftContent.title, draftContent.content);
+
+    if (result.success) {
+      task.status = "posted";
+      saveContentTask(task);
+
+      await logEvent("soltome_post", {
+        title: draftContent.title,
+        postId: result.postId,
+        taskId: task.id,
+        creditsRemaining: result.newBalance,
+      }, "claudegolem");
+
+      await ctx.editMessageText(`🎉 Posted to Soltome!\n\n*${draftContent.title}*\n\n(${result.newBalance} credits left)`, { parse_mode: "Markdown" });
+      await ctx.answerCallbackQuery({ text: "Posted!" });
+    } else {
+      await ctx.editMessageText(`⚠️ Failed to post: ${result.error}`);
+      await ctx.answerCallbackQuery({ text: "Post failed" });
+    }
+  } catch (err) {
+    await ctx.answerCallbackQuery({ text: `Error: ${err}` });
+  }
+});
+
+// Reject pipeline draft
+bot.callbackQuery(/^pipeline-reject:/, async (ctx) => {
+  const taskId = ctx.callbackQuery.data?.replace("pipeline-reject:", "") || "";
+  const task = loadContentTask(taskId);
+
+  if (!task) {
+    await ctx.answerCallbackQuery({ text: "Task not found" });
+    return;
+  }
+
+  task.status = "failed";
+  task.error = "Rejected by user";
+  saveContentTask(task);
+
+  await logEvent("pipeline_draft_rejected", {
+    taskId: task.id,
+    topic: task.topic,
+  }, "claudegolem");
+
+  await ctx.editMessageText("❌ Draft rejected.");
+  await ctx.answerCallbackQuery({ text: "Rejected" });
+});
+
+// Edit pipeline draft - send to chat for editing
+bot.callbackQuery(/^pipeline-edit:/, async (ctx) => {
+  const taskId = ctx.callbackQuery.data?.replace("pipeline-edit:", "") || "";
+  const task = loadContentTask(taskId);
+
+  if (!task || !task.draftPath) {
+    await ctx.answerCallbackQuery({ text: "Task not found" });
+    return;
+  }
+
+  try {
+    const draftContent = JSON.parse(readFileSync(task.draftPath, "utf-8"));
+
+    // Queue for Claude to edit
+    const editPrompt = `[CONTENT MODE: EDIT DRAFT]
+
+I need to improve this draft before posting. The verification found these issues:
+${task.lastVerification?.corrections.map(c => `- ${c}`).join("\n") || "No specific issues"}
+
+Current draft:
+Title: ${draftContent.title}
+
+${draftContent.content}
+
+---
+
+Please suggest improvements or ask me what changes I want.`;
+
+    queue.push({ ctx, text: editPrompt });
+    processQueue();
+
+    await ctx.editMessageText(`✏️ Editing draft... Reply with your changes.`);
+    await ctx.answerCallbackQuery({ text: "Editing mode" });
+  } catch (err) {
+    await ctx.answerCallbackQuery({ text: `Error: ${err}` });
+  }
+});
+
 // Persona selection
 bot.callbackQuery(/^persona:/, async (ctx) => {
   const personaKey = ctx.callbackQuery.data?.replace("persona:", "") || "default";
@@ -739,38 +1171,60 @@ bot.on("message:text", async (ctx) => {
 
     await ctx.reply(`📚 *Creating content about:* "${topic}"
 
-_Spawning influencer agent... This may take a few minutes._`, { parse_mode: "Markdown" });
+🔬 Research → ✍️ Draft → 🔍 Verify → 📝 Review
+
+_Running full content pipeline... This may take several minutes._`, { parse_mode: "Markdown" });
     await ctx.replyWithChatAction("typing");
 
-    // Create the prompt for the influencer
-    const influencerPrompt = `[CONTENT MODE: RESEARCH TOPIC]
+    // Run the full content pipeline (A2)
+    const progressHandler = async (status: string) => {
+      await ctx.reply(status);
+      await ctx.replyWithChatAction("typing");
+    };
 
-Create an engaging Soltome post about: "${topic}"
+    try {
+      const task = await runContentPipeline(topic, "golems/packages/autonomous", progressHandler);
 
-Instructions:
-1. First, explore the relevant code/docs in the golems monorepo to understand the topic
-2. Write a post in ClaudeGolem voice (first person, technical but accessible)
-3. Use markdown formatting
-4. Include a hook/mystery element
-5. Keep it factual - only include what you can verify from the code
+      if (task.status === "review" && task.draftPath) {
+        // Read the draft and show it for approval
+        try {
+          const draftContent = JSON.parse(readFileSync(task.draftPath, "utf-8"));
+          const confidence = task.lastVerification?.confidence || 0;
+          const corrections = task.lastVerification?.corrections || [];
 
-Output format:
+          let msg = `📝 *Draft Ready for Review*
+
+*Title:* ${draftContent.title}
+
+*Confidence:* ${confidence}%
+${corrections.length > 0 ? `*Corrections needed:*\n${corrections.map((c: string) => `• ${c}`).join("\n")}\n` : ""}
 ---
-title: [Engaging title]
-type: reveal
----
 
-[Post content here]
+${draftContent.content.slice(0, 2000)}${draftContent.content.length > 2000 ? "..." : ""}`;
 
-After creating the draft, save it using the post-generator's addDraft function or output it clearly for manual approval.`;
+          const keyboard = new InlineKeyboard()
+            .text("✅ Approve", `pipeline-approve:${task.id}`)
+            .text("❌ Reject", `pipeline-reject:${task.id}`)
+            .row()
+            .text("✏️ Edit", `pipeline-edit:${task.id}`);
 
-    // Queue the request
-    queue.push({ ctx, text: influencerPrompt });
-    console.log(`📥 Content research topic queued: "${topic}"`);
+          await ctx.reply(msg, { parse_mode: "Markdown", reply_markup: keyboard });
 
-    // Start processing
-    if (!isProcessing) {
-      processQueue();
+          // Log event
+          await logEvent("pipeline_draft_ready", {
+            taskId: task.id,
+            topic: task.topic,
+            confidence,
+          }, "claudegolem");
+        } catch (parseErr) {
+          await ctx.reply(`⚠️ Draft created but couldn't parse: ${task.draftPath}`);
+        }
+      } else if (task.status === "failed") {
+        await ctx.reply(`❌ Pipeline failed: ${task.error}`);
+      }
+    } catch (err) {
+      console.error("[ContentPipeline] Error:", err);
+      await ctx.reply(`❌ Pipeline error: ${err}`);
     }
     return;
   }
