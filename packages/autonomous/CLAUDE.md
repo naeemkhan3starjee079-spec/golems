@@ -49,6 +49,17 @@
 - Injected into Claude's context at spawn time ("While You Were Down")
 - ClaudeGolem actions show as "YOU", other golems by name
 
+### Telegram Topics (2026-02-03)
+- **Group with Topics** - Notifications routed to separate threads by type
+- **Topics configured:**
+  - 💬 Chat (thread 2) - ClaudeGolem interactive conversation
+  - 🔔 Alerts (thread 3) - CLI updates, commits, healthchecks
+  - 🌙 Night Shift (thread 4) - Autonomous 4am work
+  - 📧 Email (thread 5) - Urgent email alerts
+  - 🎯 Jobs (thread 7) - Job matches
+- **Setup:** `/setup <topic>` in each topic to register thread IDs
+- **Routing:** Based on `source` field in notification payload
+
 ---
 
 ## Golem Roles
