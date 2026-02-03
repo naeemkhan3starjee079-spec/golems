@@ -11,6 +11,9 @@
         <string>serve</string>
     </array>
 
+    <key>WorkingDirectory</key>
+    <string>/Users/etanheyman/Gits/golems/packages/autonomous</string>
+
     <key>RunAtLoad</key>
     <true/>
 

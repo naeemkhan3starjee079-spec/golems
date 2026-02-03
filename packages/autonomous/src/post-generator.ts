@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Post Generator - Critique-Waves pattern for Moltbook drafts
+ * Post Generator - Critique-Waves pattern for Soltome drafts
  *
  * PHASE 1: Parallel Generation (Ollama x3)
  * PHASE 2: Parallel Critique (All agents score all drafts)
@@ -11,7 +11,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import { join } from "path";
 import { runOllama } from "./ollama-helper";
-import { getLearnedPatterns, getTopExamples, getZikaronStyle, getSimilarPosts } from "./moltbook-learner";
+import { getLearnedPatterns, getTopExamples, getZikaronStyle } from "./soltome-learner";
 
 const HOME = process.env.HOME || "/Users/etanheyman";
 const DATA_DIR = join(HOME, "Gits/golems-zikaron/data");
@@ -88,7 +88,7 @@ async function parallelGeneration(context: {
 }): Promise<Draft[]> {
   console.log("\n📝 PHASE 1: Parallel Generation");
 
-  // Get learned patterns from Moltbook + Zikaron style
+  // Get learned patterns from Soltome + Zikaron style
   const patterns = getLearnedPatterns();
   const topExamples = getTopExamples(3);
   const zikaronStyle = getZikaronStyle();
@@ -115,7 +115,7 @@ OWNER'S COMMUNICATION STYLE (from Zikaron analysis):
     {
       name: "Agent A (Zikaron)",
       source: "zikaron" as const,
-      prompt: `You are writing Moltbook posts about Zikaron, a conversation memory system.
+      prompt: `You are writing Soltome posts about Zikaron, a conversation memory system.
 ${learnedContext}
 Context about Zikaron:
 ${context.zikaronInfo || "Zikaron indexes Claude Code conversations for search/retrieval. It helps AI remember past solutions."}
@@ -133,7 +133,7 @@ CONTENT: [2-3 sentences, educational, no fluff]
     {
       name: "Agent B (Claude-Golem)",
       source: "claude-golem" as const,
-      prompt: `You are writing Moltbook posts about Claude-Golem (Ralph), an autonomous AI coding loop.
+      prompt: `You are writing Soltome posts about Claude-Golem (Ralph), an autonomous AI coding loop.
 
 Context about Claude-Golem:
 ${context.claudeGolemInfo || "Ralph runs Claude in a loop to execute PRD stories autonomously. Spawn fresh AI, read PRD, implement, review, commit."}
@@ -151,7 +151,7 @@ CONTENT: [2-3 sentences, educational, no fluff]
     {
       name: "Agent C (Learnings)",
       source: "learnings" as const,
-      prompt: `You are writing Moltbook posts about AI agent learnings and patterns.
+      prompt: `You are writing Soltome posts about AI agent learnings and patterns.
 
 Tonight's learnings:
 ${context.overnightLearnings || "General insights about AI agents, memory systems, and autonomous coding."}
@@ -224,7 +224,7 @@ async function parallelCritique(drafts: Draft[]): Promise<Draft[]> {
   const styleGuide = loadStyleGuide();
 
   for (const draft of drafts) {
-    const prompt = `Score this Moltbook post draft 1-10.
+    const prompt = `Score this Soltome post draft 1-10.
 
 TITLE: ${draft.title}
 CONTENT: ${draft.content}
@@ -277,7 +277,7 @@ async function sequentialRefinement(drafts: Draft[]): Promise<Draft[]> {
   const styleGuide = loadStyleGuide();
 
   for (const draft of top3) {
-    const prompt = `Refine this Moltbook post. Keep it SHORT (2-3 sentences max).
+    const prompt = `Refine this Soltome post. Keep it SHORT (2-3 sentences max).
 
 CURRENT:
 Title: ${draft.title}
@@ -324,7 +324,7 @@ async function claudeCodePolish(drafts: Draft[]): Promise<Draft[]> {
   const styleGuide = loadStyleGuide();
 
   for (const draft of drafts) {
-    const prompt = `You are GolemsZikaron polishing a Moltbook post.
+    const prompt = `You are GolemsZikaron polishing a Soltome post.
 
 DRAFT:
 Title: ${draft.title}

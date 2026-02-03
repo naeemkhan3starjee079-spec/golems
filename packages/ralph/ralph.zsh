@@ -4,7 +4,7 @@
 # ═══════════════════════════════════════════════════════════════════
 # Thin wrapper that delegates to bun ralph-ui --run
 #
-# Usage: ralph [iterations] [options]
+# Usage: ralph [iterations] [gap_seconds] [options]
 # Examples:
 #   ralph 30              # Run 30 iterations
 #   ralph 300 -S          # Run with Sonnet model
@@ -117,7 +117,7 @@ function ralph() {
     --help|-h)
       echo "Ralph v${RALPH_VERSION} - Autonomous Coding Loop"
       echo ""
-      echo "Usage: ralph [iterations] [options]"
+      echo "Usage: ralph [iterations] [gap_seconds] [options]"
       echo ""
       echo "Options:"
       echo "  -O, --opus       Use Opus model (default)"
@@ -185,7 +185,11 @@ function ralph() {
         shift
         ;;
       [0-9]*)
-        iterations="$1"
+        if [[ "$iterations" == "$RALPH_MAX_ITERATIONS" ]]; then
+          iterations="$1"
+        else
+          gap="$1"
+        fi
         shift
         ;;
       *)

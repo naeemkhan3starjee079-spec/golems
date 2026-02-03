@@ -3,13 +3,15 @@
   "title": "Fix Job Golem Launchd Error",
   "description": "Job Golem launchd service shows exit code 1. Need to investigate why it's failing and fix the startup script or code.",
   "acceptanceCriteria": [
-    {"text": "Check /tmp/job-golem.log and /tmp/job-golem.err for error details", "checked": false},
-    {"text": "Read launchd plist to understand how it's started", "checked": false},
-    {"text": "Fix the error (likely missing dependency or path issue)", "checked": false},
-    {"text": "Test: launchctl start com.golemszikaron.job-golem && check exit code", "checked": false},
-    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": false},
-    {"text": "Commit: fix: BUG-102 resolve Job Golem launchd error", "checked": false}
+    {"text": "Check /tmp/job-golem.log and /tmp/job-golem.err for error details", "checked": true},
+    {"text": "Read launchd plist to understand how it's started", "checked": true},
+    {"text": "Fix the error (likely missing dependency or path issue)", "checked": true},
+    {"text": "Test: launchctl start com.golemszikaron.job-golem && check exit code", "checked": true},
+    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": true},
+    {"text": "Commit: fix: BUG-102 resolve Job Golem launchd error", "checked": true}
   ],
-  "passes": false,
-  "blockedBy": null
+  "passes": true,
+  "blockedBy": null,
+  "completedAt": "2026-02-02T08:48:00.000Z",
+  "completedBy": "sonnet"
 }

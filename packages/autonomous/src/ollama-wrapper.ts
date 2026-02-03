@@ -88,3 +88,13 @@ export const forNightShift = {
   runOllama: (prompt: string) => runOllama(prompt, "night-shift"),
   runOllamaJSON: <T>(prompt: string) => runOllamaJSON<T>(prompt, "night-shift"),
 };
+
+export const forEmailGolem = {
+  runOllama: (prompt: string) => runOllama(prompt, "email-golem"),
+  runOllamaJSON: <T>(prompt: string) => runOllamaJSON<T>(prompt, "email-golem"),
+};
+
+export const forSoltome = {
+  runOllama: (prompt: string) => runOllama(prompt, "soltome-learner"),
+  runOllamaJSON: <T>(prompt: string) => runOllamaJSON<T>(prompt, "soltome-learner"),
+};

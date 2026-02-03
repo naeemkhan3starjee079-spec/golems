@@ -1,0 +1,276 @@
+#!/usr/bin/env bash
+#
+# golems - System status and control CLI
+# Usage: golems [command]
+#
+
+set -e
+
+GOLEMS_HOME="${GOLEMS_HOME:-$HOME/Gits/golems/packages/autonomous}"
+LOGS_DIR="$HOME/.golems-zikaron/logs"
+STATE_FILE="$HOME/.golems-zikaron/state.json"
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+status_icon() {
+  case "$1" in
+    0) echo -e "${GREEN}✓${NC}" ;;
+    1) echo -e "${RED}✗${NC}" ;;
+    *) echo -e "${YELLOW}?${NC}" ;;
+  esac
+}
+
+cmd_help() {
+  cat << 'EOF'
+golems - Golem System CLI
+
+USAGE:
+  golems [command]
+
+COMMANDS:
+  status        Show all services status (default)
+  services      Detailed launchd service status
+  docker        Docker container status
+  sessions      Running Claude sessions
+  logs [name]   Show logs (telegram, nightshift, job-golem, etc.)
+
+  start [svc]   Start a service (telegram, nightshift, ollama)
+  stop [svc]    Stop a service
+  restart [svc] Restart a service
+
+  rebuild       Rebuild ollama container (fixes healthcheck)
+  clear-errors  Clear launchd error states
+
+  help          Show this help
+
+EXAMPLES:
+  golems                # Quick status overview
+  golems services       # Detailed service status
+  golems logs telegram  # Tail telegram bot logs
+  golems restart telegram
+  golems rebuild        # Rebuild ollama with curl fix
+
+DOCS:
+  ~/Gits/golems/packages/autonomous/CLAUDE.md
+
+EOF
+}
+
+cmd_status() {
+  echo -e "${BLUE}=== GOLEMS STATUS ===${NC}"
+  echo
+
+  # Telegram bot
+  if lsof -i :3847 &>/dev/null; then
+    echo -e "$(status_icon 0) Telegram Bot     running (port 3847)"
+  else
+    echo -e "$(status_icon 1) Telegram Bot     not running"
+  fi
+
+  # Docker
+  if docker ps --format '{{.Names}}' 2>/dev/null | grep -q ollama-sandbox; then
+    health=$(docker inspect ollama-sandbox --format='{{.State.Health.Status}}' 2>/dev/null)
+    if [ "$health" = "healthy" ]; then
+      echo -e "$(status_icon 0) Ollama Sandbox   running (healthy)"
+    else
+      echo -e "$(status_icon 1) Ollama Sandbox   running ($health)"
+    fi
+  else
+    echo -e "$(status_icon 1) Ollama Sandbox   not running"
+  fi
+
+  # LaunchAgents summary
+  echo
+  echo -e "${BLUE}LaunchAgents:${NC}"
+  for svc in nightshift briefing job-golem session-archiver; do
+    status=$(launchctl list 2>/dev/null | grep "com.golemszikaron.$svc\|com.golems.$svc" | awk '{print $1}')
+    if [ -z "$status" ]; then
+      echo -e "  $(status_icon 1) $svc (not loaded)"
+    elif [ "$status" = "0" ] || [ "$status" = "-" ]; then
+      echo -e "  $(status_icon 0) $svc"
+    else
+      echo -e "  $(status_icon 1) $svc (exit: $status)"
+    fi
+  done
+
+  # Claude sessions
+  sessions=$(ps aux | grep -c "[c]laude " 2>/dev/null || echo 0)
+  echo
+  echo -e "${BLUE}Claude Sessions:${NC} $sessions running"
+
+  # State info
+  if [ -f "$STATE_FILE" ]; then
+    target=$(jq -r '.nightShiftTarget // "none"' "$STATE_FILE" 2>/dev/null)
+    echo -e "${BLUE}Night Shift Target:${NC} $target"
+  fi
+}
+
+cmd_services() {
+  echo -e "${BLUE}=== LAUNCHD SERVICES ===${NC}"
+  echo
+  printf "%-25s %-8s %s\n" "SERVICE" "STATUS" "NOTES"
+  printf "%-25s %-8s %s\n" "-------" "------" "-----"
+
+  launchctl list 2>/dev/null | grep -E "golem|zikaron" | while read status pid label; do
+    if [ "$status" = "-" ]; then
+      status="idle"
+    elif [ "$status" = "0" ]; then
+      status="ok"
+    else
+      status="err:$status"
+    fi
+    printf "%-25s %-8s %s\n" "$label" "$status" ""
+  done
+}
+
+cmd_docker() {
+  echo -e "${BLUE}=== DOCKER CONTAINERS ===${NC}"
+  docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" 2>/dev/null | grep -E "NAME|ollama"
+
+  echo
+  echo -e "${BLUE}Health Check:${NC}"
+  docker inspect ollama-sandbox --format='{{range .State.Health.Log}}{{.End}}: {{.ExitCode}} - {{.Output}}{{end}}' 2>/dev/null | tail -3
+}
+
+cmd_sessions() {
+  echo -e "${BLUE}=== CLAUDE SESSIONS ===${NC}"
+  ps aux | grep "[c]laude " | awk '{printf "PID: %s  CPU: %s%%  Started: %s\n", $2, $3, $9}'
+}
+
+cmd_logs() {
+  local name="${1:-telegram}"
+  case "$name" in
+    telegram)
+      tail -f "$LOGS_DIR/telegram-bot.log" 2>/dev/null || tail -f /tmp/golemszikaron-telegram.log 2>/dev/null || echo "No telegram logs found"
+      ;;
+    nightshift)
+      tail -f /tmp/nightshift.log 2>/dev/null || echo "No nightshift logs found"
+      ;;
+    job-golem|job)
+      tail -f /tmp/job-golem.err /tmp/job-golem.log 2>/dev/null || echo "No job-golem logs found"
+      ;;
+    archiver)
+      tail -f "$LOGS_DIR/session-archiver.log" 2>/dev/null || echo "No archiver logs found"
+      ;;
+    *)
+      echo "Unknown log: $name"
+      echo "Available: telegram, nightshift, job-golem, archiver"
+      ;;
+  esac
+}
+
+cmd_start() {
+  local svc="$1"
+  case "$svc" in
+    telegram|bot)
+      cd "$GOLEMS_HOME" && bun run bot &
+      echo "Started telegram bot"
+      ;;
+    nightshift)
+      launchctl load ~/Library/LaunchAgents/com.golemszikaron.nightshift.plist 2>/dev/null
+      echo "Loaded nightshift launchd"
+      ;;
+    ollama)
+      cd "$GOLEMS_HOME/docker/ollama" && docker compose up -d
+      echo "Started ollama containers"
+      ;;
+    *)
+      echo "Unknown service: $svc"
+      echo "Available: telegram, nightshift, ollama"
+      ;;
+  esac
+}
+
+cmd_stop() {
+  local svc="$1"
+  case "$svc" in
+    telegram|bot)
+      pkill -f "bun.*telegram-bot" 2>/dev/null || echo "Not running"
+      echo "Stopped telegram bot"
+      ;;
+    nightshift)
+      launchctl bootout gui/$(id -u)/com.golemszikaron.nightshift 2>/dev/null || true
+      pkill -f "night-shift" 2>/dev/null || true
+      echo "Stopped nightshift"
+      ;;
+    ollama)
+      cd "$GOLEMS_HOME/docker/ollama" && docker compose down
+      echo "Stopped ollama containers"
+      ;;
+    *)
+      echo "Unknown service: $svc"
+      ;;
+  esac
+}
+
+cmd_restart() {
+  local svc="$1"
+  cmd_stop "$svc"
+  sleep 1
+  cmd_start "$svc"
+}
+
+cmd_rebuild() {
+  echo "Rebuilding ollama container (this will fix healthcheck)..."
+  cd "$GOLEMS_HOME/docker/ollama"
+  docker compose down
+  docker compose build --no-cache
+  docker compose up -d
+  echo "Done. Check: golems docker"
+}
+
+cmd_clear_errors() {
+  echo "Clearing launchd error states..."
+  for label in com.golemszikaron.job-golem com.golemszikaron.moltbook-monitor com.golemszikaron.ollama; do
+    launchctl bootout gui/$(id -u)/$label 2>/dev/null || true
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/${label}.plist 2>/dev/null || true
+  done
+  echo "Done. Check: golems services"
+}
+
+# Main
+case "${1:-status}" in
+  help|--help|-h)
+    cmd_help
+    ;;
+  status)
+    cmd_status
+    ;;
+  services|svc)
+    cmd_services
+    ;;
+  docker)
+    cmd_docker
+    ;;
+  sessions)
+    cmd_sessions
+    ;;
+  logs)
+    cmd_logs "$2"
+    ;;
+  start)
+    cmd_start "$2"
+    ;;
+  stop)
+    cmd_stop "$2"
+    ;;
+  restart)
+    cmd_restart "$2"
+    ;;
+  rebuild)
+    cmd_rebuild
+    ;;
+  clear-errors|clear)
+    cmd_clear_errors
+    ;;
+  *)
+    echo "Unknown command: $1"
+    echo "Run 'golems help' for usage"
+    exit 1
+    ;;
+esac

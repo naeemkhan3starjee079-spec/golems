@@ -8,7 +8,7 @@
     <key>ProgramArguments</key>
     <array>
         <string>/Users/etanheyman/.bun/bin/bun</string>
-        <string>/Users/etanheyman/Gits/golems-zikaron/src/briefing.ts</string>
+        <string>/Users/etanheyman/Gits/golems/packages/autonomous/src/briefing.ts</string>
     </array>
 
     <key>StartCalendarInterval</key>
@@ -25,13 +25,25 @@
     <key>StandardErrorPath</key>
     <string>/tmp/golemszikaron-briefing.log</string>
 
+    <!--
+    IMPORTANT: This is a TEMPLATE. Before installing, copy to ~/Library/LaunchAgents/
+    and add these environment variables with your actual values:
+    - SUPABASE_URL
+    - SUPABASE_ANON_KEY
+    - TELEGRAM_BOT_TOKEN
+
+    See .env file for values.
+    -->
     <key>EnvironmentVariables</key>
     <dict>
         <key>HOME</key>
         <string>/Users/etanheyman</string>
         <key>PATH</key>
-        <string>/usr/local/bin:/usr/bin:/bin:/Users/etanheyman/.bun/bin</string>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/Users/etanheyman/.bun/bin</string>
     </dict>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/etanheyman/Gits/golems/packages/autonomous</string>
 
     <key>RunAtLoad</key>
     <false/>

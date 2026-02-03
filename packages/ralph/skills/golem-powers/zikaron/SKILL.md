@@ -7,73 +7,79 @@ description: Local knowledge pipeline for Claude Code conversations - index, sea
 
 Zikaron indexes Claude Code conversation history and markdown files into a searchable vector database. Query past solutions, code patterns, and debugging sessions.
 
-## Prerequisites
+## Architecture (Feb 2026)
 
-```bash
-# Ollama must be running for embeddings
-ollama serve &
-ollama pull nomic-embed-text
+```
+~/.claude/projects/     →  Pipeline  →  sqlite-vec  →  FastAPI Daemon  →  CLI / MCP
+   (JSONL files)           (5 stages)    (vectors)      (pre-loaded)      (query)
+
+Stages:
+1. Extract - Parse JSONL, dedupe system prompts
+2. Classify - Identify content type (code, errors, messages)
+3. Chunk - AST-aware splitting for code, header-based for markdown
+4. Embed - Generate vectors via sentence-transformers (bge-large-en-v1.5, 1024 dims)
+5. Index - Store in sqlite-vec with metadata
 ```
 
 ## Quick Reference
 
-### Index Conversations
+### Fast Commands (Recommended)
+
 ```bash
-# Index all Claude Code conversations
-zikaron index
+# Search (daemon-based, <2s)
+zikaron search-fast "how did I implement authentication"
+zikaron search-fast "error handling" --text  # Exact match
+
+# Stats
+zikaron stats-fast
+
+# Interactive Dashboard
+zikaron dashboard
+```
+
+### Indexing
+
+```bash
+# Index all Claude Code conversations (sqlite-vec backend)
+zikaron index-fast
 
 # Index specific project only
-zikaron index -p project-name
+zikaron index-fast -p project-name
+
+# Index markdown files
+zikaron index-md ~/Gits/golems/docs.local/learnings
 ```
 
-### Index Markdown Files
+### Migration (One-Time)
+
 ```bash
-# Index learnings, skills, CLAUDE.md files, research docs
-zikaron index-md ~/Gits/claude-golem/docs.local/learnings
-zikaron index-md ~/Gits/claude-golem/skills
-zikaron index-md ~/path/to/any/markdown/directory
-```
-
-**Content types by path:**
-| Path Pattern | Type | Value |
-|--------------|------|-------|
-| `*/learnings/*` | learning | HIGH |
-| `*/skills/*` | skill | HIGH |
-| `CLAUDE.md` | project_config | HIGH |
-| `*/research/*` | research | HIGH |
-| `*/prd*/*` | prd_archive | MEDIUM |
-| `*/verification*` | verification | LOW |
-| Default | documentation | MEDIUM |
-
-### Search
-```bash
-# Basic search
-zikaron search "how did I implement authentication"
-
-# Filter by project
-zikaron search "error handling" -p my-project
-
-# Filter by content type
-zikaron search "debugging" -t learning
-
-# More results
-zikaron search "api design" -n 20
-```
-
-### Stats & Management
-```bash
-# View knowledge base stats
-zikaron stats
-
-# Clear entire database (careful!)
-zikaron clear -y
+# Convert ChromaDB → sqlite-vec (run once after upgrade)
+zikaron migrate
+# Time: ~4-6 hours for 200k chunks with bge-large-en-v1.5
+# Runs embedding on all chunks - can leave overnight
 ```
 
 ## Storage Location
 
-Database: `~/.local/share/zikaron/chromadb`
+```
+~/.local/share/zikaron/
+├── zikaron.db         # sqlite-vec database (vectors + metadata)
+├── prompts/           # Deduplicated system prompts
+└── chromadb.backup/   # Old ChromaDB (after migration)
 
-Check size: `du -sh ~/.local/share/zikaron/chromadb`
+/tmp/zikaron.sock      # Unix socket for daemon communication
+```
+
+Check size: `du -sh ~/.local/share/zikaron/zikaron.db`
+
+## Performance
+
+| Metric | Old (ChromaDB) | New (sqlite-vec) |
+|--------|----------------|------------------|
+| Cold Start | 180s | 15s |
+| Warm Query | N/A | <2s |
+| Model Load | 30s (Ollama) | 8s (sentence-transformers) |
+| Memory | 6GB+ | 4GB |
 
 ## MCP Integration
 
@@ -90,43 +96,33 @@ Add to `~/.claude/settings.json`:
 
 Then Claude Code can query directly: "Search my past conversations for authentication patterns"
 
+## Daemon Management
+
+```bash
+# Start daemon manually
+zikaron-daemon
+
+# Install auto-start service (launchd)
+python ~/Gits/golems/packages/zikaron/scripts/install_service.py install
+```
+
 ## Troubleshooting
 
-### Schema Errors
-If you see "no such column" errors after upgrading:
+### Schema Errors / Fresh Start
 ```bash
-rm -rf ~/.local/share/zikaron/chromadb
-zikaron index  # Re-index from scratch
+rm ~/.local/share/zikaron/zikaron.db
+zikaron migrate  # Re-migrate from ChromaDB
+# or
+zikaron index-fast  # Re-index from scratch
 ```
 
-### Ollama Not Running
+### Daemon Not Running
 ```bash
-# Check if running
-curl http://localhost:11434/api/tags
+# Check if daemon is running
+curl --unix-socket /tmp/zikaron.sock http://localhost/health
 
-# Start if needed
-ollama serve &
-```
-
-### Large Database Size
-ChromaDB 0.5.x had bloat issues. Zikaron pins to 0.4.x for stability. If database is huge:
-```bash
-rm -rf ~/.local/share/zikaron/chromadb
-zikaron index  # Should be much smaller
-```
-
-## Architecture
-
-```
-~/.claude/projects/     →  Pipeline  →  ChromaDB  →  CLI / MCP
-   (JSONL files)           (5 stages)    (vectors)    (query)
-
-Stages:
-1. Extract - Parse JSONL, dedupe system prompts
-2. Classify - Identify content type (code, errors, messages)
-3. Chunk - AST-aware splitting for code, header-based for markdown
-4. Embed - Generate vectors via Ollama (nomic-embed-text)
-5. Index - Store in ChromaDB with metadata
+# Start manually
+zikaron-daemon &
 ```
 
 ## When to Use

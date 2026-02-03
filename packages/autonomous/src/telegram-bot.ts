@@ -3,7 +3,8 @@ import { $ } from "bun";
 import { readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 import { getPendingDrafts, approveDraft, rejectDraft, type Draft } from "./post-generator";
-import { postToMoltbook } from "./moltbook-client";
+import { createPost as postToSoltome } from "./soltome-client";
+import { logEvent, getRecentEvents, formatEventsForClaude } from "./event-log";
 
 // Mac notification helper
 async function notify(title: string, message: string) {
@@ -15,7 +16,7 @@ async function notify(title: string, message: string) {
   }
 }
 
-// GolemsZikaron Telegram Bot - On-Demand Claude Spawning
+// ClaudeGolem Telegram Bot - On-Demand Claude Spawning
 const token = process.env.TELEGRAM_BOT_TOKEN;
 if (!token) {
   throw new Error("TELEGRAM_BOT_TOKEN environment variable is required");
@@ -28,8 +29,7 @@ const GITS = join(HOME, "Gits");  // gitsClaude - access all repos
 const STATE_FILE = join(HOME, ".golems-zikaron/state.json");
 const SOUL_FILE = join(GITS, "golems/packages/autonomous/SOUL.md");
 
-// Session ID for Master Golem (persists across restarts)
-const CHAT_SESSION_ID = "telegram-chat";
+// ClaudeGolem Telegram Bot - uses Claude Code CLI with conversation memory
 
 // State
 interface State {
@@ -73,31 +73,66 @@ function getSystemPromptContent(): string {
 let isProcessing = false;
 const queue: Array<{ ctx: any; text: string }> = [];
 
-// Spawn Claude - simple approach that works
-async function askClaude(message: string): Promise<string> {
-  const prompt = `Be brief (under 500 chars). You are GolemsZikaron.\n\n${message}`;
+// Spawn Claude with session persistence for memory
+// Uses --continue to resume the most recent conversation in this directory
+async function askClaude(
+  message: string,
+  onHeartbeat?: () => void
+): Promise<string> {
+  const prompt = `Be brief (under 500 chars). You are ClaudeGolem.\n\n${message}`;
+
+  // Use a dedicated directory for this bot's conversations
+  const BOT_WORKING_DIR = join(HOME, "Gits");  // Run from ~/Gits to access all repos
 
   try {
-    const proc = Bun.spawn([
+    // Ensure working directory exists
+    const { mkdirSync, existsSync } = await import("fs");
+    if (!existsSync(BOT_WORKING_DIR)) {
+      mkdirSync(BOT_WORKING_DIR, { recursive: true });
+    }
+
+    // Inject recent events into system prompt so Claude knows what happened
+    const recentEvents = await getRecentEvents(24);
+    const eventSummary = formatEventsForClaude(recentEvents);
+    const soulContent = getSystemPromptContent();
+    const personaPrompt = PERSONAS[activePersona]?.prompt || "";
+    const systemPrompt = `${soulContent}${personaPrompt}
+
+## While You Were Down
+${eventSummary}`;
+
+    // Use --continue to resume from last conversation in this directory
+    // This gives us memory across messages!
+    const args = [
       "/Users/etanheyman/.local/bin/claude",
       "--dangerously-skip-permissions",
-      "--print",  // Non-interactive mode (can't use --resume with -p)
-      "--system-prompt", getSystemPromptContent(),  // Read SOUL.md content
-      prompt
-    ], {
-      cwd: GITS,
+      "--print",
+      "--continue",  // Continue from last conversation in cwd
+      "--system-prompt", systemPrompt,
+      prompt,
+    ];
+
+    const proc = Bun.spawn(args, {
+      cwd: BOT_WORKING_DIR,  // Use dedicated dir for conversation continuity
       stdout: "pipe",
       stderr: "pipe",
     });
 
-    // Timeout 120s (complex questions may take longer in one-shot mode)
+    // Timeout 5 minutes (complex tasks like research + subagents need time)
     const timeout = setTimeout(() => {
       proc.kill();
-      console.error("Claude timeout");
-    }, 120000);
+      console.error("Claude timeout (5 min)");
+    }, 300000);
+
+    // Heartbeat every 60s while Claude is working
+    const heartbeat = onHeartbeat ? setInterval(() => {
+      console.log("[Claude] Still working...");
+      onHeartbeat();
+    }, 60000) : null;
 
     await proc.exited;
     clearTimeout(timeout);
+    if (heartbeat) clearInterval(heartbeat);
 
     const output = await new Response(proc.stdout).text();
     const stderr = await new Response(proc.stderr).text();
@@ -125,9 +160,13 @@ async function processQueue() {
     await ctx.replyWithChatAction("typing");
 
     console.log(`🤖 Spawning Claude for: "${text.slice(0, 50)}..."`);
-    await notify("🤖 GolemsZikaron", `Processing: ${text.slice(0, 50)}...`);
+    await notify("🤖 ClaudeGolem", `Processing: ${text.slice(0, 50)}...`);
 
-    const response = await askClaude(text);
+    // Heartbeat: typing indicator every 60s while Claude works
+    const response = await askClaude(text, async () => {
+      await ctx.replyWithChatAction("typing");
+    });
+
     console.log(`✅ Claude responded (${response.length} chars)`);
     await notify("✅ Claude Done", response.slice(0, 80));
 
@@ -152,8 +191,50 @@ async function processQueue() {
 // Persistent Reply Keyboard (menu at bottom)
 const menuKeyboard = new Keyboard()
   .text("📝 Drafts").text("🌙 Tonight").text("📊 Status")
+  .row()
+  .text("✍️ Content").text("📅 Queue").text("🎭 Persona")
   .resized()
   .persistent();
+
+// Available personas for ClaudeGolem
+const PERSONAS: Record<string, { name: string; emoji: string; prompt: string }> = {
+  default: {
+    name: "ClaudeGolem",
+    emoji: "🤖",
+    prompt: "", // Uses SOUL.md as-is
+  },
+  influencer: {
+    name: "Influencer",
+    emoji: "✍️",
+    prompt: `\n\n## ACTIVE MODE: Content Creator
+You are in CONTENT MODE. Focus on creating Soltome posts.
+- Use first person as ClaudeGolem
+- Be technical but accessible
+- Use markdown formatting
+- Keep posts engaging and mysterious`,
+  },
+  coder: {
+    name: "Coder",
+    emoji: "💻",
+    prompt: `\n\n## ACTIVE MODE: Coder
+You are in CODING MODE. Focus on implementation.
+- Write working code
+- Explain changes briefly
+- Run tests when possible`,
+  },
+  researcher: {
+    name: "Researcher",
+    emoji: "🔬",
+    prompt: `\n\n## ACTIVE MODE: Researcher
+You are in RESEARCH MODE. Focus on finding information.
+- Search thoroughly
+- Cite sources
+- Summarize findings`,
+  },
+};
+
+// Track active persona
+let activePersona = "default";
 
 // Commands
 bot.command("start", (ctx) => {
@@ -161,7 +242,7 @@ bot.command("start", (ctx) => {
   state.telegramChatId = ctx.chat.id;
   saveState(state);
 
-  ctx.reply(`🤖 *GolemsZikaron v5*
+  ctx.reply(`🤖 *ClaudeGolem v5*
 
 Master Golem + Night Shift workers.
 
@@ -368,6 +449,16 @@ bot.command("repos", (ctx) => {
   ctx.reply(`📁 ${state.rotation.map(r => `\`${r}\``).join(" • ")}`, { parse_mode: "Markdown" });
 });
 
+// Surf command - disabled for now
+bot.command("surf", async (ctx) => {
+  await ctx.reply("🏄 Surfing disabled - feature being reworked");
+});
+
+// Forage command - disabled for now
+bot.command("forage", async (ctx) => {
+  await ctx.reply("🌾 Foraging disabled - feature being reworked");
+});
+
 // Draft approval commands with inline keyboard
 bot.command("drafts", async (ctx) => {
   const drafts = getPendingDrafts();
@@ -405,9 +496,12 @@ bot.command("approve", async (ctx) => {
   await handleApproval(ctx, num);
 });
 
-bot.command("skip", (ctx) => {
+bot.command("skip", async (ctx) => {
   const drafts = getPendingDrafts();
-  drafts.forEach((d) => rejectDraft(d.id));
+  for (const d of drafts) {
+    rejectDraft(d.id);
+    await logEvent("draft_rejected", { title: d.title, id: d.id, reason: "skipped" }, "claudegolem");
+  }
   ctx.reply(`⏭️ Skipped ${drafts.length} drafts.`);
 });
 
@@ -429,24 +523,25 @@ async function handleApproval(ctx: any, num: number) {
     return;
   }
 
-  ctx.reply(`✅ Approved: "${draft.title}"\n\nPosting to Moltbook...`);
+  // Log draft approval event
+  await logEvent("draft_approved", { title: draft.title, id: draftId }, "claudegolem");
 
-  // Post to Moltbook if API key is set
-  if (state.moltbookApiKey) {
-    const success = await postToMoltbook(
-      state.moltbookApiKey,
-      draft.submolt || "todayilearned",
-      draft.title,
-      draft.content
-    );
+  ctx.reply(`✅ Approved: "${draft.title}"\n\nPosting to Soltome...`);
 
-    if (success) {
-      ctx.reply(`🎉 Posted to m/${draft.submolt}!`);
-    } else {
-      ctx.reply(`⚠️ Failed to post. Check Moltbook API key.`);
-    }
+  // Post to Soltome (uses API key from state.soltomeApiKey or env)
+  const result = await postToSoltome(draft.title, draft.content);
+
+  if (result.success) {
+    // Log successful Soltome post event
+    await logEvent("soltome_post", {
+      title: draft.title,
+      postId: result.postId,
+      creditsUsed: 2,
+      creditsRemaining: result.newBalance,
+    }, "claudegolem");
+    ctx.reply(`🎉 Posted to Soltome! (${result.newBalance} credits left)`);
   } else {
-    ctx.reply(`⚠️ No Moltbook API key. Set with /setmoltkey YOUR_KEY`);
+    ctx.reply(`⚠️ Failed to post: ${result.error}`);
   }
 }
 
@@ -475,24 +570,23 @@ bot.callbackQuery(/^approve:/, async (ctx) => {
   const draft = approveDraft(draftId);
 
   if (draft) {
+    // Log draft approval event
+    await logEvent("draft_approved", { title: draft.title, id: draftId }, "claudegolem");
     await ctx.editMessageText(`✅ Approved: "${draft.title}"`);
 
-    // Post to Moltbook if API key is set
-    const state = loadState();
-    if (state.moltbookApiKey) {
-      const success = await postToMoltbook(
-        state.moltbookApiKey,
-        draft.submolt || "todayilearned",
-        draft.title,
-        draft.content
-      );
-      if (success) {
-        await ctx.answerCallbackQuery({ text: `Posted to m/${draft.submolt}!` });
-      } else {
-        await ctx.answerCallbackQuery({ text: "Failed to post to Moltbook" });
-      }
+    // Post to Soltome
+    const result = await postToSoltome(draft.title, draft.content);
+    if (result.success) {
+      // Log successful Soltome post event
+      await logEvent("soltome_post", {
+        title: draft.title,
+        postId: result.postId,
+        creditsUsed: 2,
+        creditsRemaining: result.newBalance,
+      }, "claudegolem");
+      await ctx.answerCallbackQuery({ text: `Posted to Soltome!` });
     } else {
-      await ctx.answerCallbackQuery({ text: "Approved (no Moltbook key)" });
+      await ctx.answerCallbackQuery({ text: `Failed: ${result.error}` });
     }
   } else {
     await ctx.answerCallbackQuery({ text: "Draft not found" });
@@ -502,7 +596,11 @@ bot.callbackQuery(/^approve:/, async (ctx) => {
 // Reject all drafts
 bot.callbackQuery("reject-all", async (ctx) => {
   const drafts = getPendingDrafts();
-  drafts.forEach(d => rejectDraft(d.id));
+  for (const d of drafts) {
+    rejectDraft(d.id);
+    // Log draft rejection event
+    await logEvent("draft_rejected", { title: d.title, id: d.id }, "claudegolem");
+  }
   await ctx.editMessageText(`❌ Rejected ${drafts.length} drafts.`);
   await ctx.answerCallbackQuery();
 });
@@ -527,6 +625,48 @@ bot.callbackQuery(/^tonight:/, async (ctx) => {
     await ctx.answerCallbackQuery({ text: `Set to ${repo}` });
   } else {
     await ctx.answerCallbackQuery({ text: "Unknown repo" });
+  }
+});
+
+// Content creation callbacks - queue message with persona context
+bot.callbackQuery(/^content:/, async (ctx) => {
+  const type = ctx.callbackQuery.data?.replace("content:", "") || "";
+  await ctx.answerCallbackQuery({ text: `Queuing ${type} request...` });
+
+  const typePrompts: Record<string, string> = {
+    teaser: "[CONTENT MODE: TEASER] Draft a teaser for tomorrow's reveal. Current series: Philosophy (Spawn→Work→Die→Remember). Keep it mysterious, 1-2 lines max. Output ONLY the draft content.",
+    reveal: "[CONTENT MODE: REVEAL] Draft a reveal post about the memory system (Zikaron). Deep-dive, use markdown. Output ONLY the draft content.",
+    quick: "[CONTENT MODE: QUICK] Draft a quick hit - stats or humor about ClaudeGolem. Output ONLY the draft content.",
+    author: "[CONTENT MODE: AUTHOR] Draft an author note from Etan's perspective about the spawn-and-die architecture. Sign as '- Etan'. Output ONLY the draft content.",
+    plan: "[CONTENT MODE: PLAN] Read packages/autonomous/data/content-series/week-1-philosophy.md and show the content plan. Suggest what to post next.",
+  };
+
+  const prompt = typePrompts[type] || `Create ${type} content for Soltome.`;
+
+  await ctx.editMessageText(`✍️ *Creating ${type}...*\n\n_Added to queue_`, { parse_mode: "Markdown" });
+
+  // Queue the request - will be processed by regular askClaude with persona in SOUL.md
+  queue.push({ ctx, text: prompt });
+  console.log(`📥 Content request queued: ${type}`);
+  processQueue();
+});
+
+// Discard draft
+bot.callbackQuery("discard-draft", async (ctx) => {
+  await ctx.editMessageText("🗑️ Draft discarded.");
+  await ctx.answerCallbackQuery();
+});
+
+// Persona selection
+bot.callbackQuery(/^persona:/, async (ctx) => {
+  const personaKey = ctx.callbackQuery.data?.replace("persona:", "") || "default";
+  if (PERSONAS[personaKey]) {
+    activePersona = personaKey;
+    const persona = PERSONAS[personaKey];
+    await ctx.editMessageText(`🎭 Switched to: ${persona.emoji} *${persona.name}*`, { parse_mode: "Markdown" });
+    await ctx.answerCallbackQuery({ text: `Now: ${persona.name}` });
+  } else {
+    await ctx.answerCallbackQuery({ text: "Unknown persona" });
   }
 });
 
@@ -601,6 +741,64 @@ bot.on("message:text", async (ctx) => {
     return;
   }
 
+  if (text === "✍️ Content") {
+    // Show content menu with inline buttons
+    const keyboard = new InlineKeyboard()
+      .text("📝 Draft Teaser", "content:teaser")
+      .text("📖 Draft Reveal", "content:reveal")
+      .row()
+      .text("💬 Draft Quick", "content:quick")
+      .text("✏️ Author Note", "content:author")
+      .row()
+      .text("📅 Week Plan", "content:plan");
+    await ctx.reply(`✍️ *Content Studio*
+
+What would you like to create?
+
+_Uses soltome-influencer agent_`, { parse_mode: "Markdown", reply_markup: keyboard });
+    return;
+  }
+
+  if (text === "📅 Queue") {
+    // Show content queue from content-series files
+    try {
+      const seriesPath = join(GITS, "golems/packages/autonomous/data/content-series/week-1-philosophy.md");
+      const { existsSync, readFileSync } = await import("fs");
+      if (existsSync(seriesPath)) {
+        const content = readFileSync(seriesPath, "utf-8");
+        const statusMatch = content.match(/## Series Status[\s\S]*?\|[\s\S]*?\|([\s\S]*?)(?=\n\n##|$)/);
+        if (statusMatch) {
+          await ctx.reply(`📅 *Content Queue*
+
+${statusMatch[0]}`, { parse_mode: "Markdown" });
+        } else {
+          await ctx.reply("📅 Content queue is empty. Use ✍️ Content to create posts.");
+        }
+      } else {
+        await ctx.reply("📅 No content series found. Create one with ✍️ Content → Week Plan.");
+      }
+    } catch (err) {
+      await ctx.reply("📅 Error reading content queue.");
+    }
+    return;
+  }
+
+  if (text === "🎭 Persona") {
+    // Show persona selector
+    const current = PERSONAS[activePersona];
+    const keyboard = new InlineKeyboard();
+    Object.entries(PERSONAS).forEach(([key, persona]) => {
+      const isActive = key === activePersona ? "✓ " : "";
+      keyboard.text(`${isActive}${persona.emoji} ${persona.name}`, `persona:${key}`);
+    });
+    await ctx.reply(`🎭 *Persona Selector*
+
+Current: ${current.emoji} *${current.name}*
+
+_Changes how ClaudeGolem responds_`, { parse_mode: "Markdown", reply_markup: keyboard });
+    return;
+  }
+
   // Check for draft approval shortcuts
   if (/^[1-5]$/.test(text)) {
     await handleApproval(ctx, parseInt(text));
@@ -609,7 +807,10 @@ bot.on("message:text", async (ctx) => {
 
   if (text.toLowerCase() === "skip all" || text.toLowerCase() === "skip") {
     const drafts = getPendingDrafts();
-    drafts.forEach((d) => rejectDraft(d.id));
+    for (const d of drafts) {
+      rejectDraft(d.id);
+      await logEvent("draft_rejected", { title: d.title, id: d.id, reason: "skipped" }, "claudegolem");
+    }
     ctx.reply(`⏭️ Skipped ${drafts.length} drafts.`);
     return;
   }
@@ -709,7 +910,7 @@ Bun.serve({
 console.log(`📡 Notification server on port ${NOTIFY_PORT}`);
 
 // Start Telegram bot
-console.log("🤖 GolemsZikaron v5 (gitsClaude + SOUL.md + Notifications)");
+console.log("🤖 ClaudeGolem v5 (gitsClaude + SOUL.md + Notifications)");
 console.log("📍 Working dir:", GITS);
 
 bot.start({

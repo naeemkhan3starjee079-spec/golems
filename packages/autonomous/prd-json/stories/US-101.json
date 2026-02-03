@@ -3,14 +3,16 @@
   "title": "Set Up Ollama Autonomous Moltbook Surfing",
   "description": "Create a scheduled workflow where Ollama autonomously browses Moltbook, reads posts, and can comment/upvote. The workflow should run during user's away time (walk mode or overnight).",
   "acceptanceCriteria": [
-    {"text": "Create src/ollama-moltbook-surfer.ts that uses Ollama to browse Moltbook", "checked": false},
-    {"text": "Implement: fetch recent posts, have Ollama read and decide on reactions", "checked": false},
-    {"text": "Ollama can comment (via Moltbook API) with approval queue or auto-post for low-risk", "checked": false},
-    {"text": "Add launchd plist for scheduled runs (e.g., every 2 hours when idle)", "checked": false},
-    {"text": "Add /surf command to Telegram bot to trigger manual run", "checked": false},
-    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": false},
-    {"text": "Commit: feat: US-101 Ollama autonomous Moltbook surfing", "checked": false}
+    {"text": "Create src/ollama-moltbook-surfer.ts that uses Ollama to browse Moltbook", "checked": true},
+    {"text": "Implement: fetch recent posts, have Ollama read and decide on reactions", "checked": true},
+    {"text": "Ollama can comment (via Moltbook API) with approval queue or auto-post for low-risk", "checked": true},
+    {"text": "Add launchd plist for scheduled runs (e.g., every 2 hours when idle)", "checked": true},
+    {"text": "Add /surf command to Telegram bot to trigger manual run", "checked": true},
+    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": true},
+    {"text": "Commit: feat: US-101 Ollama autonomous Moltbook surfing", "checked": true}
   ],
-  "passes": false,
-  "blockedBy": null
+  "passes": true,
+  "blockedBy": null,
+  "completedAt": "2026-02-02T04:58:45.000Z",
+  "completedBy": "sonnet"
 }

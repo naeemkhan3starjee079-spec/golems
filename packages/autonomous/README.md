@@ -73,7 +73,9 @@ Then message [@GolemZikaronBot](https://t.me/GolemZikaronBot) on Telegram.
 - System prompt now correctly loads SOUL.md content (was passing path)
 - `/jobq` uses `--print` mode (one-shot, no session conflicts)
 - Added stderr logging for debugging Claude spawns
-- Increased timeout to 120s for complex queries
+- **Timeout: 5 minutes** for complex tasks (research, subagents)
+- **Typing heartbeat** every 60s while Claude works
+- **Acknowledge pattern** - Claude says "Got it. I'll do X, Y, Z." before complex tasks (see SOUL.md)
 
 ### Fixed: Night Shift
 - Empty PR guard: checks `git diff --stat` before creating PR

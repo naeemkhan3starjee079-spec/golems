@@ -118,7 +118,8 @@ function saveResults(matches: MatchResult[]) {
 
 // Main job search routine
 async function runJobSearch() {
-  console.log("🤖 Job Golem starting...\n");
+  const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 19);
+  console.log(`[${timestamp}] 🤖 Job Golem starting...\n`);
   const startTime = Date.now();
 
   // 1. Scrape all job boards
@@ -154,7 +155,8 @@ async function runJobSearch() {
   console.log("\n📱 Sending Telegram notifications...");
   await sendJobMatches(matches);
 
-  console.log(`\n✅ Job Golem finished in ${duration}s`);
+  const endTime = new Date().toISOString().replace('T', ' ').slice(0, 19);
+  console.log(`\n[${endTime}] ✅ Job Golem finished in ${duration}s`);
   console.log(`   • Scraped: ${allJobs.length} jobs`);
   console.log(`   • Filtered: ${filtered.length} by keywords`);
   console.log(`   • Matched: ${matches.length} scored 6+`);

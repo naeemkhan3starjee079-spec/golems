@@ -13,7 +13,8 @@
 import { $ } from "bun";
 import { readFileSync, writeFileSync, rmSync } from "fs";
 import { join } from "path";
-import { browseMoltbook, filterShitposts, extractLearnings } from "./moltbook-client";
+import { fetchPosts as fetchSoltomePosts } from "./soltome-client";
+import { getMoltbookStatus } from "./moltbook-client";
 import { generatePosts } from "./post-generator";
 
 // Configuration
@@ -52,7 +53,7 @@ function getTelegramToken(): string {
   if (process.env.TELEGRAM_BOT_TOKEN) return process.env.TELEGRAM_BOT_TOKEN;
 
   try {
-    const envFile = readFileSync(join(HOME, "Gits/golems-zikaron/.env"), "utf-8");
+    const envFile = readFileSync(join(HOME, "Gits/golems/packages/autonomous/.env"), "utf-8");
     const match = envFile.match(/TELEGRAM_BOT_TOKEN=(.+)/);
     return match?.[1]?.trim() || "";
   } catch {
@@ -352,34 +353,43 @@ async function nightShift(): Promise<NightShiftResult> {
     }
 
     // ═══════════════════════════════════════════════════════
-    // PHASE 2: Browse Moltbook → Extract Learnings
+    // PHASE 2: Browse Soltome → Extract Learnings
+    // Note: Moltbook is for identity only, not content
     // ═══════════════════════════════════════════════════════
-    console.log("\n═══ PHASE 2: Moltbook Browsing ═══\n");
+    console.log("\n═══ PHASE 2: Soltome Browsing ═══\n");
 
     try {
-      const posts = await browseMoltbook();
-      const qualityPosts = await filterShitposts(posts);
-      result.moltbookLearnings = await extractLearnings(qualityPosts);
+      const posts = await fetchSoltomePosts(20);
+      if (posts.length > 0) {
+        // Extract titles as learnings for post generation context
+        result.moltbookLearnings = posts.slice(0, 5).map(
+          (p) => `[Soltome] "${p.title}" by ${p.author?.username || "unknown"}`
+        );
+        console.log(`[Soltome] Found ${posts.length} posts, extracted ${result.moltbookLearnings.length} learnings`);
+      } else {
+        result.moltbookLearnings = ["No Soltome posts available (check credentials)"];
+      }
     } catch (err) {
-      console.error("[Moltbook] Browsing failed:", err);
-      result.moltbookLearnings = ["Moltbook API not available"];
+      console.error("[Soltome] Browsing failed:", err);
+      result.moltbookLearnings = ["Soltome API not available"];
     }
 
     // ═══════════════════════════════════════════════════════
-    // PHASE 3: Generate Post Drafts (Critique-Waves)
+    // PHASE 3: Generate Post Drafts (DISABLED until aInfluencer)
     // ═══════════════════════════════════════════════════════
-    console.log("\n═══ PHASE 3: Post Generation ═══\n");
-
-    try {
-      const drafts = await generatePosts({
-        zikaronInfo: "Zikaron indexes Claude Code conversations for search/retrieval.",
-        claudeGolemInfo: "Ralph (claude-golem) runs autonomous coding loops.",
-        overnightLearnings: result.moltbookLearnings.join("\n"),
-      });
-      result.draftsGenerated = drafts.length;
-    } catch (err) {
-      console.error("[PostGen] Failed:", err);
-    }
+    console.log("\n═══ PHASE 3: Post Generation (SKIPPED - awaiting aInfluencer) ═══\n");
+    result.draftsGenerated = 0;
+    // TODO: Re-enable when aInfluencer is implemented
+    // try {
+    //   const drafts = await generatePosts({
+    //     zikaronInfo: "Zikaron indexes Claude Code conversations for search/retrieval.",
+    //     claudeGolemInfo: "Ralph (claude-golem) runs autonomous coding loops.",
+    //     overnightLearnings: result.moltbookLearnings.join("\n"),
+    //   });
+    //   result.draftsGenerated = drafts.length;
+    // } catch (err) {
+    //   console.error("[PostGen] Failed:", err);
+    // }
 
     // ═══════════════════════════════════════════════════════
     // PHASE 4: Send Summary
