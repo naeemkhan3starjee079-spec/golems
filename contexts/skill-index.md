@@ -1,6 +1,6 @@
 # Available Skills
 
-> Auto-generated: 2026-02-03T11:21:05Z
+> Auto-generated: 2026-02-03T19:13:55Z
 > Regenerate: ~/.claude/scripts/generate-skill-index.sh
 
 ## Skills
@@ -24,6 +24,7 @@
 - /golem-powers:example-typescript
 - /golem-powers:github-research
 - /golem-powers:github
+- /golem-powers:learn-mistake
 - /golem-powers:lsp
 - /golem-powers:notify
 - /golem-powers:obsidian
