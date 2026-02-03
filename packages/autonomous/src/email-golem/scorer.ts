@@ -142,7 +142,8 @@ export function extractSubscriptionInfo(
  * Build the scoring prompt for Ollama
  */
 function buildScoringPrompt(email: EmailInput): string {
-  return `You are an email triage assistant. Score this email for urgency and categorize it.
+  return `You are an email triage assistant for a developer who works heavily with Claude/Anthropic.
+Score this email for urgency and categorize it.
 
 EMAIL:
 - Subject: ${email.subject}
@@ -158,10 +159,17 @@ SCORING CRITERIA:
   * Direct message needing urgent reply
   * Offer letters, contracts to sign
 
-- Score 7-9 (Include in daily briefing):
+- Score 9 (HIGH PRIORITY - tech learning):
+  * Anthropic/Claude announcements, changelogs, new features
+  * Claude API updates, model releases
+  * Major tech news DIRECTLY about tools I use (Claude, Convex, Bun, React)
+  * Security alerts for my tools
+
+- Score 7-8 (Include in daily briefing):
   * Job application status updates
-  * Recruiter viewed profile
-  * Important but not time-sensitive
+  * Recruiter messages (not bulk alerts)
+  * GitHub PR reviews, issue mentions
+  * Specific tech content I should learn (not generic newsletters)
 
 - Score 5-6 (Track for monthly report):
   * Subscription payment receipts
@@ -169,17 +177,21 @@ SCORING CRITERIA:
   * New subscription confirmations
 
 - Score 3-4 (Log only):
-  * Job alert digests ("15 jobs match")
-  * Rejection emails
+  * Job alert digests ("15 jobs match", "new jobs in your area")
+  * Generic rejection emails
   * Automated confirmations
+  * Daily.dev, Hashnode, dev.to generic digests
 
 - Score 1-2 (Ignore):
-  * Newsletters
-  * Promos/marketing
-  * Social notifications
+  * Generic newsletters (even if tech-related but not actionable)
+  * Promos/marketing (events, festivals, sales)
+  * Social notifications (LinkedIn views, follows)
   * Spam
 
-CATEGORIES: interview, urgent, job, subscription, newsletter, promo, social, other
+IMPORTANT: Generic newsletters and "weekly digest" type emails are 2-3, NOT 7+.
+Only score 7+ if the content is DIRECTLY actionable or about Claude/Anthropic specifically.
+
+CATEGORIES: interview, urgent, job, subscription, tech-update, newsletter, promo, social, other
 
 For subscription emails, also extract:
 - serviceName: Name of the service (Netflix, Spotify, etc.)
