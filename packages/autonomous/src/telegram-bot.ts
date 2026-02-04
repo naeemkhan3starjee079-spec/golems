@@ -5,6 +5,7 @@ import { join } from "path";
 import { getPendingDrafts, approveDraft, rejectDraft, type Draft } from "./post-generator";
 import { createPost as postToSoltome } from "./soltome-client";
 import { logEvent, getRecentEvents, formatEventsForClaude } from "./event-log";
+import { runJobSearch } from "./job-golem/index";
 import { runCursorResearch, runCursorVerification, readResearch } from "./cursor-helper";
 
 // Mac notification helper
@@ -1585,11 +1586,47 @@ Bun.serve({
       }
     }
 
+    // Job scraping endpoint - trigger manually or via interval
+    if (url.pathname === "/scrape-jobs") {
+      console.log("[Job Golem] Manual scrape triggered via HTTP");
+      // Run async, return immediately
+      runJobSearch().then(result => {
+        if (result) {
+          console.log(`[Job Golem] Scrape complete: ${result.scraped} scraped, ${result.filtered} filtered, ${result.matched} matched`);
+        }
+      }).catch(err => {
+        console.error("[Job Golem] Scrape failed:", err);
+      });
+      return new Response(JSON.stringify({ status: "started" }), {
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
     return new Response("not found", { status: 404 });
   },
 });
 
 console.log(`📡 Notification server on port ${NOTIFY_PORT}`);
+
+// ═══════════════════════════════════════════════════════
+// Job Golem Auto-Scrape (every 10 minutes)
+// ═══════════════════════════════════════════════════════
+const JOB_SCRAPE_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
+
+// Run initial scrape after 30 seconds (let bot fully start)
+setTimeout(() => {
+  console.log("[Job Golem] Running initial scrape...");
+  runJobSearch().catch(err => console.error("[Job Golem] Initial scrape failed:", err));
+}, 30 * 1000);
+
+// Then every 10 minutes
+setInterval(() => {
+  const now = new Date().toTimeString().slice(0, 5);
+  console.log(`[Job Golem] Auto-scrape triggered at ${now}`);
+  runJobSearch().catch(err => console.error("[Job Golem] Auto-scrape failed:", err));
+}, JOB_SCRAPE_INTERVAL_MS);
+
+console.log(`⏰ Job Golem auto-scrape: every ${JOB_SCRAPE_INTERVAL_MS / 60000} minutes`);
 
 // Start Telegram bot
 console.log("🤖 ClaudeGolem v5 (gitsClaude + SOUL.md + Notifications)");
