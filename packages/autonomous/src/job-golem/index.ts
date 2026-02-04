@@ -58,7 +58,6 @@ async function sendJobMatches(matches: MatchResult[]) {
 
   // High-scoring matches (8+) get highlighted
   const hotMatches = matches.filter(m => m.score >= 8);
-  const goodMatches = matches.filter(m => m.score >= 6 && m.score < 8);
 
   // Build one consolidated message with context
   const lines: string[] = [`*${matches.length} Job Matches Found*\n`];

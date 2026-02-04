@@ -49,15 +49,6 @@ export interface CursorOptions {
 // ═══════════════════════════════════════════════════════
 
 /**
- * Shell-escape a string to prevent injection attacks.
- * Wraps in single quotes and escapes any existing single quotes.
- */
-function shellEscape(str: string): string {
-  // Replace single quotes with: end quote, escaped quote, start quote
-  return "'" + str.replace(/'/g, "'\\''") + "'";
-}
-
-/**
  * Sanitize a topic/filename for filesystem use.
  * Only allows alphanumeric, dash, underscore.
  */

@@ -13,7 +13,7 @@
 
 import { exec } from "child_process";
 import { promisify } from "util";
-import { existsSync, readFileSync, writeFileSync } from "fs";
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
 import { join } from "path";
 
 const execAsync = promisify(exec);
@@ -76,6 +76,9 @@ function loadRateLimitState(): RateLimitState {
  * Save rate limit state to disk
  */
 function saveRateLimitState(state: RateLimitState): void {
+  if (!existsSync(STATE_DIR)) {
+    mkdirSync(STATE_DIR, { recursive: true });
+  }
   writeFileSync(RATE_LIMIT_FILE, JSON.stringify(state, null, 2));
 }
 

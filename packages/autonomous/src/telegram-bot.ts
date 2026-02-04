@@ -5,7 +5,7 @@ import { join } from "path";
 import { getPendingDrafts, approveDraft, rejectDraft, type Draft } from "./post-generator";
 import { createPost as postToSoltome } from "./soltome-client";
 import { logEvent, getRecentEvents, formatEventsForClaude } from "./event-log";
-import { runCursorResearch, runCursorVerification, getResearchPath, readResearch } from "./cursor-helper";
+import { runCursorResearch, runCursorVerification, readResearch } from "./cursor-helper";
 
 // Mac notification helper
 async function notify(title: string, message: string) {
@@ -369,7 +369,7 @@ async function runContentPipeline(
   await onProgress(`🔬 Researching "${topic}"...`);
   const researchOk = await runResearchPhase(task.id);
   if (!researchOk) {
-    await onProgress(`❌ Research failed: ${task.error}`);
+    await onProgress(`❌ Research failed: ${loadContentTask(task.id)?.error || "Unknown error"}`);
     return loadContentTask(task.id) || task;
   }
 

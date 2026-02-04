@@ -4,7 +4,7 @@
  * These tests mock the fetch API since they interact with external services.
  */
 
-import { describe, expect, it, beforeEach, afterEach, mock, spyOn } from "bun:test";
+import { describe, expect, it, beforeEach, afterEach, mock } from "bun:test";
 
 // We need to mock fetch before importing the module
 const originalFetch = globalThis.fetch;
@@ -61,7 +61,9 @@ describe("Soltome Client", () => {
       await editPost("post-123", { title: "Updated Title" });
 
       expect(mockFetch).toHaveBeenCalled();
-      const [url, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+      // Use last call to handle module caching across tests
+      const calls = mockFetch.mock.calls;
+      const [url, options] = calls[calls.length - 1] as [string, RequestInit];
       expect(url).toContain("/posts/post-123");
       expect(options.method).toBe("PATCH");
       expect(JSON.parse(options.body as string)).toEqual({ title: "Updated Title" });
@@ -100,7 +102,9 @@ describe("Soltome Client", () => {
 
       await editPost("post-789", { title: "Title", content: "Content" });
 
-      const [_, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+      // Use last call to handle module caching across tests
+      const calls = mockFetch.mock.calls;
+      const [_, options] = calls[calls.length - 1] as [string, RequestInit];
       expect(JSON.parse(options.body as string)).toEqual({
         title: "Title",
         content: "Content",
@@ -135,7 +139,9 @@ describe("Soltome Client", () => {
 
       await editPost("  post-id  ", { title: "  Title  ", content: "  Content  " });
 
-      const [url, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+      // Use last call to handle module caching across tests
+      const calls = mockFetch.mock.calls;
+      const [url, options] = calls[calls.length - 1] as [string, RequestInit];
       expect(url).toContain("/posts/post-id");
       expect(JSON.parse(options.body as string)).toEqual({
         title: "Title",
@@ -220,7 +226,9 @@ describe("Soltome Client", () => {
 
       await fetchPosts(5);
 
-      const [_, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+      // Use last call to handle module caching across tests
+      const calls = mockFetch.mock.calls;
+      const [_, options] = calls[calls.length - 1] as [string, RequestInit];
       expect((options.headers as Record<string, string>)["Authorization"]).toBe(
         "Bearer ntls_test_key_12345"
       );

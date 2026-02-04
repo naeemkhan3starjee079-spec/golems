@@ -5,7 +5,7 @@
  * created → researching → drafting → verifying → review → posted
  */
 
-import { describe, it, expect, beforeEach, afterEach, mock } from "bun:test";
+import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { existsSync, rmSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 
