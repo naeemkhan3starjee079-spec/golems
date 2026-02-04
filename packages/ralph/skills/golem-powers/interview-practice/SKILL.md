@@ -10,7 +10,7 @@ description: 7 interview modes for technical interview preparation with Elo trac
 
 ## Usage
 
-```
+```text
 /interview-practice [mode] [company] [level]
 ```
 

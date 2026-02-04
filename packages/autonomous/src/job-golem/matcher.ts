@@ -169,7 +169,9 @@ const NOT_A_JOB_PATTERNS = [
  */
 const WRONG_STACK_TITLE_PATTERNS = [
   // Wrong programming languages/frameworks
-  /\b(java|c#|\.net|dotnet|php|angular)\s+(developer|engineer|programmer)/i,
+  // Note: \.net requires word boundary before to avoid matching domain names like company.net
+  /\b(java|c#|dotnet|php|angular)\s+(developer|engineer|programmer)/i,
+  /(?<![a-z])\.net\s+(developer|engineer|programmer)/i,  // .net but not domain.net
   /\bsenior\s+java\b/i,
   /\bsenior\s+c\+\+/i,
   /\bc\+\+\s+(developer|engineer)/i,
@@ -203,7 +205,7 @@ const WRONG_STACK_TITLE_PATTERNS = [
   /\bproject\s+management\s+office/i,
   /\btraining\b/i,
   /\b(system|it)\s+admin/i,
-  /\bdata\s+engineer/i,
+  // Note: "data engineer" moved to WRONG_STACK_REQUIRED_KEYWORDS - it's often nice-to-have
 
   // Hebrew wrong roles
   /מנתח[\\/]?ת?\s+מערכות/,  // System analyst
@@ -264,6 +266,10 @@ const WRONG_STACK_REQUIRED_KEYWORDS = [
   // Data/DBA
   'dba experience', 'database administration',
   'neo4j', 'cassandra', 'hadoop', 'spark',
+
+  // Data Engineering (when it's the primary role)
+  'data engineer required', 'data engineer is required',
+  'must have data engineering', 'data engineering experience required',
 ];
 
 /**

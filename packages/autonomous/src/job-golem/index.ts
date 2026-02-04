@@ -11,7 +11,7 @@
 import { scrapeAllJobs } from "./scraper";
 import { syncJobs, syncScores } from "./sync-to-supabase";
 import { matchJobs, prefilterJobs, type MatchResult } from "./matcher";
-import { readFileSync, writeFileSync, existsSync, readdirSync, unlinkSync, statSync } from "fs";
+import { readFileSync, writeFileSync, existsSync, readdirSync, unlinkSync, statSync, mkdirSync } from "fs";
 import { join } from "path";
 
 const HOME = process.env.HOME;
@@ -22,9 +22,8 @@ const RESULTS_DIR = join(HOME, ".golems-zikaron/job-golem/results");
 
 // Ensure results directory exists
 function ensureResultsDir() {
-  const fs = require("fs");
-  if (!fs.existsSync(RESULTS_DIR)) {
-    fs.mkdirSync(RESULTS_DIR, { recursive: true });
+  if (!existsSync(RESULTS_DIR)) {
+    mkdirSync(RESULTS_DIR, { recursive: true });
   }
 }
 

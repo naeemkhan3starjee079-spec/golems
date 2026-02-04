@@ -48,8 +48,8 @@ const DEFAULT_CONFIG: EloConfig = {
   initialRating: 1200,
 };
 
-// All interview modes
-const ALL_MODES: InterviewMode[] = [
+// All interview modes - exported for reuse in other modules
+export const ALL_MODES: InterviewMode[] = [
   "leetcode",
   "system-design",
   "debugging",
@@ -104,8 +104,17 @@ function loadState(): EloState {
 
   if (existsSync(filePath)) {
     try {
-      eloState = JSON.parse(readFileSync(filePath, "utf-8"));
-      return eloState!;
+      const loaded = JSON.parse(readFileSync(filePath, "utf-8")) as EloState;
+
+      // Backfill any missing modes (handles older state files when new modes are added)
+      for (const mode of ALL_MODES) {
+        if (loaded.ratings[mode] === undefined) {
+          loaded.ratings[mode] = DEFAULT_CONFIG.initialRating;
+        }
+      }
+      loaded.updatedAt = new Date().toISOString();
+      eloState = loaded;
+      return eloState;
     } catch {
       // Invalid JSON, create fresh state
     }

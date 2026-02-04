@@ -71,6 +71,9 @@ export function initDb(customPath?: string): void {
 
   db = new Database(dbPath);
 
+  // Enable foreign key enforcement
+  db.run("PRAGMA foreign_keys = ON");
+
   // Create tables
   db.run(`
     CREATE TABLE IF NOT EXISTS sessions (

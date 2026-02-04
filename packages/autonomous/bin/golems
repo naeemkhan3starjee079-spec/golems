@@ -229,8 +229,15 @@ cmd_restart() {
 
 cmd_scrape() {
   echo "Triggering job scrape..."
-  curl -s http://localhost:3847/scrape-jobs && echo ""
-  echo "Scrape started. Check: golems logs telegram"
+  if curl --fail -s http://localhost:3847/scrape-jobs; then
+    echo ""
+    echo "Scrape started. Check: golems logs telegram"
+  else
+    echo ""
+    echo -e "${RED}Failed to trigger job scrape.${NC} Is telegram bot running?"
+    echo "Start with: golems start telegram"
+    exit 1
+  fi
 }
 
 cmd_clear_errors() {
@@ -272,9 +279,8 @@ case "${1:-status}" in
     cmd_restart "$2"
     ;;
   reload)
-    cmd_stop "${2:-telegram}"
-    sleep 1
-    cmd_start "${2:-telegram}"
+    # Reload delegates to restart for code consistency
+    cmd_restart "${2:-telegram}"
     echo "Reloaded ${2:-telegram}"
     ;;
   clear-errors|clear)

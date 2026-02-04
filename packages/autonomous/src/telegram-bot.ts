@@ -13,6 +13,7 @@ import {
   updateAfterSession,
   getQuestionRating,
   getStatsSummary,
+  ALL_MODES,
   type InterviewMode,
 } from "./recruiter-golem/elo";
 import {
@@ -835,21 +836,12 @@ bot.command("jobq", async (ctx) => {
 // Interview Practice Commands (RecruiterGolem E4)
 // ═══════════════════════════════════════════════════════
 
-// Valid interview modes
-const INTERVIEW_MODES: InterviewMode[] = [
-  "leetcode",
-  "system-design",
-  "debugging",
-  "code-review",
-  "behavioral",
-  "optimization",
-  "complexity",
-];
+// Interview modes imported from elo.ts (ALL_MODES) to keep single source of truth
 
 // Track pending practice sessions for pass/fail input
 const pendingPracticeSessions = new Map<number, { sessionId: string; mode: InterviewMode }>();
 
-// Initialize practice database
+// Initialize practice database (sync init is acceptable at bot startup)
 initPracticeDb();
 
 // /practice command - start interview practice
@@ -883,10 +875,10 @@ ${getStatsSummary()}`, { parse_mode: "Markdown", reply_markup: keyboard });
   }
 
   // Validate mode
-  if (!INTERVIEW_MODES.includes(modeArg)) {
+  if (!ALL_MODES.includes(modeArg)) {
     await ctx.reply(`❌ Unknown mode: ${modeArg}
 
-Valid modes: ${INTERVIEW_MODES.join(", ")}`, { parse_mode: "Markdown" });
+Valid modes: ${ALL_MODES.join(", ")}`, { parse_mode: "Markdown" });
     return;
   }
 
@@ -947,10 +939,10 @@ bot.command("stats", async (ctx) => {
   const modeArg = args[0]?.toLowerCase() as InterviewMode | undefined;
 
   // Validate mode if provided
-  if (modeArg && !INTERVIEW_MODES.includes(modeArg)) {
+  if (modeArg && !ALL_MODES.includes(modeArg)) {
     await ctx.reply(`❌ Unknown mode: ${modeArg}
 
-Valid modes: ${INTERVIEW_MODES.join(", ")}
+Valid modes: ${ALL_MODES.join(", ")}
 
 Or use \`/stats\` for overall stats.`, { parse_mode: "Markdown" });
     return;
@@ -970,7 +962,7 @@ Or use \`/stats\` for overall stats.`, { parse_mode: "Markdown" });
 bot.callbackQuery(/^practice:/, async (ctx) => {
   const mode = ctx.callbackQuery.data?.replace("practice:", "") as InterviewMode;
 
-  if (!INTERVIEW_MODES.includes(mode)) {
+  if (!ALL_MODES.includes(mode)) {
     await ctx.answerCallbackQuery({ text: "Unknown mode" });
     return;
   }
