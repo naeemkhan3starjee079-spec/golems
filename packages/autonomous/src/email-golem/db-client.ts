@@ -18,10 +18,12 @@ export const OFFLINE_QUEUE_PATH = process.env.HOME + '/.golems-zikaron/offline-q
  */
 export function createDbClient(config?: { url: string; key: string }): SupabaseClient {
   const url = config?.url || process.env.SUPABASE_URL;
-  const key = config?.key || process.env.SUPABASE_ANON_KEY;
+  // SECURITY: Use service_role key only (server-only, bypasses RLS)
+  // Anon key is blocked by RLS - do NOT fall back to it
+  const key = config?.key || process.env.SUPABASE_SERVICE_KEY;
 
   if (!url || !key) {
-    throw new Error('Missing SUPABASE_URL or SUPABASE_ANON_KEY in environment');
+    throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_KEY in environment');
   }
 
   return createClient(url, key);

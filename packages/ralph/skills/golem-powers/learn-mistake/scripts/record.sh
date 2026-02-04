@@ -22,19 +22,16 @@ FILENAME="$(date +%Y-%m-%d-%H%M%S).json"
 PROJECT=$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null || echo "unknown")
 SESSION_ID="${CLAUDE_SESSION_ID:-unknown}"
 
-# Create record
-cat > "$MISTAKES_DIR/$FILENAME" << EOF
-{
-  "id": "$ID",
-  "timestamp": "$TIMESTAMP",
-  "description": "$DESCRIPTION",
-  "context": {
-    "project": "$PROJECT",
-    "cwd": "$(pwd)",
-    "session": "$SESSION_ID"
-  }
-}
-EOF
+# Create record using jq for safe JSON encoding (prevents injection)
+jq -n \
+  --arg id "$ID" \
+  --arg ts "$TIMESTAMP" \
+  --arg desc "$DESCRIPTION" \
+  --arg proj "$PROJECT" \
+  --arg cwd "$(pwd)" \
+  --arg sess "$SESSION_ID" \
+  '{id: $id, timestamp: $ts, description: $desc, context: {project: $proj, cwd: $cwd, session: $sess}}' \
+  > "$MISTAKES_DIR/$FILENAME"
 
 echo "Recorded: $DESCRIPTION"
 echo "File: $MISTAKES_DIR/$FILENAME"

@@ -10,7 +10,7 @@
 
 import { readdir, readFile, writeFile, mkdir } from "fs/promises";
 import { join } from "path";
-import { execSync } from "child_process";
+import { spawnSync } from "child_process";
 
 const MISTAKES_DIR = join(process.env.HOME!, ".golems-zikaron", "mistakes");
 const RAW_DIR = join(MISTAKES_DIR, "raw");
@@ -57,20 +57,36 @@ function cosineSimilarity(a: number[], b: number[]): number {
 }
 
 // Get embedding from Zikaron (calls the Python module)
+// SECURITY: Uses stdin to pass text, avoiding shell injection
 async function getEmbedding(text: string): Promise<number[]> {
   try {
-    // Use Zikaron's embedding functionality via Python
-    const result = execSync(
-      `cd ~/Gits/golems/packages/zikaron && source .venv/bin/activate && python3 -c "
-from sentence_transformers import SentenceTransformer
+    const zikaronDir = join(process.env.HOME!, "Gits", "golems", "packages", "zikaron");
+    const pythonScript = `
+import sys
 import json
+from sentence_transformers import SentenceTransformer
 model = SentenceTransformer('BAAI/bge-large-en-v1.5')
-embedding = model.encode('${text.replace(/'/g, "\\'")}').tolist()
+text = sys.stdin.read()
+embedding = model.encode(text).tolist()
 print(json.dumps(embedding))
-"`,
-      { encoding: "utf-8", timeout: 30000 }
+`;
+
+    // Use spawnSync with stdin and cwd to avoid shell injection
+    const result = spawnSync(
+      "bash",
+      ["-c", `source .venv/bin/activate && python3 -c "${pythonScript.replace(/"/g, '\\"')}"`],
+      {
+        input: text,
+        encoding: "utf-8",
+        timeout: 30000,
+        cwd: zikaronDir, // SECURITY: Use cwd option instead of cd in shell
+      }
     );
-    return JSON.parse(result.trim());
+
+    if (result.error) throw result.error;
+    if (result.status !== 0) throw new Error(result.stderr || "Python script failed");
+
+    return JSON.parse(result.stdout.trim());
   } catch (error) {
     console.error(`Failed to get embedding for: ${text}`);
     throw error;

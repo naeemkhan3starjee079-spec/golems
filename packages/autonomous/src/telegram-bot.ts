@@ -24,6 +24,30 @@ if (!token) {
 }
 const bot = new Bot(token);
 
+// Security: Whitelist allowed Telegram user IDs
+// Get your ID: message @userinfobot on Telegram, or check logs below
+const ALLOWED_USER_IDS = process.env.TELEGRAM_ALLOWED_IDS
+  ?.split(",")
+  .map((id) => parseInt(id.trim(), 10))
+  .filter((id) => !isNaN(id)) || [];
+
+// Auth check helper - returns true if authorized
+function isAuthorized(userId: number | undefined): boolean {
+  if (ALLOWED_USER_IDS.length === 0) return true; // No whitelist = allow all (backwards compat)
+  if (!userId) return false;
+  return ALLOWED_USER_IDS.includes(userId);
+}
+
+// Global auth middleware - blocks ALL interactions from non-whitelisted users
+bot.use(async (ctx, next) => {
+  const userId = ctx.from?.id;
+  if (!isAuthorized(userId)) {
+    console.log(`[Auth] Blocked user ${userId} from ${ctx.chat?.id}`);
+    return; // Silent block
+  }
+  await next();
+});
+
 // Paths
 const HOME = process.env.HOME || "/Users/etanheyman";
 const GITS = join(HOME, "Gits");  // gitsClaude - access all repos

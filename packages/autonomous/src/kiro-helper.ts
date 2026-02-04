@@ -257,6 +257,13 @@ export async function runKiroPlan(
 }
 
 /**
+ * Escape string for Kiro prompt (escape backslashes and double quotes)
+ */
+function escapeForKiroPrompt(str: string): string {
+  return str.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+}
+
+/**
  * Add content to Kiro's knowledge base.
  * Useful for persistent context across sessions.
  *
@@ -269,7 +276,10 @@ export async function addToKnowledgeBase(
   content: string,
   options: KiroOptions = {}
 ): Promise<KiroResult> {
-  const prompt = `/kb add "${topic}" "${content}"`;
+  // SECURITY: Escape quotes to prevent prompt injection
+  const safeTopic = escapeForKiroPrompt(topic);
+  const safeContent = escapeForKiroPrompt(content);
+  const prompt = `/kb add "${safeTopic}" "${safeContent}"`;
   return runKiro(prompt, options);
 }
 
@@ -283,7 +293,9 @@ export async function searchKnowledgeBase(
   query: string,
   options: KiroOptions = {}
 ): Promise<KiroResult> {
-  const prompt = `/kb search "${query}"`;
+  // SECURITY: Escape quotes to prevent prompt injection
+  const safeQuery = escapeForKiroPrompt(query);
+  const prompt = `/kb search "${safeQuery}"`;
   return runKiro(prompt, options);
 }
 

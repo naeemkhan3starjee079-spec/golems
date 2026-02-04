@@ -173,6 +173,18 @@ function escapeForShell(str: string): string {
 }
 
 /**
+ * Validate and sanitize model name to prevent command injection
+ * Only allow alphanumeric, hyphens, underscores, and dots
+ */
+function sanitizeModel(model: string): string {
+  const sanitized = model.replace(/[^a-zA-Z0-9._-]/g, "");
+  if (sanitized !== model) {
+    console.warn(`[Gemini] Model name sanitized: "${model}" -> "${sanitized}"`);
+  }
+  return sanitized;
+}
+
+/**
  * Run Gemini CLI with rate limiting and retry
  */
 export async function runGemini(
@@ -200,8 +212,10 @@ export async function runGemini(
       recordRequest();
 
       // Build command with timeout
+      // SECURITY: Sanitize model to prevent command injection
       const escapedPrompt = escapeForShell(prompt);
-      const cmd = `timeout ${Math.ceil(timeout / 1000)} gemini -m ${model} --output-format json ${escapedPrompt}`;
+      const safeModel = sanitizeModel(model);
+      const cmd = `timeout ${Math.ceil(timeout / 1000)} gemini -m ${safeModel} --output-format json ${escapedPrompt}`;
 
       console.log(`[Gemini] Request (${source}): ${prompt.slice(0, 50)}...`);
 
