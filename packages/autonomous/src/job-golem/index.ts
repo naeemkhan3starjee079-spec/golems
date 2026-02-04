@@ -11,7 +11,7 @@
 import { scrapeAllJobs } from "./scraper";
 import { syncJobs, syncScores } from "./sync-to-supabase";
 import { matchJobs, prefilterJobs, type MatchResult } from "./matcher";
-import { readFileSync, writeFileSync, existsSync, readdirSync, unlinkSync, statSync } from "fs";
+import { readFileSync, writeFileSync, existsSync, readdirSync, unlinkSync, statSync, mkdirSync } from "fs";
 import { join } from "path";
 
 const HOME = process.env.HOME;
@@ -22,9 +22,8 @@ const RESULTS_DIR = join(HOME, ".golems-zikaron/job-golem/results");
 
 // Ensure results directory exists
 function ensureResultsDir() {
-  const fs = require("fs");
-  if (!fs.existsSync(RESULTS_DIR)) {
-    fs.mkdirSync(RESULTS_DIR, { recursive: true });
+  if (!existsSync(RESULTS_DIR)) {
+    mkdirSync(RESULTS_DIR, { recursive: true });
   }
 }
 
@@ -159,8 +158,19 @@ function cleanupOldResults() {
   }
 }
 
+// Track if scrape is in progress (prevent concurrent runs)
+let isScrapingInProgress = false;
+
 // Main job search routine
-async function runJobSearch() {
+export async function runJobSearch(): Promise<{ scraped: number; filtered: number; matched: number } | null> {
+  // Prevent concurrent runs
+  if (isScrapingInProgress) {
+    console.log("[Job Golem] Scrape already in progress, skipping...");
+    return null;
+  }
+
+  isScrapingInProgress = true;
+  try {
   const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 19);
   console.log(`[${timestamp}] 🤖 Job Golem starting...\n`);
   const startTime = Date.now();
@@ -172,7 +182,7 @@ async function runJobSearch() {
   if (allJobs.length === 0) {
     console.log("No new jobs found.");
     await sendTelegram("Job Golem", "No new jobs found today.");
-    return;
+    return { scraped: 0, filtered: 0, matched: 0 };
   }
 
   // 2. Quick keyword prefilter
@@ -182,7 +192,7 @@ async function runJobSearch() {
 
   if (filtered.length === 0) {
     await sendTelegram("Job Golem", `Scraped ${allJobs.length} jobs but none matched your keywords.`);
-    return;
+    return { scraped: allJobs.length, filtered: 0, matched: 0 };
   }
 
   // 3. AI scoring with Ollama
@@ -217,6 +227,11 @@ async function runJobSearch() {
 
   // Clean up old result files
   cleanupOldResults();
+
+  return { scraped: allJobs.length, filtered: filtered.length, matched: matches.length };
+  } finally {
+    isScrapingInProgress = false;
+  }
 }
 
 // CLI

@@ -5,7 +5,25 @@ import { join } from "path";
 import { getPendingDrafts, approveDraft, rejectDraft, type Draft } from "./post-generator";
 import { createPost as postToSoltome } from "./soltome-client";
 import { logEvent, getRecentEvents, formatEventsForClaude } from "./event-log";
+import { runJobSearch } from "./job-golem/index";
 import { runCursorResearch, runCursorVerification, readResearch } from "./cursor-helper";
+import {
+  getCandidateRating,
+  getRecommendedDifficulty,
+  updateAfterSession,
+  getQuestionRating,
+  getStatsSummary,
+  ALL_MODES,
+  type InterviewMode,
+} from "./recruiter-golem/elo";
+import {
+  initDb as initPracticeDb,
+  createSession,
+  completeSession,
+  getStats,
+  getActiveSession,
+  formatStats,
+} from "./recruiter-golem/practice-db";
 
 // Mac notification helper
 async function notify(title: string, message: string) {
@@ -814,6 +832,235 @@ bot.command("jobq", async (ctx) => {
   }
 });
 
+// ═══════════════════════════════════════════════════════
+// Interview Practice Commands (RecruiterGolem E4)
+// ═══════════════════════════════════════════════════════
+
+// Interview modes imported from elo.ts (ALL_MODES) to keep single source of truth
+
+// Track pending practice sessions for pass/fail input
+const pendingPracticeSessions = new Map<number, { sessionId: string; mode: InterviewMode }>();
+
+// Initialize practice database (sync init is acceptable at bot startup)
+initPracticeDb();
+
+// /practice command - start interview practice
+bot.command("practice", async (ctx) => {
+  const args = ctx.message?.text?.replace("/practice", "").trim().split(/\s+/) || [];
+  const modeArg = args[0]?.toLowerCase() as InterviewMode;
+
+  // If no mode provided, show mode selection
+  if (!modeArg) {
+    const keyboard = new InlineKeyboard();
+    keyboard.text("💻 Leetcode", "practice:leetcode").text("🏗️ System Design", "practice:system-design").row();
+    keyboard.text("🐛 Debugging", "practice:debugging").text("📝 Code Review", "practice:code-review").row();
+    keyboard.text("🗣️ Behavioral", "practice:behavioral").text("⚡ Optimization", "practice:optimization").row();
+    keyboard.text("📊 Complexity", "practice:complexity");
+
+    await ctx.reply(`🎯 *Interview Practice*
+
+Choose a mode to practice:
+
+• *Leetcode* - Algorithms & data structures
+• *System Design* - Architecture & scale
+• *Debugging* - Bug finding
+• *Code Review* - Quality & security
+• *Behavioral* - Soft skills + technical depth
+• *Optimization* - Performance improvement
+• *Complexity* - Big O analysis
+
+Your Elo ratings:
+${getStatsSummary()}`, { parse_mode: "Markdown", reply_markup: keyboard });
+    return;
+  }
+
+  // Validate mode
+  if (!ALL_MODES.includes(modeArg)) {
+    await ctx.reply(`❌ Unknown mode: ${modeArg}
+
+Valid modes: ${ALL_MODES.join(", ")}`, { parse_mode: "Markdown" });
+    return;
+  }
+
+  // Check for existing active session
+  const existing = getActiveSession(modeArg);
+  if (existing) {
+    const keyboard = new InlineKeyboard()
+      .text("✅ I Passed", `practice-result:${existing.id}:pass`)
+      .text("❌ I Failed", `practice-result:${existing.id}:fail`);
+
+    await ctx.reply(`⚠️ You have an active ${modeArg} session!
+
+When you're done, mark your result:`, { parse_mode: "Markdown", reply_markup: keyboard });
+    return;
+  }
+
+  // Get recommended difficulty and create session
+  const difficulty = getRecommendedDifficulty(modeArg);
+  const rating = getCandidateRating(modeArg);
+  const session = createSession(modeArg, difficulty);
+
+  // Track this session for result input
+  pendingPracticeSessions.set(ctx.chat.id, { sessionId: session.id, mode: modeArg });
+
+  // Build the practice prompt
+  const company = args[1] || "a top tech company";
+  const level = args[2] || "senior engineer";
+
+  const practicePrompt = `Start a ${modeArg} interview practice session.
+
+Company: ${company}
+Level: ${level}
+Difficulty: ${difficulty}
+Current rating: ${rating}
+
+Use the /interview-practice skill prompt for ${modeArg} mode.
+Stay in character as the interviewer. One question at a time.`;
+
+  await ctx.reply(`🎯 *Starting ${modeArg} Practice*
+
+📊 Your rating: ${rating}
+📈 Difficulty: ${difficulty}
+🏢 Company: ${company}
+💼 Level: ${level}
+
+_Claude will now act as your interviewer..._
+
+When you're done, use the buttons to record your result.`, { parse_mode: "Markdown" });
+
+  // Queue for Claude - the actual interview
+  queue.push({ ctx, text: practicePrompt });
+  processQueue();
+});
+
+// /stats command - show practice statistics
+bot.command("stats", async (ctx) => {
+  const args = ctx.message?.text?.replace("/stats", "").trim().split(/\s+/) || [];
+  const modeArg = args[0]?.toLowerCase() as InterviewMode | undefined;
+
+  // Validate mode if provided
+  if (modeArg && !ALL_MODES.includes(modeArg)) {
+    await ctx.reply(`❌ Unknown mode: ${modeArg}
+
+Valid modes: ${ALL_MODES.join(", ")}
+
+Or use \`/stats\` for overall stats.`, { parse_mode: "Markdown" });
+    return;
+  }
+
+  // Get stats
+  const stats = getStats(modeArg);
+  const eloSummary = getStatsSummary();
+
+  let response = formatStats(stats, modeArg);
+  response += "\n\n" + eloSummary;
+
+  await ctx.reply(response, { parse_mode: "Markdown" });
+});
+
+// Practice mode selection callback
+bot.callbackQuery(/^practice:/, async (ctx) => {
+  const mode = ctx.callbackQuery.data?.replace("practice:", "") as InterviewMode;
+
+  if (!ALL_MODES.includes(mode)) {
+    await ctx.answerCallbackQuery({ text: "Unknown mode" });
+    return;
+  }
+
+  // Check for existing active session
+  const existing = getActiveSession(mode);
+  if (existing) {
+    const keyboard = new InlineKeyboard()
+      .text("✅ I Passed", `practice-result:${existing.id}:pass`)
+      .text("❌ I Failed", `practice-result:${existing.id}:fail`);
+
+    await ctx.editMessageText(`⚠️ You have an active ${mode} session!
+
+When you're done, mark your result:`, { parse_mode: "Markdown", reply_markup: keyboard });
+    await ctx.answerCallbackQuery();
+    return;
+  }
+
+  // Get recommended difficulty and create session
+  const difficulty = getRecommendedDifficulty(mode);
+  const rating = getCandidateRating(mode);
+  const session = createSession(mode, difficulty);
+
+  // Track this session for result input
+  const chatId = ctx.chat?.id;
+  if (chatId) {
+    pendingPracticeSessions.set(chatId, { sessionId: session.id, mode });
+  }
+
+  const practicePrompt = `Start a ${mode} interview practice session.
+
+Difficulty: ${difficulty}
+Current rating: ${rating}
+
+Use the /interview-practice skill prompt for ${mode} mode.
+Stay in character as the interviewer. One question at a time.`;
+
+  await ctx.editMessageText(`🎯 *Starting ${mode} Practice*
+
+📊 Your rating: ${rating}
+📈 Difficulty: ${difficulty}
+
+_Claude will now act as your interviewer..._
+
+When you're done, reply with "pass" or "fail" to record your result.`, { parse_mode: "Markdown" });
+  await ctx.answerCallbackQuery({ text: `Starting ${mode} practice` });
+
+  // Queue for Claude - the actual interview
+  if (chatId) {
+    queue.push({ ctx, text: practicePrompt });
+    processQueue();
+  }
+});
+
+// Practice result callback (pass/fail)
+bot.callbackQuery(/^practice-result:/, async (ctx) => {
+  const parts = ctx.callbackQuery.data?.split(":") || [];
+  const sessionId = parts[1];
+  const result = parts[2]; // "pass" or "fail"
+
+  if (!sessionId || !["pass", "fail"].includes(result)) {
+    await ctx.answerCallbackQuery({ text: "Invalid result" });
+    return;
+  }
+
+  const passed = result === "pass";
+  const session = await completeSession(sessionId, passed);
+
+  if (!session) {
+    await ctx.answerCallbackQuery({ text: "Session not found" });
+    return;
+  }
+
+  // Update Elo rating
+  const questionRating = getQuestionRating(session.difficulty);
+  const eloResult = updateAfterSession(session.mode, passed, questionRating);
+
+  // Clear pending session
+  const chatId = ctx.chat?.id;
+  if (chatId) {
+    pendingPracticeSessions.delete(chatId);
+  }
+
+  const emoji = passed ? "✅" : "❌";
+  const changeEmoji = eloResult.change > 0 ? "📈" : "📉";
+
+  await ctx.editMessageText(`${emoji} *Session Complete*
+
+Mode: ${session.mode}
+Difficulty: ${session.difficulty}
+Result: ${passed ? "PASSED" : "FAILED"}
+
+${changeEmoji} Rating: ${eloResult.oldRating} → ${eloResult.newRating} (${eloResult.change > 0 ? "+" : ""}${eloResult.change})
+
+Use \`/stats ${session.mode}\` to see your progress.`, { parse_mode: "Markdown" });
+  await ctx.answerCallbackQuery({ text: passed ? "Great job!" : "Keep practicing!" });
+});
+
 // Jobs pagination callback
 bot.callbackQuery(/^jobs:/, async (ctx) => {
   const page = parseInt(ctx.callbackQuery.data?.replace("jobs:", "") || "1");
@@ -1585,11 +1832,47 @@ Bun.serve({
       }
     }
 
+    // Job scraping endpoint - trigger manually or via interval
+    if (url.pathname === "/scrape-jobs") {
+      console.log("[Job Golem] Manual scrape triggered via HTTP");
+      // Run async, return immediately
+      runJobSearch().then(result => {
+        if (result) {
+          console.log(`[Job Golem] Scrape complete: ${result.scraped} scraped, ${result.filtered} filtered, ${result.matched} matched`);
+        }
+      }).catch(err => {
+        console.error("[Job Golem] Scrape failed:", err);
+      });
+      return new Response(JSON.stringify({ status: "started" }), {
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
     return new Response("not found", { status: 404 });
   },
 });
 
 console.log(`📡 Notification server on port ${NOTIFY_PORT}`);
+
+// ═══════════════════════════════════════════════════════
+// Job Golem Auto-Scrape (every 10 minutes)
+// ═══════════════════════════════════════════════════════
+const JOB_SCRAPE_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
+
+// Run initial scrape after 30 seconds (let bot fully start)
+setTimeout(() => {
+  console.log("[Job Golem] Running initial scrape...");
+  runJobSearch().catch(err => console.error("[Job Golem] Initial scrape failed:", err));
+}, 30 * 1000);
+
+// Then every 10 minutes
+setInterval(() => {
+  const now = new Date().toTimeString().slice(0, 5);
+  console.log(`[Job Golem] Auto-scrape triggered at ${now}`);
+  runJobSearch().catch(err => console.error("[Job Golem] Auto-scrape failed:", err));
+}, JOB_SCRAPE_INTERVAL_MS);
+
+console.log(`⏰ Job Golem auto-scrape: every ${JOB_SCRAPE_INTERVAL_MS / 60000} minutes`);
 
 // Start Telegram bot
 console.log("🤖 ClaudeGolem v5 (gitsClaude + SOUL.md + Notifications)");

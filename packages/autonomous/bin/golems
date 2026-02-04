@@ -35,7 +35,7 @@ USAGE:
 COMMANDS:
   status        Show all services status (default)
   services      Detailed launchd service status
-  docker        Docker container status
+  scrape        Trigger job scrape now
   sessions      Running Claude sessions
   logs [name]   Show logs (telegram, nightshift, job-golem, etc.)
 
@@ -43,7 +43,7 @@ COMMANDS:
   stop [svc]    Stop a service
   restart [svc] Restart a service
 
-  rebuild       Rebuild ollama container (fixes healthcheck)
+  reload [svc]  Reload service (picks up code changes)
   clear-errors  Clear launchd error states
 
   help          Show this help
@@ -53,7 +53,7 @@ EXAMPLES:
   golems services       # Detailed service status
   golems logs telegram  # Tail telegram bot logs
   golems restart telegram
-  golems rebuild        # Rebuild ollama with curl fix
+  golems scrape         # Trigger job scrape now
 
 DOCS:
   ~/Gits/golems/packages/autonomous/CLAUDE.md
@@ -72,22 +72,17 @@ cmd_status() {
     echo -e "$(status_icon 1) Telegram Bot     not running"
   fi
 
-  # Docker
-  if docker ps --format '{{.Names}}' 2>/dev/null | grep -q ollama-sandbox; then
-    health=$(docker inspect ollama-sandbox --format='{{.State.Health.Status}}' 2>/dev/null)
-    if [ "$health" = "healthy" ]; then
-      echo -e "$(status_icon 0) Ollama Sandbox   running (healthy)"
-    else
-      echo -e "$(status_icon 1) Ollama Sandbox   running ($health)"
-    fi
+  # Ollama (local, via launchd)
+  if pgrep -q ollama 2>/dev/null; then
+    echo -e "$(status_icon 0) Ollama           running"
   else
-    echo -e "$(status_icon 1) Ollama Sandbox   not running"
+    echo -e "$(status_icon 1) Ollama           not running"
   fi
 
   # LaunchAgents summary
   echo
   echo -e "${BLUE}LaunchAgents:${NC}"
-  for svc in nightshift briefing job-golem session-archiver; do
+  for svc in nightshift briefing job-golem email-golem session-archiver; do
     status=$(launchctl list 2>/dev/null | grep "com.golemszikaron.$svc\|com.golems.$svc" | awk '{print $1}')
     if [ -z "$status" ]; then
       echo -e "  $(status_icon 1) $svc (not loaded)"
@@ -176,12 +171,20 @@ cmd_start() {
       echo "Loaded nightshift launchd"
       ;;
     ollama)
-      cd "$GOLEMS_HOME/docker/ollama" && docker compose up -d
-      echo "Started ollama containers"
+      launchctl load ~/Library/LaunchAgents/com.golemszikaron.ollama.plist 2>/dev/null
+      echo "Started ollama via launchd"
+      ;;
+    job-golem|job)
+      launchctl load ~/Library/LaunchAgents/com.golemszikaron.job-golem.plist 2>/dev/null
+      echo "Loaded job-golem launchd"
+      ;;
+    email-golem|email)
+      launchctl load ~/Library/LaunchAgents/com.golemszikaron.email-golem.plist 2>/dev/null
+      echo "Loaded email-golem launchd"
       ;;
     *)
       echo "Unknown service: $svc"
-      echo "Available: telegram, nightshift, ollama"
+      echo "Available: telegram, nightshift, ollama, job-golem, email-golem"
       ;;
   esac
 }
@@ -199,8 +202,17 @@ cmd_stop() {
       echo "Stopped nightshift"
       ;;
     ollama)
-      cd "$GOLEMS_HOME/docker/ollama" && docker compose down
-      echo "Stopped ollama containers"
+      launchctl unload ~/Library/LaunchAgents/com.golemszikaron.ollama.plist 2>/dev/null
+      pkill -f ollama 2>/dev/null || true
+      echo "Stopped ollama"
+      ;;
+    job-golem|job)
+      launchctl unload ~/Library/LaunchAgents/com.golemszikaron.job-golem.plist 2>/dev/null
+      echo "Stopped job-golem"
+      ;;
+    email-golem|email)
+      launchctl unload ~/Library/LaunchAgents/com.golemszikaron.email-golem.plist 2>/dev/null
+      echo "Stopped email-golem"
       ;;
     *)
       echo "Unknown service: $svc"
@@ -215,18 +227,22 @@ cmd_restart() {
   cmd_start "$svc"
 }
 
-cmd_rebuild() {
-  echo "Rebuilding ollama container (this will fix healthcheck)..."
-  cd "$GOLEMS_HOME/docker/ollama"
-  docker compose down
-  docker compose build --no-cache
-  docker compose up -d
-  echo "Done. Check: golems docker"
+cmd_scrape() {
+  echo "Triggering job scrape..."
+  if curl --fail -s http://localhost:3847/scrape-jobs; then
+    echo ""
+    echo "Scrape started. Check: golems logs telegram"
+  else
+    echo ""
+    echo -e "${RED}Failed to trigger job scrape.${NC} Is telegram bot running?"
+    echo "Start with: golems start telegram"
+    exit 1
+  fi
 }
 
 cmd_clear_errors() {
   echo "Clearing launchd error states..."
-  for label in com.golemszikaron.job-golem com.golemszikaron.moltbook-monitor com.golemszikaron.ollama; do
+  for label in com.golemszikaron.job-golem com.golemszikaron.email-golem com.golemszikaron.ollama; do
     launchctl bootout gui/$(id -u)/$label 2>/dev/null || true
     launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/${label}.plist 2>/dev/null || true
   done
@@ -244,8 +260,8 @@ case "${1:-status}" in
   services|svc)
     cmd_services
     ;;
-  docker)
-    cmd_docker
+  scrape)
+    cmd_scrape
     ;;
   sessions)
     cmd_sessions
@@ -262,8 +278,10 @@ case "${1:-status}" in
   restart)
     cmd_restart "$2"
     ;;
-  rebuild)
-    cmd_rebuild
+  reload)
+    # Reload delegates to restart for code consistency
+    cmd_restart "${2:-telegram}"
+    echo "Reloaded ${2:-telegram}"
     ;;
   clear-errors|clear)
     cmd_clear_errors

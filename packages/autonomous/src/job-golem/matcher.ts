@@ -155,17 +155,73 @@ export async function matchJobs(jobs: JobListing[], minScore = 6): Promise<Match
 }
 
 /**
+ * TIER 0: NOT A JOB - these are notification emails from job boards
+ * Pattern: "0 משרות חדשות של X" = "0 new jobs of type X"
+ */
+const NOT_A_JOB_PATTERNS = [
+  /^0\s+משרות/i,  // "0 משרות..." - notification email, not a job
+  /משרות.*מחכות לכם/i,  // "X jobs are waiting for you" - notification
+];
+
+/**
  * TIER 0: Instant reject based on job title
  * These are wrong-stack jobs that don't need any further analysis
  */
 const WRONG_STACK_TITLE_PATTERNS = [
-  /\b(java|c#|\.net|dotnet|php|angular)\s+(developer|engineer|programmer)/i,
+  // Wrong programming languages/frameworks
+  // Note: \.net requires word boundary before to avoid matching domain names like company.net
+  /\b(java|c#|dotnet|php|angular)\s+(developer|engineer|programmer)/i,
+  /(?<![a-z])\.net\s+(developer|engineer|programmer)/i,  // .net but not domain.net
+  /\bsenior\s+java\b/i,
+  /\bsenior\s+c\+\+/i,
+  /\bc\+\+\s+(developer|engineer)/i,
+  /\brust\s+(developer|engineer)/i,
   /\b(devops|sre|site reliability|infrastructure|platform)\s+(engineer|developer)/i,
   /\b(data\s+scientist|machine\s+learning|ml\s+engineer|ai\s+engineer)/i,
   /\b(embedded|firmware|hardware)\s+(engineer|developer)/i,
   /\b(qa|quality\s+assurance|test)\s+(engineer|developer|analyst)/i,
   /\bcobol\b/i,
   /\brpg\s+developer/i,
+  /\babap\b/i,
+  /\bsap\s+developer/i,
+  /\bmagento/i,
+  /\bdocumentum/i,
+  /\boutsystems/i,
+  /\brpa\s+(developer|bot|automation)/i,
+
+  // Wrong roles (non-development)
+  /\bdba\b/i,
+  /\bdatabase\s+administrator/i,
+  /\b(system|systems)\s+analyst/i,
+  /\bbusiness\s+intelligence\b/i,
+  /\bbi\s+(developer|analyst|engineer)/i,
+  /\bcustomer\s+success/i,
+  /\bhelpdesk/i,
+  /\bhelp\s+desk/i,
+  /\bit\s+support/i,
+  /\btechnical\s+support/i,
+  /\bsupport\s+(engineer|specialist)/i,
+  /\bpmo\b/i,
+  /\bproject\s+management\s+office/i,
+  /\btraining\b/i,
+  /\b(system|it)\s+admin/i,
+  // Note: "data engineer" moved to WRONG_STACK_REQUIRED_KEYWORDS - it's often nice-to-have
+
+  // Hebrew wrong roles
+  /מנתח[\\/]?ת?\s+מערכות/,  // System analyst
+  /מיישם[\\/]?ת?\s+מערכות/,  // System implementer
+  /מהנדס[\\/]?ת?\s+אוטומציה/,  // Automation engineer
+  /מנהל[\\/]?ת?\s+מערכות\s+מחשוב/,  // IT admin
+  /מפתח[\\/]?ת?\s+אינטגרציה/,  // Integration developer
+  /מפתח[\\/]?ת?\s+תקשורת/,  // Communication/network developer
+  /תמיכה\s+טכנית/,  // Technical support
+
+  // Hebrew wrong stack (Java, Angular, .NET etc)
+  /מפתח[\\/]?ת?\s+java/i,  // Java developer
+  /מפתח[\\/]?ת?\s+angular/i,  // Angular developer
+  /מפתח[\\/]?ת?\s+\.net/i,  // .NET developer
+  /מפתח[\\/]?ת?\s+c#/i,  // C# developer
+  /מפתח[\\/]?ת?\s+מערכות\s+מידע/,  // Information systems developer
 ];
 
 /**
@@ -182,14 +238,38 @@ const RIGHT_STACK_TITLE_PATTERNS = [
  * If these appear in requirements (not just nice-to-have), likely wrong fit
  */
 const WRONG_STACK_REQUIRED_KEYWORDS = [
+  // C# / .NET ecosystem
   'c# required', 'c# is required', 'must have c#', 'must know c#',
   '.net required', '.net is required', 'must have .net', 'must know .net',
+  '.net core', 'asp.net', 'wcf', 'entity framework',
+  'experience with c#', 'years of c#', 'שנות ניסיון ב-c#',
+
+  // Java ecosystem
   'java required', 'java is required', 'must have java', 'must know java',
+  'experience with java', 'years of java', 'spring boot', 'spring framework',
+  'שנות ניסיון ב-java', 'שליטה ב-java',
+
+  // Angular (not React)
   'angular required', 'angular is required', 'must have angular',
+  'experience with angular', 'years of angular',
+  'שליטה ב-angular', 'ניסיון ב-angular',
+
+  // PHP
   'php required', 'php is required', 'must have php',
-  'python required', 'python is required', 'must have python', // unless it's a React+Python role
+  'laravel', 'symfony', 'wordpress developer',
+
+  // Go/Rust/Python as primary
+  'python required', 'python is required', 'must have python',
   'go required', 'golang required', 'must have go',
   'rust required', 'must have rust',
+
+  // Data/DBA
+  'dba experience', 'database administration',
+  'neo4j', 'cassandra', 'hadoop', 'spark',
+
+  // Data Engineering (when it's the primary role)
+  'data engineer required', 'data engineer is required',
+  'must have data engineering', 'data engineering experience required',
 ];
 
 /**
@@ -269,10 +349,17 @@ export function prefilterJob(job: JobListing): PrefilterResult {
   const description = (job.description || '').toLowerCase();
   const text = `${title} ${description}`;
 
+  // TIER -1: Not a job - these are notification emails from job boards
+  for (const pattern of NOT_A_JOB_PATTERNS) {
+    if (pattern.test(job.title)) {
+      return { job, tier: 'REJECT', reason: `Not a job listing (notification email): ${job.title}` };
+    }
+  }
+
   // TIER 0: Title-based instant reject
   for (const pattern of WRONG_STACK_TITLE_PATTERNS) {
     if (pattern.test(job.title)) {
-      return { job, tier: 'REJECT', reason: `Wrong stack in title: ${job.title}` };
+      return { job, tier: 'REJECT', reason: `Wrong role/stack in title: ${job.title}` };
     }
   }
 
