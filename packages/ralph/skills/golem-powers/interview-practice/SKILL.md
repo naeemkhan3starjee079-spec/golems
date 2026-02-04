@@ -1,3 +1,8 @@
+---
+name: interview-practice
+description: 7 interview modes for technical interview preparation with Elo tracking
+---
+
 # Interview Practice Skill
 
 > 7 interview modes for technical interview preparation.
