@@ -65,6 +65,7 @@ function saveSeenJobs(seen: Set<string>) {
 
 /**
  * Fetch with retry logic for rate limiting (429)
+ * TODO: Increase delay between requests (slower but more reliable) - currently hits 429 after ~50 jobs
  */
 async function fetchWithRetry(
   url: string,
@@ -218,6 +219,7 @@ async function fetchSecretTLVJobDetails(url: string, slug: string): Promise<JobL
 /**
  * Scrape SecretTLV jobs
  * Fetches each job page to verify active and get real details
+ * TODO: Cache results so we don't re-verify recently checked URLs (e.g., 24h cache by slug)
  */
 export async function scrapeSecretTLV(): Promise<JobListing[]> {
   console.log("[SecretTLV] Searching for developer jobs...");
