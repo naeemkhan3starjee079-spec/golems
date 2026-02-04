@@ -19,6 +19,7 @@ const HOME = process.env.HOME || "/Users/etanheyman";
 const DATA_DIR = join(HOME, ".golems-zikaron/job-golem");
 const SEEN_FILE = join(DATA_DIR, "seen-jobs.json");
 const SECRETLV_CACHE_FILE = join(DATA_DIR, "secretlv-cache.json");
+const SCRAPED_JOBS_FILE = join(DATA_DIR, "scraped-jobs.json");
 const CACHE_TTL_HOURS = 24;
 
 export interface JobListing {
@@ -66,6 +67,49 @@ function loadSeenJobs(): Set<string> {
 // Save seen job IDs
 function saveSeenJobs(seen: Set<string>) {
   writeFileSync(SEEN_FILE, JSON.stringify([...seen], null, 2));
+}
+
+// Load all scraped jobs (for sync to Supabase)
+export function loadScrapedJobs(): JobListing[] {
+  try {
+    if (!existsSync(SCRAPED_JOBS_FILE)) {
+      return [];
+    }
+
+    const content = readFileSync(SCRAPED_JOBS_FILE, "utf-8");
+    const parsed = JSON.parse(content);
+
+    // Validate that it's an array
+    if (!Array.isArray(parsed)) {
+      console.error(`[Scraper] ${SCRAPED_JOBS_FILE} is not an array, returning empty`);
+      return [];
+    }
+
+    // Basic validation: check first few items have required fields
+    for (const item of parsed.slice(0, 3)) {
+      if (!item.id || !item.title || !item.url) {
+        console.error(`[Scraper] ${SCRAPED_JOBS_FILE} contains invalid job entries`);
+        return [];
+      }
+    }
+
+    return parsed;
+  } catch (err) {
+    console.error(`[Scraper] Error loading ${SCRAPED_JOBS_FILE}:`, err);
+    return [];
+  }
+}
+
+// Save scraped jobs (append new, keep last 2000)
+function saveScrapedJobs(newJobs: JobListing[]) {
+  try {
+    const existing = loadScrapedJobs();
+    const combined = [...newJobs, ...existing].slice(0, 2000);
+    writeFileSync(SCRAPED_JOBS_FILE, JSON.stringify(combined, null, 2));
+  } catch (err) {
+    console.error(`[Scraper] Error saving to ${SCRAPED_JOBS_FILE}:`, err);
+    throw err; // Rethrow so caller knows save failed
+  }
 }
 
 // SecretTLV cache: { slug: { job: JobListing | null, cachedAt: ISO string } }
@@ -810,6 +854,12 @@ export async function scrapeAllJobs(): Promise<JobListing[]> {
     seen.add(job.id);
   }
   saveSeenJobs(seen);
+
+  // Save new jobs to file (for Supabase sync)
+  if (newJobs.length > 0) {
+    saveScrapedJobs(newJobs);
+    console.log(`[Scraper] Saved ${newJobs.length} jobs to ${SCRAPED_JOBS_FILE}`);
+  }
 
   console.log(`[Scraper] Total: ${allJobs.length} active jobs, ${newJobs.length} new (${elapsed}s)`);
   return newJobs;

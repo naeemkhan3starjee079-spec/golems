@@ -276,7 +276,18 @@ export function prefilterJob(job: JobListing): PrefilterResult {
     }
   }
 
-  // Hebrew jobs skip to LLM (need language understanding)
+  // Load profile for excludeKeywords check (needed for both Hebrew and English)
+  const profile = loadProfile();
+  const excludeKeywords = profile.excludeKeywords.map((k: string) => k.toLowerCase());
+
+  // Check excludeKeywords for ALL jobs (including Hebrew)
+  for (const kw of excludeKeywords) {
+    if (text.includes(kw)) {
+      return { job, tier: 'REJECT', reason: `Excluded keyword: "${kw}"` };
+    }
+  }
+
+  // Hebrew jobs skip remaining checks but pass to LLM (need language understanding)
   if (job.language === 'he') {
     return { job, tier: 'NEEDS_LLM', reason: 'Hebrew job - needs LLM' };
   }
@@ -289,17 +300,7 @@ export function prefilterJob(job: JobListing): PrefilterResult {
     }
   }
 
-  // TIER 1: Load profile and check excludeKeywords
-  const profile = loadProfile();
-  const excludeKeywords = profile.excludeKeywords.map((k: string) => k.toLowerCase());
-
-  for (const kw of excludeKeywords) {
-    if (text.includes(kw)) {
-      return { job, tier: 'REJECT', reason: `Excluded keyword: "${kw}"` };
-    }
-  }
-
-  // TIER 1: Check if any primary skills are mentioned
+  // TIER 1: Check if any primary skills are mentioned (profile already loaded above)
   const primarySkills = profile.primarySkills.map((s: string) => s.toLowerCase());
   const hasPrimarySkill = primarySkills.some((skill: string) => text.includes(skill));
 
