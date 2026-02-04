@@ -10,9 +10,11 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
-import { readFileSync, existsSync, writeFileSync, unlinkSync } from "fs";
+import { existsSync, writeFileSync, unlinkSync } from "fs";
 import { join } from "path";
 import type { JobListing } from "./scraper";
+import { loadScrapedJobs } from "./scraper";
+import type { MatchResult } from "./matcher";
 
 const HOME = process.env.HOME;
 if (!HOME) {
@@ -42,15 +44,6 @@ function loadSyncState(): SyncState {
 
 function saveSyncState(state: SyncState) {
   writeFileSync(SYNC_STATE_FILE, JSON.stringify(state, null, 2));
-}
-
-function loadScrapedJobs(): JobListing[] {
-  try {
-    if (existsSync(JOBS_FILE)) {
-      return JSON.parse(readFileSync(JOBS_FILE, "utf-8"));
-    }
-  } catch {}
-  return [];
 }
 
 /**
@@ -179,13 +172,6 @@ async function syncJobs(dryRun = false) {
 /**
  * Sync match scores back to Supabase after Ollama scoring
  */
-interface MatchResult {
-  job: JobListing;
-  score: number;
-  reason: string;
-  highlights: string[];
-}
-
 async function syncScores(matches: MatchResult[]) {
   if (!SUPABASE_URL || !SUPABASE_KEY) {
     console.error("[SyncScores] Missing Supabase env vars");

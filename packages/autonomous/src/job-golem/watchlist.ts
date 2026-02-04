@@ -12,7 +12,8 @@
 import { readFileSync, writeFileSync, existsSync } from "fs";
 import { join } from "path";
 
-const HOME = process.env.HOME || "/Users/etanheyman";
+const HOME = process.env.HOME;
+if (!HOME) throw new Error("HOME environment variable is required");
 const DATA_DIR = join(HOME, ".golems-zikaron/job-golem");
 const WATCHLIST_FILE = join(DATA_DIR, "watchlist.json");
 

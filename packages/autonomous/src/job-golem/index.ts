@@ -14,7 +14,8 @@ import { matchJobs, prefilterJobs, type MatchResult } from "./matcher";
 import { readFileSync, writeFileSync, existsSync, readdirSync, unlinkSync, statSync } from "fs";
 import { join } from "path";
 
-const HOME = process.env.HOME || "/Users/etanheyman";
+const HOME = process.env.HOME;
+if (!HOME) throw new Error("HOME environment variable is required");
 const STATE_FILE = join(HOME, ".golems-zikaron/state.json");
 const NOTIFY_URL = "http://localhost:3847/notify";
 const RESULTS_DIR = join(HOME, ".golems-zikaron/job-golem/results");

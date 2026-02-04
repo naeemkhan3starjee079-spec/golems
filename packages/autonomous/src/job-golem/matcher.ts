@@ -11,7 +11,8 @@ import { join } from "path";
 import type { JobListing } from "./scraper";
 import { forJobGolem } from "../ollama-wrapper";
 
-const HOME = process.env.HOME || "/Users/etanheyman";
+const HOME = process.env.HOME;
+if (!HOME) throw new Error("HOME environment variable is required");
 // Profile now in consolidated monorepo location
 const PROFILE_PATH = join(HOME, "Gits/golems/packages/autonomous/src/job-golem/profile.json");
 
@@ -22,9 +23,15 @@ export interface MatchResult {
   highlights: string[]; // Matching skills/keywords
 }
 
-// Load candidate profile
+// Cached profile to avoid redundant file reads
+let cachedProfile: any = null;
+
+// Load candidate profile (cached)
 function loadProfile() {
-  return JSON.parse(readFileSync(PROFILE_PATH, "utf-8"));
+  if (!cachedProfile) {
+    cachedProfile = JSON.parse(readFileSync(PROFILE_PATH, "utf-8"));
+  }
+  return cachedProfile;
 }
 
 /**

@@ -15,7 +15,8 @@ import { readFileSync, writeFileSync, existsSync } from "fs";
 import { join } from "path";
 import { scrapeJobs as scrapeIndeed } from "ts-jobspy";
 
-const HOME = process.env.HOME || "/Users/etanheyman";
+const HOME = process.env.HOME;
+if (!HOME) throw new Error("HOME environment variable is required");
 const DATA_DIR = join(HOME, ".golems-zikaron/job-golem");
 const SEEN_FILE = join(DATA_DIR, "seen-jobs.json");
 const SECRETLV_CACHE_FILE = join(DATA_DIR, "secretlv-cache.json");
@@ -722,18 +723,21 @@ export async function scrapeIndeedIsrael(): Promise<JobListing[]> {
       });
 
       for (const job of results) {
-        // Create stable ID from job URL or title+company
-        const id = job.id || `indeed-${(job.title + job.company).replace(/\s+/g, "-").toLowerCase().slice(0, 50)}`;
+        // Create stable ID - avoid double prefix
+        const baseId = job.id
+          ? (job.id.startsWith("indeed-") ? job.id : `indeed-${job.id}`)
+          : `indeed-${(job.title + job.company).replace(/\s+/g, "-").toLowerCase().slice(0, 50)}`;
 
-        if (seenIds.has(id)) continue;
-        seenIds.add(id);
+        if (seenIds.has(baseId)) continue;
+        seenIds.add(baseId);
 
         // Convert ts-jobspy format to our JobListing format
         const listing: JobListing = {
-          id: `indeed-${id}`,
+          id: baseId,
           title: job.title,
           company: job.company || "Unknown",
           location: job.location || "Israel",
+          experience: "", // Indeed doesn't provide structured experience data
           description: job.description?.slice(0, 800) || "",
           url: job.jobUrl,
           source: "indeed",
