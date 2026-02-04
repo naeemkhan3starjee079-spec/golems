@@ -15,7 +15,7 @@
 
 import { readFileSync, writeFileSync, existsSync } from "fs";
 import { join } from "path";
-import { fetchRecentEmails, fetchEmailsSince, type GmailEmail } from "./gmail-client";
+import { fetchRecentEmails, fetchEmailsSince, searchEmails, type GmailEmail } from "./gmail-client";
 import { scoreEmail, shouldNotifyImmediately, shouldTrackSubscription, type ScoredEmail, type EmailInput } from "./scorer";
 import {
   createDbClient,
@@ -87,7 +87,7 @@ async function sendNotification(title: string, body: string) {
       body: JSON.stringify({
         title,
         body,
-        source: "email-golem",
+        source: "email",  // Routes to 📧 Email topic
         priority: "high",
       }),
     });
@@ -164,11 +164,20 @@ async function processEmail(
       console.log(`     Queued for later sync`);
     }
 
-    // Notify if urgent
+    // Notify if urgent - with context!
     if (shouldNotifyImmediately(scored)) {
       const emoji = CATEGORY_EMOJIS[scored.category] || "📧";
-      const title = `${emoji} Urgent Email`;
-      const body = `${scored.category}: ${scored.subject.slice(0, 100)}`;
+      const title = `${emoji} ${scored.category.charAt(0).toUpperCase() + scored.category.slice(1)}`;
+
+      // Build descriptive body with WHY this matters
+      const fromName = scored.from.split("<")[0].trim() || scored.from;
+      const lines = [
+        `*From:* ${fromName}`,
+        `*Subject:* ${scored.subject.slice(0, 80)}`,
+        ``,
+        `*Why:* ${scored.reason}`,
+      ];
+      const body = lines.join("\n");
 
       await sendNotification(title, body);
       console.log(`     🔔 Notification sent!`);
@@ -308,10 +317,66 @@ async function processEmails(options: { dryRun?: boolean; maxEmails?: number } =
 }
 
 /**
+ * Search emails and display results
+ */
+async function runSearch(query: string, maxResults: number) {
+  console.log(`\n🔍 Searching: "${query}" (max ${maxResults})\n`);
+
+  try {
+    const results = await searchEmails(query, maxResults);
+
+    if (results.length === 0) {
+      console.log("No emails found.");
+      return;
+    }
+
+    console.log(`Found ${results.length} emails:\n`);
+
+    for (const email of results) {
+      const date = email.receivedAt.toISOString().split("T")[0];
+      const from = email.fromName || email.from;
+      console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+      console.log(`📅 ${date} | From: ${from}`);
+      console.log(`📧 ${email.subject}`);
+      console.log(`   ${email.snippet.slice(0, 100)}...`);
+    }
+
+    console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+    console.log(`Total: ${results.length} emails`);
+  } catch (err: any) {
+    console.error("❌ Search failed:", err.message);
+    process.exit(1);
+  }
+}
+
+/**
  * CLI
  */
 async function main() {
   const args = process.argv.slice(2);
+
+  // Handle search subcommand
+  if (args[0] === "search") {
+    const query = args.slice(1).filter(a => !a.startsWith("--")).join(" ");
+    const maxArg = args.find((a) => a.startsWith("--max="));
+    const maxResults = maxArg ? parseInt(maxArg.split("=")[1], 10) : 20;
+
+    if (!query) {
+      console.log(`
+Usage: bun run src/email-golem/index.ts search <query> [--max=N]
+
+Examples:
+  bun run src/email-golem/index.ts search "from:united.com confirmation"
+  bun run src/email-golem/index.ts search "from:britishairways.com" --max=10
+  bun run src/email-golem/index.ts search "subject:receipt after:2025/01/01"
+  bun run src/email-golem/index.ts search "anthropic OR firecrawl"
+`);
+      process.exit(1);
+    }
+
+    await runSearch(query, maxResults);
+    process.exit(0);
+  }
 
   const dryRun = args.includes("--dry-run") || args.includes("-n");
   const maxEmailsArg = args.find((a) => a.startsWith("--max="));
@@ -323,6 +388,10 @@ EmailGolem - Smart Email Triage
 
 Usage:
   bun run src/email-golem/index.ts [options]
+  bun run src/email-golem/index.ts search <query> [--max=N]
+
+Commands:
+  search <query>   Search emails using Gmail query syntax
 
 Options:
   --dry-run, -n    Don't save to DB or send notifications
@@ -332,6 +401,8 @@ Options:
 Examples:
   bun run src/email-golem/index.ts --dry-run
   bun run src/email-golem/index.ts --max=50
+  bun run src/email-golem/index.ts search "from:united.com"
+  bun run src/email-golem/index.ts search "subject:receipt" --max=10
 `);
     process.exit(0);
   }
@@ -350,4 +421,5 @@ if (import.meta.main) {
 }
 
 // Exports for testing and briefing integration
-export { processEmails, loadState, saveState, CATEGORY_EMOJIS };
+export { processEmails, loadState, saveState, CATEGORY_EMOJIS, runSearch };
+export { searchEmails } from "./gmail-client";

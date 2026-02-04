@@ -33,7 +33,6 @@ interface State {
   lastNightShift?: string;
   lastPrUrl?: string; // deprecated
   nightShiftPRs?: { url: string; repo: string; createdAt: string }[];
-  moltbookApiKey?: string;
   pendingDraftIds?: string[];
 }
 

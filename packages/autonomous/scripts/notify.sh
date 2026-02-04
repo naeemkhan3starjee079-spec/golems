@@ -10,7 +10,7 @@ NOTIFY_URL="http://localhost:${NOTIFY_PORT}/notify"
 
 title="${1:-Notification}"
 body="${2:-}"
-source="${3:-claude}"
+source="${3:-alerts}"  # Default to alerts topic (CLI sessions are one-way updates)
 
 # Function to escape string for JSON (handles \, ", newlines)
 json_escape() {

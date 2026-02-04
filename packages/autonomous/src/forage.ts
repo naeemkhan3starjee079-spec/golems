@@ -5,8 +5,6 @@
  *
  * Supported platforms:
  * - Soltome (soltome.com) - Credit-powered discussion platform
- *
- * Note: Moltbook doesn't have a posts API - it's only for agent identity.
  */
 
 import { writeFileSync, mkdirSync } from "fs";
@@ -18,7 +16,7 @@ export interface ForagedPost {
   id: string;
   title: string;
   author: string;
-  platform: "soltome" | "moltbook";
+  platform: "soltome";
   content: string;
   url: string;
   createdAt?: string;
@@ -64,10 +62,6 @@ export async function fetchAllPosts(limit = 20): Promise<ForagedPost[]> {
   const soltomePosts = await fetchSoltome(limit);
   allPosts.push(...soltomePosts);
   console.log(`[Forage] Soltome: ${soltomePosts.length} posts`);
-
-  // Note: Moltbook doesn't have a posts API - only identity verification
-  // If Moltbook adds a posts API in the future, add it here
-
   console.log(`[Forage] Total: ${allPosts.length} posts`);
   return allPosts;
 }

@@ -1,10 +1,11 @@
 import { Bot, InlineKeyboard, Keyboard } from "grammy";
 import { $ } from "bun";
-import { readFileSync, writeFileSync } from "fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import { join } from "path";
 import { getPendingDrafts, approveDraft, rejectDraft, type Draft } from "./post-generator";
 import { createPost as postToSoltome } from "./soltome-client";
 import { logEvent, getRecentEvents, formatEventsForClaude } from "./event-log";
+import { runCursorResearch, runCursorVerification, readResearch } from "./cursor-helper";
 
 // Mac notification helper
 async function notify(title: string, message: string) {
@@ -23,8 +24,34 @@ if (!token) {
 }
 const bot = new Bot(token);
 
+// Security: Whitelist allowed Telegram user IDs
+// Get your ID: message @userinfobot on Telegram, or check logs below
+const ALLOWED_USER_IDS = process.env.TELEGRAM_ALLOWED_IDS
+  ?.split(",")
+  .map((id) => parseInt(id.trim(), 10))
+  .filter((id) => !isNaN(id)) || [];
+
+// Auth check helper - returns true if authorized
+function isAuthorized(userId: number | undefined): boolean {
+  if (ALLOWED_USER_IDS.length === 0) return true; // No whitelist = allow all (backwards compat)
+  if (!userId) return false;
+  return ALLOWED_USER_IDS.includes(userId);
+}
+
+// Global auth middleware - blocks ALL interactions from non-whitelisted users
+bot.use(async (ctx, next) => {
+  const userId = ctx.from?.id;
+  if (!isAuthorized(userId)) {
+    console.log(`[Auth] Blocked user ${userId} from ${ctx.chat?.id}`);
+    return; // Silent block
+  }
+  await next();
+});
+
 // Paths
-const HOME = process.env.HOME || "/Users/etanheyman";
+import { homedir } from "os";
+
+const HOME = process.env.HOME || homedir();
 const GITS = join(HOME, "Gits");  // gitsClaude - access all repos
 const STATE_FILE = join(HOME, ".golems-zikaron/state.json");
 const SOUL_FILE = join(GITS, "golems/packages/autonomous/SOUL.md");
@@ -36,8 +63,343 @@ interface State {
   nightShiftTarget: string;
   rotation: string[];
   telegramChatId: number | null;
-  moltbookApiKey?: string;
+  nightShiftPRs: Array<{ url: string; repo: string; createdAt: string }>;
+  lastNightShift: string | null;
   pendingDraftIds?: string[]; // Track which drafts were shown for approval
+  // Group with Topics support
+  groupChatId?: number;        // The group chat ID
+  topics?: {
+    // Note: "claude" source goes to General (no thread ID needed)
+    alerts?: number;           // 🔔 Alerts topic thread ID
+    nightshift?: number;       // 🌙 Night Shift topic thread ID
+    email?: number;            // 📧 Email topic thread ID
+    jobs?: number;             // 🎯 Jobs topic thread ID
+  };
+}
+
+// ═══════════════════════════════════════════════════════
+// CONTENT PIPELINE (A2)
+// ═══════════════════════════════════════════════════════
+
+// Content task state machine: created → researching → drafting → verifying → review → posted
+type ContentTaskStatus = "created" | "researching" | "drafting" | "verifying" | "review" | "posted" | "failed";
+
+interface ContentTask {
+  id: string;
+  topic: string;
+  repo: string;
+  status: ContentTaskStatus;
+  createdAt: string;
+  updatedAt: string;
+  researchPath?: string;
+  draftPath?: string;
+  verificationAttempts: number;
+  lastVerification?: {
+    confidence: number;
+    corrections: string[];
+  };
+  error?: string;
+}
+
+const TASKS_DIR = join(HOME, ".golems-zikaron/tasks");
+const DRAFTS_DIR = join(HOME, ".golems-zikaron/drafts");
+const MAX_VERIFICATION_ATTEMPTS = 2;
+const CONFIDENCE_THRESHOLD = 75;
+
+// Ensure directories exist
+function ensureContentDirs(): void {
+  if (!existsSync(TASKS_DIR)) mkdirSync(TASKS_DIR, { recursive: true });
+  if (!existsSync(DRAFTS_DIR)) mkdirSync(DRAFTS_DIR, { recursive: true });
+}
+
+/**
+ * Create a new content task
+ */
+function createContentTask(topic: string, repo: string = "golems/packages/autonomous"): ContentTask {
+  ensureContentDirs();
+  const id = `task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const task: ContentTask = {
+    id,
+    topic,
+    repo,
+    status: "created",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    verificationAttempts: 0,
+  };
+  saveContentTask(task);
+  console.log(`[ContentPipeline] Created task ${id}: ${topic}`);
+  return task;
+}
+
+function saveContentTask(task: ContentTask): void {
+  task.updatedAt = new Date().toISOString();
+  writeFileSync(join(TASKS_DIR, `${task.id}.json`), JSON.stringify(task, null, 2));
+}
+
+function loadContentTask(taskId: string): ContentTask | null {
+  const path = join(TASKS_DIR, `${taskId}.json`);
+  if (!existsSync(path)) return null;
+  try {
+    return JSON.parse(readFileSync(path, "utf-8"));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Run research phase using Cursor CLI
+ */
+async function runResearchPhase(taskId: string): Promise<boolean> {
+  const task = loadContentTask(taskId);
+  if (!task) return false;
+
+  task.status = "researching";
+  saveContentTask(task);
+
+  console.log(`[ContentPipeline] Starting research for: ${task.topic}`);
+
+  const researchPrompt = `Research "${task.topic}" in this codebase for a Soltome post.
+
+Use @codebase to find:
+1. Core files and entry points related to ${task.topic}
+2. Key functions, types, and data flow
+3. How it integrates with other systems
+4. Any interesting implementation details
+
+Output a comprehensive technical overview that can be used to write an engaging post.
+Include code snippets and file paths.`;
+
+  const result = await runCursorResearch(task.repo, task.topic, researchPrompt, { verbose: true });
+
+  if (result.success && result.outputPath) {
+    task.researchPath = result.outputPath;
+    task.status = "drafting";
+    saveContentTask(task);
+    console.log(`[ContentPipeline] Research complete: ${result.outputPath}`);
+    return true;
+  } else {
+    task.status = "failed";
+    task.error = result.error || "Research failed";
+    saveContentTask(task);
+    console.error(`[ContentPipeline] Research failed: ${task.error}`);
+    return false;
+  }
+}
+
+/**
+ * Run influencer phase - spawn Claude to write draft
+ */
+async function runInfluencerPhase(taskId: string): Promise<boolean> {
+  const task = loadContentTask(taskId);
+  if (!task || !task.researchPath) return false;
+
+  task.status = "drafting";
+  saveContentTask(task);
+
+  console.log(`[ContentPipeline] Starting influencer for: ${task.topic}`);
+
+  // Read research
+  const research = readResearch(task.repo, task.topic);
+  if (!research) {
+    task.status = "failed";
+    task.error = "Research file not found";
+    saveContentTask(task);
+    return false;
+  }
+
+  // Spawn Claude with influencer agent
+  const soulContent = getSystemPromptContent();
+  const draftPath = join(DRAFTS_DIR, `${task.id}.json`);
+
+  const influencerPrompt = `You are the soltome-influencer agent. Create an engaging post about "${task.topic}".
+
+## Research (use this as source material):
+${research.slice(0, 8000)}
+
+## Instructions:
+1. Write in ClaudeGolem voice (first person, technical but accessible)
+2. Create a compelling hook in the first line
+3. Use markdown formatting
+4. Include a CLAIMS section at the end with factual claims that can be verified
+
+## Output Format (JSON):
+{
+  "title": "Engaging title here",
+  "content": "Full post content here...",
+  "claims": [
+    "Claim 1 that can be verified against code",
+    "Claim 2 about specific files or functions"
+  ]
+}
+
+Output ONLY the JSON, no explanation.`;
+
+  const args = [
+    "/Users/etanheyman/.local/bin/claude",
+    "--dangerously-skip-permissions",
+    "--print",
+    "--system-prompt", soulContent,
+    influencerPrompt,
+  ];
+
+  try {
+    const proc = Bun.spawn(args, {
+      cwd: join(GITS, task.repo),
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+
+    const timeout = setTimeout(() => proc.kill(), 3 * 60 * 1000); // 3 min timeout
+    await proc.exited;
+    clearTimeout(timeout);
+
+    const output = await new Response(proc.stdout).text();
+
+    // Parse JSON from output
+    const jsonMatch = output.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      task.status = "failed";
+      task.error = "No JSON in influencer output";
+      saveContentTask(task);
+      return false;
+    }
+
+    const draft = JSON.parse(jsonMatch[0]);
+    writeFileSync(draftPath, JSON.stringify(draft, null, 2));
+    task.draftPath = draftPath;
+    task.status = "verifying";
+    saveContentTask(task);
+
+    console.log(`[ContentPipeline] Draft created: ${draftPath}`);
+    return true;
+  } catch (err) {
+    task.status = "failed";
+    task.error = `Influencer error: ${err}`;
+    saveContentTask(task);
+    return false;
+  }
+}
+
+/**
+ * Run verification phase using Cursor CLI
+ */
+async function runVerificationPhase(taskId: string): Promise<{ passed: boolean; confidence: number; corrections: string[] }> {
+  const task = loadContentTask(taskId);
+  if (!task || !task.draftPath || !task.researchPath) {
+    return { passed: false, confidence: 0, corrections: ["Task or paths missing"] };
+  }
+
+  task.status = "verifying";
+  task.verificationAttempts++;
+  saveContentTask(task);
+
+  console.log(`[ContentPipeline] Verification attempt ${task.verificationAttempts} for: ${task.topic}`);
+
+  const result = await runCursorVerification(task.draftPath, task.researchPath, { verbose: true });
+
+  if (!result.success) {
+    return { passed: false, confidence: 0, corrections: [result.error || "Verification failed"] };
+  }
+
+  task.lastVerification = {
+    confidence: result.confidence,
+    corrections: result.corrections,
+  };
+
+  if (result.confidence >= CONFIDENCE_THRESHOLD) {
+    task.status = "review";
+    saveContentTask(task);
+    console.log(`[ContentPipeline] Verification passed: ${result.confidence}%`);
+    return { passed: true, confidence: result.confidence, corrections: result.corrections };
+  }
+
+  // Check if we should retry
+  if (task.verificationAttempts < MAX_VERIFICATION_ATTEMPTS) {
+    task.status = "drafting"; // Loop back to influencer
+    saveContentTask(task);
+    console.log(`[ContentPipeline] Verification failed (${result.confidence}%), will retry`);
+  } else {
+    task.status = "review"; // Send to human review even if failed
+    saveContentTask(task);
+    console.log(`[ContentPipeline] Max attempts reached, sending to review`);
+  }
+
+  return { passed: false, confidence: result.confidence, corrections: result.corrections };
+}
+
+/**
+ * Handle verification result - loop back to influencer if needed
+ */
+async function handleVerificationResult(
+  taskId: string,
+  result: { passed: boolean; confidence: number; corrections: string[] }
+): Promise<void> {
+  const task = loadContentTask(taskId);
+  if (!task) return;
+
+  if (result.passed) {
+    // Ready for human review
+    console.log(`[ContentPipeline] Task ${taskId} ready for review`);
+    return;
+  }
+
+  if (task.verificationAttempts < MAX_VERIFICATION_ATTEMPTS && task.status === "drafting") {
+    // Loop back: run influencer with corrections
+    console.log(`[ContentPipeline] Looping back to influencer with ${result.corrections.length} corrections`);
+
+    // Update the research file with corrections for next influencer run
+    // (The influencer will read this and adjust)
+    await runInfluencerPhase(taskId);
+    const verifyResult = await runVerificationPhase(taskId);
+    await handleVerificationResult(taskId, verifyResult);
+  }
+}
+
+/**
+ * Run the full content pipeline for a topic
+ */
+async function runContentPipeline(
+  topic: string,
+  repo: string,
+  onProgress: (status: string) => Promise<void>
+): Promise<ContentTask> {
+  // 1. Create task
+  const task = createContentTask(topic, repo);
+  await onProgress(`📋 Task created: ${task.id.slice(0, 12)}`);
+
+  // 2. Research phase
+  await onProgress(`🔬 Researching "${topic}"...`);
+  const researchOk = await runResearchPhase(task.id);
+  if (!researchOk) {
+    await onProgress(`❌ Research failed: ${loadContentTask(task.id)?.error || "Unknown error"}`);
+    return loadContentTask(task.id) || task;
+  }
+
+  // 3. Influencer phase
+  await onProgress(`✍️ Drafting post...`);
+  const draftOk = await runInfluencerPhase(task.id);
+  if (!draftOk) {
+    await onProgress(`❌ Draft failed: ${loadContentTask(task.id)?.error}`);
+    return loadContentTask(task.id) || task;
+  }
+
+  // 4. Verification phase
+  await onProgress(`🔍 Verifying claims...`);
+  const verifyResult = await runVerificationPhase(task.id);
+
+  // 5. Handle result (may loop)
+  await handleVerificationResult(task.id, verifyResult);
+
+  const finalTask = loadContentTask(task.id) || task;
+
+  if (finalTask.status === "review") {
+    await onProgress(`✅ Ready for review! Confidence: ${finalTask.lastVerification?.confidence || 0}%`);
+  } else if (finalTask.status === "failed") {
+    await onProgress(`❌ Pipeline failed: ${finalTask.error}`);
+  }
+
+  return finalTask;
 }
 
 function loadState(): State {
@@ -49,6 +411,8 @@ function loadState(): State {
       nightShiftTarget: "songscript",
       rotation: ["songscript", "zikaron", "claude-golem"],
       telegramChatId: null,
+      nightShiftPRs: [],
+      lastNightShift: null,
     };
   }
 }
@@ -236,6 +600,10 @@ You are in RESEARCH MODE. Focus on finding information.
 // Track active persona
 let activePersona = "default";
 
+// Track pending content topic requests per chat (MVP content pipeline)
+// Using Map to support multiple concurrent users
+const pendingContentTopics = new Map<number, { type: string }>();
+
 // Commands
 bot.command("start", (ctx) => {
   const state = loadState();
@@ -275,6 +643,70 @@ bot.command("morning", async (ctx) => {
   } catch (err) {
     ctx.reply(`❌ Briefing failed: ${err}`);
   }
+});
+
+// Setup command - configure group topics
+bot.command("setup", async (ctx) => {
+  const chatId = ctx.chat.id;
+  const threadId = ctx.message?.message_thread_id;
+  const chatType = ctx.chat.type;
+
+  // Must be run in a group
+  if (chatType !== "group" && chatType !== "supergroup") {
+    await ctx.reply("⚠️ Run /setup in a group with Topics enabled, not in DM.");
+    return;
+  }
+
+  const state = loadState();
+  state.groupChatId = chatId;
+
+  // Initialize topics if not exists
+  if (!state.topics) {
+    state.topics = {};
+  }
+
+  // Detect which topic this message was sent from
+  const topicArg = ctx.message?.text?.split(" ")[1]?.toLowerCase();
+
+  if (!topicArg) {
+    await ctx.reply(`🔧 *Group Setup*
+
+Run this command in each topic to register it:
+
+\`/setup alerts\` - in 🔔 Alerts topic
+\`/setup nightshift\` - in 🌙 Night Shift topic
+\`/setup email\` - in 📧 Email topic
+\`/setup jobs\` - in 🎯 Jobs topic
+
+_Note: ClaudeGolem chat goes to General (no setup needed)_
+
+Current config:
+• Group: ${state.groupChatId || "not set"}
+• General: ClaudeGolem chat (no thread ID needed)
+• Alerts: ${state.topics?.alerts || "not set"}
+• Night Shift: ${state.topics?.nightshift || "not set"}
+• Email: ${state.topics?.email || "not set"}
+• Jobs: ${state.topics?.jobs || "not set"}`, { parse_mode: "Markdown" });
+    return;
+  }
+
+  // Save the topic thread ID
+  // Note: "chat" removed - ClaudeGolem goes to General (no thread ID)
+  const validTopics = ["alerts", "nightshift", "email", "jobs"];
+  if (!validTopics.includes(topicArg)) {
+    await ctx.reply(`❌ Unknown topic: ${topicArg}\nValid: ${validTopics.join(", ")}\n\n_ClaudeGolem chat goes to General automatically_`, { parse_mode: "Markdown" });
+    return;
+  }
+
+  if (!threadId) {
+    await ctx.reply(`⚠️ No thread ID detected. Make sure Topics are enabled in this group and you're in a topic (not General).`);
+    return;
+  }
+
+  (state.topics as any)[topicArg] = threadId;
+  saveState(state);
+
+  await ctx.reply(`✅ Registered **${topicArg}** topic (thread ${threadId})`, { parse_mode: "Markdown" });
 });
 
 // Job Golem - view matched jobs
@@ -545,21 +977,6 @@ async function handleApproval(ctx: any, num: number) {
   }
 }
 
-bot.command("setmoltkey", (ctx) => {
-  const key = ctx.message?.text?.split(" ").slice(1).join(" ");
-
-  if (!key) {
-    ctx.reply("Usage: /setmoltkey YOUR_MOLTBOOK_API_KEY");
-    return;
-  }
-
-  const state = loadState();
-  state.moltbookApiKey = key;
-  saveState(state);
-
-  ctx.reply("✅ Moltbook API key saved.");
-});
-
 // ═══════════════════════════════════════════════════════
 // Inline Keyboard Callback Handlers
 // ═══════════════════════════════════════════════════════
@@ -631,6 +1048,30 @@ bot.callbackQuery(/^tonight:/, async (ctx) => {
 // Content creation callbacks - queue message with persona context
 bot.callbackQuery(/^content:/, async (ctx) => {
   const type = ctx.callbackQuery.data?.replace("content:", "") || "";
+
+  // Special handling for "research" - ask for topic first (MVP content pipeline)
+  if (type === "research") {
+    const chatId = ctx.chat?.id;
+    if (!chatId) {
+      await ctx.answerCallbackQuery({ text: "Error: no chat ID" });
+      return;
+    }
+
+    pendingContentTopics.set(chatId, { type: "research" });
+    await ctx.answerCallbackQuery({ text: "Tell me the topic!" });
+    await ctx.editMessageText(`📚 *Research Topic*
+
+What topic should I create content about?
+
+Examples:
+• "Zikaron memory system"
+• "Night Shift autonomous work"
+• "How ClaudeGolem spawns and dies"
+
+_Reply with your topic..._`, { parse_mode: "Markdown" });
+    return;
+  }
+
   await ctx.answerCallbackQuery({ text: `Queuing ${type} request...` });
 
   const typePrompts: Record<string, string> = {
@@ -655,6 +1096,111 @@ bot.callbackQuery(/^content:/, async (ctx) => {
 bot.callbackQuery("discard-draft", async (ctx) => {
   await ctx.editMessageText("🗑️ Draft discarded.");
   await ctx.answerCallbackQuery();
+});
+
+// ═══════════════════════════════════════════════════════
+// Content Pipeline Callbacks (A2)
+// ═══════════════════════════════════════════════════════
+
+// Approve pipeline draft
+bot.callbackQuery(/^pipeline-approve:/, async (ctx) => {
+  const taskId = ctx.callbackQuery.data?.replace("pipeline-approve:", "") || "";
+  const task = loadContentTask(taskId);
+
+  if (!task || !task.draftPath) {
+    await ctx.answerCallbackQuery({ text: "Task not found" });
+    return;
+  }
+
+  try {
+    const draftContent = JSON.parse(readFileSync(task.draftPath, "utf-8"));
+
+    // Post to Soltome
+    await ctx.editMessageText(`✅ Approved! Posting to Soltome...`);
+
+    const result = await postToSoltome(draftContent.title, draftContent.content);
+
+    if (result.success) {
+      task.status = "posted";
+      saveContentTask(task);
+
+      await logEvent("soltome_post", {
+        title: draftContent.title,
+        postId: result.postId,
+        taskId: task.id,
+        creditsRemaining: result.newBalance,
+      }, "claudegolem");
+
+      await ctx.editMessageText(`🎉 Posted to Soltome!\n\n*${draftContent.title}*\n\n(${result.newBalance} credits left)`, { parse_mode: "Markdown" });
+      await ctx.answerCallbackQuery({ text: "Posted!" });
+    } else {
+      await ctx.editMessageText(`⚠️ Failed to post: ${result.error}`);
+      await ctx.answerCallbackQuery({ text: "Post failed" });
+    }
+  } catch (err) {
+    await ctx.answerCallbackQuery({ text: `Error: ${err}` });
+  }
+});
+
+// Reject pipeline draft
+bot.callbackQuery(/^pipeline-reject:/, async (ctx) => {
+  const taskId = ctx.callbackQuery.data?.replace("pipeline-reject:", "") || "";
+  const task = loadContentTask(taskId);
+
+  if (!task) {
+    await ctx.answerCallbackQuery({ text: "Task not found" });
+    return;
+  }
+
+  task.status = "failed";
+  task.error = "Rejected by user";
+  saveContentTask(task);
+
+  await logEvent("pipeline_draft_rejected", {
+    taskId: task.id,
+    topic: task.topic,
+  }, "claudegolem");
+
+  await ctx.editMessageText("❌ Draft rejected.");
+  await ctx.answerCallbackQuery({ text: "Rejected" });
+});
+
+// Edit pipeline draft - send to chat for editing
+bot.callbackQuery(/^pipeline-edit:/, async (ctx) => {
+  const taskId = ctx.callbackQuery.data?.replace("pipeline-edit:", "") || "";
+  const task = loadContentTask(taskId);
+
+  if (!task || !task.draftPath) {
+    await ctx.answerCallbackQuery({ text: "Task not found" });
+    return;
+  }
+
+  try {
+    const draftContent = JSON.parse(readFileSync(task.draftPath, "utf-8"));
+
+    // Queue for Claude to edit
+    const editPrompt = `[CONTENT MODE: EDIT DRAFT]
+
+I need to improve this draft before posting. The verification found these issues:
+${task.lastVerification?.corrections.map(c => `- ${c}`).join("\n") || "No specific issues"}
+
+Current draft:
+Title: ${draftContent.title}
+
+${draftContent.content}
+
+---
+
+Please suggest improvements or ask me what changes I want.`;
+
+    queue.push({ ctx, text: editPrompt });
+    processQueue();
+
+    await ctx.editMessageText(`✏️ Editing draft... Reply with your changes.`);
+    await ctx.answerCallbackQuery({ text: "Editing mode" });
+  } catch (err) {
+    await ctx.answerCallbackQuery({ text: `Error: ${err}` });
+  }
 });
 
 // Persona selection
@@ -689,6 +1235,85 @@ bot.on("message:text", async (ctx) => {
   const state = loadState();
   state.telegramChatId = ctx.chat.id;
   saveState(state);
+
+  // Check if we're waiting for a content topic (MVP content pipeline)
+  const pendingContent = pendingContentTopics.get(ctx.chat.id);
+  if (pendingContent) {
+    // Allow user to cancel
+    if (text.toLowerCase() === "cancel") {
+      pendingContentTopics.delete(ctx.chat.id);
+      await ctx.reply("❌ Research topic cancelled.");
+      return;
+    }
+
+    // Sanitize topic: limit length, strip control chars and quotes (prevent prompt injection)
+    const topic = text.slice(0, 200).replace(/[\x00-\x1F"'`\\]/g, '').trim();
+    pendingContentTopics.delete(ctx.chat.id); // Clear pending state
+
+    if (!topic) {
+      await ctx.reply("❌ Topic cannot be empty. Try again with ✍️ Content → 📚 Research Topic");
+      return;
+    }
+
+    await ctx.reply(`📚 *Creating content about:* "${topic}"
+
+🔬 Research → ✍️ Draft → 🔍 Verify → 📝 Review
+
+_Running full content pipeline... This may take several minutes._`, { parse_mode: "Markdown" });
+    await ctx.replyWithChatAction("typing");
+
+    // Run the full content pipeline (A2)
+    const progressHandler = async (status: string) => {
+      await ctx.reply(status);
+      await ctx.replyWithChatAction("typing");
+    };
+
+    try {
+      const task = await runContentPipeline(topic, "golems/packages/autonomous", progressHandler);
+
+      if (task.status === "review" && task.draftPath) {
+        // Read the draft and show it for approval
+        try {
+          const draftContent = JSON.parse(readFileSync(task.draftPath, "utf-8"));
+          const confidence = task.lastVerification?.confidence || 0;
+          const corrections = task.lastVerification?.corrections || [];
+
+          let msg = `📝 *Draft Ready for Review*
+
+*Title:* ${draftContent.title}
+
+*Confidence:* ${confidence}%
+${corrections.length > 0 ? `*Corrections needed:*\n${corrections.map((c: string) => `• ${c}`).join("\n")}\n` : ""}
+---
+
+${draftContent.content.slice(0, 2000)}${draftContent.content.length > 2000 ? "..." : ""}`;
+
+          const keyboard = new InlineKeyboard()
+            .text("✅ Approve", `pipeline-approve:${task.id}`)
+            .text("❌ Reject", `pipeline-reject:${task.id}`)
+            .row()
+            .text("✏️ Edit", `pipeline-edit:${task.id}`);
+
+          await ctx.reply(msg, { parse_mode: "Markdown", reply_markup: keyboard });
+
+          // Log event
+          await logEvent("pipeline_draft_ready", {
+            taskId: task.id,
+            topic: task.topic,
+            confidence,
+          }, "claudegolem");
+        } catch (parseErr) {
+          await ctx.reply(`⚠️ Draft created but couldn't parse: ${task.draftPath}`);
+        }
+      } else if (task.status === "failed") {
+        await ctx.reply(`❌ Pipeline failed: ${task.error}`);
+      }
+    } catch (err) {
+      console.error("[ContentPipeline] Error:", err);
+      await ctx.reply(`❌ Pipeline error: ${err}`);
+    }
+    return;
+  }
 
   // Handle Reply Keyboard buttons
   if (text === "📝 Drafts") {
@@ -744,6 +1369,8 @@ bot.on("message:text", async (ctx) => {
   if (text === "✍️ Content") {
     // Show content menu with inline buttons
     const keyboard = new InlineKeyboard()
+      .text("📚 Research Topic", "content:research")
+      .row()
       .text("📝 Draft Teaser", "content:teaser")
       .text("📖 Draft Reveal", "content:reveal")
       .row()
@@ -754,6 +1381,8 @@ bot.on("message:text", async (ctx) => {
     await ctx.reply(`✍️ *Content Studio*
 
 What would you like to create?
+
+📚 *Research Topic* - Tell me a topic, I'll create content about it
 
 _Uses soltome-influencer agent_`, { parse_mode: "Markdown", reply_markup: keyboard });
     return;
@@ -832,22 +1461,46 @@ _Changes how ClaudeGolem responds_`, { parse_mode: "Markdown", reply_markup: key
 // ═══════════════════════════════════════════════════════
 const NOTIFY_PORT = 3847;
 
-// Per-bot notification styles
-const BOT_STYLES: Record<string, { icon: string; format: (t: string, b: string) => string }> = {
+// Per-source notification styles and topic routing
+// Note: "claude" goes to General (no thread ID), others go to specific topics
+const SOURCE_CONFIG: Record<string, {
+  icon: string;
+  topic: keyof NonNullable<State["topics"]> | "general";  // "general" = no thread ID
+  format: (t: string, b: string) => string;
+}> = {
   claude: {
     icon: "🤖",
+    topic: "general",  // Goes to General topic (no thread ID)
     format: (t, b) => `🤖 *${t}*\n${b}`,
   },
   ralph: {
     icon: "🔄",
+    topic: "alerts",
     format: (t, b) => `🔄 *Ralph*: ${t}\n\n${b}`,
   },
   nightshift: {
     icon: "🌙",
+    topic: "nightshift",
     format: (t, b) => `🌙 *Night Shift*\n${t}\n${b}`,
+  },
+  email: {
+    icon: "📧",
+    topic: "email",
+    format: (t, b) => `📧 *${t}*\n\n${b}`,
+  },
+  jobs: {
+    icon: "🎯",
+    topic: "jobs",
+    format: (t, b) => `🎯 *${t}*\n\n${b}`,
+  },
+  healthcheck: {
+    icon: "🏥",
+    topic: "alerts",
+    format: (t, b) => `🏥 *${t}*\n\n${b}`,
   },
   default: {
     icon: "📨",
+    topic: "alerts",
     format: (t, b) => `📨 *${t}*\n\n${b}`,
   },
 };
@@ -856,31 +1509,52 @@ async function sendNotificationToTelegram(data: {
   title: string;
   body: string;
   priority?: string;
-  source?: string;  // claude, ralph, nightshift
+  source?: string;  // claude, ralph, nightshift, email, jobs, healthcheck
 }) {
   const state = loadState();
-  const chatId = state.telegramChatId;
+  const config = SOURCE_CONFIG[data.source || "default"] || SOURCE_CONFIG.default;
+  const priorityIcon = data.priority === "high" ? "🔔 " : "";
+  const message = priorityIcon + config.format(data.title, data.body);
+
+  // Determine where to send: group topic or DM fallback
+  let chatId: number | null = null;
+  let threadId: number | undefined = undefined;
+
+  if (state.groupChatId && state.topics) {
+    // Use group with topics
+    chatId = state.groupChatId;
+    // "general" means no thread ID (goes to General topic)
+    threadId = config.topic === "general" ? undefined : state.topics[config.topic as keyof typeof state.topics];
+    console.log(`[Notify] Routing to group ${chatId}, topic ${config.topic} (thread ${threadId ?? "General"})`);
+  } else if (state.telegramChatId) {
+    // Fallback to DM
+    chatId = state.telegramChatId;
+    console.log(`[Notify] Fallback to DM ${chatId}`);
+  }
 
   if (!chatId) {
     console.log("[Notify] No chat ID saved, skipping");
     return;
   }
 
-  const style = BOT_STYLES[data.source || "default"] || BOT_STYLES.default;
-  const priorityIcon = data.priority === "high" ? "🔔 " : "";
-  const message = priorityIcon + style.format(data.title, data.body);
-
   try {
     // Try Markdown first, fall back to plain text if it fails
+    const sendOptions: any = { parse_mode: "Markdown" };
+    if (threadId) {
+      sendOptions.message_thread_id = threadId;
+    }
+
     try {
-      await bot.api.sendMessage(chatId, message, { parse_mode: "Markdown" });
+      await bot.api.sendMessage(chatId, message, sendOptions);
     } catch (mdErr) {
       // Markdown failed (likely special chars), send plain text
       console.warn("[Notify] Markdown failed, falling back to plain text:", (mdErr as Error).message);
       const plainMessage = message.replace(/[*_`\[\]]/g, "");
-      await bot.api.sendMessage(chatId, plainMessage);
+      const plainOptions: any = {};
+      if (threadId) plainOptions.message_thread_id = threadId;
+      await bot.api.sendMessage(chatId, plainMessage, plainOptions);
     }
-    console.log(`[Notify] Sent: ${data.title}`);
+    console.log(`[Notify] Sent: ${data.title} → ${config.topic}`);
   } catch (err) {
     console.error("[Notify] Failed:", err);
   }

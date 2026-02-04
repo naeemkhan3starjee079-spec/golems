@@ -44,7 +44,8 @@ create index if not exists emails_category_idx on emails(category);
 create index if not exists emails_received_idx on emails(received_at);
 create index if not exists payments_paid_at_idx on payments(paid_at);
 
--- Enable RLS (Row Level Security) - optional, disable for now since we use anon key
--- alter table emails enable row level security;
--- alter table subscriptions enable row level security;
--- alter table payments enable row level security;
+-- Enable RLS (Row Level Security) - REQUIRED for security
+-- No policies = service_role can access, anon key is blocked
+ALTER TABLE emails ENABLE ROW LEVEL SECURITY;
+ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payments ENABLE ROW LEVEL SECURITY;

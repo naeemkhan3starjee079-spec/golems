@@ -49,6 +49,17 @@
 - Injected into Claude's context at spawn time ("While You Were Down")
 - ClaudeGolem actions show as "YOU", other golems by name
 
+### Telegram Topics (2026-02-03)
+- **Group with Topics** - Notifications routed to separate threads by type
+- **Topics configured:**
+  - 💬 General (no thread ID) - ClaudeGolem interactive conversation
+  - 🔔 Alerts (thread 3) - CLI updates, commits, healthchecks
+  - 🌙 Night Shift (thread 4) - Autonomous 4am work
+  - 📧 Email (thread 5) - Urgent email alerts
+  - 🎯 Jobs (thread 7) - Job matches
+- **Setup:** `/setup <topic>` in each topic to register thread IDs
+- **Routing:** Based on `source` field in notification payload
+
 ---
 
 ## Golem Roles
@@ -125,6 +136,21 @@ launchctl load ~/Library/LaunchAgents/com.golems.learner.plist
 # Disable scheduled
 launchctl unload ~/Library/LaunchAgents/com.golems.learner.plist
 ```
+
+### Daily Healthcheck (9am)
+```bash
+# Run now (manual)
+cd ~/Gits/golems/packages/autonomous && bun src/healthcheck.ts
+
+# Enable scheduled (9am daily)
+launchctl load ~/Library/LaunchAgents/com.golemszikaron.healthcheck.plist
+
+# Disable scheduled
+launchctl unload ~/Library/LaunchAgents/com.golemszikaron.healthcheck.plist
+```
+
+**Checks:** Telegram bot, Notify server, Ollama, State file, Launchd jobs.
+**Report:** Sent to Telegram with status of each service.
 
 ### Check All Status
 ```bash
@@ -269,7 +295,6 @@ Research conducted via Ralph (gitignored, local only):
 |------|-------|
 | `docs.local/research/telegram-features.md` | Voice messages, threading, inline mode |
 | `docs.local/research/agent-memory.md` | LangChain, Redis, multi-agent patterns |
-| `docs.local/research/moltbook-integration.md` | Posting strategies, scheduling, authenticity |
 | `docs.local/research/night-shift-patterns.md` | Task prioritization, quality gates, rollback |
 
 ---
