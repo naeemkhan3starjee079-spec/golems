@@ -49,11 +49,12 @@ bot.use(async (ctx, next) => {
 });
 
 // Paths
-const HOME = process.env.HOME || "/Users/etanheyman";
+import { homedir } from "os";
+
+const HOME = process.env.HOME || homedir();
 const GITS = join(HOME, "Gits");  // gitsClaude - access all repos
 const STATE_FILE = join(HOME, ".golems-zikaron/state.json");
 const SOUL_FILE = join(GITS, "golems/packages/autonomous/SOUL.md");
-const CHAT_SESSION_ID = "telegram-chat"; // Persistent session for conversation memory
 
 // ClaudeGolem Telegram Bot - uses Claude Code CLI with conversation memory
 
@@ -62,6 +63,8 @@ interface State {
   nightShiftTarget: string;
   rotation: string[];
   telegramChatId: number | null;
+  nightShiftPRs: Array<{ url: string; repo: string; createdAt: string }>;
+  lastNightShift: string | null;
   pendingDraftIds?: string[]; // Track which drafts were shown for approval
   // Group with Topics support
   groupChatId?: number;        // The group chat ID
@@ -408,6 +411,8 @@ function loadState(): State {
       nightShiftTarget: "songscript",
       rotation: ["songscript", "zikaron", "claude-golem"],
       telegramChatId: null,
+      nightShiftPRs: [],
+      lastNightShift: null,
     };
   }
 }
@@ -674,7 +679,6 @@ Run this command in each topic to register it:
 \`/setup jobs\` - in 🎯 Jobs topic
 
 _Note: ClaudeGolem chat goes to General (no setup needed)_
-\`/setup jobs\` - in 🎯 Jobs topic
 
 Current config:
 • Group: ${state.groupChatId || "not set"}

@@ -7,12 +7,13 @@
 
 import { existsSync, mkdirSync, writeFileSync, readFileSync } from "fs";
 import { join } from "path";
+import { homedir } from "os";
 
 // ═══════════════════════════════════════════════════════
 // CONSTANTS
 // ═══════════════════════════════════════════════════════
 
-const HOME = process.env.HOME || "/Users/etanheyman";
+const HOME = process.env.HOME || homedir();
 const GITS = join(HOME, "Gits");
 const RESEARCH_BASE = join(HOME, ".golems-zikaron/research/gits");
 const NOTIFY_URL = "http://localhost:3847/notify";
