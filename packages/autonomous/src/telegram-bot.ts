@@ -74,6 +74,7 @@ interface State {
     nightshift?: number;       // 🌙 Night Shift topic thread ID
     email?: number;            // 📧 Email topic thread ID
     jobs?: number;             // 🎯 Jobs topic thread ID
+    recruiter?: number;        // 👔 Recruiter topic thread ID
   };
 }
 
@@ -677,6 +678,7 @@ Run this command in each topic to register it:
 \`/setup nightshift\` - in 🌙 Night Shift topic
 \`/setup email\` - in 📧 Email topic
 \`/setup jobs\` - in 🎯 Jobs topic
+\`/setup recruiter\` - in 👔 Recruiter topic
 
 _Note: ClaudeGolem chat goes to General (no setup needed)_
 
@@ -686,13 +688,14 @@ Current config:
 • Alerts: ${state.topics?.alerts || "not set"}
 • Night Shift: ${state.topics?.nightshift || "not set"}
 • Email: ${state.topics?.email || "not set"}
-• Jobs: ${state.topics?.jobs || "not set"}`, { parse_mode: "Markdown" });
+• Jobs: ${state.topics?.jobs || "not set"}
+• Recruiter: ${state.topics?.recruiter || "not set"}`, { parse_mode: "Markdown" });
     return;
   }
 
   // Save the topic thread ID
   // Note: "chat" removed - ClaudeGolem goes to General (no thread ID)
-  const validTopics = ["alerts", "nightshift", "email", "jobs"];
+  const validTopics = ["alerts", "nightshift", "email", "jobs", "recruiter"];
   if (!validTopics.includes(topicArg)) {
     await ctx.reply(`❌ Unknown topic: ${topicArg}\nValid: ${validTopics.join(", ")}\n\n_ClaudeGolem chat goes to General automatically_`, { parse_mode: "Markdown" });
     return;
@@ -1492,6 +1495,11 @@ const SOURCE_CONFIG: Record<string, {
     icon: "🎯",
     topic: "jobs",
     format: (t, b) => `🎯 *${t}*\n\n${b}`,
+  },
+  recruiter: {
+    icon: "👔",
+    topic: "recruiter",
+    format: (t, b) => `👔 *${t}*\n\n${b}`,
   },
   healthcheck: {
     icon: "🏥",

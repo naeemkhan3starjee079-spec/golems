@@ -3,18 +3,25 @@
  * Job Golem - Scraper
  *
  * Scrapes job listings from:
+ * - Indeed Israel (via ts-jobspy, no rate limits)
  * - SecretTLV (English, tech-focused)
  * - Drushim (Hebrew, general tech)
+ * - Goozali Telegram channels
  *
  * Fetches each job page to verify active and get real details.
  */
 
 import { readFileSync, writeFileSync, existsSync } from "fs";
 import { join } from "path";
+import { scrapeJobs as scrapeIndeed } from "ts-jobspy";
 
-const HOME = process.env.HOME || "/Users/etanheyman";
+const HOME = process.env.HOME;
+if (!HOME) throw new Error("HOME environment variable is required");
 const DATA_DIR = join(HOME, ".golems-zikaron/job-golem");
 const SEEN_FILE = join(DATA_DIR, "seen-jobs.json");
+const SECRETLV_CACHE_FILE = join(DATA_DIR, "secretlv-cache.json");
+const SCRAPED_JOBS_FILE = join(DATA_DIR, "scraped-jobs.json");
+const CACHE_TTL_HOURS = 24;
 
 export interface JobListing {
   id: string;
@@ -63,8 +70,87 @@ function saveSeenJobs(seen: Set<string>) {
   writeFileSync(SEEN_FILE, JSON.stringify([...seen], null, 2));
 }
 
+// Load all scraped jobs (for sync to Supabase)
+export function loadScrapedJobs(): JobListing[] {
+  try {
+    if (!existsSync(SCRAPED_JOBS_FILE)) {
+      return [];
+    }
+
+    const content = readFileSync(SCRAPED_JOBS_FILE, "utf-8");
+    const parsed = JSON.parse(content);
+
+    // Validate that it's an array
+    if (!Array.isArray(parsed)) {
+      console.error(`[Scraper] ${SCRAPED_JOBS_FILE} is not an array, returning empty`);
+      return [];
+    }
+
+    // Basic validation: check first few items have required fields
+    for (const item of parsed.slice(0, 3)) {
+      if (!item.id || !item.title || !item.url) {
+        console.error(`[Scraper] ${SCRAPED_JOBS_FILE} contains invalid job entries`);
+        return [];
+      }
+    }
+
+    return parsed;
+  } catch (err) {
+    console.error(`[Scraper] Error loading ${SCRAPED_JOBS_FILE}:`, err);
+    return [];
+  }
+}
+
+// Save scraped jobs (append new, keep last 2000)
+function saveScrapedJobs(newJobs: JobListing[]) {
+  try {
+    const existing = loadScrapedJobs();
+    const combined = [...newJobs, ...existing].slice(0, 2000);
+    writeFileSync(SCRAPED_JOBS_FILE, JSON.stringify(combined, null, 2));
+  } catch (err) {
+    console.error(`[Scraper] Error saving to ${SCRAPED_JOBS_FILE}:`, err);
+    throw err; // Rethrow so caller knows save failed
+  }
+}
+
+// SecretTLV cache: { slug: { job: JobListing | null, cachedAt: ISO string } }
+interface SecretLVCache {
+  [slug: string]: {
+    job: JobListing | null;  // null = verified inactive
+    cachedAt: string;
+  };
+}
+
+function loadSecretLVCache(): SecretLVCache {
+  try {
+    if (existsSync(SECRETLV_CACHE_FILE)) {
+      return JSON.parse(readFileSync(SECRETLV_CACHE_FILE, "utf-8"));
+    }
+  } catch {}
+  return {};
+}
+
+function saveSecretLVCache(cache: SecretLVCache) {
+  // Clean up entries older than 7 days to prevent unbounded growth
+  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const cleaned: SecretLVCache = {};
+  for (const [slug, entry] of Object.entries(cache)) {
+    if (new Date(entry.cachedAt).getTime() > weekAgo) {
+      cleaned[slug] = entry;
+    }
+  }
+  writeFileSync(SECRETLV_CACHE_FILE, JSON.stringify(cleaned, null, 2));
+}
+
+function isCacheValid(cachedAt: string): boolean {
+  const cacheTime = new Date(cachedAt).getTime();
+  const ttlMs = CACHE_TTL_HOURS * 60 * 60 * 1000;
+  return Date.now() - cacheTime < ttlMs;
+}
+
 /**
  * Fetch with retry logic for rate limiting (429)
+ * TODO: Increase delay between requests (slower but more reliable) - currently hits 429 after ~50 jobs
  */
 async function fetchWithRetry(
   url: string,
@@ -218,6 +304,7 @@ async function fetchSecretTLVJobDetails(url: string, slug: string): Promise<JobL
 /**
  * Scrape SecretTLV jobs
  * Fetches each job page to verify active and get real details
+ * TODO: Cache results so we don't re-verify recently checked URLs (e.g., 24h cache by slug)
  */
 export async function scrapeSecretTLV(): Promise<JobListing[]> {
   console.log("[SecretTLV] Searching for developer jobs...");
@@ -260,12 +347,16 @@ export async function scrapeSecretTLV(): Promise<JobListing[]> {
     }
   }
 
-  console.log(`[SecretTLV] Found ${jobUrls.length} URLs, verifying (this takes ~5min)...`);
+  // Load cache for faster verification
+  const cache = loadSecretLVCache();
+  let cacheHits = 0;
+  let cacheMisses = 0;
+
+  console.log(`[SecretTLV] Found ${jobUrls.length} URLs, verifying with cache...`);
 
   // Fetch each job page to verify active and get details
   const jobs: JobListing[] = [];
   let inactive = 0;
-  let rateLimited = 0;
 
   // Process in batches of 10, with longer pauses between batches
   const BATCH_SIZE = 10;
@@ -277,12 +368,34 @@ export async function scrapeSecretTLV(): Promise<JobListing[]> {
 
     // Progress indicator every 10 jobs
     if (i % BATCH_SIZE === 0 && i > 0) {
-      console.log(`  📊 Progress: ${i}/${jobUrls.length} (${jobs.length} active, ${inactive} inactive, ${rateLimited} rate-limited)`);
+      console.log(`  📊 Progress: ${i}/${jobUrls.length} (${jobs.length} active, ${inactive} inactive, ${cacheHits} cached)`);
       // Longer pause between batches
       await new Promise((r) => setTimeout(r, DELAY_BETWEEN_BATCHES));
     }
 
+    // Check cache first (24h TTL)
+    const cached = cache[slug];
+    if (cached && isCacheValid(cached.cachedAt)) {
+      cacheHits++;
+      if (cached.job) {
+        jobs.push(cached.job);
+        console.log(`  ⚡ ${cached.job.title.slice(0, 40)}... (cached)`);
+      } else {
+        inactive++;  // Cached as inactive
+      }
+      continue;  // Skip fetch, no delay needed
+    }
+
+    // Cache miss - fetch and verify
+    cacheMisses++;
     const job = await fetchSecretTLVJobDetails(url, slug);
+
+    // Cache the result (job or null for inactive)
+    cache[slug] = {
+      job,
+      cachedAt: new Date().toISOString(),
+    };
+
     if (job) {
       jobs.push(job);
       console.log(`  ✓ ${job.title.slice(0, 40)}... (${job.location})`);
@@ -290,11 +403,14 @@ export async function scrapeSecretTLV(): Promise<JobListing[]> {
       inactive++;
     }
 
-    // Delay between requests
+    // Delay between requests (only for cache misses)
     await new Promise((r) => setTimeout(r, DELAY_BETWEEN_REQUESTS));
   }
 
-  console.log(`[SecretTLV] ${jobs.length} active jobs (${inactive} inactive/expired)`);
+  // Save cache for next run
+  saveSecretLVCache(cache);
+
+  console.log(`[SecretTLV] ${jobs.length} active jobs (${inactive} inactive, ${cacheHits} cache hits, ${cacheMisses} fetched)`);
   return jobs;
 }
 
@@ -582,35 +698,156 @@ export async function scrapeGoozali(): Promise<JobListing[]> {
 }
 
 /**
- * Scrape all sources and filter out already-seen jobs
- * Set SKIP_SECRETLV=1 to skip SecretTLV (useful if rate limited)
+ * Scrape Indeed Israel using ts-jobspy
+ * No rate limits - uses official-ish API under the hood
+ */
+export async function scrapeIndeedIsrael(): Promise<JobListing[]> {
+  console.log("[Indeed] Searching Israel jobs via ts-jobspy...");
+
+  const searchTerms = ["react developer", "frontend developer", "typescript developer", "full stack developer"];
+  const allJobs: JobListing[] = [];
+  const seenIds = new Set<string>();
+
+  for (const searchTerm of searchTerms) {
+    try {
+      console.log(`  • Searching: "${searchTerm}"...`);
+
+      const results = await scrapeIndeed({
+        siteName: "indeed",
+        searchTerm,
+        location: "Israel",
+        countryIndeed: "israel",
+        resultsWanted: 25,  // Per search term
+        hoursOld: 72,       // Last 3 days
+        descriptionFormat: "plain",
+      });
+
+      for (const job of results) {
+        // Create stable ID - avoid double prefix
+        const baseId = job.id
+          ? (job.id.startsWith("indeed-") ? job.id : `indeed-${job.id}`)
+          : `indeed-${(job.title + job.company).replace(/\s+/g, "-").toLowerCase().slice(0, 50)}`;
+
+        if (seenIds.has(baseId)) continue;
+        seenIds.add(baseId);
+
+        // Convert ts-jobspy format to our JobListing format
+        const listing: JobListing = {
+          id: baseId,
+          title: job.title,
+          company: job.company || "Unknown",
+          location: job.location || "Israel",
+          experience: "", // Indeed doesn't provide structured experience data
+          description: job.description?.slice(0, 800) || "",
+          url: job.jobUrl,
+          source: "indeed",
+          language: "en",
+          scrapedAt: new Date().toISOString(),
+        };
+
+        allJobs.push(listing);
+      }
+
+      console.log(`    ✓ Found ${results.length} jobs`);
+
+      // Small delay between searches
+      await new Promise(r => setTimeout(r, 2000));
+    } catch (err) {
+      console.log(`    ⚠️ Error searching "${searchTerm}": ${err}`);
+    }
+  }
+
+  console.log(`[Indeed] Total: ${allJobs.length} unique jobs`);
+  return allJobs;
+}
+
+/**
+ * Wrapper to safely scrape a source with error handling
+ * Returns empty array on failure, logs the error
+ */
+async function safeSourceScrape(
+  name: string,
+  scrapeFn: () => Promise<JobListing[]>
+): Promise<{ source: string; jobs: JobListing[]; error?: string }> {
+  try {
+    const jobs = await scrapeFn();
+    return { source: name, jobs };
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    console.error(`[${name}] ❌ Failed: ${errorMsg}`);
+    return { source: name, jobs: [], error: errorMsg };
+  }
+}
+
+/**
+ * Scrape all sources in PARALLEL with resilience
+ * - Uses Promise.allSettled so one failure doesn't stop others
+ * - Each source wrapped in try/catch
+ * - Set SKIP_SECRETLV=1 or SKIP_DRUSHIM=1 to skip specific sources
  */
 export async function scrapeAllJobs(): Promise<JobListing[]> {
   ensureDataDir();
 
   const seen = loadSeenJobs();
-  const allJobs: JobListing[] = [];
 
-  // Scrape sources sequentially to avoid rate limits
+  // Build list of sources to scrape
+  const sources: Array<{ name: string; fn: () => Promise<JobListing[]> }> = [];
 
-  // Goozali first (fast, Telegram scraping)
-  const goozaliJobs = await scrapeGoozali();
-  allJobs.push(...goozaliJobs);
+  // Goozali (Telegram, fast)
+  sources.push({ name: "Goozali", fn: scrapeGoozali });
 
-  // SecretTLV (slow, rate limited)
+  // Indeed Israel (ts-jobspy, no rate limits)
+  if (process.env.SKIP_INDEED !== "1") {
+    sources.push({ name: "Indeed", fn: scrapeIndeedIsrael });
+  } else {
+    console.log("[Indeed] Skipped (SKIP_INDEED=1)");
+  }
+
+  // SecretTLV (rate limited, slow)
   if (process.env.SKIP_SECRETLV !== "1") {
-    const secretJobs = await scrapeSecretTLV();
-    allJobs.push(...secretJobs);
+    sources.push({ name: "SecretTLV", fn: scrapeSecretTLV });
   } else {
     console.log("[SecretTLV] Skipped (SKIP_SECRETLV=1)");
   }
 
   // Drushim (Hebrew)
   if (process.env.SKIP_DRUSHIM !== "1") {
-    const drushimJobs = await scrapeDrushim();
-    allJobs.push(...drushimJobs);
+    sources.push({ name: "Drushim", fn: scrapeDrushim });
   } else {
     console.log("[Drushim] Skipped (SKIP_DRUSHIM=1)");
+  }
+
+  console.log(`[Scraper] Fetching ${sources.length} sources in parallel...`);
+  const startTime = Date.now();
+
+  // Fetch ALL sources in parallel with resilience
+  const results = await Promise.allSettled(
+    sources.map(s => safeSourceScrape(s.name, s.fn))
+  );
+
+  // Combine successful results
+  const allJobs: JobListing[] = [];
+  const errors: string[] = [];
+
+  for (const result of results) {
+    if (result.status === "fulfilled") {
+      const { source, jobs, error } = result.value;
+      if (error) {
+        errors.push(`${source}: ${error}`);
+      }
+      allJobs.push(...jobs);
+    } else {
+      // Promise itself rejected (shouldn't happen with safeSourceScrape)
+      errors.push(`Unknown source: ${result.reason}`);
+    }
+  }
+
+  const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+
+  // Log summary
+  if (errors.length > 0) {
+    console.log(`[Scraper] ⚠️ ${errors.length} source(s) failed but continuing:`);
+    errors.forEach(e => console.log(`  • ${e}`));
   }
 
   // Filter out seen jobs
@@ -622,7 +859,13 @@ export async function scrapeAllJobs(): Promise<JobListing[]> {
   }
   saveSeenJobs(seen);
 
-  console.log(`[Scraper] Total: ${allJobs.length} active jobs, ${newJobs.length} new`);
+  // Save new jobs to file (for Supabase sync)
+  if (newJobs.length > 0) {
+    saveScrapedJobs(newJobs);
+    console.log(`[Scraper] Saved ${newJobs.length} jobs to ${SCRAPED_JOBS_FILE}`);
+  }
+
+  console.log(`[Scraper] Total: ${allJobs.length} active jobs, ${newJobs.length} new (${elapsed}s)`);
   return newJobs;
 }
 

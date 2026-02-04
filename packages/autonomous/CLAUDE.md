@@ -256,34 +256,64 @@ curl -X POST http://localhost:3847/notify \
 ## File Structure
 
 ```
-golems-zikaron/
+golems-zikaron/                    # Code repo: ~/Gits/golems-zikaron/
 ├── src/
-│   ├── telegram-bot.ts     # Telegram bot + notification server (3847)
-│   ├── night-shift.ts      # 4am: Claude → CR review → PR
-│   ├── soltome-learner.ts  # 2am: Scrape posts, learn patterns
-│   ├── soltome-client.ts   # Soltome API client
-│   ├── event-log.ts        # Event log for ClaudeGolem memory
-│   ├── briefing.ts         # 8am morning summary
-│   ├── post-generator.ts   # Critique-waves (uses learned patterns)
-│   ├── ollama-wrapper.ts   # Ollama spawn wrapper
-│   ├── email-golem/        # Email triage + subscription tracking
-│   │   ├── index.ts        # Main entry (10min cron)
-│   │   ├── gmail-client.ts # Gmail API wrapper
-│   │   ├── scorer.ts       # Ollama scoring (urgent/job/subscription)
-│   │   └── db-client.ts    # Supabase + offline queue
-│   └── job-golem/          # Job board scraping
+│   ├── telegram-bot.ts            # Telegram bot + notification server (3847)
+│   ├── night-shift.ts             # 4am: Claude → CR review → PR
+│   ├── soltome-learner.ts         # 2am: Scrape posts, learn patterns
+│   ├── soltome-client.ts          # Soltome API client
+│   ├── event-log.ts               # Event log for ClaudeGolem memory
+│   ├── briefing.ts                # 8am morning summary
+│   ├── post-generator.ts          # Critique-waves (uses learned patterns)
+│   ├── ollama-wrapper.ts          # Ollama spawn wrapper
+│   ├── email-golem/               # Email triage + subscription tracking
+│   │   ├── index.ts               # Main entry (10min cron)
+│   │   ├── gmail-client.ts        # Gmail API wrapper
+│   │   ├── scorer.ts              # Ollama scoring (urgent/job/subscription)
+│   │   └── db-client.ts           # Supabase + offline queue
+│   └── job-golem/                 # Job board scraping
 ├── launchd/
-│   ├── *.plist             # macOS schedulers
-│   └── install.sh          # One-command setup
+│   ├── *.plist                    # macOS schedulers
+│   └── install.sh                 # One-command setup
 ├── data/
-│   ├── drafts.json         # Pending post drafts
-│   ├── soltome-training.json   # Scraped posts + engagement
-│   └── learned-patterns.json   # Extracted patterns for drafting
-├── SOUL.md                 # Bot persona & constraints
-├── CLAUDE.md               # This file
-├── .env                    # Secrets (gitignored)
+│   ├── drafts.json                # ⚠️ DRAFTS ARRAY - bot reads from here!
+│   ├── soltome-training.json      # Scraped posts + engagement
+│   └── learned-patterns.json      # Extracted patterns for drafting
+├── SOUL.md                        # Bot persona & constraints
+├── CLAUDE.md                      # This file
+├── .env                           # Secrets (gitignored)
 └── README.md
 ```
+
+---
+
+## ⚠️ Data Locations (IMPORTANT)
+
+**Two separate directories - don't confuse them:**
+
+| Path | Purpose | Examples |
+|------|---------|----------|
+| `~/Gits/golems-zikaron/` | **Code repo** + static data | `src/*.ts`, `data/drafts.json` |
+| `~/.golems-zikaron/` | **Runtime state** | `state.json`, `event-log.json` |
+
+### Soltome Drafts
+
+| File | Location | Purpose |
+|------|----------|---------|
+| `drafts.json` | `~/Gits/golems-zikaron/data/` | **Array of drafts** - bot's `/drafts` reads this |
+| `content-calendar.json` | `~/Gits/golems-zikaron/data/` | Posting schedule, queue, backlog |
+
+**Draft status flow:** `draft` → `polished` → `approved` → posted
+
+Only `polished` or `refined` status shows in `/drafts` command.
+
+### Runtime State
+
+| File | Location | Purpose |
+|------|----------|---------|
+| `state.json` | `~/.golems-zikaron/` | Bot state, night shift target, pending draft IDs |
+| `event-log.json` | `~/.golems-zikaron/` | Golem actions for "While You Were Down" |
+| `job-golem/` | `~/.golems-zikaron/` | Scraped jobs, sync state |
 
 ---
 

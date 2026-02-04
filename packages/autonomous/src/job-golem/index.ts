@@ -9,11 +9,13 @@
  */
 
 import { scrapeAllJobs } from "./scraper";
+import { syncJobs, syncScores } from "./sync-to-supabase";
 import { matchJobs, prefilterJobs, type MatchResult } from "./matcher";
-import { readFileSync, writeFileSync, existsSync } from "fs";
+import { readFileSync, writeFileSync, existsSync, readdirSync, unlinkSync, statSync } from "fs";
 import { join } from "path";
 
-const HOME = process.env.HOME || "/Users/etanheyman";
+const HOME = process.env.HOME;
+if (!HOME) throw new Error("HOME environment variable is required");
 const STATE_FILE = join(HOME, ".golems-zikaron/state.json");
 const NOTIFY_URL = "http://localhost:3847/notify";
 const RESULTS_DIR = join(HOME, ".golems-zikaron/job-golem/results");
@@ -127,6 +129,36 @@ function saveResults(matches: MatchResult[]) {
   return filename;
 }
 
+// Clean up old results files (keep last 7 days)
+function cleanupOldResults() {
+  if (!existsSync(RESULTS_DIR)) return;
+
+  const MAX_AGE_DAYS = 7;
+  const cutoff = Date.now() - MAX_AGE_DAYS * 24 * 60 * 60 * 1000;
+  let deleted = 0;
+
+  try {
+    const files = readdirSync(RESULTS_DIR);
+    for (const file of files) {
+      if (!file.startsWith("jobs-") || !file.endsWith(".json")) continue;
+
+      const filepath = join(RESULTS_DIR, file);
+      const stats = statSync(filepath);
+
+      if (stats.mtimeMs < cutoff) {
+        unlinkSync(filepath);
+        deleted++;
+      }
+    }
+
+    if (deleted > 0) {
+      console.log(`[Cleanup] Deleted ${deleted} old result files (>7 days)`);
+    }
+  } catch (err) {
+    console.error("[Cleanup] Failed to clean old results:", err);
+  }
+}
+
 // Main job search routine
 async function runJobSearch() {
   const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 19);
@@ -160,7 +192,18 @@ async function runJobSearch() {
   // 4. Save results
   const resultsFile = saveResults(matches);
 
-  // 5. Send Telegram notifications (one per job)
+  // 5. Sync to Supabase (for dashboard)
+  console.log("\n☁️ Syncing to Supabase...");
+  try {
+    await syncJobs();
+    // Also sync the match scores back
+    await syncScores(matches);
+  } catch (err) {
+    console.error("[Sync] Failed to sync to Supabase:", err);
+    // Don't fail the whole run - dashboard sync is optional
+  }
+
+  // 6. Send Telegram notifications (one per job)
   const duration = Math.round((Date.now() - startTime) / 1000);
 
   console.log("\n📱 Sending Telegram notifications...");
@@ -171,6 +214,9 @@ async function runJobSearch() {
   console.log(`   • Scraped: ${allJobs.length} jobs`);
   console.log(`   • Filtered: ${filtered.length} by keywords`);
   console.log(`   • Matched: ${matches.length} scored 6+`);
+
+  // Clean up old result files
+  cleanupOldResults();
 }
 
 // CLI
