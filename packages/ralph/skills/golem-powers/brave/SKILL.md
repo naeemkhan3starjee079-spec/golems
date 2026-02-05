@@ -9,12 +9,25 @@ description: Use as fallback browser automation when Claude-in-Chrome MCP is una
 
 ## Prerequisites Check
 
-Run first:
+**1. Check brave-manager installed:**
 ```bash
 which brave-manager || echo "Not installed"
 ```
 
-If not installed: See troubleshooting in [workflows/debugging.md](workflows/debugging.md)
+**2. Launch Brave with debug port enabled:**
+```bash
+# Close Brave completely first, then:
+open -a 'Brave Browser' --args --remote-debugging-port=9222
+```
+
+If Brave is already running without the debug flag, quit it completely and relaunch.
+
+**3. Verify connection:**
+```bash
+brave-manager tabs
+```
+
+If not installed or connection issues: See [workflows/debugging.md](workflows/debugging.md)
 
 ---
 

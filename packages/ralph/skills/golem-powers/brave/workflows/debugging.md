@@ -199,6 +199,21 @@ brave-manager eval "window.location.pathname === '/dashboard'"
 - Check PATH includes brave-manager location
 - Verify with: `which brave-manager`
 
+**"No tabs found" or "Cannot connect to browser"**
+Brave must be launched with remote debugging enabled:
+
+```bash
+# Close Brave completely first, then:
+open -a 'Brave Browser' --args --remote-debugging-port=9222
+```
+
+Or from terminal:
+```bash
+'/Applications/Brave Browser.app/Contents/MacOS/Brave Browser' --remote-debugging-port=9222
+```
+
+**Important:** If Brave is already running without the debug flag, you must quit it completely and relaunch with the flag.
+
 **Eval returns undefined**
 - Variable may not exist on page
 - Check spelling and case
