@@ -90,6 +90,7 @@ async function sendTelegram(message: string) {
     }
   } catch (err) {
     console.error("[Telegram] Network error:", err);
+    console.error("[Telegram] Check: Is network available? Is Telegram API reachable?");
   }
 }
 

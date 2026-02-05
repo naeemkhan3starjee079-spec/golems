@@ -8,6 +8,9 @@
  * Schedule: 5-7 AM and 5-7 PM
  */
 
+// MUST be first import - loads .env for launchd (runs from /)
+import "../lib/load-env";
+
 import { scrapeAllJobs } from "./scraper";
 import { syncJobs, syncScores } from "./sync-to-supabase";
 import { matchJobs, prefilterJobs, type MatchResult } from "./matcher";
@@ -39,14 +42,29 @@ function getTelegramChatId(): number | null {
 
 // Send Telegram notification
 async function sendTelegram(title: string, body: string, priority: "default" | "high" = "default") {
+  const chatId = getTelegramChatId();
+  if (!chatId) {
+    console.error("[Telegram] No chat ID configured. Message the bot first to register.");
+    return;
+  }
+
   try {
-    await fetch(NOTIFY_URL, {
+    console.log(`[Telegram] Sending notification: "${title}"`);
+    const response = await fetch(NOTIFY_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title, body, source: "jobs", priority }),  // Routes to 🎯 Jobs topic
     });
+
+    if (!response.ok) {
+      const text = await response.text();
+      console.error(`[Telegram] Server error ${response.status}: ${text}`);
+    } else {
+      console.log("[Telegram] Notification sent successfully");
+    }
   } catch (err) {
-    console.error("[Telegram] Failed:", err);
+    console.error("[Telegram] Failed to connect to notification server:", err);
+    console.error("[Telegram] Is telegram-bot running? Check: pgrep -fl telegram-bot");
   }
 }
 
@@ -202,10 +220,10 @@ export async function runJobSearch(): Promise<{ scraped: number; filtered: numbe
   // 4. Save results
   const resultsFile = saveResults(matches);
 
-  // 5. Sync to Supabase (for dashboard)
+  // 5. Sync to Supabase (for dashboard) - ONLY filtered jobs, not raw scrape
   console.log("\n☁️ Syncing to Supabase...");
   try {
-    await syncJobs();
+    await syncJobs(filtered);  // Pass filtered jobs, not raw scrape
     // Also sync the match scores back
     await syncScores(matches);
   } catch (err) {

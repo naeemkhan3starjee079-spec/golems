@@ -5,6 +5,9 @@
  * All operations queue locally when offline and sync when reconnected.
  */
 
+// IMPORTANT: Load env FIRST - fixes launchd cwd issues
+import "../lib/load-env";
+
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { dirname } from 'path';

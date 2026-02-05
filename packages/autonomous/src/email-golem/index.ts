@@ -93,10 +93,14 @@ async function sendNotification(title: string, body: string) {
     });
 
     if (!response.ok) {
-      console.error("[EmailGolem] Notification failed:", response.status);
+      const text = await response.text();
+      console.error(`[EmailGolem] Notification server error ${response.status}: ${text}`);
+    } else {
+      console.log(`[EmailGolem] Notification sent: "${title}"`);
     }
   } catch (err) {
-    console.error("[EmailGolem] Could not send notification:", err);
+    console.error("[EmailGolem] Could not connect to notification server:", err);
+    console.error("[EmailGolem] Is telegram-bot running? Check: pgrep -fl telegram-bot");
   }
 }
 

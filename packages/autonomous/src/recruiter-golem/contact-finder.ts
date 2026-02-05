@@ -145,8 +145,8 @@ async function findGitHubContacts(orgName: string, maxResults: number): Promise<
             confidence: user.email ? "high" : "medium",
           });
         }
-      } catch {
-        // Skip unparseable users
+      } catch (err) {
+        console.warn(`[GitHub] Could not parse user ${login}:`, err);
       }
     }
 
@@ -196,14 +196,15 @@ async function findGitHubContacts(orgName: string, maxResults: number): Promise<
                 confidence: "high",
               });
             }
-          } catch {
-            // Skip
+          } catch (err) {
+            console.warn(`[GitHub] Could not parse contributor ${login}:`, err);
           }
         }
       }
     }
-  } catch {
-    // GitHub API failed
+  } catch (err) {
+    console.error(`[GitHub] API failed for org ${orgName}:`, err);
+    console.error("[GitHub] Is gh CLI authenticated? Try: gh auth status");
   }
 
   return contacts;
@@ -225,7 +226,9 @@ async function findHunterContacts(
     const response = await fetch(url);
 
     if (!response.ok) {
-      console.error("[Hunter] API error:", response.status);
+      const text = await response.text();
+      console.error(`[Hunter] API error ${response.status}: ${text}`);
+      console.error("[Hunter] Check API key at: https://hunter.io/api-keys");
       return contacts;
     }
 
@@ -255,7 +258,8 @@ async function findHunterContacts(
       });
     }
   } catch (err) {
-    console.error("[Hunter] Error:", err);
+    console.error("[Hunter] Connection error:", err);
+    console.error("[Hunter] Check network and API key at: https://hunter.io/api-keys");
   }
 
   return contacts;
@@ -280,7 +284,9 @@ export async function findLushaContact(
     });
 
     if (!response.ok) {
-      console.error("[Lusha] API error:", response.status);
+      const text = await response.text();
+      console.error(`[Lusha] API error ${response.status}: ${text}`);
+      console.error("[Lusha] Check API key and credits at: https://dashboard.lusha.com/");
       return null;
     }
 
@@ -303,7 +309,8 @@ export async function findLushaContact(
       confidence: "high",
     };
   } catch (err) {
-    console.error("[Lusha] Error:", err);
+    console.error("[Lusha] Connection error:", err);
+    console.error("[Lusha] Check network and API key at: https://dashboard.lusha.com/");
     return null;
   }
 }

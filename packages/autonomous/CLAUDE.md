@@ -4,6 +4,23 @@
 
 ---
 
+## Recent Changes (2026-02-05)
+
+### Launchd Environment Fix
+
+- **Problem:** Bun auto-loads `.env` from cwd. Launchd runs from `/`, not package root.
+- **Solution:** `src/lib/load-env.ts` - shared utility that finds package root and loads `.env`
+- **Usage:** Import at TOP of any entry point that needs env vars:
+
+  ```typescript
+  import "../lib/load-env";  // FIRST import
+  ```
+
+- **Symptom when broken:** `Missing SUPABASE_URL or SUPABASE_ANON_KEY env vars` even though .env exists
+- **Files fixed:** `job-golem/sync-to-supabase.ts`, `email-golem/db-client.ts`
+
+---
+
 ## Recent Changes (2026-02-02)
 
 ### ClaudeGolem Timeout & Heartbeat

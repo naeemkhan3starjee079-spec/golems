@@ -9,8 +9,11 @@
  *   bun src/job-golem/sync-to-supabase.ts [--dry-run]
  */
 
+// IMPORTANT: Load env FIRST - fixes launchd cwd issues
+import "../lib/load-env";
+
 import { createClient } from "@supabase/supabase-js";
-import { existsSync, writeFileSync, unlinkSync } from "fs";
+import { existsSync, writeFileSync, unlinkSync, readFileSync } from "fs";
 import { join } from "path";
 import type { JobListing } from "./scraper";
 import { loadScrapedJobs } from "./scraper";
@@ -71,7 +74,12 @@ function clearSyncedJobs(syncedIds: string[]) {
   }
 }
 
-async function syncJobs(dryRun = false) {
+/**
+ * Sync jobs to Supabase
+ * @param filteredJobs - If provided, sync only these jobs (after prefiltering). Otherwise reads from file.
+ * @param dryRun - If true, don't actually sync
+ */
+async function syncJobs(filteredJobs?: JobListing[], dryRun = false) {
   if (!SUPABASE_URL || !SUPABASE_KEY) {
     console.error("[Sync] Missing SUPABASE_URL or SUPABASE_ANON_KEY env vars");
     console.log("[Sync] Set these in your .env or environment");
@@ -79,8 +87,13 @@ async function syncJobs(dryRun = false) {
   }
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-  const jobs = loadScrapedJobs();
+  // Use provided filtered jobs OR fall back to file (for backward compat/CLI)
+  const jobs = filteredJobs ?? loadScrapedJobs();
   const syncState = loadSyncState();
+
+  if (filteredJobs) {
+    console.log(`[Sync] Syncing ${jobs.length} pre-filtered jobs`);
+  }
 
   console.log(`[Sync] Found ${jobs.length} scraped jobs`);
   console.log(`[Sync] ${syncState.syncedIds.length} already synced`);
@@ -213,7 +226,7 @@ if (import.meta.main) {
   const args = process.argv.slice(2);
   const dryRun = args.includes("--dry-run");
 
-  syncJobs(dryRun).catch((err) => {
+  syncJobs(undefined, dryRun).catch((err) => {
     console.error("[Sync] Fatal error:", err);
     process.exit(1);
   });

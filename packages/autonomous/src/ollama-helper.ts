@@ -19,8 +19,10 @@ export async function runOllama(prompt: string): Promise<string> {
 
   if (exitCode !== 0) {
     const stderr = await new Response(proc.stderr).text();
-    console.error("[Ollama] Error:", stderr);
-    return "";
+    console.error("[Ollama] Process error (exit code", exitCode + "):", stderr);
+    console.error("[Ollama] Is Ollama running? Check: ollama list");
+    console.error("[Ollama] Model available? Try: ollama pull", MODEL);
+    return "";  // TODO: Return null and update callers to handle failures
   }
 
   return output.trim();
@@ -66,15 +68,18 @@ export async function getEmbedding(text: string): Promise<number[]> {
     });
 
     if (!response.ok) {
-      console.error("[Embed] API error:", response.status);
-      return [];
+      const errorBody = await response.text();
+      console.error(`[Embed] API error ${response.status}: ${errorBody}`);
+      console.error("[Embed] Is Ollama running? Check: curl http://127.0.0.1:11434/api/tags");
+      return [];  // TODO: Return null and update callers to handle failures
     }
 
     const data = await response.json();
     return data.embedding || [];
   } catch (err) {
-    console.error("[Embed] Failed:", err);
-    return [];
+    console.error("[Embed] Connection failed:", err);
+    console.error("[Embed] Is Ollama running? Try: ollama serve");
+    return [];  // TODO: Return null and update callers to handle failures
   }
 }
 

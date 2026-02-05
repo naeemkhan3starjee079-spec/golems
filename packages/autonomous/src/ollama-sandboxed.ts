@@ -335,15 +335,18 @@ export async function getEmbedding(text: string): Promise<number[]> {
     });
 
     if (!response.ok) {
-      console.error("[Embed] API error:", response.status);
-      return [];
+      const text = await response.text();
+      console.error(`[Embed] API error ${response.status}: ${text}`);
+      console.error(`[Embed] Is Ollama running? Check: curl ${OLLAMA_URL}/api/tags`);
+      return [];  // TODO: Return null and update callers to handle failures
     }
 
     const data = await response.json();
     return data.embedding || [];
   } catch (err) {
-    console.error("[Embed] Failed:", err);
-    return [];
+    console.error("[Embed] Connection failed:", err);
+    console.error("[Embed] Is Ollama running? Try: ollama serve");
+    return [];  // TODO: Return null and update callers to handle failures
   }
 }
 

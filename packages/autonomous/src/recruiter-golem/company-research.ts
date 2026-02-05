@@ -128,7 +128,8 @@ async function fetchGitHubOrgInfo(companyName: string): Promise<Partial<CompanyI
     }
 
     return parseGitHubOrg(output, orgName);
-  } catch {
+  } catch (err) {
+    console.warn(`[CompanyResearch] GitHub org lookup failed for ${companyName}:`, err);
     return null;
   }
 }
@@ -148,7 +149,8 @@ function parseGitHubOrg(json: string, orgName: string): Partial<CompanyInfo> | n
       teamSize: org.public_repos ? `${org.public_repos} public repos` : null,
       founded: org.created_at ? new Date(org.created_at).getFullYear().toString() : null,
     };
-  } catch {
+  } catch (err) {
+    console.warn("[CompanyResearch] Failed to parse GitHub org JSON:", err);
     return null;
   }
 }
@@ -180,7 +182,8 @@ export async function fetchGitHubTechStack(orgName: string): Promise<string[]> {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 6)
       .map(([lang]) => lang);
-  } catch {
+  } catch (err) {
+    console.warn(`[CompanyResearch] Failed to fetch tech stack for ${orgName}:`, err);
     return [];
   }
 }

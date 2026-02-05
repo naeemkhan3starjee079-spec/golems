@@ -126,6 +126,7 @@ export async function fetchPosts(limit = 20): Promise<SoltomePost[]> {
     return data.posts || [];
   } catch (err) {
     console.error("[Soltome] Fetch error:", err);
+    console.error("[Soltome] Check: Is soltome.com reachable? Is API key valid?");
     return [];
   }
 }
