@@ -15,12 +15,21 @@
 
 set -e
 
-RECRUITER_DIR="$HOME/.golems-zikaron/recruiter"
-GOLEMS_DIR="$HOME/Gits/golems/packages/autonomous"
+# Derive GOLEMS_DIR from script location, allow env override
+SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+GOLEMS_DIR="${GOLEMS_DIR:-$SCRIPT_DIR}"
+RECRUITER_DIR="${RECRUITER_DIR:-$HOME/.golems-zikaron/recruiter}"
 CONTEXT_FILE="$GOLEMS_DIR/RECRUITER.md"
 
 # Ensure directories exist
 mkdir -p "$RECRUITER_DIR"
+
+# Check if claude CLI exists
+if ! command -v claude &>/dev/null; then
+  echo "ERROR: claude CLI not found in PATH" >&2
+  echo "Install: npm install -g @anthropic-ai/claude-code" >&2
+  exit 1
+fi
 
 # Parse args
 NEW_SESSION=false

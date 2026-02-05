@@ -47,6 +47,7 @@ Your skill level is tracked per mode:
 ## Session Commands
 
 ### Quick Actions
+
 ```bash
 # Check your Elo ratings
 /stats
