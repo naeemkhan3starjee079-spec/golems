@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+#
+# recruiterGolem - Dedicated Claude session for job hunting
+#
+# Features:
+# - Interview practice with Elo tracking
+# - Job search assistance
+# - Outreach strategy
+#
+# Usage:
+#   recruiterGolem              # Start/continue session
+#   recruiterGolem --new        # Start fresh session
+#   recruiterGolem --practice   # Jump straight to practice mode
+#
+
+set -e
+
+RECRUITER_DIR="$HOME/.golems-zikaron/recruiter"
+GOLEMS_DIR="$HOME/Gits/golems/packages/autonomous"
+CONTEXT_FILE="$GOLEMS_DIR/RECRUITER.md"
+
+# Ensure directories exist
+mkdir -p "$RECRUITER_DIR"
+
+# Parse args
+NEW_SESSION=false
+PRACTICE_MODE=false
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --new|-n)
+      NEW_SESSION=true
+      shift
+      ;;
+    --practice|-p)
+      PRACTICE_MODE=true
+      shift
+      ;;
+    --help|-h)
+      cat << 'EOF'
+recruiterGolem - Job Hunt Assistant
+
+USAGE:
+  recruiterGolem              Start/continue session
+  recruiterGolem --new        Start fresh session
+  recruiterGolem --practice   Jump to interview practice
+
+INTERVIEW MODES:
+  leetcode        Algorithms, data structures
+  system-design   Architecture, scale
+  debugging       Bug finding
+  code-review     Quality, security
+  behavioral      Soft skills + technical
+  optimization    Performance improvement
+  complexity      Big O analysis
+
+EXAMPLES:
+  recruiterGolem
+  recruiterGolem --practice
+  # Then: /interview-practice leetcode Meta L5
+
+EOF
+      exit 0
+      ;;
+    *)
+      echo "Unknown option: $1"
+      exit 1
+      ;;
+  esac
+done
+
+# Build claude args
+CLAUDE_ARGS=(
+  "--resume" "recruiter-golem"
+)
+
+# Add context file
+if [[ -f "$CONTEXT_FILE" ]]; then
+  CLAUDE_ARGS+=("--system-prompt" "$(cat "$CONTEXT_FILE")")
+fi
+
+# Working directory - run from golems for code access
+cd "$GOLEMS_DIR"
+
+# Initial prompt based on mode
+if $PRACTICE_MODE; then
+  INITIAL_PROMPT="I want to practice interviews. Show me my current Elo ratings and recommend which mode to practice based on my stats."
+elif $NEW_SESSION; then
+  INITIAL_PROMPT="Starting fresh RecruiterGolem session. What would you like to work on today?
+
+Options:
+1. Interview practice (7 modes with Elo tracking)
+2. Review job matches
+3. Outreach strategy
+4. Career planning"
+else
+  INITIAL_PROMPT=""
+fi
+
+echo "🎯 RecruiterGolem - Job Hunt Assistant"
+echo "📍 Working dir: $GOLEMS_DIR"
+echo ""
+
+# Launch Claude
+if [[ -n "$INITIAL_PROMPT" ]]; then
+  exec claude "${CLAUDE_ARGS[@]}" "$INITIAL_PROMPT"
+else
+  exec claude "${CLAUDE_ARGS[@]}"
+fi
