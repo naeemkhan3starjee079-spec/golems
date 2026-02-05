@@ -17,13 +17,14 @@ async function run() {
 
   const browser = await puppeteer.connect({
     browserURL: 'http://127.0.0.1:9222',
-  }).catch(async () => {
-    return await puppeteer.launch({
-      executablePath: BRAVE_PATH,
-      headless: false,
-      defaultViewport: null,
-      args: ['--remote-debugging-port=9222', '--user-data-dir=/tmp/brave-manager-profile', '--window-size=1440,900']
-    });
+  }).catch(() => {
+    console.error('ERROR: Cannot connect to Brave browser on port 9222.');
+    console.error('');
+    console.error('Launch Brave with debug port enabled:');
+    console.error("  open -a 'Brave Browser' --args --remote-debugging-port=9222");
+    console.error('');
+    console.error('If Brave is already running, quit it completely and relaunch with the command above.');
+    process.exit(1);
   });
 
   const pages = await browser.pages();

@@ -24,6 +24,15 @@ import {
   getActiveSession,
   formatStats,
 } from "./recruiter-golem/practice-db";
+import {
+  initDb as initOutreachDb,
+  getOutreachStats,
+  getPendingFollowups,
+  getOutreachByJob,
+  updateOutreachStatus,
+  formatOutreachStats,
+  type Outreach,
+} from "./recruiter-golem/outreach-db";
 
 // Mac notification helper
 async function notify(title: string, message: string) {
@@ -956,6 +965,95 @@ Or use \`/stats\` for overall stats.`, { parse_mode: "Markdown" });
   response += "\n\n" + eloSummary;
 
   await ctx.reply(response, { parse_mode: "Markdown" });
+});
+
+// /outreach command - show outreach statistics and pending drafts
+bot.command("outreach", async (ctx) => {
+  try {
+    initOutreachDb();
+    const stats = getOutreachStats();
+    const followups = getPendingFollowups(5);
+
+    let msg = formatOutreachStats(stats);
+
+    if (followups.length > 0) {
+      msg += `\n\n⏰ *Pending Follow-ups (${followups.length})*\n`;
+      for (const f of followups.slice(0, 5)) {
+        const daysSince = Math.floor((Date.now() - new Date(f.sentAt!).getTime()) / (1000 * 60 * 60 * 24));
+        msg += `• Job ${f.jobId} - ${daysSince} days ago\n`;
+      }
+      if (followups.length > 5) {
+        msg += `\n+${followups.length - 5} more. Use /followup to see all.`;
+      }
+    }
+
+    await ctx.reply(msg, { parse_mode: "Markdown" });
+  } catch (err) {
+    await ctx.reply(`❌ Error loading outreach: ${err}`);
+  }
+});
+
+// /followup command - list outreach needing follow-up
+bot.command("followup", async (ctx) => {
+  try {
+    initOutreachDb();
+    const daysArg = parseInt(ctx.message?.text?.split(" ")[1] || "5") || 5;
+    const followups = getPendingFollowups(daysArg);
+
+    if (followups.length === 0) {
+      await ctx.reply(`✅ No pending follow-ups (older than ${daysArg} days).`);
+      return;
+    }
+
+    let msg = `⏰ *Outreach Needing Follow-up* (>${daysArg} days)\n\n`;
+
+    for (const f of followups.slice(0, 10)) {
+      const daysSince = Math.floor((Date.now() - new Date(f.sentAt!).getTime()) / (1000 * 60 * 60 * 24));
+      const typeEmoji = f.messageType === "email" ? "📧" : f.messageType === "linkedin_connect" ? "🔗" : "💬";
+
+      msg += `${typeEmoji} *Job:* ${f.jobId}\n`;
+      msg += `📅 Sent ${daysSince} days ago\n`;
+      msg += `_${f.messageText.slice(0, 50)}..._\n\n`;
+    }
+
+    if (followups.length > 10) {
+      msg += `+${followups.length - 10} more pending.`;
+    }
+
+    // Add action buttons
+    const keyboard = new InlineKeyboard();
+    if (followups.length > 0) {
+      keyboard.text("✅ Mark Responded", `followup:responded:${followups[0].id}`);
+      keyboard.text("❌ No Response", `followup:no_response:${followups[0].id}`);
+    }
+
+    await ctx.reply(msg, { parse_mode: "Markdown", reply_markup: keyboard });
+  } catch (err) {
+    await ctx.reply(`❌ Error loading follow-ups: ${err}`);
+  }
+});
+
+// Follow-up action callback
+bot.callbackQuery(/^followup:/, async (ctx) => {
+  try {
+    const parts = ctx.callbackQuery.data?.split(":") || [];
+    const action = parts[1]; // "responded" or "no_response"
+    const outreachId = parts[2];
+
+    if (!outreachId || !["responded", "no_response"].includes(action)) {
+      await ctx.answerCallbackQuery({ text: "Invalid action" });
+      return;
+    }
+
+    initOutreachDb();
+    updateOutreachStatus(outreachId, action as "responded" | "no_response");
+
+    const emoji = action === "responded" ? "✅" : "❌";
+    await ctx.answerCallbackQuery({ text: `${emoji} Status updated!` });
+    await ctx.editMessageText(`${emoji} Outreach marked as: ${action.replace("_", " ")}`);
+  } catch (err) {
+    await ctx.answerCallbackQuery({ text: "Error updating status" });
+  }
 });
 
 // Practice mode selection callback
