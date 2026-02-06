@@ -4,6 +4,67 @@
 
 ---
 
+## Recent Changes (2026-02-06) — Phase 2: Cloud Offload
+
+### Architecture: Mac = Brain, Railway = Body
+- **Cloud (Railway):** Email poller, job scraper, briefing, soltome learner
+- **Local (Mac):** Telegram bot, Night Shift, notification server
+
+### Track 1: LLM Abstraction
+- **`lib/cloud-llm.ts`** — Haiku 4.5 backend with token usage tracking (cost/source)
+- **`ollama-wrapper.ts`** — `LLM_BACKEND` env: `"ollama"` (default) | `"haiku"` — zero consumer changes
+- **Usage endpoint:** `/usage` on cloud worker shows calls, tokens, cost by source
+
+### Track 2: Telegram Direct Sender
+- **`lib/telegram-direct.ts`** — dual-mode: `TELEGRAM_MODE=local` (localhost:3847) | `direct` (Telegram Bot API)
+- **Topic routing** via `TELEGRAM_TOPIC_*` env vars (matches local bot config)
+
+### Track 3: Supabase Migration
+- **`003_cloud_offload.sql`** — 8 new tables: golem_state, golem_events, golem_seen_jobs, outreach_contacts/messages/companies, practice_sessions/questions
+- All tables RLS-enabled (service_role bypasses)
+
+### Track 4: State Store Abstraction
+- **`lib/state-store.ts`** — `STATE_BACKEND=file` (default) | `supabase`
+- Covers: key-value state, event log, seen jobs
+- `GOLEMS_STATE_DIR` env for test isolation
+
+### Track 5: SQLite → Supabase Adapters
+- **`outreach-db-cloud.ts`** — same interface as outreach-db.ts, Supabase-backed
+- **`practice-db-cloud.ts`** — same interface as practice-db.ts, Supabase-backed
+
+### Track 6: Cloud Worker
+- **`cloud-worker.ts`** — single Railway service running all cloud golems on schedules
+- Email (10min), Jobs (30min), Briefing (8am IL), Soltome (2am IL)
+- Health endpoint on `$PORT`, usage tracking endpoint
+
+### Track 7: Railway Config
+- **`Dockerfile`** — `oven/bun:1.2-alpine`, runs cloud-worker.ts
+- **`railway.json`** — build + deploy config with healthcheck
+
+### Track 8: Data Migration
+- **`scripts/migrate-to-supabase.ts`** — one-time idempotent migration (dry-run default)
+- Migrates: state.json, event-log.json, seen-jobs.json, outreach.db, practice.db
+
+### Test Results
+- **376 pass, 0 fail**, 1834 expect() calls across 382 tests in 33 files
+
+### Env Var Reference (Cloud)
+```
+LLM_BACKEND=haiku          # Use Haiku instead of Ollama
+STATE_BACKEND=supabase      # Use Supabase instead of JSON files
+TELEGRAM_MODE=direct        # Send via Bot API instead of localhost:3847
+ANTHROPIC_API_KEY=sk-...    # Required for haiku backend
+TELEGRAM_CHAT_ID=...        # Group chat ID for direct mode
+TELEGRAM_TOPIC_ALERTS=3     # Thread IDs for topic routing
+TELEGRAM_TOPIC_EMAIL=5
+TELEGRAM_TOPIC_JOBS=7
+```
+
+### Rollback
+Switch back to local with: `LLM_BACKEND=ollama STATE_BACKEND=file TELEGRAM_MODE=local`
+
+---
+
 ## Recent Changes (2026-02-06) — Phase 1: Ship What's Built
 
 ### Track A: PR#7 Bug Fixes
