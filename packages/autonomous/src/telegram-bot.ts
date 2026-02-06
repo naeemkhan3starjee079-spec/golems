@@ -709,6 +709,7 @@ Run this command in each topic to register it:
 \`/setup email\` - in 📧 Email topic
 \`/setup jobs\` - in 🎯 Jobs topic
 \`/setup recruiter\` - in 👔 Recruiter topic
+\`/setup uptime\` - in 📡 Uptime topic
 
 _Note: ClaudeGolem chat goes to General (no setup needed)_
 
@@ -725,7 +726,7 @@ Current config:
 
   // Save the topic thread ID
   // Note: "chat" removed - ClaudeGolem goes to General (no thread ID)
-  const validTopics = ["alerts", "nightshift", "email", "jobs", "recruiter"];
+  const validTopics = ["alerts", "nightshift", "email", "jobs", "recruiter", "uptime"];
   if (!validTopics.includes(topicArg)) {
     await ctx.reply(`❌ Unknown topic: ${topicArg}\nValid: ${validTopics.join(", ")}\n\n_ClaudeGolem chat goes to General automatically_`, { parse_mode: "Markdown" });
     return;
