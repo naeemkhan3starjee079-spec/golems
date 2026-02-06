@@ -119,12 +119,22 @@ Items that need Finder/Launchpad (Mac App Store apps, SIP-protected):
 Total reclaimable: ~X GB
 ```
 
+### UX Flow (MANDATORY)
+
+1. **Announce first** — Before scanning anything, tell the user:
+   > "I'm about to run a thorough storage checkup on your Mac. This is read-only — I won't delete, move, or modify anything. I'll scan your disk, identify waste, and give you a full report. You decide what to do with it."
+2. **Run all 7 phases** — Collect everything silently (no incremental "should I delete this?" questions)
+3. **Present the full report** — Show the complete markdown report (format above)
+4. **Ask what to delete** — After the report, ask: "Which items would you like me to clean up? You can pick by category (e.g. 'all ghost app data') or specific items. I'll show you the exact commands before running anything."
+5. **Confirm before each action** — Show the exact `rm` or cleanup command, wait for approval, then execute
+
 ### Important Rules
 
-1. **NEVER delete anything** — report only
-2. **Check before flagging** — verify an app is actually unused before recommending deletion
-3. **Privacy-sensitive items** — if data looks personal (messages, photos, credentials), mark as "KEEP — private data" and don't explore further
-4. **Mac App Store apps** — note these can't be deleted via CLI (need Launchpad)
-5. **Container dirs** — `~/Library/Containers/` are often macOS-protected, note this
-6. **Build tools** — check if Expo/React Native projects need Android SDK before recommending deletion
-7. **Flag the weekly cleanup script** — check if `com.golems.storage-cleanup` launchd job is running and report its last run from `~/.golems-zikaron/storage-cleanup.log`
+1. **NEVER delete anything without explicit user approval** — report first, ask second, act third
+2. **No incremental prompts during scanning** — collect everything, report once
+3. **Check before flagging** — verify an app is actually unused before recommending deletion
+4. **Privacy-sensitive items** — if data looks personal (messages, photos, credentials), mark as "KEEP — private data" and don't explore further
+5. **Mac App Store apps** — note these can't be deleted via CLI (need Launchpad)
+6. **Container dirs** — `~/Library/Containers/` are often macOS-protected, note this
+7. **Build tools** — check if Expo/React Native projects need Android SDK before recommending deletion
+8. **Flag the weekly cleanup script** — check if `com.golems.storage-cleanup` launchd job is running and report its last run from `~/.golems-zikaron/storage-cleanup.log`
