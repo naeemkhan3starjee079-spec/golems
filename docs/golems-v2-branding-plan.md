@@ -1298,9 +1298,17 @@ Forces bold, production-grade UI instead of generic AI slop.
 
 ---
 
-## Part 20: Documentation, Wizard & Admin (2026-02-06)
+## Part 20: Documentation, Wizard, Monitoring & Security (2026-02-06)
 
-> Added after Phase 2 code complete. Tracks 10-14 cover discoverability, setup UX, and centralization.
+> Added after Phase 2 code complete. Tracks 10-17 cover discoverability, setup UX, centralization, monitoring, and security.
+
+### Cross-Cutting Requirements (ALL tracks must follow)
+
+1. **TDD** — Write tests first or alongside. Every new module has its own test file. No PR without passing tests.
+2. **Context7 verification** — Before shipping, use `/context7` skill to check that our code uses libraries correctly (Anthropic SDK, Supabase client, Grammy, Gmail API, etc.). Catch deprecated methods, wrong API patterns, missing options.
+3. **Cursor CLI mapping** — Use `cursor agent "@codebase <question>" --output-format text` to map and verify codebase state. Especially for docs and coverage sweep.
+4. **Documentation** — Every track updates relevant docs (CLAUDE.md, plan, or doc site). No undocumented features.
+5. **1Password** — All secrets flow through 1Password. Never hardcode, never commit `.env` files.
 
 ### Centralization Principle
 
@@ -1315,16 +1323,38 @@ Forces bold, production-grade UI instead of generic AI slop.
 | **Skills** | `packages/ralph/skills/golem-powers/` (symlinked to ~/.claude/commands/) | Duplicated across packages |
 | **Learnings** | `~/.claude/learnings/` (global) + `docs.local/learnings/` (project) | Scattered .md files |
 | **Plans** | `docs/golems-v2-branding-plan.md` (canonical) | Multiple copies in docs.local |
+| **Monitoring** | UptimeRobot → Telegram topic | Manual checks, hope-based uptime |
 
 The wizard (Track 12) and docs (Track 11) must enforce this — every setup produces the same predictable layout.
 
+---
+
+### Track 9: Local Cleanup (launchd + bin/golems)
+
+**Status:** Pending (after Railway confirmed stable)
+- Disable launchd plists for email-golem and job-golem (cloud handles these now)
+- Update `bin/golems` CLI: add `golems cloud` command showing Railway health
+- Update `healthcheck.ts` to ping Railway `/health` endpoint
+- Add Railway/cloud status to ccstatusline
+
+**Tests:** healthcheck.test.ts for Railway ping, golems CLI unit tests
+**Context7:** Verify launchd plist format, Railway health check patterns
+**Docs:** Update CLAUDE.md Phase 2 section with which services are local vs cloud
+
+---
+
 ### Track 10: Storage Audit
 
-**File:** `scripts/storage-audit-prompt.md`
+**File:** `scripts/storage-audit-prompt.md` ✅ EXISTS
 - 7-phase non-destructive audit: disk overview, ghost detection, staleness, recurring growers, large files, Android SDK, browsers
+- UX flow: announce checkup → scan silently → full report → ask what to delete → confirm each action
 - Runs **pre-setup** (baseline) and **post-setup** (cleanup redundant local state)
-- Outputs structured markdown: "delete / keep because X" categories
-- Never deletes anything — audit and recommend only
+- Weekly automated cleanup via `scripts/storage-cleanup.sh` + launchd plist
+
+**Tests:** Dry-run mode test (verify no deletions), report format validation
+**Docs:** Add to wizard pre-flight and post-flight phases
+
+---
 
 ### Track 11: Documentation Site
 
@@ -1337,8 +1367,14 @@ The wizard (Track 12) and docs (Track 11) must enforce this — every setup prod
 5. MCP Servers — zikaron, golems-email, golems-jobs
 6. Configuration Reference — all env vars, 1Password items, launchd plists
 7. Architecture — domain golems principle (Part 14)
+8. Monitoring & Security — UptimeRobot, Dependabot, Snyk, Socket.dev setup
 
-**Build workflow:** Parallel Haiku-powered Claude Code agents draft sections, main agent reviews/organizes. Cursor CLI `@codebase` for automated codebase mapping.
+**Build workflow:** Parallel Haiku-powered Claude Code agents draft sections, main agent reviews/organizes. Cursor CLI `@codebase` for automated codebase mapping. Context7 for verifying all library usage is correct.
+
+**Tests:** Link checker (no dead links), code snippet validation (examples actually run)
+**Cursor CLI:** `cursor agent "@codebase list all exported functions and their purpose" --output-format text` to auto-generate API reference sections
+
+---
 
 ### Track 12: Golem CLI Wizard (`golems setup`)
 
@@ -1351,26 +1387,109 @@ Interactive setup for new projects or new Macs. Modular — user picks which ser
 - Risks and how to rollback
 - Asks for confirmation even on bypass mode
 
-**Phases:** Pre-flight audit → Core setup → Service selection → 1Password secrets → Deploy (Railway or launchd) → Verify → Post-flight audit
+**Phases:** Pre-flight audit (Track 10) → Core setup → Service selection → 1Password secrets → Deploy (Railway or launchd) → Monitoring setup (Track 15) → Verify → Post-flight audit
 
 **Output:** `SETUP_LOG.md` documenting exactly what was configured.
+
+**Tests:** Mock wizard run (no real system changes), verify each phase produces correct output
+**Context7:** Verify 1Password CLI usage, Railway CLI patterns, launchd plist format
+
+---
 
 ### Track 13: Coverage Sweep
 
 Final pass after all other tracks:
 - Cursor CLI `@codebase` full mapping
 - Cross-reference docs vs actual code
+- Context7 verify ALL library imports against current docs
 - Find undocumented env vars, MCP tools, skills
 - Fill gaps, remove stale references
+- Verify all tests pass, no orphaned test files
+
+---
 
 ### Track 14: Golem Admin UI (`@golems/admin`)
 
 **Package:** `packages/admin-ui`
 - Embeddable React admin interface
-- Shows: golem status, event log, API usage/costs, outreach pipeline, email routing
+- Shows: golem status, event log, API usage/costs, outreach pipeline, email routing, uptime status
 - Reads from Supabase (cloud) or local state (file)
 - Publishable as `@golems/admin` — drop into any website
 - Standalone (Vite) or embeddable component
+
+**Tests:** Component tests (Vitest + Testing Library), mock Supabase responses
+**Context7:** Verify React, Vite, Supabase client usage
+
+---
+
+### Track 15: Uptime Monitoring
+
+**Service:** UptimeRobot (free tier: 50 monitors, 5min intervals)
+**Telegram:** New topic `#uptime` in Golems group for alerts
+
+**Monitors:**
+| Monitor | URL | Interval | Alert |
+|---------|-----|----------|-------|
+| Railway Health | `https://<railway-url>/health` | 5min | Telegram #uptime topic |
+| Railway Usage | `https://<railway-url>/usage` | 30min | Telegram (cost spike alert) |
+| Supabase | `https://mkijzwkuubtfjqcemorx.supabase.co/rest/v1/` | 5min | Telegram #uptime topic |
+
+**Setup:**
+1. Create UptimeRobot account (free)
+2. Add Telegram integration (Bot API webhook → uptime topic)
+3. Create monitors for each endpoint
+4. Add status badge to README / admin UI
+
+**Docs:** Document UptimeRobot setup in wizard and doc site. Add to 1Password if API key needed.
+
+---
+
+### Track 16: Security Tooling
+
+**Free tools for open source:**
+
+| Tool | What | Setup |
+|------|------|-------|
+| **GitHub Dependabot** | Auto PRs for vulnerable deps | Enable in repo Settings → Security |
+| **Snyk** | Deep dependency scanning + container scanning | `snyk auth` + GitHub integration |
+| **Socket.dev** | Supply chain attack detection (typosquatting, install scripts) | GitHub App install |
+| **GitHub Secret Scanning** | Detect leaked secrets in commits | Enable in repo Settings → Security |
+| **CodeQL** | Static analysis (XSS, injection, etc.) | GitHub Actions workflow |
+
+**Priority order:**
+1. Dependabot (5min setup, immediate value)
+2. Secret Scanning (1min toggle, catches leaks)
+3. Socket.dev (5min GitHub App install)
+4. Snyk (10min, container scanning for Dockerfile)
+5. CodeQL (30min, GitHub Actions workflow)
+
+**Tests:** CI must pass all security checks before merge
+**Docs:** Security section in doc site, badge in README
+
+---
+
+### Track 17: Telegram Topic for Monitoring
+
+Add new topic to Golems Telegram group:
+- `#uptime` — UptimeRobot alerts, Railway health changes, security scan results
+- Get thread ID, add to state.json and Railway env vars (`TELEGRAM_TOPIC_UPTIME`)
+- Update `telegram-direct.ts` source→topic mapping
+
+---
+
+### Implementation Order (Phase 2.5)
+
+| # | Track | Depends On | Effort |
+|---|-------|------------|--------|
+| 1 | **Track 9:** Local cleanup | Railway stable ✅ | 1-2hr |
+| 2 | **Track 15:** Uptime monitoring | Railway deployed ✅ | 30min |
+| 3 | **Track 16:** Security tooling | Repo exists ✅ | 1hr |
+| 4 | **Track 17:** Telegram uptime topic | Track 15 | 15min |
+| 5 | **Track 10:** Storage audit | Independent ✅ | Done |
+| 6 | **Track 11:** Documentation site | Tracks 9-10 done | 4-6hr |
+| 7 | **Track 12:** CLI wizard | Track 11 (needs docs structure) | 4-6hr |
+| 8 | **Track 14:** Admin UI | Tracks 11-12 | 6-8hr |
+| 9 | **Track 13:** Coverage sweep | Everything else | 2-3hr |
 
 ---
 
@@ -1386,7 +1505,64 @@ Final pass after all other tracks:
 
 ---
 
-## Appendix: Path Variables
+## Appendix A: Railway Deployment Reference
+
+> Deployed 2026-02-06 via Railway CLI.
+
+### Project
+| Field | Value |
+|-------|-------|
+| **Project** | `helpful-empathy` |
+| **Service** | `golems` |
+| **Root Directory** | `packages/autonomous` |
+| **Builder** | Dockerfile |
+| **Health Check** | `/health` |
+| **Usage Endpoint** | `/usage` |
+| **Branch** | `master` (auto-deploy on push) |
+
+### CLI Setup
+```bash
+brew install railway
+railway login          # opens browser
+cd packages/autonomous
+railway link           # select helpful-empathy → golems
+railway variables      # view env vars
+railway up             # manual deploy
+railway logs           # tail logs
+```
+
+### Environment Variables (17 total)
+| Variable | Source | Notes |
+|----------|--------|-------|
+| `ANTHROPIC_API_KEY` | 1Password: `ANTHROPIC_GOLEMS_API_KEY` | Haiku 4.5 calls |
+| `SUPABASE_URL` | Supabase dashboard | `mkijzwkuubtfjqcemorx` project |
+| `SUPABASE_SERVICE_KEY` | Supabase dashboard | service_role, bypasses RLS |
+| `GMAIL_CLIENT_ID` | Google Cloud Console | OAuth2 for email polling |
+| `GMAIL_CLIENT_SECRET` | Google Cloud Console | OAuth2 |
+| `GMAIL_REFRESH_TOKEN` | OAuth2 flow | Long-lived refresh token |
+| `TELEGRAM_BOT_TOKEN` | @BotFather | GolemsBot |
+| `TELEGRAM_CHAT_ID` | `-1003791473584` | Golems group |
+| `TELEGRAM_TOPIC_ALERTS` | `3` | Thread ID for alerts topic |
+| `TELEGRAM_TOPIC_NIGHTSHIFT` | `4` | Thread ID for night shift topic |
+| `TELEGRAM_TOPIC_EMAIL` | `5` | Thread ID for email topic |
+| `TELEGRAM_TOPIC_JOBS` | `7` | Thread ID for jobs topic |
+| `TELEGRAM_TOPIC_RECRUITER` | `126` | Thread ID for recruiter topic |
+| `LLM_BACKEND` | `haiku` | Use Anthropic API instead of Ollama |
+| `STATE_BACKEND` | `supabase` | Use Supabase instead of local files |
+| `TELEGRAM_MODE` | `direct` | Bot API direct (no localhost proxy) |
+| `TZ` | `Asia/Jerusalem` | Timezone for briefing/soltome schedules |
+
+Railway auto-provides `PORT` — the cloud worker binds to it.
+
+### Rollback
+Flip to local mode by changing 3 vars:
+```bash
+railway variables --set "LLM_BACKEND=ollama" --set "STATE_BACKEND=file" --set "TELEGRAM_MODE=local"
+```
+
+---
+
+## Appendix B: Path Variables
 
 > Internal path variables used throughout this document.
 

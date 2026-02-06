@@ -19,6 +19,7 @@ import { $ } from "bun";
 const HOME = process.env.HOME || "/Users/etanheyman";
 const STATE_FILE = join(HOME, ".golems-zikaron/state.json");
 const NOTIFY_URL = "http://localhost:3847/notify";
+const RAILWAY_URL_DEFAULT = "https://golems-cloud.up.railway.app";
 
 interface HealthStatus {
   name: string;
@@ -86,6 +87,30 @@ async function checkStateFile(): Promise<HealthStatus> {
   }
 }
 
+async function checkRailwayCloud(): Promise<HealthStatus> {
+  const baseUrl = process.env.RAILWAY_URL || RAILWAY_URL_DEFAULT;
+  try {
+    const response = await fetch(`${baseUrl}/health`, {
+      method: "GET",
+      signal: AbortSignal.timeout(5000),
+    });
+    if (response.ok) {
+      const data = await response.json();
+      if (data.status === "ok") {
+        return {
+          name: "Railway Cloud",
+          ok: true,
+          detail: `uptime: ${data.uptime}s, LLM: ${data.backend || "unknown"}, state: ${data.stateBackend || "unknown"}`,
+        };
+      }
+      return { name: "Railway Cloud", ok: false, detail: `Status: ${data.status}` };
+    }
+    return { name: "Railway Cloud", ok: false, detail: `Status ${response.status}` };
+  } catch {
+    return { name: "Railway Cloud", ok: false, detail: "Not responding" };
+  }
+}
+
 async function checkLaunchdJobs(): Promise<HealthStatus> {
   try {
     const result = await $`launchctl list | grep golems`.quiet();
@@ -140,6 +165,7 @@ async function runHealthcheck(): Promise<void> {
     checkOllama(),
     checkStateFile(),
     checkLaunchdJobs(),
+    checkRailwayCloud(),
   ]);
 
   // Log to console
@@ -168,4 +194,4 @@ if (import.meta.main) {
   });
 }
 
-export { runHealthcheck, HealthStatus };
+export { runHealthcheck, checkRailwayCloud, HealthStatus };

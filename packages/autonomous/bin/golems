@@ -50,6 +50,7 @@ COMMANDS:
   on            Turn on all services (exit hibernation)
   off           Turn off all services (hibernation mode)
 
+  cloud         Show Railway cloud worker health + usage
   instructions  Show Claude Chat project files to upload
   regen-style   Regenerate style card from Zikaron data
 
@@ -379,6 +380,70 @@ cmd_instructions() {
   fi
 }
 
+cmd_cloud() {
+  local RAILWAY_URL="${RAILWAY_URL:-https://golems-cloud.up.railway.app}"
+  echo -e "${BLUE}=== RAILWAY CLOUD WORKER ===${NC}"
+  echo -e "Endpoint: ${YELLOW}${RAILWAY_URL}${NC}"
+  echo
+
+  # Health check
+  echo -e "${BLUE}Health:${NC}"
+  local health
+  health=$(curl -s --max-time 5 "${RAILWAY_URL}/health" 2>/dev/null)
+  if [ $? -eq 0 ] && [ -n "$health" ]; then
+    local status=$(echo "$health" | jq -r '.status // "unknown"')
+    local uptime=$(echo "$health" | jq -r '.uptime // "?"')
+    local backend=$(echo "$health" | jq -r '.backend // "?"')
+    local state_backend=$(echo "$health" | jq -r '.stateBackend // "?"')
+    local tg_mode=$(echo "$health" | jq -r '.telegramMode // "?"')
+
+    if [ "$status" = "ok" ]; then
+      echo -e "  $(status_icon 0) Status: ${GREEN}ok${NC}"
+    else
+      echo -e "  $(status_icon 1) Status: ${RED}${status}${NC}"
+    fi
+    echo "  Uptime: ${uptime}s"
+    echo "  LLM Backend: ${backend}"
+    echo "  State Backend: ${state_backend}"
+    echo "  Telegram Mode: ${tg_mode}"
+  else
+    echo -e "  $(status_icon 1) ${RED}Not responding${NC}"
+    return 1
+  fi
+
+  echo
+
+  # Usage stats
+  echo -e "${BLUE}Usage:${NC}"
+  local usage
+  usage=$(curl -s --max-time 5 "${RAILWAY_URL}/usage" 2>/dev/null)
+  if [ $? -eq 0 ] && [ -n "$usage" ]; then
+    local total_calls=$(echo "$usage" | jq -r '.totalCalls // 0')
+    local total_input=$(echo "$usage" | jq -r '.totalInputTokens // 0')
+    local total_output=$(echo "$usage" | jq -r '.totalOutputTokens // 0')
+    local total_cost=$(echo "$usage" | jq -r '.totalCostUsd // 0')
+
+    echo "  Total Calls: ${total_calls}"
+    echo "  Input Tokens: ${total_input}"
+    echo "  Output Tokens: ${total_output}"
+    echo -e "  Cost: ${YELLOW}\$${total_cost}${NC}"
+
+    # Show by-source breakdown if available
+    local sources=$(echo "$usage" | jq -r '.bySource // empty | keys[]' 2>/dev/null)
+    if [ -n "$sources" ]; then
+      echo
+      echo -e "${BLUE}By Source:${NC}"
+      echo "$sources" | while read src; do
+        local src_calls=$(echo "$usage" | jq -r ".bySource[\"$src\"].calls // 0")
+        local src_cost=$(echo "$usage" | jq -r ".bySource[\"$src\"].costUsd // 0")
+        printf "  %-20s %s calls  \$%s\n" "$src" "$src_calls" "$src_cost"
+      done
+    fi
+  else
+    echo "  (Could not fetch usage data)"
+  fi
+}
+
 cmd_regen_style() {
   echo "Regenerating style card from Zikaron data..."
   cd "$GOLEMS_HOME" && bun src/lib/style-export.ts "$CHAT_DIR/style-card.md"
@@ -434,6 +499,9 @@ case "${1:-status}" in
     ;;
   instructions|instr)
     cmd_instructions "$2"
+    ;;
+  cloud|railway)
+    cmd_cloud
     ;;
   regen-style|style)
     cmd_regen_style

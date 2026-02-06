@@ -24,6 +24,8 @@ const SOURCE_TO_TOPIC: Record<string, string> = {
   jobs: "jobs",
   recruiter: "recruiter",
   healthcheck: "alerts",
+  uptime: "uptime",
+  monitoring: "uptime",
   default: "alerts",
 };
 
@@ -36,6 +38,8 @@ const SOURCE_FORMAT: Record<string, { icon: string; format: (t: string, b: strin
   jobs: { icon: "🎯", format: (t, b) => `🎯 *${t}*\n\n${b}` },
   recruiter: { icon: "👔", format: (t, b) => `👔 *${t}*\n\n${b}` },
   healthcheck: { icon: "🏥", format: (t, b) => `🏥 *${t}*\n\n${b}` },
+  uptime: { icon: "📡", format: (t, b) => `📡 *${t}*\n\n${b}` },
+  monitoring: { icon: "📡", format: (t, b) => `📡 *${t}*\n\n${b}` },
   default: { icon: "📨", format: (t, b) => `📨 *${t}*\n\n${b}` },
 };
 

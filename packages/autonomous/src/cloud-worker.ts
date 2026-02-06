@@ -185,6 +185,30 @@ Bun.serve({
       });
     }
 
+    // UptimeRobot webhook → Telegram uptime topic
+    // Set UptimeRobot alert contact webhook to: POST https://golems-production.up.railway.app/webhook/uptimerobot
+    if (url.pathname === "/webhook/uptimerobot" && req.method === "POST") {
+      try {
+        const form = await req.formData().catch(() => null);
+        const text = await req.text().catch(() => "");
+        // UptimeRobot sends form-encoded: monitorFriendlyName, alertType (1=down, 2=up), alertDetails
+        const monitorName = form?.get("monitorFriendlyName") || "Unknown";
+        const alertType = form?.get("alertType") || "";
+        const alertDetails = form?.get("alertDetails") || text || "No details";
+        const isDown = String(alertType) === "1";
+
+        await sendNotification({
+          title: isDown ? `DOWN: ${monitorName}` : `UP: ${monitorName}`,
+          body: String(alertDetails),
+          source: "uptime",
+        });
+        return new Response("OK", { status: 200 });
+      } catch (e) {
+        console.error("[Webhook] UptimeRobot error:", e);
+        return new Response("Error", { status: 500 });
+      }
+    }
+
     return new Response("Not Found", { status: 404 });
   },
 });
