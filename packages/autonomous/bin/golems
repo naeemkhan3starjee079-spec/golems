@@ -53,6 +53,7 @@ COMMANDS:
   cloud         Show Railway cloud worker health + usage
   instructions  Show Claude Chat project files to upload
   regen-style   Regenerate style card from Zikaron data
+  setup         Interactive setup wizard for new machines
 
   help          Show this help
 
@@ -505,6 +506,10 @@ case "${1:-status}" in
     ;;
   regen-style|style)
     cmd_regen_style
+    ;;
+  setup|wizard)
+    echo -e "${BLUE}=== GOLEMS SETUP WIZARD ===${NC}"
+    cd "$GOLEMS_HOME" && bun run src/wizard.ts
     ;;
   *)
     echo "Unknown command: $1"
