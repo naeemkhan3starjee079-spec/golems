@@ -8,14 +8,14 @@ Golems Phase 2 runs on **Railway** as the cloud "body" while the Mac remains the
 
 ## Railway Project
 
-- **Organization:** helpful-empathy
-- **Project:** golems
-- **Service:** golems (autonomous)
-- **Region:** US West (us-west)
+Create a new project in Railway with these settings:
+
+- **Organization:** Your Railway org
+- **Project:** golems (or any name you choose)
+- **Service:** golems
+- **Region:** Any region (US West, Europe, etc.)
 - **Root:** `packages/autonomous`
 - **Builder:** Dockerfile
-
-Dashboard: https://railway.app/project/helpful-empathy/services/golems
 
 ## Getting Started
 
@@ -38,8 +38,8 @@ From repo root or `packages/autonomous/`:
 
 ```bash
 railway link
-# Select "helpful-empathy" org
-# Select "golems" project
+# Select your org
+# Select your project
 ```
 
 ### Deploy
@@ -72,25 +72,25 @@ Set all 18 variables in Railway dashboard (`Settings` → `Variables`):
 
 | Variable | Source | Required |
 |----------|--------|----------|
-| `ANTHROPIC_API_KEY` | `ANTHROPIC_GOLEMS_API_KEY` | ✅ Yes |
-| `SUPABASE_URL` | Supabase console | ✅ Yes |
-| `SUPABASE_SERVICE_KEY` | 1Password | ✅ Yes |
-| `GMAIL_CLIENT_ID` | Google Cloud Console | ✅ Yes |
-| `GMAIL_CLIENT_SECRET` | 1Password | ✅ Yes |
-| `GMAIL_REFRESH_TOKEN` | 1Password | ✅ Yes |
-| `TELEGRAM_BOT_TOKEN` | 1Password | ✅ Yes |
-| `TELEGRAM_CHAT_ID` | Telegram group | ✅ Yes |
+| `ANTHROPIC_API_KEY` | Your Anthropic Console | ✅ Yes |
+| `SUPABASE_URL` | Your Supabase project (format: `https://YOUR_PROJECT.supabase.co`) | ✅ Yes |
+| `SUPABASE_SERVICE_KEY` | Supabase dashboard → Settings → API | ✅ Yes |
+| `GMAIL_CLIENT_ID` | Google Cloud Console → OAuth credentials | ✅ Yes |
+| `GMAIL_CLIENT_SECRET` | Google Cloud Console | ✅ Yes |
+| `GMAIL_REFRESH_TOKEN` | OAuth flow (see Gmail setup docs) | ✅ Yes |
+| `TELEGRAM_BOT_TOKEN` | @BotFather on Telegram | ✅ Yes |
+| `TELEGRAM_CHAT_ID` | Your Telegram group/chat ID | ✅ Yes |
 
 ### Telegram Topics
 
-| Variable | Value |
-|----------|-------|
-| `TELEGRAM_TOPIC_ALERTS` | `3` |
-| `TELEGRAM_TOPIC_NIGHTSHIFT` | `4` |
-| `TELEGRAM_TOPIC_EMAIL` | `5` |
-| `TELEGRAM_TOPIC_JOBS` | `7` |
-| `TELEGRAM_TOPIC_RECRUITER` | `126` |
-| `TELEGRAM_TOPIC_UPTIME` | `282` |
+| Variable | Example Value | How to Get |
+|----------|---------------|-----------|
+| `TELEGRAM_TOPIC_ALERTS` | `3` | Create topic, send `/setup alerts` in that topic |
+| `TELEGRAM_TOPIC_NIGHTSHIFT` | `4` | Create topic, send `/setup nightshift` in that topic |
+| `TELEGRAM_TOPIC_EMAIL` | `5` | Create topic, send `/setup email` in that topic |
+| `TELEGRAM_TOPIC_JOBS` | `7` | Create topic, send `/setup jobs` in that topic |
+| `TELEGRAM_TOPIC_RECRUITER` | `126` | Create topic, send `/setup recruiter` in that topic |
+| `TELEGRAM_TOPIC_UPTIME` | `282` | Create topic, send `/setup uptime` in that topic |
 
 ### Monitoring
 
@@ -146,14 +146,9 @@ Returns API cost stats:
 Configure **UptimeRobot** (free tier):
 
 1. Go to [uptimerobot.com](https://uptimerobot.com)
-2. Add monitor: `https://golems-production.up.railway.app/health`
+2. Add monitor: `https://your-service.up.railway.app/health`
 3. Check every 5 minutes
-4. Set webhook notification to Telegram:
-
-   ```
-   https://YOUR_TELEGRAM_BOT_URL/webhook/uptimerobot
-   ```
-
+4. Set webhook notification to Telegram (optional - configure bot webhook)
 5. Receives alerts in Telegram `⏰ Uptime` topic
 
 ## Rollback Strategy

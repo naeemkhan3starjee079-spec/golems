@@ -78,7 +78,7 @@ bun install && bun run bot
 
 ```bash
 # Clone
-git clone https://github.com/EtanHey/golems.git
+git clone https://github.com/YOUR_USERNAME/golems.git
 cd golems
 
 # Ralph (autonomous coding)

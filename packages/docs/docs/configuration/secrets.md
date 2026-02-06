@@ -10,22 +10,18 @@ Golems uses **1Password** for secure secret storage. Never hardcode secrets or c
 
 ### Vault Items
 
-Two API keys stored in the "development" vault:
+Store your API keys in 1Password (in any vault you prefer):
 
-| Item | Username | Path | Purpose |
-|------|----------|------|---------|
-| `ANTHROPIC_GOLEMS_API_KEY` | `golems-cloud-worker` | `op://development/ANTHROPIC_GOLEMS_API_KEY/credential` | Golems cloud agent (Phase 2) |
-| `ANTHROPIC_SONGSCRIPT_API_KEY` | `songscript-whisperx` | `op://development/ANTHROPIC_SONGSCRIPT_API_KEY/credential` | SongScript WhisperX pipeline |
-
-### Other Secrets
-
-Store in 1Password under "development" vault:
-
-| Secret | Usage |
-|--------|-------|
-| `SUPABASE_SERVICE_KEY` | Cloud database access (service_role, bypasses RLS) |
-| `GMAIL_CLIENT_SECRET` | Gmail OAuth |
-| `TELEGRAM_BOT_TOKEN` | Telegram bot auth |
+| Secret Name | What to Store | Purpose |
+|-------------|--------------|---------|
+| `ANTHROPIC_API_KEY` | Your Anthropic API key | Claude LLM calls (name the 1Password item anything you want) |
+| `SUPABASE_URL` | Your Supabase project URL | Database connection |
+| `SUPABASE_SERVICE_KEY` | Your service role key | Cloud database access (service_role, bypasses RLS) |
+| `GMAIL_CLIENT_ID` | Google Cloud OAuth client ID | Gmail API access |
+| `GMAIL_CLIENT_SECRET` | Google Cloud OAuth secret | Gmail OAuth |
+| `GMAIL_REFRESH_TOKEN` | OAuth refresh token | Persistent Gmail access |
+| `TELEGRAM_BOT_TOKEN` | Bot token from @BotFather | Telegram bot auth |
+| `TELEGRAM_CHAT_ID` | Your chat/group ID | Notification destination |
 
 ## Accessing Secrets
 
@@ -46,7 +42,7 @@ op signin
 Read a secret:
 
 ```bash
-op read "op://development/ANTHROPIC_GOLEMS_API_KEY/credential"
+op read "op://YOUR_VAULT/YOUR_ITEM/credential"
 ```
 
 ### In Shell Profile
@@ -55,10 +51,10 @@ Source secrets in your shell profile (e.g., `~/.zshrc`):
 
 ```bash
 # Load Golems secrets
-export ANTHROPIC_API_KEY=$(op read "op://development/ANTHROPIC_GOLEMS_API_KEY/credential")
-export SUPABASE_SERVICE_KEY=$(op read "op://development/SUPABASE_SERVICE_KEY/credential")
-export GMAIL_CLIENT_SECRET=$(op read "op://development/GMAIL_CLIENT_SECRET/credential")
-export TELEGRAM_BOT_TOKEN=$(op read "op://development/TELEGRAM_BOT_TOKEN/credential")
+export ANTHROPIC_API_KEY=$(op read "op://YOUR_VAULT/YOUR_ANTHROPIC_ITEM/credential")
+export SUPABASE_SERVICE_KEY=$(op read "op://YOUR_VAULT/YOUR_SUPABASE_ITEM/service_key")
+export GMAIL_CLIENT_SECRET=$(op read "op://YOUR_VAULT/YOUR_GMAIL_ITEM/client_secret")
+export TELEGRAM_BOT_TOKEN=$(op read "op://YOUR_VAULT/YOUR_TELEGRAM_ITEM/credential")
 ```
 
 ### In Railway (Production)
@@ -67,7 +63,7 @@ Railway environment variables are **plain text** (not 1Password). Copy values ma
 
 1. Read from 1Password:
    ```bash
-   op read "op://development/ANTHROPIC_GOLEMS_API_KEY/credential"
+   op read "op://YOUR_VAULT/YOUR_ANTHROPIC_ITEM/credential"
    ```
 
 2. Paste into Railway dashboard → `Settings` → `Variables`
@@ -115,14 +111,14 @@ When rotating API keys:
 4. **Monitor logs** for successful auth
 5. **Revoke old key** in console after 24 hours of successful operation
 
-### Safely Retire Old Generic Key
+### Key Rotation Best Practices
 
-After `ANTHROPIC_GOLEMS_API_KEY` is confirmed working in production:
+After rotating keys:
 
-1. Monitor logs for 1+ week
-2. Search for any hardcoded references to old key
-3. Revoke in Anthropic console
-4. Document in changelog
+1. Monitor logs for 1+ week to ensure new key works
+2. Search for any hardcoded references to old keys
+3. Revoke old key in provider console (Anthropic/Supabase/etc.)
+4. Document the change in your internal changelog
 
 ## Security Best Practices
 

@@ -54,10 +54,10 @@ LLM_BACKEND=haiku          # Use Haiku instead of Ollama
 STATE_BACKEND=supabase      # Use Supabase instead of JSON files
 TELEGRAM_MODE=direct        # Send via Bot API instead of localhost:3847
 ANTHROPIC_API_KEY=sk-...    # Required for haiku backend
-TELEGRAM_CHAT_ID=...        # Group chat ID for direct mode
-TELEGRAM_TOPIC_ALERTS=3     # Thread IDs for topic routing
-TELEGRAM_TOPIC_EMAIL=5
-TELEGRAM_TOPIC_JOBS=7
+TELEGRAM_CHAT_ID=...        # Group chat ID for direct mode (negative number for groups)
+TELEGRAM_TOPIC_ALERTS=...   # Thread IDs for topic routing (get from /setup command)
+TELEGRAM_TOPIC_EMAIL=...
+TELEGRAM_TOPIC_JOBS=...
 ```
 
 ### Rollback
@@ -167,11 +167,11 @@ Switch back to local with: `LLM_BACKEND=ollama STATE_BACKEND=file TELEGRAM_MODE=
 - **Group with Topics** - Notifications routed to separate threads by type
 - **Topics configured:**
   - 💬 General (no thread ID) - ClaudeGolem interactive conversation
-  - 🔔 Alerts (thread 3) - CLI updates, commits, healthchecks
-  - 🌙 Night Shift (thread 4) - Autonomous 4am work
-  - 📧 Email (thread 5) - Urgent email alerts
-  - 🎯 Jobs (thread 7) - Job matches
-- **Setup:** `/setup <topic>` in each topic to register thread IDs
+  - 🔔 Alerts - CLI updates, commits, healthchecks
+  - 🌙 Night Shift - Autonomous 4am work
+  - 📧 Email - Urgent email alerts
+  - 🎯 Jobs - Job matches
+- **Setup:** `/setup <topic>` in each topic to register thread IDs (bot will tell you the ID)
 - **Routing:** Based on `source` field in notification payload
 
 ---
@@ -678,7 +678,7 @@ Gives ClaudeGolem memory of actions taken while "asleep".
 
 **Context:** See `~/.claude/contexts/tech/supabase.md` for full guidelines.
 
-**Project:** `mkijzwkuubtfjqcemorx` (etanheyman.com)
+**Project:** Your Supabase project (get URL from dashboard)
 
 **Tables (EmailGolem):**
 - `emails` - scored emails with categories

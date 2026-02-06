@@ -192,14 +192,14 @@ Same schema + RLS policies for data isolation per account.
 
 ```bash
 # LinkedIn scraper (if using)
-export LINKEDIN_EMAIL=$(op read op://development/LINKEDIN_ACCOUNT/username)
-export LINKEDIN_PASSWORD=$(op read op://development/LINKEDIN_ACCOUNT/password)
+export LINKEDIN_EMAIL=$(op read op://YOUR_VAULT/YOUR_LINKEDIN_ITEM/username)
+export LINKEDIN_PASSWORD=$(op read op://YOUR_VAULT/YOUR_LINKEDIN_ITEM/password)
 
 # Outreach DB
 export LLM_BACKEND=haiku  # For style adaptation
 export STATE_BACKEND=supabase  # Phase 2+ uses cloud
-export SUPABASE_URL=$(op read op://development/SUPABASE_URL/username)
-export SUPABASE_ANON_KEY=$(op read op://development/SUPABASE_ANON_KEY/password)
+export SUPABASE_URL=$(op read op://YOUR_VAULT/YOUR_SUPABASE_ITEM/url)
+export SUPABASE_ANON_KEY=$(op read op://YOUR_VAULT/YOUR_SUPABASE_ITEM/anon_key)
 ```
 
 ## Running RecruiterGolem

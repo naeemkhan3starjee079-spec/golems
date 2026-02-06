@@ -12,9 +12,9 @@ npm install
 Create `.env` with:
 
 ```env
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key
-VITE_RAILWAY_URL=https://your-cloud-worker.up.railway.app
+VITE_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+VITE_SUPABASE_ANON_KEY=your_anon_key_from_supabase_dashboard
+VITE_RAILWAY_URL=https://your-service-name.up.railway.app
 ```
 
 ## Development

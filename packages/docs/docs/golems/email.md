@@ -94,9 +94,9 @@ Available via the Zikaron MCP server:
 ## Environment Variables
 
 ```bash
-# 1Password items (development vault)
-export GMAIL_OAUTH_REFRESH_TOKEN=$(op read op://development/GMAIL_OAUTH/credential)
-export ANTHROPIC_GOLEMS_API_KEY=$(op read op://development/ANTHROPIC_GOLEMS_API_KEY/credential)
+# 1Password items (store in any vault)
+export GMAIL_OAUTH_REFRESH_TOKEN=$(op read op://YOUR_VAULT/YOUR_GMAIL_ITEM/refresh_token)
+export ANTHROPIC_API_KEY=$(op read op://YOUR_VAULT/YOUR_ANTHROPIC_ITEM/credential)
 
 # Scoring model (Phase 2+)
 export LLM_BACKEND=haiku  # or 'ollama' for local
@@ -162,10 +162,10 @@ bun src/email-golem/draft-reply.ts --email-id <id> --intent accept
 **Emails not being scored:**
 ```bash
 # Check Haiku API key
-op read op://development/ANTHROPIC_GOLEMS_API_KEY/credential
+op read op://YOUR_VAULT/YOUR_ANTHROPIC_ITEM/credential
 
 # Check Gmail OAuth token
-op read op://development/GMAIL_OAUTH/credential
+op read op://YOUR_VAULT/YOUR_GMAIL_ITEM/refresh_token
 ```
 
 **Routing to wrong golem:**

@@ -1432,7 +1432,7 @@ Final pass after all other tracks:
 |---------|-----|----------|-------|
 | Railway Health | `https://<railway-url>/health` | 5min | Telegram #uptime topic |
 | Railway Usage | `https://<railway-url>/usage` | 30min | Telegram (cost spike alert) |
-| Supabase | `https://mkijzwkuubtfjqcemorx.supabase.co/rest/v1/` | 5min | Telegram #uptime topic |
+| Supabase | `https://YOUR_PROJECT_ID.supabase.co/rest/v1/` | 5min | Telegram #uptime topic |
 
 **Setup:**
 1. Create UptimeRobot account (free)
@@ -1512,7 +1512,7 @@ Add new topic to Golems Telegram group:
 ### Project
 | Field | Value |
 |-------|-------|
-| **Project** | `helpful-empathy` |
+| **Project** | `your-railway-org` |
 | **Service** | `golems` |
 | **Root Directory** | `packages/autonomous` |
 | **Builder** | Dockerfile |
@@ -1525,7 +1525,7 @@ Add new topic to Golems Telegram group:
 brew install railway
 railway login          # opens browser
 cd packages/autonomous
-railway link           # select helpful-empathy → golems
+railway link           # select your-org → your-project
 railway variables      # view env vars
 railway up             # manual deploy
 railway logs           # tail logs
@@ -1534,14 +1534,14 @@ railway logs           # tail logs
 ### Environment Variables (17 total)
 | Variable | Source | Notes |
 |----------|--------|-------|
-| `ANTHROPIC_API_KEY` | 1Password: `ANTHROPIC_GOLEMS_API_KEY` | Haiku 4.5 calls |
-| `SUPABASE_URL` | Supabase dashboard | `mkijzwkuubtfjqcemorx` project |
+| `ANTHROPIC_API_KEY` | 1Password (any item name) | Haiku 4.5 calls |
+| `SUPABASE_URL` | Supabase dashboard | `YOUR_PROJECT_ID` project |
 | `SUPABASE_SERVICE_KEY` | Supabase dashboard | service_role, bypasses RLS |
 | `GMAIL_CLIENT_ID` | Google Cloud Console | OAuth2 for email polling |
 | `GMAIL_CLIENT_SECRET` | Google Cloud Console | OAuth2 |
 | `GMAIL_REFRESH_TOKEN` | OAuth2 flow | Long-lived refresh token |
 | `TELEGRAM_BOT_TOKEN` | @BotFather | GolemsBot |
-| `TELEGRAM_CHAT_ID` | `-1003791473584` | Golems group |
+| `TELEGRAM_CHAT_ID` | Your Telegram group | Negative number for groups |
 | `TELEGRAM_TOPIC_ALERTS` | `3` | Thread ID for alerts topic |
 | `TELEGRAM_TOPIC_NIGHTSHIFT` | `4` | Thread ID for night shift topic |
 | `TELEGRAM_TOPIC_EMAIL` | `5` | Thread ID for email topic |
