@@ -1,28 +1,40 @@
 /**
  * Ollama Wrapper
  *
- * Unified interface for Ollama - switches between direct and sandboxed modes.
- * Set OLLAMA_SANDBOXED=1 to use validation queue.
+ * Unified LLM interface - switches between backends:
+ *   - direct: Ollama CLI (default)
+ *   - sandboxed: Ollama with validation queue (OLLAMA_SANDBOXED=1)
+ *   - haiku: Claude Haiku 4.5 via Anthropic SDK (LLM_BACKEND=haiku)
+ *
+ * Consumers call runOllama/runOllamaJSON regardless of backend.
  */
 
 import * as directOllama from "./ollama-helper";
 import * as sandboxedOllama from "./ollama-sandboxed";
+import { runHaiku, runHaikuJSON } from "./lib/cloud-llm";
 
+const LLM_BACKEND = process.env.LLM_BACKEND || "ollama";
 const USE_SANDBOX = process.env.OLLAMA_SANDBOXED === "1";
 
-if (USE_SANDBOX) {
-  console.log("[Ollama] Using SANDBOXED mode (validation queue enabled)");
+if (LLM_BACKEND === "haiku") {
+  console.log("[LLM] Using HAIKU mode (Anthropic API)");
+} else if (USE_SANDBOX) {
+  console.log("[LLM] Using SANDBOXED Ollama mode (validation queue)");
 } else {
-  console.log("[Ollama] Using DIRECT mode (no validation)");
+  console.log("[LLM] Using DIRECT Ollama mode");
 }
 
 /**
- * Run Ollama with optional validation
+ * Run an LLM prompt. Backend determined by LLM_BACKEND env var.
  *
- * In sandboxed mode, outputs go through validation queue.
- * In direct mode, outputs return immediately.
+ * - "haiku": Claude Haiku 4.5 via Anthropic SDK
+ * - "ollama" (default): Local Ollama, optionally sandboxed
  */
 export async function runOllama(prompt: string, source = "unknown"): Promise<string> {
+  if (LLM_BACKEND === "haiku") {
+    return runHaiku(prompt, source);
+  }
+
   if (USE_SANDBOX) {
     const result = await sandboxedOllama.runOllamaSandboxed(prompt, source);
 
@@ -39,9 +51,13 @@ export async function runOllama(prompt: string, source = "unknown"): Promise<str
 }
 
 /**
- * Run Ollama and parse JSON response
+ * Run an LLM prompt and parse JSON from the response.
  */
 export async function runOllamaJSON<T>(prompt: string, source = "unknown"): Promise<T | null> {
+  if (LLM_BACKEND === "haiku") {
+    return runHaikuJSON<T>(prompt, source);
+  }
+
   const result = await runOllama(prompt, source);
 
   if (!result) return null;
