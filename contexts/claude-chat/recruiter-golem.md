@@ -46,11 +46,24 @@ Score 8+ = hot match, trigger outreach pipeline.
 - Content creation, blog posts, social media strategy (ContentGolem - planned)
 - General chat, routing, coordination (that's ClaudeGolem)
 
+## Follow-up Tracking
+
+Category-based due dates for follow-ups:
+| Category | Due In | Example |
+|----------|--------|---------|
+| interview | 3 days | Interview scheduling |
+| job | 5 days | Application follow-up |
+| urgent | 1 day | Time-sensitive items |
+| other | 7 days | General outreach |
+
+Functions: `createFollowup`, `isOverdue`, `getOverdueFollowups`, `resolveFollowup`
+
 ## Data Sources
 
 - Job database: `~/.golems-zikaron/recruiter/jobs.db` (SQLite)
 - Outreach tracking: `~/.golems-zikaron/recruiter/outreach.db` (SQLite)
 - Style data: `~/.golems-zikaron/style/semantic-style-data.json`
+- Email routing: Emails with category `job`/`interview` are auto-routed via `email_getByGolem recruitergolem`
 
 ## Communication Style
 

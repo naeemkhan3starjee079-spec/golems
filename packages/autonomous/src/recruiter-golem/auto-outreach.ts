@@ -133,12 +133,16 @@ export async function processHotMatch(
         source: contact.source,
       });
 
+      // Skip unreachable contacts (no email AND no linkedin)
+      if (!contact.email && !contact.linkedinUrl) {
+        console.log(`[Outreach] Skipping unreachable contact (no email or LinkedIn)`);
+        continue;
+      }
+
       // Determine best message type based on contact info
       const messageType: MessageType = contact.email
         ? "email"
-        : contact.linkedinUrl
-          ? "linkedin_connect"
-          : "linkedin_message";
+        : "linkedin_connect";
 
       // Generate personalized outreach
       const outreachContext: OutreachContext = {

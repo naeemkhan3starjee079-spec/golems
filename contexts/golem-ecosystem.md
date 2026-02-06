@@ -8,31 +8,44 @@
 ## Architecture Overview
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                      USER (Etan)                            │
-│                          │                                  │
-│              ┌───────────┴───────────┐                      │
-│              ▼                       ▼                      │
-│      [Claude Code]            [Telegram]                    │
-│              │                       │                      │
-│              ▼                       ▼                      │
-│    ┌─────────────────┐    ┌──────────────────┐             │
-│    │  claude-golem   │    │  golems-zikaron  │             │
-│    │     (Ralph)     │◄───│  (Telegram Bot)  │             │
-│    └────────┬────────┘    └────────┬─────────┘             │
-│             │                      │                        │
-│             │              ┌───────┴───────┐               │
-│             │              ▼               ▼               │
-│             │       [Soltome]       [Night Shift]          │
-│             │                              │               │
-│             └──────────────┬───────────────┘               │
-│                            ▼                               │
-│                   ┌─────────────────┐                      │
-│                   │     zikaron     │                      │
-│                   │ (Memory Layer)  │                      │
-│                   └─────────────────┘                      │
-└─────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────┐
+│                        USER (Etan)                              │
+│                            │                                    │
+│                ┌───────────┴───────────┐                        │
+│                ▼                       ▼                        │
+│        [Claude Code]            [Telegram]                      │
+│                │                       │                        │
+│                ▼                       ▼                        │
+│      ┌─────────────────┐    ┌──────────────────┐               │
+│      │  claude-golem   │    │  golems-zikaron  │               │
+│      │     (Ralph)     │◄───│  (Telegram Bot)  │               │
+│      └────────┬────────┘    └────────┬─────────┘               │
+│               │                      │                          │
+│               │         ┌────────────┼────────────┐             │
+│               │         ▼            ▼            ▼             │
+│               │   [EmailGolem]  [Night Shift]  [Soltome]        │
+│               │         │                                       │
+│               │    ┌────┴────────────────────┐                  │
+│               │    ▼         ▼         ▼     ▼                  │
+│               │ Recruiter  Teller  Claude  Email                │
+│               │  Golem     Golem   Golem   Golem                │
+│               │                                                 │
+│               └──────────────┬──────────────────┘               │
+│                              ▼                                  │
+│                     ┌─────────────────┐                         │
+│                     │     zikaron     │                         │
+│                     │ (Memory Layer)  │                         │
+│                     └─────────────────┘                         │
+└────────────────────────────────────────────────────────────────┘
 ```
+
+### Email Routing (Phase 1)
+
+EmailGolem scores and categorizes incoming emails, then routes them:
+- **job, interview** → RecruiterGolem (outreach pipeline)
+- **subscription** → TellerGolem (financial tracking)
+- **tech-update, urgent** → ClaudeGolem (knowledge/immediate handling)
+- **newsletter, promo, social, other** → EmailGolem (default)
 
 ---
 
@@ -93,12 +106,18 @@ ralph --prd path # Use specific PRD
 - Runs Night Shift (4am autonomous work)
 - Morning briefings (8am)
 
-**LaunchAgents** (5 total):
+**LaunchAgents** (6 total):
 - `com.golemszikaron.telegram` - Main bot (always on)
 - `com.golemszikaron.nightshift` - 4:00 AM
 - `com.golemszikaron.briefing` - 8:00 AM
 - `com.golemszikaron.job-golem` - 5:00 AM + 5:00 PM
+- `com.golemszikaron.email-golem` - Every 10 min
 - `com.golemszikaron.ollama` - Local LLM (always on)
+
+**MCP Servers** (3 total):
+- `golems-email` - Email tools (7 tools: getRecent, search, subscriptions, urgent, stats, getByGolem, draftReply)
+- `golems-jobs` - Job board tools
+- `zikaron` - Memory/conversation search
 
 **State files**: `~/.golems-zikaron/`
 - `inbox.md` - Messages from Telegram

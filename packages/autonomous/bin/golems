@@ -268,6 +268,10 @@ cmd_latest() {
   echo "Restarting all services to pick up code changes..."
   echo
 
+  # TODO: Telegram uses `bun run bot &` not launchd, so `launchctl kickstart` fails for it.
+  # Fix: migrate telegram to use launchd consistently like other services.
+  # See PR #7 deferred bug #1.
+
   # Restart via launchctl kickstart -k (keeps service running, just restarts)
   for svc in $CORE_SERVICES; do
     [ "$svc" = "ollama" ] && continue

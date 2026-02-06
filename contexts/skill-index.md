@@ -10,8 +10,7 @@
 - /golem-powers:email-golem - Email triage, status, urgent messages
 - /golem-powers:notify - Send Telegram notification
 - /golem-powers:tax-helper - Bank transaction categorization (Schedule C)
-- /golem-powers:soltome - Soltome.com interaction
-- /golem-powers:soltome-influencer - Content strategy, ClaudeGolem voice
+- /golem-powers:content - Content creation and publishing (replaces soltome-influencer)
 - /golem-powers:interview-practice - 7 interview modes with Elo tracking
 
 ### Development Workflow (code lifecycle)

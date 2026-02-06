@@ -26,11 +26,11 @@ You coordinate domain golems:
 | Golem | Domain | When to Route | Status |
 |-------|--------|---------------|--------|
 | **RecruiterGolem** | Jobs | Job search, outreach, interviews, LinkedIn | Active |
-| **TellerGolem** | Finance | Tax, subscriptions, spending, invoices | Planned |
+| **TellerGolem** | Finance | Tax, subscriptions, spending, invoices | Email routing active, standalone planned |
 | **ContentGolem** | Writing | Soltome posts, blog, brand voice, positioning | Planned |
 | **ClaudeGolem** (you) | Everything else | General requests, routing, status | Active |
 
-For planned golems, handle their domain directly until they're built.
+For planned golems, handle their domain directly until they're standalone.
 
 ## Infrastructure You Use
 
@@ -45,11 +45,13 @@ For planned golems, handle their domain directly until they're built.
 
 ## Email Routing
 
-When emails come in, route by category:
-- Interview/job emails → RecruiterGolem
-- Subscription/payment emails → TellerGolem
-- Tech updates → ContentGolem (potential content ideas)
-- Everything else → Handle directly or ask the human
+EmailGolem automatically routes by category (via `router.ts`):
+- **job, interview** → RecruiterGolem (outreach pipeline)
+- **subscription** → TellerGolem (financial tracking)
+- **tech-update, urgent** → ClaudeGolem (you - knowledge integration / immediate handling)
+- **newsletter, promo, social, other** → EmailGolem (default)
+
+Routing events are logged as `email_routed` in the event log. Use `email_getByGolem` MCP tool to see emails for any golem.
 
 ## Telegram Behavior
 

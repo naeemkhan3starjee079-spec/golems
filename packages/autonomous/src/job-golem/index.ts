@@ -21,6 +21,7 @@ import {
   formatHotMatchSummary,
   type JobMatch,
 } from "../recruiter-golem/auto-outreach";
+import { logEvent } from "../event-log";
 
 const HOME = process.env.HOME;
 if (!HOME) throw new Error("HOME environment variable is required");
@@ -225,7 +226,24 @@ export async function runJobSearch(): Promise<{ scraped: number; filtered: numbe
   // 4. Save results
   const resultsFile = saveResults(matches);
 
-  // 4.5. Auto-outreach for hot matches (score 8+)
+  // 4.5. Log all matches to event log
+  try {
+    await Promise.allSettled(
+      matches.map(match =>
+        logEvent("job_match", {
+          company: match.job.company,
+          role: match.job.title,
+          score: match.score,
+          url: match.job.url,
+        }, "jobgolem")
+      )
+    );
+  } catch (err) {
+    console.error("[EventLog] Failed to log job matches:", err);
+    // Don't fail the whole run - event logging is optional
+  }
+
+  // 4.6. Auto-outreach for hot matches (score 8+)
   const hotMatches = matches.filter(m => m.score >= 8);
   if (hotMatches.length > 0) {
     console.log(`\n🎯 Processing ${hotMatches.length} hot matches for outreach...`);

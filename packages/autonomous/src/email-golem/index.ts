@@ -27,6 +27,8 @@ import {
   type Email,
   type Subscription,
 } from "./db-client";
+import { determineTargetGolem } from "./router";
+import { logEvent } from "../event-log";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 // Configuration
@@ -146,7 +148,8 @@ async function processEmail(
   console.log(`  📧 Scoring: ${input.subject.slice(0, 50)}...`);
 
   const scored = await scoreEmail(input);
-  console.log(`     Score: ${scored.score}/10 (${scored.category})`);
+  const routing = determineTargetGolem(scored.category, scored.score);
+  console.log(`     Score: ${scored.score}/10 (${scored.category}) → ${routing.targetGolem}`);
 
   if (dryRun) {
     console.log(`     [DRY-RUN] Would save to DB`);
@@ -166,6 +169,21 @@ async function processEmail(
 
     if (!saveResult.success) {
       console.log(`     Queued for later sync`);
+    }
+
+    // Log routing event (non-blocking, don't fail the pipeline)
+    if (routing.targetGolem !== "emailgolem") {
+      try {
+        await logEvent("email_routed", {
+          subject: scored.subject,
+          category: scored.category,
+          score: scored.score,
+          targetGolem: routing.targetGolem,
+          reason: routing.reason,
+        }, "emailgolem");
+      } catch (err) {
+        console.error("[EventLog] Failed to log email routing:", err);
+      }
     }
 
     // Notify if urgent - with context!

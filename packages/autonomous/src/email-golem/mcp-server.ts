@@ -27,7 +27,9 @@ import {
   getRecentEmails,
   getSubscriptionSummary,
   getUnnotifiedUrgentEmails,
+  getEmailsByGolem,
 } from "./db-client";
+import { buildReplyDraft, type ReplyDraftInput } from "./draft-reply";
 import type { Email } from "./types";
 
 const server = new Server(
@@ -116,6 +118,63 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         properties: {},
       },
     },
+    {
+      name: "email_getByGolem",
+      description:
+        "Get emails routed to a specific golem. Golems: recruitergolem (job/interview), tellergolem (subscription), claudegolem (tech-update/urgent), emailgolem (newsletter/promo/social/other).",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          golem: {
+            type: "string",
+            description: "Target golem: recruitergolem, tellergolem, claudegolem, emailgolem",
+            enum: ["recruitergolem", "tellergolem", "claudegolem", "emailgolem"],
+          },
+          hours: {
+            type: "number",
+            description: "How many hours back to look (default: 24)",
+            default: 24,
+          },
+        },
+        required: ["golem"],
+      },
+    },
+    {
+      name: "email_draftReply",
+      description:
+        "Draft a reply to an email. Generates a template-based reply draft that can be reviewed and sent.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          subject: {
+            type: "string",
+            description: "Original email subject",
+          },
+          from: {
+            type: "string",
+            description: "Original sender email address",
+          },
+          snippet: {
+            type: "string",
+            description: "Email snippet/preview text",
+          },
+          category: {
+            type: "string",
+            description: "Email category (interview, job, urgent, subscription, etc.)",
+          },
+          intent: {
+            type: "string",
+            description: "Reply intent: accept, decline, interested, followup, acknowledge",
+            enum: ["accept", "decline", "interested", "followup", "acknowledge"],
+          },
+          customNote: {
+            type: "string",
+            description: "Optional custom note to prepend to the template",
+          },
+        },
+        required: ["subject", "from", "intent"],
+      },
+    },
   ],
 }));
 
@@ -136,6 +195,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return handleUrgent();
       case "email_stats":
         return handleStats();
+      case "email_getByGolem":
+        return handleGetByGolem(args);
+      case "email_draftReply":
+        return handleDraftReply(args);
       default:
         return {
           content: [{ type: "text" as const, text: `Unknown tool: ${name}` }],
@@ -299,6 +362,86 @@ async function handleStats() {
     ...Object.entries(categories)
       .sort(([, a], [, b]) => b - a)
       .map(([cat, count]) => `- ${cat}: ${count}`),
+  ];
+
+  return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+}
+
+async function handleDraftReply(args: any) {
+  const { subject, from, snippet, category, intent, customNote } = args || {};
+
+  if (!subject || !from || !intent) {
+    return {
+      content: [{ type: "text" as const, text: "Missing required: subject, from, intent" }],
+      isError: true,
+    };
+  }
+
+  const input: ReplyDraftInput = {
+    originalSubject: subject,
+    originalFrom: from,
+    originalSnippet: snippet || "",
+    category: category || "other",
+    intent,
+    customNote,
+  };
+
+  const draft = buildReplyDraft(input);
+
+  const lines = [
+    "## Email Reply Draft",
+    "",
+    `**To:** ${draft.to}`,
+    `**Subject:** ${draft.subject}`,
+    `**Intent:** ${draft.intent}`,
+    `**Status:** ${draft.status}`,
+    "",
+    "### Body",
+    "",
+    draft.body,
+    "",
+    "---",
+    `_Created: ${draft.createdAt}_`,
+  ];
+
+  return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+}
+
+async function handleGetByGolem(args: any) {
+  const golem = args?.golem;
+  const hours = args?.hours ?? 24;
+
+  if (!golem) {
+    return {
+      content: [{ type: "text" as const, text: "Missing required: golem" }],
+      isError: true,
+    };
+  }
+
+  const emails = await getEmailsByGolem(getDb(), golem, hours);
+
+  if (emails.length === 0) {
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text: `No emails routed to ${golem} in the last ${hours}h.`,
+        },
+      ],
+    };
+  }
+
+  const golemNames: Record<string, string> = {
+    recruitergolem: "RecruiterGolem",
+    tellergolem: "TellerGolem",
+    claudegolem: "ClaudeGolem",
+    emailgolem: "EmailGolem",
+  };
+
+  const lines = [
+    `## Emails for ${golemNames[golem] || golem} (last ${hours}h)`,
+    `**${emails.length} emails**\n`,
+    ...emails.map(formatEmail),
   ];
 
   return { content: [{ type: "text" as const, text: lines.join("\n") }] };

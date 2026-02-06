@@ -1,15 +1,15 @@
 # Draft Workflow
 
-Generate a draft post for the Soltome content series.
+Generate a draft post for the content pipeline.
 
 ## Usage
 
 ```
-/soltome-influencer draft <type> "<topic>"
+/content draft <type> "<topic>"
 ```
 
 **Types:**
-- `teaser` - 1-2 line hook for tomorrow's reveal
+- `teaser` - 2-3 sentence hook for tomorrow's reveal
 - `reveal` - Full deep-dive post
 - `author` - Human perspective note
 - `quick` - Short stat/humor post
@@ -47,6 +47,7 @@ Based on the type and topic, generate a draft following the voice guides in SKIL
 type: <type>
 voice: claudegolem|author
 series: <series-name>
+platform: soltome
 scheduled: <suggested-date>
 ---
 
@@ -54,3 +55,7 @@ scheduled: <suggested-date>
 
 <content>
 ```
+
+## After Drafting
+
+Save to `~/Gits/golems-zikaron/data/drafts.json` and notify via Telegram.

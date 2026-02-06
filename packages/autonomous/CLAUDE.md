@@ -4,6 +4,42 @@
 
 ---
 
+## Recent Changes (2026-02-06) — Phase 1: Ship What's Built
+
+### Track A: PR#7 Bug Fixes
+- **8 deferred bugs fixed** (unreachable contacts guard, shared-types.ts, Hebrew topic seeds, numpy guard, logger migration, job_match event logging)
+- **Pre-commit hook** added (`bun test --bail` on staged .ts files)
+
+### Track B: Email Routing
+- **`router.ts`** — routes emails to domain golems by category (job/interview → recruitergolem, subscription → tellergolem, tech-update/urgent → claudegolem, rest → emailgolem)
+- **New event type:** `email_routed` in event-log.ts
+- **New actors:** `recruitergolem`, `tellergolem` in GolemActor union
+- **New MCP tool:** `email_getByGolem` — filter emails by target golem
+- **`db-client.ts`** — added `getEmailsByGolem()` function
+
+### Track C: Content Skill Merge
+- **Deleted** `soltome/` and `soltome-influencer/` skills from repo
+- **Created** unified `/content` skill with draft workflow
+- **Updated** `contexts/skill-index.md`
+
+### Track D: Email Reply Drafting
+- **`draft-reply.ts`** — template-based reply drafting (category + intent)
+- **New MCP tool:** `email_draftReply` — generate reply drafts with intent (accept/decline/interested/followup/acknowledge)
+
+### Track E: Agent Runner
+- **`lib/agent-runner.ts`** — unified multi-model agent runner replacing cursor-helper, gemini-helper, kiro-helper
+- **telegram-bot.ts** import updated from cursor-helper to agent-runner
+
+### Track F: Follow-up Tracking
+- **`followup.ts`** — category-based due dates (interview=3d, job=5d, urgent=1d, other=7d)
+- Functions: `createFollowup`, `isOverdue`, `getOverdueFollowups`, `resolveFollowup`
+
+### Test Results
+- **333 pass, 0 fail**, 1749 expect() calls across 339 tests in 28 files
+- CodeRabbit review: 10 findings addressed
+
+---
+
 ## Recent Changes (2026-02-05)
 
 ### Launchd Environment Fix
@@ -88,9 +124,10 @@ Each golem has a distinct role and attribution in the event log:
 | **ClaudeGolem** | External face - chat, post, represent | `soltome_post`, `draft_approved`, `draft_rejected` |
 | **OllamaGolem** | Internal work - scoring, reviewing, patterns | `draft_scored`, `pattern_extracted` |
 | **NightShift** | Autonomous code improvements (4am) | `nightshift_pr` |
-| **EmailGolem** | Email triage and alerts | `email_alert` |
+| **EmailGolem** | Email triage, routing, and alerts | `email_alert`, `email_routed` |
 | **JobGolem** | Job board scraping and matching | `job_match` |
 | **RecruiterGolem** | Outreach for high-scoring jobs (8+) | `outreach_draft`, `contact_found` |
+| **TellerGolem** | Finance - subscriptions, payments, tax | _(planned: subscription_alert)_ |
 
 **Actor attribution:** When reading event log, ClaudeGolem sees "YOU" for its own actions, helping maintain identity continuity across sessions.
 
@@ -309,12 +346,21 @@ golems-zikaron/                    # Code repo: ~/Gits/golems-zikaron/
 │   ├── briefing.ts                # 8am morning summary
 │   ├── post-generator.ts          # Critique-waves (uses learned patterns)
 │   ├── ollama-wrapper.ts          # Ollama spawn wrapper
-│   ├── email-golem/               # Email triage + subscription tracking
+│   ├── lib/
+│   │   ├── load-env.ts            # Env loader for launchd (import first!)
+│   │   ├── shared-types.ts        # Canonical TopicStyle/SemanticStyleData
+│   │   └── agent-runner.ts        # Unified multi-model agent runner
+│   ├── email-golem/               # Email triage + routing + drafts
 │   │   ├── index.ts               # Main entry (10min cron)
 │   │   ├── gmail-client.ts        # Gmail API wrapper
 │   │   ├── scorer.ts              # Ollama scoring (urgent/job/subscription)
-│   │   └── db-client.ts           # Supabase + offline queue
-│   └── job-golem/                 # Job board scraping
+│   │   ├── router.ts              # Email → domain golem routing
+│   │   ├── draft-reply.ts         # Template-based reply drafting
+│   │   ├── followup.ts            # Follow-up tracking with due dates
+│   │   ├── db-client.ts           # Supabase + offline queue
+│   │   └── mcp-server.ts          # MCP server (7 tools)
+│   ├── job-golem/                 # Job board scraping
+│   └── recruiter-golem/           # Outreach pipeline (E1-E6)
 ├── launchd/
 │   ├── *.plist                    # macOS schedulers
 │   └── install.sh                 # One-command setup
@@ -410,11 +456,38 @@ src/email-golem/
 ├── index.ts           # Main loop (CLI: --dry-run, --max=N)
 ├── gmail-client.ts    # Gmail API wrapper
 ├── scorer.ts          # Ollama scoring + categories
-├── db-client.ts       # Supabase + offline queue
+├── router.ts          # Email → domain golem routing
+├── draft-reply.ts     # Template-based reply drafting
+├── followup.ts        # Follow-up tracking with due dates
+├── db-client.ts       # Supabase + offline queue + getEmailsByGolem
+├── mcp-server.ts      # MCP server (email_getRecent, search, urgent, stats, getByGolem, draftReply)
 ├── types.ts           # TypeScript interfaces
 ├── CONTEXT.md         # Agent documentation
 └── README.md          # Setup + troubleshooting
 ```
+
+### Email Routing
+
+Emails are routed to domain golems after scoring:
+
+| Category | Target Golem | Reason |
+|----------|-------------|--------|
+| job, interview | RecruiterGolem | Job pipeline |
+| subscription | TellerGolem | Financial tracking |
+| tech-update, urgent | ClaudeGolem | Knowledge integration / immediate handling |
+| newsletter, promo, social, other | EmailGolem | Default handler |
+
+### MCP Tools (golems-email server)
+
+| Tool | Description |
+|------|-------------|
+| `email_getRecent` | Recent emails filtered by hours and min score |
+| `email_search` | Keyword search in subject/sender |
+| `email_subscriptions` | Monthly subscription summary |
+| `email_urgent` | Unnotified urgent emails |
+| `email_stats` | 24h category breakdown |
+| `email_getByGolem` | Emails routed to a specific golem |
+| `email_draftReply` | Generate reply draft by intent |
 
 ### Control Panel
 
@@ -519,6 +592,7 @@ Gives ClaudeGolem memory of actions taken while "asleep".
 | `draft_scored` | OllamaGolem | `{count, avgScore}` |
 | `pattern_extracted` | OllamaGolem | `{patternCount}` |
 | `email_alert` | EmailGolem | `{subject, sender}` |
+| `email_routed` | EmailGolem | `{subject, targetGolem, reason}` |
 | `nightshift_pr` | NightShift | `{repo, prNumber}` |
 | `job_match` | JobGolem | `{company, role}` |
 

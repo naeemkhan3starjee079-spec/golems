@@ -4,15 +4,17 @@
  * TDD approach: RED → GREEN → REFACTOR
  */
 
-import { describe, it, expect, beforeEach, afterEach } from "bun:test";
+import { describe, it, expect, beforeEach, afterEach, mock, spyOn } from "bun:test";
 import { existsSync, rmSync, writeFileSync, mkdirSync, readFileSync } from "fs";
 import { join, dirname } from "path";
 
 // Test paths (isolated from production)
 const TEST_DIR = "/tmp/golems-zikaron-test/job-golem";
+const TEST_EVENT_LOG = "/tmp/golems-zikaron-test/job-golem/event-log.json";
 
 // Import will fail initially if code not implemented
 import { loadScrapedJobs, type JobListing } from "../job-golem/scraper";
+import { logEvent, type GolemEvent } from "../event-log";
 
 describe("Job Golem - loadScrapedJobs()", () => {
   const TEST_JOBS_FILE = join(TEST_DIR, "scraped-jobs.json");
@@ -280,5 +282,55 @@ describe("Job Golem - Dashboard Data Queries", () => {
     );
 
     expect(searchResults.length).toBe(2); // React Developer + ReactStartup
+  });
+});
+
+describe("Job Golem - Event Logging", () => {
+  beforeEach(() => {
+    if (existsSync(TEST_DIR)) {
+      rmSync(TEST_DIR, { recursive: true, force: true });
+    }
+    mkdirSync(TEST_DIR, { recursive: true });
+  });
+
+  afterEach(() => {
+    if (existsSync(TEST_DIR)) {
+      rmSync(TEST_DIR, { recursive: true, force: true });
+    }
+  });
+
+  it("should log job_match events with correct data shape", async () => {
+    await logEvent(
+      "job_match",
+      { company: "Monday.com", role: "Frontend Developer", score: 9, url: "https://example.com/job/1" },
+      "jobgolem",
+      TEST_EVENT_LOG
+    );
+
+    expect(existsSync(TEST_EVENT_LOG)).toBe(true);
+    const events: GolemEvent[] = JSON.parse(readFileSync(TEST_EVENT_LOG, "utf-8"));
+    expect(events.length).toBe(1);
+    expect(events[0].type).toBe("job_match");
+    expect(events[0].actor).toBe("jobgolem");
+    expect(events[0].data.company).toBe("Monday.com");
+    expect(events[0].data.role).toBe("Frontend Developer");
+    expect(events[0].data.score).toBe(9);
+    expect(events[0].data.url).toBe("https://example.com/job/1");
+  });
+
+  it("should log multiple job_match events for multiple hot matches", async () => {
+    const hotMatches = [
+      { company: "Wix", role: "Sr. Engineer", score: 8, url: "https://wix.com/job/1" },
+      { company: "Monday", role: "Tech Lead", score: 9, url: "https://monday.com/job/2" },
+    ];
+
+    for (const match of hotMatches) {
+      await logEvent("job_match", match, "jobgolem", TEST_EVENT_LOG);
+    }
+
+    const events: GolemEvent[] = JSON.parse(readFileSync(TEST_EVENT_LOG, "utf-8"));
+    expect(events.length).toBe(2);
+    expect(events[0].data.company).toBe("Wix");
+    expect(events[1].data.company).toBe("Monday");
   });
 });

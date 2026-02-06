@@ -6,7 +6,7 @@ import { getPendingDrafts, approveDraft, rejectDraft, type Draft } from "./post-
 import { createPost as postToSoltome } from "./soltome-client";
 import { logEvent, getRecentEvents, formatEventsForClaude } from "./event-log";
 import { runJobSearch } from "./job-golem/index";
-import { runCursorResearch, runCursorVerification, readResearch } from "./cursor-helper";
+import { runCursorResearch, runCursorVerification, readResearch } from "./lib/agent-runner";
 import {
   getCandidateRating,
   getRecommendedDifficulty,

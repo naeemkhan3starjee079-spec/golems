@@ -10,29 +10,10 @@
 import { readFileSync, existsSync } from "fs";
 import { homedir } from "os";
 import { join } from "path";
+import type { TopicStyle, SemanticStyleData } from "../lib/shared-types";
 
-export interface TopicStyle {
-  message_count: number;
-  avg_length: number;
-  formality: number;
-  emoji_rate: number;
-  language_mix: {
-    hebrew: number;
-    english: number;
-  };
-  common_phrases: string[];
-}
-
-export interface SemanticStyleData {
-  topics: {
-    technical?: TopicStyle;
-    casual?: TopicStyle;
-    professional?: TopicStyle;
-    emotional?: TopicStyle;
-    explanatory?: TopicStyle;
-  };
-  insights: string[];
-}
+// Re-export for backward compatibility
+export type { TopicStyle, SemanticStyleData } from "../lib/shared-types";
 
 export interface StyleGuidelines {
   /** Target formality (0=casual, 1=formal) */

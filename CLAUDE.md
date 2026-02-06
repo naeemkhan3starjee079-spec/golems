@@ -14,6 +14,15 @@
 
 **Always read the package-specific CLAUDE.md when working in that package.**
 
+### Phase 1 Complete (2026-02-06)
+
+Branch `feature/phase1-ship-whats-built` includes:
+- Email routing (emails → domain golems), reply drafting, follow-up tracking
+- Unified agent-runner.ts, shared-types.ts
+- Content skill (merged soltome + soltome-influencer)
+- 8 PR#7 bug fixes, pre-commit hook
+- 331 tests pass
+
 ---
 
 ## Research Documentation

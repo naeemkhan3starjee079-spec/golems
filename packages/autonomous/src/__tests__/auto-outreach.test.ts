@@ -117,6 +117,19 @@ describe("Auto-Outreach (E6)", () => {
       expect(result.error).toBeUndefined();
     });
 
+    test("skips unreachable contacts (no email AND no linkedin)", async () => {
+      const result = await processHotMatch(mockJob, {
+        mockContacts: [
+          { name: "Reachable", role: "CTO", email: "cto@acme.com", source: "github" as const },
+          { name: "Unreachable", role: "PM", source: "github" as const },
+        ],
+      });
+
+      // Should only create draft for the reachable contact
+      expect(result.contactsFound).toBe(2);
+      expect(result.draftsCreated).toBe(1);
+    });
+
     test("includes tech stack in company research from job posting", async () => {
       const result = await processHotMatch(mockJob, { skipContactSearch: true });
 

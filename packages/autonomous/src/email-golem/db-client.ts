@@ -12,6 +12,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { dirname } from 'path';
 import type { Email, Subscription, Payment, QueuedItem, SubscriptionSummary, SafeResult } from './types';
+import { GOLEM_CATEGORIES } from './router';
 
 // Offline queue path - in golems state directory
 export const OFFLINE_QUEUE_PATH = process.env.HOME + '/.golems-zikaron/offline-queue.json';
@@ -405,6 +406,38 @@ export async function getUnnotifiedUrgentEmails(
   }
 }
 
+/**
+ * Get emails by target golem (based on category routing rules)
+ * Since target_golem isn't stored in DB yet, we filter by category client-side.
+ */
+export async function getEmailsByGolem(
+  client: SupabaseClient,
+  golem: string,
+  hours: number = 24
+): Promise<Email[]> {
+  const categories = GOLEM_CATEGORIES[golem];
+  if (!categories) return [];
+
+  try {
+    const since = new Date(Date.now() - hours * 60 * 60 * 1000);
+    const { data, error } = await client
+      .from("emails")
+      .select("*")
+      .gte("received_at", since.toISOString())
+      .in("category", categories)
+      .order("score", { ascending: false });
+
+    if (error || !data) {
+      if (error) console.error("[db-client] Failed to get emails by golem:", error.message);
+      return [];
+    }
+    return data as Email[];
+  } catch (err) {
+    console.error("[db-client] Error getting emails by golem:", err);
+    return [];
+  }
+}
+
 // Default export for convenience
 export default {
   createDbClient,
@@ -418,6 +451,7 @@ export default {
   recordPayment,
   markNotified,
   getUnnotifiedUrgentEmails,
+  getEmailsByGolem,
   loadLocalQueue,
   clearLocalQueue
 };

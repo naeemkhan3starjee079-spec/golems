@@ -24,7 +24,9 @@ export type GolemActor =
   | "ollamagolem"
   | "nightshift"
   | "jobgolem"
-  | "emailgolem";
+  | "emailgolem"
+  | "recruitergolem"
+  | "tellergolem";
 
 // Event types
 export type EventType =
@@ -34,6 +36,7 @@ export type EventType =
   | "draft_scored"
   | "pattern_extracted"
   | "email_alert"
+  | "email_routed"
   | "nightshift_pr"
   | "job_match";
 
@@ -178,6 +181,10 @@ function formatActor(actor: GolemActor): string {
       return "JobGolem";
     case "emailgolem":
       return "EmailGolem";
+    case "recruitergolem":
+      return "RecruiterGolem";
+    case "tellergolem":
+      return "TellerGolem";
     default:
       return actor;
   }
@@ -233,6 +240,12 @@ function formatAction(event: GolemEvent): string {
       const company = data.company || "a company";
       const role = data.role || "a role";
       return `found job match: ${role} at ${company}`;
+    }
+
+    case "email_routed": {
+      const subject = data.subject || "(no subject)";
+      const target = data.targetGolem || "unknown";
+      return `routed email to ${target}: "${subject}"`;
     }
 
     default:

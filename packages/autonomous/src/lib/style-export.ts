@@ -14,20 +14,14 @@
 
 import { readFileSync, writeFileSync } from "fs";
 import { join } from "path";
+import type { TopicStyle, SemanticStyleData } from "./shared-types";
 
-export interface TopicStyle {
-  message_count: number;
-  avg_length: number;
-  formality: number;
-  emoji_rate: number;
-  language_mix: { hebrew: number; english: number };
-  common_phrases: string[];
-}
+// Re-export for backward compatibility
+export type { TopicStyle } from "./shared-types";
+export type { SemanticStyleData as StyleData } from "./shared-types";
 
-export interface StyleData {
-  topics: Record<string, TopicStyle>;
-  insights: string[];
-}
+// Keep StyleData as alias for SemanticStyleData
+type StyleData = SemanticStyleData;
 
 const DEFAULT_STYLE_PATH = join(
   process.env.HOME || "~",
