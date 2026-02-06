@@ -1298,6 +1298,82 @@ Forces bold, production-grade UI instead of generic AI slop.
 
 ---
 
+## Part 20: Documentation, Wizard & Admin (2026-02-06)
+
+> Added after Phase 2 code complete. Tracks 10-14 cover discoverability, setup UX, and centralization.
+
+### Centralization Principle
+
+**Everything must be easy to find and manage** — for humans, for Claude, for any tooling:
+
+| What | Where | NOT scattered across |
+|------|-------|---------------------|
+| **Runtime state** | `~/.golems-zikaron/` (local) or Supabase (cloud) | ~/random dirs, /tmp |
+| **Secrets** | 1Password (source of truth) → env vars | .env files, hardcoded |
+| **Config** | `CLAUDE.md` hierarchy (global → repo → package) | Random dotfiles |
+| **Docs (public)** | `docs/` in repo root | docs.local (working drafts only) |
+| **Skills** | `packages/ralph/skills/golem-powers/` (symlinked to ~/.claude/commands/) | Duplicated across packages |
+| **Learnings** | `~/.claude/learnings/` (global) + `docs.local/learnings/` (project) | Scattered .md files |
+| **Plans** | `docs/golems-v2-branding-plan.md` (canonical) | Multiple copies in docs.local |
+
+The wizard (Track 12) and docs (Track 11) must enforce this — every setup produces the same predictable layout.
+
+### Track 10: Storage Audit
+
+**File:** `scripts/storage-audit-prompt.md`
+- 7-phase non-destructive audit: disk overview, ghost detection, staleness, recurring growers, large files, Android SDK, browsers
+- Runs **pre-setup** (baseline) and **post-setup** (cleanup redundant local state)
+- Outputs structured markdown: "delete / keep because X" categories
+- Never deletes anything — audit and recommend only
+
+### Track 11: Documentation Site
+
+**Stack:** Docusaurus or MkDocs
+**Sections:**
+1. Getting Started — what Golems is, what it changes on your system
+2. Phase 1 — email routing, reply drafting, follow-ups, content pipeline
+3. Phase 2 — cloud offload (Railway, Supabase, Haiku, env vars)
+4. Per-Golem Guides — RecruiterGolem, TellerGolem, ContentGolem, ClaudeGolem
+5. MCP Servers — zikaron, golems-email, golems-jobs
+6. Configuration Reference — all env vars, 1Password items, launchd plists
+7. Architecture — domain golems principle (Part 14)
+
+**Build workflow:** Parallel Haiku-powered Claude Code agents draft sections, main agent reviews/organizes. Cursor CLI `@codebase` for automated codebase mapping.
+
+### Track 12: Golem CLI Wizard (`golems setup`)
+
+Interactive setup for new projects or new Macs. Modular — user picks which services to enable.
+
+**Each step explicitly tells the user:**
+- What it will do
+- Disk/network/system impact
+- Permissions needed
+- Risks and how to rollback
+- Asks for confirmation even on bypass mode
+
+**Phases:** Pre-flight audit → Core setup → Service selection → 1Password secrets → Deploy (Railway or launchd) → Verify → Post-flight audit
+
+**Output:** `SETUP_LOG.md` documenting exactly what was configured.
+
+### Track 13: Coverage Sweep
+
+Final pass after all other tracks:
+- Cursor CLI `@codebase` full mapping
+- Cross-reference docs vs actual code
+- Find undocumented env vars, MCP tools, skills
+- Fill gaps, remove stale references
+
+### Track 14: Golem Admin UI (`@golems/admin`)
+
+**Package:** `packages/admin-ui`
+- Embeddable React admin interface
+- Shows: golem status, event log, API usage/costs, outreach pipeline, email routing
+- Reads from Supabase (cloud) or local state (file)
+- Publishable as `@golems/admin` — drop into any website
+- Standalone (Vite) or embeddable component
+
+---
+
 ## Research References
 
 | Document | Location | Contents |
