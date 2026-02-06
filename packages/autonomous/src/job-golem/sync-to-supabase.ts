@@ -13,7 +13,7 @@
 import "../lib/load-env";
 
 import { createClient } from "@supabase/supabase-js";
-import { existsSync, writeFileSync, unlinkSync, readFileSync } from "fs";
+import { existsSync, readFileSync, writeFileSync, unlinkSync } from "fs";
 import { join } from "path";
 import type { JobListing } from "./scraper";
 import { loadScrapedJobs } from "./scraper";

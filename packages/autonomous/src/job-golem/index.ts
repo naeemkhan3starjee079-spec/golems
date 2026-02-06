@@ -16,6 +16,11 @@ import { syncJobs, syncScores } from "./sync-to-supabase";
 import { matchJobs, prefilterJobs, type MatchResult } from "./matcher";
 import { readFileSync, writeFileSync, existsSync, readdirSync, unlinkSync, statSync, mkdirSync } from "fs";
 import { join } from "path";
+import {
+  processHotMatches,
+  formatHotMatchSummary,
+  type JobMatch,
+} from "../recruiter-golem/auto-outreach";
 
 const HOME = process.env.HOME;
 if (!HOME) throw new Error("HOME environment variable is required");
@@ -219,6 +224,40 @@ export async function runJobSearch(): Promise<{ scraped: number; filtered: numbe
 
   // 4. Save results
   const resultsFile = saveResults(matches);
+
+  // 4.5. Auto-outreach for hot matches (score 8+)
+  const hotMatches = matches.filter(m => m.score >= 8);
+  if (hotMatches.length > 0) {
+    console.log(`\n🎯 Processing ${hotMatches.length} hot matches for outreach...`);
+    try {
+      // Convert MatchResult to JobMatch format
+      const jobMatches: JobMatch[] = hotMatches.map(m => ({
+        id: m.job.url, // Use URL as unique ID
+        title: m.job.title,
+        company: m.job.company,
+        location: m.job.location || "Israel",
+        url: m.job.url,
+        techStack: [], // Will be extracted from description
+        description: m.job.description,
+        score: m.score,
+        reason: m.reason,
+      }));
+
+      const outreachResults = await processHotMatches(jobMatches);
+      const totalDrafts = outreachResults.reduce((sum, r) => sum + r.draftsCreated, 0);
+
+      console.log(`   ✅ Created ${totalDrafts} outreach drafts`);
+
+      // Send outreach summary notification
+      if (totalDrafts > 0) {
+        const summary = formatHotMatchSummary(outreachResults);
+        await sendTelegram("🎯 Outreach Ready", summary);
+      }
+    } catch (err) {
+      console.error("[Outreach] Error processing hot matches:", err);
+      // Don't fail the whole run - outreach is optional
+    }
+  }
 
   // 5. Sync to Supabase (for dashboard) - ONLY filtered jobs, not raw scrape
   console.log("\n☁️ Syncing to Supabase...");

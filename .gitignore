@@ -5,6 +5,7 @@
 
 # Local research docs (cherry-pick to real docs when ready)
 research.docs.local/
+docs.local/
 
 # WIP - Tax Helper
 packages/tax-helper/

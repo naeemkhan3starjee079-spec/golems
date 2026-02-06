@@ -357,6 +357,24 @@ export function extractDomain(companyNameOrUrl: string): string | null {
 }
 
 /**
+ * Convenience wrapper for finding contacts with common options
+ */
+export async function findContactsForCompany(
+  companyName: string,
+  options?: {
+    githubOrg?: string;
+    preferredRoles?: string[];
+    maxResults?: number;
+  }
+): Promise<FoundContact[]> {
+  return findContacts(companyName, {
+    githubOrg: options?.githubOrg,
+    targetRoles: options?.preferredRoles,
+    maxResults: options?.maxResults || 3,
+  });
+}
+
+/**
  * Format contacts for display
  */
 export function formatContacts(contacts: FoundContact[]): string {

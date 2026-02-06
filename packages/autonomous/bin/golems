@@ -46,6 +46,13 @@ COMMANDS:
   reload [svc]  Reload service (picks up code changes)
   clear-errors  Clear launchd error states
 
+  latest        Restart all services to pick up latest code
+  on            Turn on all services (exit hibernation)
+  off           Turn off all services (hibernation mode)
+
+  instructions  Show Claude Chat project files to upload
+  regen-style   Regenerate style card from Zikaron data
+
   help          Show this help
 
 EXAMPLES:
@@ -54,6 +61,9 @@ EXAMPLES:
   golems logs telegram  # Tail telegram bot logs
   golems restart telegram
   golems scrape         # Trigger job scrape now
+  golems latest         # Deploy latest code to all services
+  golems off            # Hibernate (stop all services)
+  golems on             # Wake up (start all services)
 
 DOCS:
   ~/Gits/golems/packages/autonomous/CLAUDE.md
@@ -249,6 +259,129 @@ cmd_clear_errors() {
   echo "Done. Check: golems services"
 }
 
+# All core services (for on/off/latest)
+CORE_SERVICES="telegram job-golem email-golem ollama"
+SCHEDULED_SERVICES="nightshift briefing"
+
+cmd_latest() {
+  echo -e "${BLUE}=== DEPLOYING LATEST CODE ===${NC}"
+  echo "Restarting all services to pick up code changes..."
+  echo
+
+  # Restart via launchctl kickstart -k (keeps service running, just restarts)
+  for svc in $CORE_SERVICES; do
+    [ "$svc" = "ollama" ] && continue
+    label="com.golemszikaron.$svc"
+    echo -n "  Restarting $svc... "
+    if launchctl kickstart -k gui/$(id -u)/$label 2>/dev/null; then
+      echo -e "${GREEN}done${NC}"
+    else
+      echo -e "${YELLOW}not running${NC}"
+    fi
+  done
+
+  echo
+  echo -e "${GREEN}✓ All services restarted with latest code${NC}"
+  echo "  Check status: golems status"
+}
+
+cmd_on() {
+  echo -e "${BLUE}=== WAKING UP GOLEMS ===${NC}"
+  echo "Starting all services..."
+  echo
+
+  # Start core services
+  for svc in $CORE_SERVICES; do
+    echo -n "  Starting $svc... "
+    cmd_start "$svc" 2>/dev/null && echo -e "${GREEN}done${NC}" || echo -e "${YELLOW}already running${NC}"
+  done
+
+  # Load scheduled services
+  for svc in $SCHEDULED_SERVICES; do
+    echo -n "  Loading $svc... "
+    launchctl load ~/Library/LaunchAgents/com.golemszikaron.$svc.plist 2>/dev/null && echo -e "${GREEN}done${NC}" || echo -e "${YELLOW}already loaded${NC}"
+  done
+
+  echo
+  echo -e "${GREEN}✓ All golems are awake${NC}"
+  cmd_status
+}
+
+cmd_off() {
+  echo -e "${BLUE}=== HIBERNATING GOLEMS ===${NC}"
+  echo "Stopping all services..."
+  echo
+
+  # Stop core services
+  for svc in $CORE_SERVICES; do
+    echo -n "  Stopping $svc... "
+    cmd_stop "$svc" 2>/dev/null
+    echo -e "${GREEN}done${NC}"
+  done
+
+  # Unload scheduled services
+  for svc in $SCHEDULED_SERVICES; do
+    echo -n "  Unloading $svc... "
+    launchctl unload ~/Library/LaunchAgents/com.golemszikaron.$svc.plist 2>/dev/null && echo -e "${GREEN}done${NC}" || echo -e "${YELLOW}not loaded${NC}"
+  done
+
+  # Kill any lingering Claude sessions
+  pkill -f "claude " 2>/dev/null || true
+
+  echo
+  echo -e "${YELLOW}💤 All golems are hibernating${NC}"
+  echo "  Wake up with: golems on"
+}
+
+CHAT_DIR="$HOME/Gits/golems/contexts/claude-chat"
+
+cmd_instructions() {
+  local golem="$1"
+  echo -e "${BLUE}=== CLAUDE CHAT PROJECT FILES ===${NC}"
+  echo
+  echo "Upload these files to your claude.ai projects:"
+  echo
+
+  if [ -n "$golem" ]; then
+    # Show specific golem
+    local file="$CHAT_DIR/${golem}.md"
+    if [ -f "$file" ]; then
+      echo -e "  ${GREEN}$file${NC}"
+      echo
+      echo "--- Content Preview ---"
+      head -20 "$file"
+      echo "..."
+      echo
+      echo -e "Copy to clipboard: ${YELLOW}cat $file | pbcopy${NC}"
+    else
+      echo -e "${RED}No instructions for: $golem${NC}"
+      echo "Available:"
+      ls "$CHAT_DIR"/*.md 2>/dev/null | grep -v README | xargs -I{} basename {} .md | sed 's/^/  /'
+    fi
+  else
+    # List all
+    for file in "$CHAT_DIR"/*.md; do
+      [ "$(basename "$file")" = "README.md" ] && continue
+      local name=$(basename "$file" .md)
+      local updated=$(grep "Last updated" "$file" 2>/dev/null | head -1 | sed 's/.*: //')
+      printf "  %-25s %s\n" "$name" "(updated: ${updated:-unknown})"
+    done
+    echo
+    echo -e "Upload to claude.ai → Projects → [golem name] → Add files"
+    echo -e "Always include ${YELLOW}style-card.md${NC} alongside golem instructions."
+    echo
+    echo -e "Details: ${YELLOW}golems instructions <golem-name>${NC}"
+    echo -e "Regenerate style card: ${YELLOW}golems regen-style${NC}"
+  fi
+}
+
+cmd_regen_style() {
+  echo "Regenerating style card from Zikaron data..."
+  cd "$GOLEMS_HOME" && bun src/lib/style-export.ts "$CHAT_DIR/style-card.md"
+  echo -e "${GREEN}✓ Style card updated${NC}"
+  echo "  Re-upload to your claude.ai projects."
+}
+
 # Main
 case "${1:-status}" in
   help|--help|-h)
@@ -285,6 +418,21 @@ case "${1:-status}" in
     ;;
   clear-errors|clear)
     cmd_clear_errors
+    ;;
+  latest|deploy)
+    cmd_latest
+    ;;
+  on|wake|up)
+    cmd_on
+    ;;
+  off|hibernate|sleep)
+    cmd_off
+    ;;
+  instructions|instr)
+    cmd_instructions "$2"
+    ;;
+  regen-style|style)
+    cmd_regen_style
     ;;
   *)
     echo "Unknown command: $1"

@@ -90,6 +90,7 @@ Each golem has a distinct role and attribution in the event log:
 | **NightShift** | Autonomous code improvements (4am) | `nightshift_pr` |
 | **EmailGolem** | Email triage and alerts | `email_alert` |
 | **JobGolem** | Job board scraping and matching | `job_match` |
+| **RecruiterGolem** | Outreach for high-scoring jobs (8+) | `outreach_draft`, `contact_found` |
 
 **Actor attribution:** When reading event log, ClaudeGolem sees "YOU" for its own actions, helping maintain identity continuity across sessions.
 
@@ -108,6 +109,31 @@ Then message [@GolemZikaronBot](https://t.me/GolemZikaronBot) on Telegram.
 ---
 
 ## 🎛️ Control Panel (On/Off)
+
+### Golems CLI (Recommended)
+```bash
+# Quick status
+golems                  # or: golems status
+
+# Deploy latest code (restarts all services)
+golems latest
+
+# Hibernation
+golems off              # Stop everything
+golems on               # Start everything
+
+# Individual services
+golems start telegram
+golems stop job-golem
+golems restart email-golem
+
+# Logs
+golems logs telegram
+golems logs job-golem
+
+# Trigger job scrape now
+golems scrape
+```
 
 ### Telegram Bot (notifications + chat)
 ```bash

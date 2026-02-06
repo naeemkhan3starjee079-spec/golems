@@ -1,60 +1,80 @@
 # Available Skills
 
-> Auto-generated: 2026-02-04T22:33:40Z
+> Auto-generated: 2026-02-06T00:00:00Z
 > Regenerate: ~/.claude/scripts/generate-skill-index.sh
+> Categories added manually - script generates flat list
 
-## Skills
+## golem-powers
 
+### Golem Operations (control your agents)
+- /golem-powers:email-golem - Email triage, status, urgent messages
+- /golem-powers:notify - Send Telegram notification
+- /golem-powers:tax-helper - Bank transaction categorization (Schedule C)
+- /golem-powers:soltome - Soltome.com interaction
+- /golem-powers:soltome-influencer - Content strategy, ClaudeGolem voice
+- /golem-powers:interview-practice - 7 interview modes with Elo tracking
 
-### golem-powers
-- /golem-powers:1password
-- /golem-powers:archive
-- /golem-powers:brave
-- /golem-powers:catchup-recent
-- /golem-powers:catchup
-- /golem-powers:coderabbit
-- /golem-powers:commit
-- /golem-powers:context-audit
-- /golem-powers:context7
-- /golem-powers:convex
-- /golem-powers:create-pr
-- /golem-powers:critique-waves
-- /golem-powers:email-golem
-- /golem-powers:example-bash
-- /golem-powers:example-typescript
-- /golem-powers:github-research
-- /golem-powers:github
-- /golem-powers:interview-practice
-- /golem-powers:learn-mistake
-- /golem-powers:lsp
-- /golem-powers:notify
-- /golem-powers:obsidian
-- /golem-powers:prd-manager
-- /golem-powers:prd
-- /golem-powers:project-context
-- /golem-powers:ralph-commit
-- /golem-powers:ralph-install
-- /golem-powers:skills
-- /golem-powers:soltome-influencer
-- /golem-powers:soltome
-- /golem-powers:tax-helper
-- /golem-powers:test-plan
-- /golem-powers:worktrees
-- /golem-powers:writing-skills
-- /golem-powers:zikaron
+### Development Workflow (code lifecycle)
+- /golem-powers:commit - CodeRabbit review + commit
+- /golem-powers:ralph-commit - Atomic commit for Ralph criteria
+- /golem-powers:create-pr - Push branch + create PR
+- /golem-powers:prd - Create PRD for Ralph
+- /golem-powers:prd-manager - Modify PRD stories programmatically
+- /golem-powers:coderabbit - AI code review
+- /golem-powers:test-plan - Generate QA checklist from diff
+- /golem-powers:archive - Archive completed PRD stories
 
-### superpowers
-- /superpowers:brainstorming
-- /superpowers:dispatching-parallel-agents
-- /superpowers:executing-plans
-- /superpowers:finishing-a-development-branch
-- /superpowers:receiving-code-review
-- /superpowers:requesting-code-review
-- /superpowers:subagent-driven-development
-- /superpowers:systematic-debugging
-- /superpowers:test-driven-development
-- /superpowers:using-git-worktrees
-- /superpowers:using-superpowers
-- /superpowers:verification-before-completion
-- /superpowers:writing-plans
-- /superpowers:writing-skills
+### Code Intelligence (search & navigate)
+- /golem-powers:lsp - Semantic code navigation (definitions, references)
+- /golem-powers:context7 - Library documentation lookup
+- /golem-powers:github - Git/GitHub operations
+- /golem-powers:github-research - Systematically explore repos
+- /golem-powers:zikaron - Search past Claude Code conversations
+
+### Environment & Setup (config & install)
+- /golem-powers:ralph-install - First-time Ralph setup
+- /golem-powers:1password - Secrets management
+- /golem-powers:project-context - Auto-detect project stack
+- /golem-powers:context-audit - Diagnose missing contexts
+- /golem-powers:brave - Browser automation (fallback)
+- /golem-powers:convex - Convex backend operations
+- /golem-powers:worktrees - Git worktree management
+
+### Context Recovery (catch up after breaks)
+- /golem-powers:catchup - Full branch recovery (48+ hours away)
+- /golem-powers:catchup-recent - Quick refresh (hours away)
+
+### Meta & Learning (skill management)
+- /golem-powers:critique-waves - Multi-agent verification consensus
+- /golem-powers:learn-mistake - Record mistakes for learning
+- /golem-powers:writing-skills - Create/edit skills
+- /golem-powers:skills - List available skills
+- /golem-powers:obsidian - Access Obsidian vault notes
+- /golem-powers:example-bash - Template: bash skill
+- /golem-powers:example-typescript - Template: TypeScript skill
+
+## superpowers
+
+### Planning & Design
+- /superpowers:brainstorming - Explore intent before creative work
+- /superpowers:writing-plans - Design implementation from spec
+
+### Execution
+- /superpowers:executing-plans - Execute plan with review checkpoints
+- /superpowers:subagent-driven-development - Parallel independent tasks
+- /superpowers:dispatching-parallel-agents - 2+ independent tasks
+- /superpowers:test-driven-development - TDD before implementation
+
+### Quality & Review
+- /superpowers:requesting-code-review - Verify work meets requirements
+- /superpowers:receiving-code-review - Handle review feedback
+- /superpowers:verification-before-completion - Evidence before assertions
+- /superpowers:systematic-debugging - Debug before proposing fixes
+
+### Git & Completion
+- /superpowers:using-git-worktrees - Isolated feature work
+- /superpowers:finishing-a-development-branch - Merge/PR/cleanup options
+
+### Meta
+- /superpowers:using-superpowers - Session startup skill discovery
+- /superpowers:writing-skills - Create/edit skills

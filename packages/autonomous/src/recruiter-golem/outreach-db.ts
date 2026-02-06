@@ -78,6 +78,17 @@ const getDefaultDbPath = () =>
  * Initialize the database
  */
 export function initDb(customPath?: string): void {
+  // If already initialized with a custom path, don't reinitialize
+  // This allows tests to set a custom path that won't be overwritten
+  if (db && !customPath) {
+    return;
+  }
+
+  // Close existing connection if reinitializing with new path
+  if (db && customPath) {
+    db.close();
+  }
+
   dbPath = customPath || getDefaultDbPath();
 
   // Ensure directory exists

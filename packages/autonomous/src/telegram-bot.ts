@@ -471,7 +471,10 @@ async function askClaude(
   message: string,
   onHeartbeat?: () => void
 ): Promise<string> {
-  const prompt = `Be brief (under 500 chars). You are ClaudeGolem.\n\n${message}`;
+  const now = new Date();
+  const timeStr = now.toLocaleString("en-IL", { timeZone: "Asia/Jerusalem", hour: "2-digit", minute: "2-digit", hour12: false });
+  const dateStr = now.toLocaleDateString("en-IL", { timeZone: "Asia/Jerusalem", weekday: "short", month: "short", day: "numeric" });
+  const prompt = `Be brief (under 500 chars). You are ClaudeGolem.\n\n[${dateStr} ${timeStr} IL] ${message}`;
 
   // Use a dedicated directory for this bot's conversations
   const BOT_WORKING_DIR = join(HOME, "Gits");  // Run from ~/Gits to access all repos

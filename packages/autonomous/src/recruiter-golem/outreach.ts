@@ -12,6 +12,14 @@
 import type { CompanyInfo } from "./company-research";
 import type { FoundContact } from "./contact-finder";
 import type { MessageType } from "./outreach-db";
+import {
+  getOutreachStyleGuidelines,
+  applyStyleToMessage,
+  getStyleAppropriateGreeting,
+  getStyleAppropriateSignOff,
+  getStyleSummary,
+  type StyleGuidelines,
+} from "./style-adapter";
 
 export interface JobContext {
   title: string;
@@ -86,8 +94,13 @@ export function generateOutreach(
 function generateLinkedInConnect(context: OutreachContext, profile: UserProfile): OutreachMessage {
   const { job, company, contact } = context;
   const personalization: string[] = [];
+  const styleGuide = getOutreachStyleGuidelines();
 
-  let body = `Hi${contact?.name ? ` ${contact.name.split(" ")[0]}` : ""}! `;
+  // Use style-appropriate greeting (shortened for connect request)
+  const firstName = contact?.name?.split(" ")[0];
+  let body = styleGuide.formality > 0.55
+    ? `Hello${firstName ? ` ${firstName}` : ""}. `
+    : `Hi${firstName ? ` ${firstName}` : ""}! `;
 
   // Find overlap in tech stack
   const techOverlap = findTechOverlap(profile.techStack, job.techStack);
@@ -109,6 +122,9 @@ function generateLinkedInConnect(context: OutreachContext, profile: UserProfile)
 
   body += " Would love to connect!";
 
+  // Apply style adjustments
+  body = applyStyleToMessage(body, styleGuide);
+
   // Ensure under 300 chars
   body = truncate(body, 300);
 
@@ -125,9 +141,10 @@ function generateLinkedInConnect(context: OutreachContext, profile: UserProfile)
 function generateLinkedInMessage(context: OutreachContext, profile: UserProfile): OutreachMessage {
   const { job, company, contact } = context;
   const personalization: string[] = [];
+  const styleGuide = getOutreachStyleGuidelines();
 
   const firstName = contact?.name?.split(" ")[0] || "";
-  let body = firstName ? `Hi ${firstName},\n\n` : "Hi there,\n\n";
+  let body = getStyleAppropriateGreeting(firstName || undefined, styleGuide) + "\n\n";
 
   // Opening - reference something specific
   if (company?.recentNews?.length) {
@@ -165,11 +182,14 @@ function generateLinkedInMessage(context: OutreachContext, profile: UserProfile)
   body += "I'd love to learn more about the team and how I might contribute. ";
   body += "Would you be open to a brief chat this week?\n\n";
 
-  // Sign off
-  body += `Best,\n${profile.name}`;
+  // Sign off with style-appropriate closing
+  body += `${getStyleAppropriateSignOff(styleGuide)}\n${profile.name}`;
   if (profile.portfolioUrl) {
     body += `\n${profile.portfolioUrl}`;
   }
+
+  // Apply style adjustments (emoji removal, formality)
+  body = applyStyleToMessage(body, styleGuide);
 
   return {
     type: "linkedin_message",
@@ -184,6 +204,7 @@ function generateLinkedInMessage(context: OutreachContext, profile: UserProfile)
 function generateEmail(context: OutreachContext, profile: UserProfile): OutreachMessage {
   const { job, company, contact } = context;
   const personalization: string[] = [];
+  const styleGuide = getOutreachStyleGuidelines();
 
   // Subject line
   let subject = `${job.title} at ${job.company}`;
@@ -193,7 +214,7 @@ function generateEmail(context: OutreachContext, profile: UserProfile): Outreach
   }
 
   const firstName = contact?.name?.split(" ")[0] || "";
-  let body = firstName ? `Hi ${firstName},\n\n` : `Hello,\n\n`;
+  let body = getStyleAppropriateGreeting(firstName || undefined, styleGuide) + "\n\n";
 
   // Opening hook
   if (company?.recentNews?.length) {
@@ -229,14 +250,17 @@ function generateEmail(context: OutreachContext, profile: UserProfile): Outreach
   body += `I'd love to learn more about what ${job.company} is building and explore whether there might be a fit. `;
   body += "Would you have 15 minutes for a quick call this week?\n\n";
 
-  // Sign off
-  body += `Best regards,\n${profile.name}`;
+  // Sign off with style-appropriate closing
+  body += `${getStyleAppropriateSignOff(styleGuide)}\n${profile.name}`;
   if (profile.linkedinUrl) {
     body += `\n\nLinkedIn: ${profile.linkedinUrl}`;
   }
   if (profile.portfolioUrl) {
     body += `\nPortfolio: ${profile.portfolioUrl}`;
   }
+
+  // Apply style adjustments (emoji removal, formality)
+  body = applyStyleToMessage(body, styleGuide);
 
   return {
     type: "email",
@@ -344,3 +368,6 @@ export function generateAllOutreachTypes(context: OutreachContext): OutreachMess
 export function getDefaultProfile(): UserProfile {
   return { ...DEFAULT_USER_PROFILE };
 }
+
+// Re-export style functions for external use
+export { getOutreachStyleGuidelines, getStyleSummary } from "./style-adapter";
