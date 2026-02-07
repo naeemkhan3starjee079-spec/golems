@@ -49,7 +49,7 @@ export async function generateMonthlyReport(month: string): Promise<MonthlyRepor
 
   for (const row of data) {
     const amount = Number(row.amount) || 0;
-    const category = (row.category as TaxCategory) || "other";
+    const category = (row.tax_category as TaxCategory) || "other";
     const vendor = row.service_name || "Unknown";
 
     totalSpend += amount;
@@ -103,7 +103,7 @@ export async function generateTaxReport(year: number): Promise<TaxReport> {
 
   for (const row of data) {
     const amount = Number(row.amount) || 0;
-    const category = (row.category as TaxCategory) || "other";
+    const category = (row.tax_category as TaxCategory) || "other";
     const vendor = row.service_name || "Unknown";
 
     totalDeductible += amount;

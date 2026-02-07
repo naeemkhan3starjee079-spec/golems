@@ -1,6 +1,7 @@
 import { sendNotification } from "../lib/telegram-direct";
 import { logEvent } from "../event-log";
 import { runOllamaJSON } from "../ollama-wrapper";
+import { extractVendor } from "./categorizer";
 import type { PaymentFailure, ScoredEmail } from "./types";
 
 /** Regex patterns that indicate payment failures */
@@ -49,7 +50,7 @@ Respond JSON: {"isFailure": true/false, "vendor": "...", "amount": null_or_numbe
   if (!result?.isFailure) return null;
 
   return {
-    vendor: result.vendor || extractVendorFromEmail(email.from),
+    vendor: result.vendor || extractVendor(email.from),
     amount: result.amount ?? undefined,
     reason: result.reason || "Payment failed",
     actionNeeded: result.actionNeeded || "Update payment method",
@@ -80,8 +81,3 @@ export async function sendPaymentAlert(
   });
 }
 
-/** Extract vendor name from email sender */
-function extractVendorFromEmail(from: string): string {
-  const match = from.match(/^([^<]+)/);
-  return match ? match[1].trim() : from;
-}

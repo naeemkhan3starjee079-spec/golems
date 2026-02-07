@@ -70,5 +70,6 @@ Respond in JSON:
  */
 export function extractVendor(from: string): string {
   const match = from.match(/^([^<]+)/);
-  return match ? match[1].trim() : from;
+  const name = match ? match[1].trim() : from;
+  return name || "Unknown";
 }

@@ -56,7 +56,7 @@ describe("TellerGolem Categorizer", () => {
     });
 
     it("handles empty string", () => {
-      expect(extractVendor("")).toBe("");
+      expect(extractVendor("")).toBe("Unknown");
     });
   });
 

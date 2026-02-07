@@ -30,7 +30,7 @@ if [ ! -f "$FILE" ]; then
 fi
 
 # Scratchpad for temp output
-SCRATCHPAD="/private/tmp/claude-501-summarize"
+SCRATCHPAD="${TMPDIR:-/tmp}/summarize-file-$$"
 mkdir -p "$SCRATCHPAD"
 OUTFILE="$SCRATCHPAD/summary-$(date +%s).md"
 
@@ -50,7 +50,7 @@ case "$MODEL" in
     if command -v gemini &>/dev/null; then
       echo "$FULL_PROMPT" | gemini > "$OUTFILE" 2>/dev/null
     else
-      echo "Error: gemini CLI not installed. Run: npm i -g @anthropic-ai/gemini-cli" >&2
+      echo "Error: gemini CLI not installed. Install Gemini CLI from https://github.com/google-gemini/gemini-cli" >&2
       exit 1
     fi
     ;;
@@ -79,17 +79,22 @@ case "$MODEL" in
       echo "Error: ANTHROPIC_API_KEY not set" >&2
       exit 1
     fi
-    # Use the Anthropic SDK via bun one-liner
+    # Write prompt to temp file to avoid shell injection via backticks
+    PROMPTFILE="$SCRATCHPAD/prompt-$(date +%s).txt"
+    printf '%s' "$FULL_PROMPT" > "$PROMPTFILE"
     bun -e "
       const Anthropic = require('@anthropic-ai/sdk');
+      const fs = require('fs');
+      const prompt = fs.readFileSync('$PROMPTFILE', 'utf8');
       const client = new Anthropic.default();
       const msg = await client.messages.create({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 2048,
-        messages: [{ role: 'user', content: \`$FULL_PROMPT\` }]
+        messages: [{ role: 'user', content: prompt }]
       });
       console.log(msg.content[0].text);
     " > "$OUTFILE" 2>/dev/null
+    rm -f "$PROMPTFILE"
     ;;
   *)
     echo "Error: Unknown model '$MODEL'. Use: gemini, cursor, kiro, haiku" >&2

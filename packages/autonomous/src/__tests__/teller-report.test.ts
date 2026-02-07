@@ -37,10 +37,10 @@ describe("TellerGolem Report", () => {
   describe("generateMonthlyReport", () => {
     test("aggregates payments correctly", async () => {
       mockPaymentsData = [
-        { date: "2026-01-05", amount: 15.99, service_name: "Netflix", category: "software" },
-        { date: "2026-01-10", amount: 9.99, service_name: "Spotify", category: "software" },
-        { date: "2026-01-15", amount: 45.00, service_name: "WeWork", category: "office" },
-        { date: "2026-01-20", amount: 12.50, service_name: "Netflix", category: "software" },
+        { date: "2026-01-05", amount: 15.99, service_name: "Netflix", tax_category: "software" },
+        { date: "2026-01-10", amount: 9.99, service_name: "Spotify", tax_category: "software" },
+        { date: "2026-01-15", amount: 45.00, service_name: "WeWork", tax_category: "office" },
+        { date: "2026-01-20", amount: 12.50, service_name: "Netflix", tax_category: "software" },
       ];
 
       const report = await generateMonthlyReport("2026-01");
@@ -71,7 +71,7 @@ describe("TellerGolem Report", () => {
 
     test("handles null category as other", async () => {
       mockPaymentsData = [
-        { date: "2026-02-01", amount: 20, service_name: "RandomShop", category: null },
+        { date: "2026-02-01", amount: 20, service_name: "RandomShop", tax_category: null },
       ];
 
       const report = await generateMonthlyReport("2026-02");
@@ -84,9 +84,9 @@ describe("TellerGolem Report", () => {
   describe("generateTaxReport", () => {
     test("groups by category with item details", async () => {
       mockPaymentsData = [
-        { date: "2026-03-01", amount: 100, service_name: "Google Ads", category: "advertising" },
-        { date: "2026-06-15", amount: 200, service_name: "Facebook Ads", category: "advertising" },
-        { date: "2026-09-01", amount: 50, service_name: "Udemy", category: "education" },
+        { date: "2026-03-01", amount: 100, service_name: "Google Ads", tax_category: "advertising" },
+        { date: "2026-06-15", amount: 200, service_name: "Facebook Ads", tax_category: "advertising" },
+        { date: "2026-09-01", amount: 50, service_name: "Udemy", tax_category: "education" },
       ];
 
       const report = await generateTaxReport(2026);
