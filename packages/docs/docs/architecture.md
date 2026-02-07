@@ -154,7 +154,7 @@ All LLM calls are logged to a JSONL file:
 cat ~/.golems-zikaron/api_costs.jsonl
 
 # Location (Cloud):
-curl https://your-railway.app/api/usage
+curl https://your-service.up.railway.app/api/usage
 ```
 
 **Format:**

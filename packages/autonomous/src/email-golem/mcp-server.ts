@@ -30,6 +30,12 @@ import {
   getEmailsByGolem,
 } from "./db-client";
 import { buildReplyDraft, type ReplyDraftInput } from "./draft-reply";
+import {
+  generateMonthlyReport,
+  generateTaxReport,
+  formatMonthlyReportText,
+  formatTaxReportText,
+} from "../teller-golem/report";
 import type { Email } from "./types";
 
 const server = new Server(
@@ -175,6 +181,36 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: ["subject", "from", "intent"],
       },
     },
+    {
+      name: "teller_monthlyReport",
+      description:
+        "Generate monthly spending report. Returns total spend, breakdown by category and vendor, and subscription count.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          month: {
+            type: "string",
+            description: "Month in YYYY-MM format (default: current month)",
+            default: new Date().toISOString().slice(0, 7),
+          },
+        },
+      },
+    },
+    {
+      name: "teller_taxSummary",
+      description:
+        "Generate annual tax report. Returns deductible totals by IRS Schedule C category with line items.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          year: {
+            type: "number",
+            description: "Tax year (default: current year)",
+            default: new Date().getFullYear(),
+          },
+        },
+      },
+    },
   ],
 }));
 
@@ -199,6 +235,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return handleGetByGolem(args);
       case "email_draftReply":
         return handleDraftReply(args);
+      case "teller_monthlyReport":
+        return handleMonthlyReport(args);
+      case "teller_taxSummary":
+        return handleTaxSummary(args);
       default:
         return {
           content: [{ type: "text" as const, text: `Unknown tool: ${name}` }],
@@ -445,6 +485,32 @@ async function handleGetByGolem(args: any) {
   ];
 
   return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+}
+
+/**
+ * Generate and format a monthly spending report.
+ * @param args - Optional month parameter in YYYY-MM format (defaults to current month)
+ */
+async function handleMonthlyReport(args: any) {
+  const month = args?.month ?? new Date().toISOString().slice(0, 7);
+
+  const report = await generateMonthlyReport(month);
+  const formatted = formatMonthlyReportText(report);
+
+  return { content: [{ type: "text" as const, text: formatted }] };
+}
+
+/**
+ * Generate and format an annual tax report.
+ * @param args - Optional year parameter (defaults to current year)
+ */
+async function handleTaxSummary(args: any) {
+  const year = args?.year ?? new Date().getFullYear();
+
+  const report = await generateTaxReport(year);
+  const formatted = formatTaxReportText(report);
+
+  return { content: [{ type: "text" as const, text: formatted }] };
 }
 
 // --- Start server ---

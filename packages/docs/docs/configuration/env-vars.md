@@ -22,8 +22,8 @@ All environment variables used by Golems v2. Store sensitive values in 1Password
 
 | Variable | Default | Description | Required For |
 |----------|---------|-------------|--------------|
-| `ANTHROPIC_API_KEY` | — | Anthropic API key from 1Password `ANTHROPIC_GOLEMS_API_KEY` | Cloud LLM calls |
-| `RAILWAY_URL` | `https://golems-production.up.railway.app` | Cloud worker endpoint for health checks | Health monitoring |
+| `ANTHROPIC_API_KEY` | — | Anthropic API key from 1Password (any item name you choose) | Cloud LLM calls |
+| `RAILWAY_URL` | `https://your-service.up.railway.app` | Cloud worker endpoint for health checks | Health monitoring |
 
 ### Local Backend (Ollama)
 
@@ -33,7 +33,7 @@ Requires Ollama running locally on `http://localhost:11434`.
 
 | Variable | Default | Description | Required For |
 |----------|---------|-------------|--------------|
-| `SUPABASE_URL` | — | Supabase project URL from [console.supabase.com](https://console.supabase.com) | Cloud state backend |
+| `SUPABASE_URL` | — | Your Supabase project URL (format: `https://YOUR_PROJECT.supabase.co`) | Cloud state backend |
 | `SUPABASE_SERVICE_KEY` | — | Service role key (bypasses RLS, for cloud worker only) from 1Password | Cloud database access |
 
 ## Gmail Configuration
@@ -50,12 +50,12 @@ Requires Ollama running locally on `http://localhost:11434`.
 |----------|---------|-------------|--------------|
 | `TELEGRAM_BOT_TOKEN` | — | Bot token from @BotFather on Telegram | Telegram bot |
 | `TELEGRAM_CHAT_ID` | — | Chat/group ID for notifications (negative number for groups) | Telegram messages |
-| `TELEGRAM_TOPIC_ALERTS` | `3` | Topic ID for 🔔 Alerts (system notifications) | Alert routing |
-| `TELEGRAM_TOPIC_NIGHTSHIFT` | `4` | Topic ID for 🌙 Night Shift (autonomous tasks) | Night Shift logs |
-| `TELEGRAM_TOPIC_EMAIL` | `5` | Topic ID for 📧 Email (email events) | Email notifications |
-| `TELEGRAM_TOPIC_JOBS` | `7` | Topic ID for 💼 Jobs (job scraper results) | Job notifications |
-| `TELEGRAM_TOPIC_RECRUITER` | `126` | Topic ID for 👥 Recruiter (outreach events) | Recruiter notifications |
-| `TELEGRAM_TOPIC_UPTIME` | `282` | Topic ID for ⏰ Uptime (health checks) | Uptime monitoring |
+| `TELEGRAM_TOPIC_ALERTS` | — | Topic ID for 🔔 Alerts (system notifications) | Alert routing |
+| `TELEGRAM_TOPIC_NIGHTSHIFT` | — | Topic ID for 🌙 Night Shift (autonomous tasks) | Night Shift logs |
+| `TELEGRAM_TOPIC_EMAIL` | — | Topic ID for 📧 Email (email events) | Email notifications |
+| `TELEGRAM_TOPIC_JOBS` | — | Topic ID for 💼 Jobs (job scraper results) | Job notifications |
+| `TELEGRAM_TOPIC_RECRUITER` | — | Topic ID for 👥 Recruiter (outreach events) | Recruiter notifications |
+| `TELEGRAM_TOPIC_UPTIME` | — | Topic ID for ⏰ Uptime (health checks) | Uptime monitoring |
 
 ## Setup Examples
 
@@ -73,8 +73,8 @@ export GMAIL_CLIENT_ID=your_client_id
 export GMAIL_CLIENT_SECRET=your_client_secret
 export GMAIL_REFRESH_TOKEN=your_refresh_token
 
-# Telegram
-export TELEGRAM_BOT_TOKEN=your_bot_token
+# Telegram (get token from @BotFather, chat ID from your group)
+export TELEGRAM_BOT_TOKEN=123456:ABC-DEF...
 export TELEGRAM_CHAT_ID=-1001234567890
 ```
 

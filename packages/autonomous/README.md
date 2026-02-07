@@ -83,7 +83,7 @@ Then message [@GolemZikaronBot](https://t.me/GolemZikaronBot) on Telegram.
 - Added response logging to `sendTelegram()`
 
 ### Infrastructure
-- Repo now public: https://github.com/EtanHey/golems
+- Repo: https://github.com/YOUR_USERNAME/golems
 - Stop hook filters short sessions (<10s) to reduce notification spam
 
 ---

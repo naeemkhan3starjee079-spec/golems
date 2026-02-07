@@ -46,7 +46,7 @@ Before you start, ensure you have:
 ### 1. Clone and Install
 
 ```bash
-git clone https://github.com/EtanHey/golems.git
+git clone https://github.com/YOUR_USERNAME/golems.git
 cd golems
 bun install
 ```
@@ -56,17 +56,17 @@ bun install
 Store secrets in 1Password (not `.env`):
 
 ```bash
-# Create 1Password items in "development" vault:
-# - ANTHROPIC_GOLEMS_API_KEY (credential)
-# - SUPABASE_URL (login)
-# - SUPABASE_ANON_KEY (password)
-# - TELEGRAM_BOT_TOKEN (credential)
-# - TELEGRAM_CHAT_ID (text field)
+# Create 1Password items in your vault:
+# - ANTHROPIC_API_KEY (can name it anything, e.g., "Golems Claude API")
+# - SUPABASE_URL
+# - SUPABASE_ANON_KEY
+# - TELEGRAM_BOT_TOKEN
+# - TELEGRAM_CHAT_ID
 
 # Load them into shell:
-export $(op read op://development/ANTHROPIC_GOLEMS_API_KEY/credential)
-export SUPABASE_URL=$(op read op://development/SUPABASE_URL/username)
-export SUPABASE_ANON_KEY=$(op read op://development/SUPABASE_ANON_KEY/password)
+export ANTHROPIC_API_KEY=$(op read op://YOUR_VAULT/YOUR_ANTHROPIC_ITEM/credential)
+export SUPABASE_URL=$(op read op://YOUR_VAULT/YOUR_SUPABASE_ITEM/url)
+export SUPABASE_ANON_KEY=$(op read op://YOUR_VAULT/YOUR_SUPABASE_ITEM/anon_key)
 # ... etc
 ```
 
@@ -141,7 +141,7 @@ golems/
 **Golems status shows disconnected:**
 ```bash
 # Check env vars loaded
-op read op://development/TELEGRAM_BOT_TOKEN/credential
+op read op://YOUR_VAULT/YOUR_TELEGRAM_ITEM/credential
 
 # Restart services
 bun src/cli/golems.ts restart

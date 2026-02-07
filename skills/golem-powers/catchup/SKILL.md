@@ -80,3 +80,4 @@ This branch implements a task management feature:
 - If the diff is huge (50+ files), consider using `/golem-powers:catchup-recent` for just recent changes first
 - Check `git log main...HEAD --oneline` to see commit history for additional context
 - Look for TODO/FIXME comments in the code to understand remaining work
+- **Large files (>100 lines):** Use `scripts/summarize-file.sh <file> "<prompt>" [model]` instead of reading directly into context. Models: gemini (default), cursor, kiro, haiku. Or delegate to a subagent that writes a summary to a scratchpad file.

@@ -102,17 +102,17 @@ const SERVICES: ServiceOption[] = [
   },
 ];
 
+// Example 1Password paths - update these to match YOUR vault structure
+// You can name items anything you want, these are just examples
 const OP_SECRET_MAP: Record<string, string> = {
-  TELEGRAM_BOT_TOKEN:
-    "op://development/GolemsZikaron Telegram Bot/credential",
-  ANTHROPIC_API_KEY:
-    "op://development/ANTHROPIC_GOLEMS_API_KEY/credential",
-  GMAIL_CLIENT_ID: "op://development/Gmail OAuth Golems/client_id",
-  GMAIL_CLIENT_SECRET: "op://development/Gmail OAuth Golems/client_secret",
-  GMAIL_REFRESH_TOKEN: "op://development/Gmail OAuth Golems/refresh_token",
-  SUPABASE_URL: "op://development/Supabase Golems/url",
-  SUPABASE_ANON_KEY: "op://development/Supabase Golems/anon_key",
-  TELEGRAM_CHAT_ID: "op://development/GolemsZikaron Telegram Bot/chat_id",
+  TELEGRAM_BOT_TOKEN: "op://YOUR_VAULT/YOUR_TELEGRAM_ITEM/credential",
+  ANTHROPIC_API_KEY: "op://YOUR_VAULT/YOUR_ANTHROPIC_ITEM/credential",
+  GMAIL_CLIENT_ID: "op://YOUR_VAULT/YOUR_GMAIL_ITEM/client_id",
+  GMAIL_CLIENT_SECRET: "op://YOUR_VAULT/YOUR_GMAIL_ITEM/client_secret",
+  GMAIL_REFRESH_TOKEN: "op://YOUR_VAULT/YOUR_GMAIL_ITEM/refresh_token",
+  SUPABASE_URL: "op://YOUR_VAULT/YOUR_SUPABASE_ITEM/url",
+  SUPABASE_ANON_KEY: "op://YOUR_VAULT/YOUR_SUPABASE_ITEM/anon_key",
+  TELEGRAM_CHAT_ID: "op://YOUR_VAULT/YOUR_TELEGRAM_ITEM/chat_id",
 };
 
 // ---------------------------------------------------------------------------
@@ -484,7 +484,7 @@ export async function phaseVerify(
         break;
       }
       case "cloud": {
-        const url = process.env.RAILWAY_URL || "https://golems-cloud.up.railway.app";
+        const url = process.env.RAILWAY_URL || "https://your-service.up.railway.app";
         info(`Checking Railway cloud (${url})...`);
         const health = shellExec(`curl -s --max-time 5 "${url}/health"`);
         if (health.ok && health.output.includes("ok")) {
