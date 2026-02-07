@@ -1772,3 +1772,109 @@ Task agents crash on exit (CC bug, not ours). Agents complete work but get marke
 |----------|-------------|
 | `$GOLEMS_DATA` | Runtime state directory (state.json, event-log, job-golem data) |
 | `$OBSIDIAN_VAULT` | Obsidian research vault |
+
+---
+
+## Part 26: External CLI Helpers Layer
+
+### Problem
+Multiple external CLI tools (Gemini, Cursor, Kiro, Codex) are used for summarization, doc generation, and code analysis. Each has different rate limits, auth methods, and syntax. Currently `scripts/summarize-file.sh` hardcodes each backend.
+
+### Architecture: `src/lib/helpers.ts`
+
+**Unified helper interface:**
+```typescript
+interface HelperResult { output: string; model: string; tokens?: number; }
+type HelperBackend = "gemini" | "cursor" | "codex" | "kiro" | "haiku";
+
+async function runHelper(prompt: string, opts?: { backend?: HelperBackend; file?: string; timeout?: number }): Promise<HelperResult>
+```
+
+**Rate limit tracker:** `~/.golems-zikaron/rate-limits.json`
+```json
+{
+  "gemini": { "used": 342, "limit": 1000, "resets": "2026-02-08T00:00:00Z" },
+  "cursor": { "used": 89, "limit": 500, "resets": "2026-03-01T00:00:00Z" },
+  "codex": { "rpm_used": 12, "rpm_limit": 60, "window_start": "..." },
+  "kiro": { "used": 12, "limit": null, "resets": null }
+}
+```
+
+**Fallback chain:** gemini (free, 1000/day) → kiro (free) → codex (pay-per-token) → cursor ($20/mo) → haiku (our API)
+
+**When rate limited:**
+1. Log to rate-limits.json with reset time
+2. Auto-fallback to next available backend
+3. If ALL backends exhausted → notify via Telegram + set timer for earliest reset
+4. Background timer triggers retry when limit clears
+
+**Files:**
+- `src/lib/helpers.ts` — Unified interface, rate tracking, fallback logic
+- `scripts/summarize-file.sh` — Refactored to call helpers.ts (or remain shell wrapper)
+- `~/.golems-zikaron/rate-limits.json` — Persistent rate limit state
+
+**CLI backends reference:**
+
+| Backend | Command | Auth | Free Tier | Rate Limit |
+|---------|---------|------|-----------|------------|
+| Gemini | `gemini "prompt"` | Google account | 1000 req/day | Daily reset midnight UTC |
+| Cursor | `cursor agent "prompt" --model gpt-5.2-codex-high --output-format text` | Cursor Pro ($20/mo) | Included | ~500 fast/mo |
+| Codex | `codex "prompt"` (API key mode) | OpenAI API key | Pay-per-token | Standard API RPM/TPM |
+| Kiro | `kiro-cli chat --no-interactive "prompt"` | AWS account | Free tier | Unknown |
+| Haiku | Via Anthropic API | ANTHROPIC_API_KEY | Pay-per-token | $0.80/MTok in, $4/MTok out |
+
+**Effort:** 3h | **Impact:** HIGH (enables all multi-model workflows)
+
+---
+
+## Part 27: Qodo Merge for Test Generation
+
+### Problem
+job-golem (6 files, 0 tests) and recruiter-golem (10 files, minimal tests) have major test gaps. Manual test writing is slow.
+
+### Solution
+Add Qodo Merge (formerly CodiumAI) specifically for test generation (not review — CodeRabbit handles that).
+
+**Setup:**
+1. Install Qodo Merge GitHub App on EtanHey/golems
+2. Configure to ONLY run `/generate_tests` (disable /review, /improve — overlap with CodeRabbit)
+3. Trigger via PR comment: `/test` on files with low coverage
+
+**PR Tool Stack (final):**
+
+| Tool | Role | Trigger |
+|------|------|---------|
+| CodeRabbit | Full review + suggestions | Auto on every PR |
+| Cursor Bugbot | Bug detection | Auto on every PR |
+| Qodo Merge | Test generation ONLY | On-demand `/test` comment |
+
+**Do NOT add:** Greptile, Sourcery, Codacy, GitHub Copilot review — overlap creates noise. Research confirmed: 1-2 well-tuned tools > 5 noisy ones.
+
+**Effort:** 30min setup | **Impact:** HIGH (fills biggest quality gap)
+
+---
+
+## Part 28: Coverage Sweep (FINAL TRACK)
+
+**NOTE:** This track runs LAST after all other tracks are complete, so it catches everything.
+
+### Goal
+Final verification pass: cross-reference code vs docs vs tests.
+
+### Multi-model doc sweep pipeline:
+1. **Cursor @codebase** → generates initial docs (best cross-file understanding)
+2. **Codex** → verifies/enriches (different model perspective)
+3. **Gemini** → final review (free, 1M context for whole-file reads)
+4. **Claude haiku agent** → commits what passes verification
+
+### Checklist:
+- [ ] All env vars documented in docsite/docs/configuration/env-vars.md
+- [ ] All MCP tools documented in docsite/docs/mcp-tools.md
+- [ ] All exported functions have TSDoc
+- [ ] Test coverage: every src/ directory has __tests__/
+- [ ] Docusaurus builds clean
+- [ ] No stale references to packages/docs (renamed to docsite)
+- [ ] UptimeRobot monitoring doc includes mobile app section
+- [ ] rate-limits.json schema documented
+
+**Effort:** 2-3h | **Impact:** MEDIUM (quality gate before "done")

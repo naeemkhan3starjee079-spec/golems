@@ -263,6 +263,20 @@ This is useful for tracking monthly spend.
 
 You likely don't need paid plan for one monitor.
 
+## Mobile App (Native Notifications)
+
+UptimeRobot has native apps for **iOS** and **Android** with:
+- **Push notifications** — instant alerts when services go down/up (no Telegram dependency)
+- **Home screen widgets** — at-a-glance status for all monitors
+- **Response time graphs** — historical uptime and latency
+- **Incident timeline** — see exactly when outages occurred
+
+Download:
+- **iOS:** [App Store](https://apps.apple.com/app/uptimerobot/id1104878581)
+- **Android:** [Google Play](https://play.google.com/store/apps/details?id=com.uptimerobot)
+
+This gives you native phone notifications alongside the Telegram webhook, so you have two independent alert channels.
+
 ## See Also
 
 - **Cloud Worker Code:** `/src/cloud-worker.ts` (health endpoint at line 281)
