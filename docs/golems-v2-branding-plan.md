@@ -1945,3 +1945,272 @@ Final verification pass: cross-reference code vs docs vs tests.
 - [ ] rate-limits.json schema documented
 
 **Effort:** 2-3h | **Impact:** MEDIUM (quality gate before "done")
+
+---
+
+## Part 29: DeepSource (Replace Dependabot)
+
+### Problem
+Dependabot provides basic dependency updates but lacks comprehensive code quality analysis. Need integrated bug detection, security scanning, and anti-pattern detection.
+
+### Solution
+Add DeepSource as primary code quality platform, replacing Dependabot.
+
+**Setup:**
+1. Add `.deepsource.toml` to repo root
+2. Configure TypeScript + Python analyzers for monorepo
+3. Enable: bug detection, security scanning, anti-patterns, dependency auditing
+4. Remove Dependabot config (`.github/dependabot.yml`) once DeepSource is confirmed working
+
+**Benefits:**
+- Free forever for open source repos
+- Deeper analysis than Dependabot (catches logic bugs, not just outdated deps)
+- Integrates with PR workflow alongside CodeRabbit
+- Auto-fixes for common issues
+
+**Reference:** deepsource.com
+
+**Effort:** 1h setup | **Impact:** MEDIUM (replaces existing tool with better one)
+
+---
+
+## Part 30: Highlight.io (Observability)
+
+### Problem
+Current event logging (`event-log.ts`) is file-based, hard to query, no visualization. Need proper observability for distributed golem system.
+
+### Solution
+Replace manual event logging with Highlight SDK for unified observability.
+
+**Features:**
+- Open source, self-hostable
+- Free tier: 500 sessions/mo
+- Track: errors, logs, sessions across all golems
+- Dashboard for monitoring all golem activity
+
+**Implementation:**
+1. Add `@highlight-run/node` to packages/autonomous
+2. Instrument entry points:
+   - `cloud-worker.ts` (email-golem, job-golem, briefing, soltome)
+   - `telegram-bot.ts` (message handling, commands)
+   - `night-shift.ts` (autonomous improvements)
+3. Migrate existing `logEvent()` calls to Highlight
+4. Keep `event-log.ts` temporarily for rollback, phase out after validation
+
+**Dashboard views:**
+- Golem activity timeline
+- Error tracking by golem
+- Performance metrics (LLM latency, DB queries)
+- Session replay for debugging
+
+**Reference:** highlight.io
+
+**Effort:** 2-3h | **Impact:** HIGH (critical for debugging distributed system)
+
+---
+
+## Part 31: Exa MCP (AI Web Search)
+
+### Problem
+Recruiter-golem and job-golem need web search for company research and job context enrichment. Current approach relies on manual lookups.
+
+### Solution
+Add Exa MCP server for AI-powered web search.
+
+**Pricing:**
+- $10 free credits (lasts ~2000 searches)
+- Then ~$5/1000 searches
+- Much cheaper than manual research time
+
+**Integration points:**
+1. Add Exa MCP server to `.mcp.json`
+2. `recruiter-golem/contact-finder.ts` — LinkedIn/company lookups
+3. `job-golem/enricher.ts` — job context (company info, tech stack, funding)
+4. Add to wizard's "available skills" list for new project wiring
+
+**Use cases:**
+- Find company funding info, tech stack, recent news
+- Enrich job postings with company context
+- Research contacts before outreach
+
+**Reference:** exa.ai
+
+**Effort:** 1h setup + 2h integration | **Impact:** MEDIUM (enhances existing golems)
+
+---
+
+## Part 32: Skills Discovery List
+
+### Problem
+Wizard (Part 7/12) needs a catalog of all possible skills/integrations to suggest during project setup. Currently hardcoded.
+
+### Solution
+Create structured catalog of all available skills and integrations.
+
+**File:** `data/available-skills.json`
+
+**Schema:**
+```json
+{
+  "code-review": [
+    {
+      "name": "CodeRabbit",
+      "description": "AI code review on PRs",
+      "free_tier": true,
+      "setup_complexity": "low",
+      "relevant_project_types": ["all"],
+      "url": "coderabbit.ai"
+    },
+    {
+      "name": "DeepSource",
+      "description": "Continuous code quality analysis",
+      "free_tier": "open-source",
+      "setup_complexity": "low",
+      "relevant_project_types": ["typescript", "python"],
+      "url": "deepsource.com"
+    }
+  ],
+  "monitoring": [
+    {
+      "name": "Highlight.io",
+      "description": "Error tracking and session replay",
+      "free_tier": "500 sessions/mo",
+      "setup_complexity": "medium",
+      "relevant_project_types": ["web", "backend"],
+      "url": "highlight.io"
+    }
+  ],
+  "search": [
+    {
+      "name": "Exa",
+      "description": "AI web search",
+      "free_tier": "$10 credits",
+      "setup_complexity": "low",
+      "relevant_project_types": ["research", "automation"],
+      "url": "exa.ai"
+    }
+  ],
+  "deployment": [
+    {
+      "name": "Railway",
+      "description": "Cloud deployment platform",
+      "free_tier": "$5/mo credit",
+      "setup_complexity": "low",
+      "relevant_project_types": ["backend", "workers"],
+      "url": "railway.app"
+    }
+  ],
+  "testing": [
+    {
+      "name": "Qodo Merge",
+      "description": "AI test generation",
+      "free_tier": true,
+      "setup_complexity": "low",
+      "relevant_project_types": ["all"],
+      "url": "qodo.ai"
+    }
+  ],
+  "browser-automation": [
+    {
+      "name": "Browserbase",
+      "description": "Headless browser API",
+      "free_tier": "100 sessions/mo",
+      "setup_complexity": "medium",
+      "relevant_project_types": ["scraping", "e2e-tests"],
+      "url": "browserbase.com"
+    },
+    {
+      "name": "Blacksmith",
+      "description": "GitHub Actions on fast runners",
+      "free_tier": false,
+      "setup_complexity": "low",
+      "relevant_project_types": ["ci-cd"],
+      "url": "blacksmith.sh"
+    }
+  ],
+  "git-workflow": [
+    {
+      "name": "Graphite",
+      "description": "Stacked PRs and review workflow",
+      "free_tier": true,
+      "setup_complexity": "low",
+      "relevant_project_types": ["all"],
+      "url": "graphite.dev"
+    }
+  ]
+}
+```
+
+**Wizard integration:**
+```
+Setup wizard: Which areas interest you? (multi-select)
+
+□ Code review & quality
+□ Monitoring & observability
+□ Web search & research
+□ Cloud deployment
+□ Testing
+□ Browser automation
+□ Git workflow optimization
+
+[For each selected area, suggest 2-3 tools with setup complexity]
+```
+
+**Community resource:**
+Link to soydev.link as additional resource for discovering developer tools (thousands of categorized tools, many with free tiers).
+
+**Maintenance:**
+- Update this file when adding new integrations
+- Wizard reads it dynamically (no hardcoded lists)
+- CLI command: `golems skills list` — shows all available skills
+
+**Effort:** 2h initial catalog + 30min wizard integration | **Impact:** HIGH (makes wizard actually useful)
+
+---
+
+## Part 33: Plan Restructure + Session Handoff Skill
+
+### Problem
+The plan file is ~1900 lines in a single file. New Claude sessions can't efficiently read it. Subagents waste context on parts that are already done.
+
+### Solution: Folder Structure
+```
+docs/plan/
+├── README.md              ← Progress index table (< 100 lines)
+├── phase-1-ship/          ← Parts 1-13 (DONE - archived)
+│   └── README.md          ← Summary of what was built
+├── phase-2-cloud/         ← Parts 14-19 (DONE - archived)
+│   └── README.md
+├── phase-2.5-infra/       ← Parts 20-25, Tracks 9-17 (DONE - archived)
+│   └── README.md
+├── phase-3-teller/        ← Part 10 TellerGolem (DONE - archived)
+│   └── README.md
+└── phase-4-tooling/       ← Parts 26-33 (ACTIVE)
+    ├── README.md          ← Phase TODO list with exact steps
+    ├── 26-helpers-layer.md
+    ├── 29-deepsource.md
+    ├── 30-highlight.md
+    ├── 31-exa-mcp.md
+    ├── 32-skills-list.md
+    └── 33-plan-restructure.md
+```
+
+### Session Handoff Pattern
+1. `docs/plan/` (in git) = permanent source of truth
+2. Fresh Claude/subagent reads ONLY its phase README → creates native CC plan → executes
+3. Native CC plan is ephemeral (session-scoped), docs/plan/ is durable (git-tracked)
+4. Main Claude owns decisions/questions, phase Claudes own execution
+5. Completed phases are "archived" - just a summary README, full specs moved to appendix
+
+### Implementation
+- [ ] Create docs/plan/ folder structure
+- [ ] Write README.md with progress table
+- [ ] Archive completed phases (summary only)
+- [ ] Write phase-4 README with exact executable TODOs
+- [ ] Delete original docs/golems-v2-branding-plan.md after migration
+- [ ] Update MEMORY.md with new plan location
+
+### Dependencies
+None - can be done anytime.
+
+### Complexity: M (2-3 hours)

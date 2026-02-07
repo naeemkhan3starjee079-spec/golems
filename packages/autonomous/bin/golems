@@ -513,6 +513,9 @@ case "${1:-status}" in
   helpers)
     cd "$GOLEMS_HOME" && bun run src/helpers-status.ts "${@:2}"
     ;;
+  skills)
+    cd "$GOLEMS_HOME" && bun run src/skills-list.ts "${@:2}"
+    ;;
   regen-style|style)
     cmd_regen_style
     ;;
