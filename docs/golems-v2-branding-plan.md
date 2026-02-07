@@ -1790,28 +1790,61 @@ type HelperBackend = "gemini" | "cursor" | "codex" | "kiro" | "haiku";
 async function runHelper(prompt: string, opts?: { backend?: HelperBackend; file?: string; timeout?: number }): Promise<HelperResult>
 ```
 
-**Rate limit tracker:** `~/.golems-zikaron/rate-limits.json`
+**Rate limit tracking — event-driven, not counting:**
+
+Schema: `~/.golems-zikaron/rate-limits.json`
 ```json
 {
-  "gemini": { "used": 342, "limit": 1000, "resets": "2026-02-08T00:00:00Z" },
-  "cursor": { "used": 89, "limit": 500, "resets": "2026-03-01T00:00:00Z" },
-  "codex": { "rpm_used": 12, "rpm_limit": 60, "window_start": "..." },
-  "kiro": { "used": 12, "limit": null, "resets": null }
+  "gemini": { "limited": false, "limited_at": null, "resets_at": null },
+  "cursor": { "limited": true, "limited_at": "2026-02-07T14:30:00Z", "resets_at": "2026-02-07T15:00:00Z" }
 }
 ```
+
+**API — one function to call:**
+```typescript
+// When a helper returns 429 or rate limit error:
+helperLimitReached("cursor");
+// Automatically sets limited=true, limited_at=now, resets_at=now+KNOWN_RESET_DURATION
+
+// Before calling a helper:
+isHelperAvailable("cursor"); // checks limited && resets_at > now
+// If resets_at < now → auto-clears (limited=false)
+```
+
+**Known reset durations (maintained in code + docs):**
+
+| Backend | Reset Duration | How We Know |
+|---------|---------------|-------------|
+| Gemini | Midnight UTC (daily) | Official docs |
+| Cursor | Rolling monthly | Empirical |
+| Codex | 1 minute (RPM) / 1 day (TPD) | OpenAI API docs |
+| Kiro | Unknown → default 1 hour | Conservative guess |
+| Haiku | 1 minute (RPM) | Anthropic API docs |
+
+**⚠️ MAINTENANCE RULE:** When adding a new helper backend:
+1. Add entry to `HELPER_RESET_DURATIONS` in `src/lib/helpers.ts`
+2. Add row to the table above in this plan
+3. Add check to `golems doctor` (health check shows rate limit status)
+4. Update `scripts/summarize-file.sh` if it has a shell fallback path
+5. Verify actual reset duration — check official docs or test empirically
 
 **Fallback chain:** gemini (free, 1000/day) → kiro (free) → codex (pay-per-token) → cursor ($20/mo) → haiku (our API)
 
 **When rate limited:**
-1. Log to rate-limits.json with reset time
-2. Auto-fallback to next available backend
-3. If ALL backends exhausted → notify via Telegram + set timer for earliest reset
-4. Background timer triggers retry when limit clears
+1. `helperLimitReached(backend)` → updates rate-limits.json with reset time
+2. `runHelper()` auto-skips limited backends, tries next in fallback chain
+3. If ALL backends exhausted → notify via Telegram + log earliest reset time
+4. `golems doctor` shows: "Cursor: ⚠ rate limited (resets in 23min)"
+
+**Integration with `golems doctor`:**
+- New check: "Helper Backends" — shows status of each CLI (available/limited/not installed)
+- If limited, shows time until reset
 
 **Files:**
-- `src/lib/helpers.ts` — Unified interface, rate tracking, fallback logic
-- `scripts/summarize-file.sh` — Refactored to call helpers.ts (or remain shell wrapper)
-- `~/.golems-zikaron/rate-limits.json` — Persistent rate limit state
+- `src/lib/helpers.ts` — Unified interface, `runHelper()`, `helperLimitReached()`, `isHelperAvailable()`, `HELPER_RESET_DURATIONS`
+- `scripts/summarize-file.sh` — Thin shell wrapper that calls `bun run src/lib/helpers.ts`
+- `~/.golems-zikaron/rate-limits.json` — Persistent rate limit state (auto-cleared on reset)
+- `src/doctor.ts` — Add helper backend status check
 
 **CLI backends reference:**
 
