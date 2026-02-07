@@ -14,10 +14,11 @@
 
 import { readFileSync, writeFileSync } from "fs";
 import { join } from "path";
-import type { TopicStyle, SemanticStyleData } from "./shared-types";
+import type { SemanticStyleData } from "./shared-types";
 
-// Re-export for backward compatibility
+/** Re-export for backward compatibility */
 export type { TopicStyle } from "./shared-types";
+/** Re-export SemanticStyleData as StyleData for backward compatibility */
 export type { SemanticStyleData as StyleData } from "./shared-types";
 
 // Keep StyleData as alias for SemanticStyleData
@@ -28,6 +29,7 @@ const DEFAULT_STYLE_PATH = join(
   ".golems-zikaron/style/semantic-style-data.json"
 );
 
+/** Parse raw JSON into validated StyleData */
 export function parseStyleData(json: string): StyleData {
   const data = JSON.parse(json);
   if (!data.topics || typeof data.topics !== "object") {
@@ -46,6 +48,7 @@ function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+/** Generate a human-readable markdown style card from style data */
 export function exportStyleCard(data: StyleData): string {
   const lines: string[] = [];
 

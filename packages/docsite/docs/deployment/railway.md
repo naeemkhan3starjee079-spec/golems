@@ -112,7 +112,12 @@ Returns `200 OK` with:
 {
   "status": "ok",
   "uptime": 3600,
-  "timestamp": "2026-02-06T10:30:00Z"
+  "backend": "haiku",
+  "stateBackend": "supabase",
+  "telegramMode": "direct",
+  "israelTime": "2026-02-06T12:30:00+02:00",
+  "isWorkHours": true,
+  "isWorkday": true
 }
 ```
 
@@ -128,15 +133,22 @@ Returns API cost stats:
 
 ```json
 {
-  "today": {
-    "calls": 145,
-    "input_tokens": 28450,
-    "output_tokens": 12890,
-    "cost_usd": 0.58
-  },
-  "all_time": {
-    "calls": 8234,
-    "cost_usd": 156.82
+  "totalCalls": 145,
+  "totalInputTokens": 28450,
+  "totalOutputTokens": 12890,
+  "estimatedCostUSD": 0.58,
+  "recentCalls": [
+    {
+      "timestamp": "2026-02-06T10:30:00Z",
+      "model": "claude-haiku-4-5-20251001",
+      "source": "email-golem",
+      "inputTokens": 1250,
+      "outputTokens": 342
+    }
+  ],
+  "bySource": {
+    "email-golem": { "calls": 52, "cost": 0.23 },
+    "job-golem": { "calls": 93, "cost": 0.35 }
   }
 }
 ```
@@ -191,7 +203,7 @@ railway up
 
 ## Database Migrations
 
-Supabase migrations live in `supabase/migrations/`:
+Supabase migrations live in `packages/autonomous/supabase/migrations/`:
 
 ```bash
 # List pending migrations
@@ -237,8 +249,7 @@ railway logs
 ```bash
 railway exec bash
 # Now in Railway container
-npm run build
-npm run dev
+bun run src/cloud-worker.ts
 ```
 
 ## Cost Management

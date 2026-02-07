@@ -28,6 +28,7 @@ function getClient(): SupabaseClient {
   return supabase;
 }
 
+/** Create a new practice session in Supabase */
 export async function createSession(
   mode: InterviewMode,
   difficulty: Difficulty
@@ -47,6 +48,7 @@ export async function createSession(
   return mapSession(data);
 }
 
+/** Get a practice session by ID from Supabase */
 export async function getSession(id: string): Promise<PracticeSession | null> {
   const { data } = await getClient()
     .from("practice_sessions")
@@ -57,6 +59,7 @@ export async function getSession(id: string): Promise<PracticeSession | null> {
   return data ? mapSession(data) : null;
 }
 
+/** Mark a practice session as passed or failed in Supabase */
 export async function completeSession(
   id: string,
   passed: boolean,
@@ -82,6 +85,7 @@ export async function completeSession(
   return (await getSession(id))!;
 }
 
+/** Get recent practice sessions from Supabase, optionally filtered by mode */
 export async function getRecentSessions(
   limit: number = 10,
   mode?: InterviewMode
@@ -100,6 +104,7 @@ export async function getRecentSessions(
   return (data || []).map(mapSession);
 }
 
+/** Add a question to a practice session in Supabase */
 export async function addQuestion(
   sessionId: string,
   difficulty: Difficulty,
@@ -126,6 +131,7 @@ export async function addQuestion(
   };
 }
 
+/** Get all questions for a practice session from Supabase */
 export async function getSessionQuestions(sessionId: string): Promise<SessionQuestion[]> {
   const { data } = await getClient()
     .from("practice_questions")
@@ -142,6 +148,7 @@ export async function getSessionQuestions(sessionId: string): Promise<SessionQue
   }));
 }
 
+/** Calculate practice statistics from Supabase, optionally filtered by mode */
 export async function getStats(mode?: InterviewMode): Promise<PracticeStats> {
   let query = getClient()
     .from("practice_sessions")
@@ -204,6 +211,7 @@ export async function getStats(mode?: InterviewMode): Promise<PracticeStats> {
   };
 }
 
+/** Get the currently active practice session from Supabase, if any */
 export async function getActiveSession(mode?: InterviewMode): Promise<PracticeSession | null> {
   let query = getClient()
     .from("practice_sessions")

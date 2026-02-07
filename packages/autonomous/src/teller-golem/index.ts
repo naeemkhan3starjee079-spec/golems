@@ -25,10 +25,11 @@ import type { ScoredEmail, MonthlyReport, TaxReport } from "./types";
 import type { ScoredEmail as EmailGolemScoredEmail } from "../email-golem/types";
 
 /**
- * Generate a monthly financial report
+ * Generate a monthly financial report for a given month.
+ * Aggregates all payments for the month by category and vendor.
  *
- * @param month - Month in YYYY-MM format (defaults to current month)
- * @returns Monthly report data
+ * @param month - Month in YYYY-MM format (defaults to current month if not provided)
+ * @returns Promise resolving to monthly report with spending totals and breakdowns
  */
 export async function generateMonthlyReport(
   month?: string
@@ -38,10 +39,11 @@ export async function generateMonthlyReport(
 }
 
 /**
- * Generate a tax report for a year
+ * Generate a tax report for a given year.
+ * Aggregates all payments for the year into IRS Schedule C categories with line items.
  *
- * @param year - Year for report (defaults to current year)
- * @returns Tax report data
+ * @param year - Tax year for report (defaults to current year if not provided)
+ * @returns Promise resolving to tax report with deductible totals and vendor itemizations
  */
 export async function generateTaxReport(year?: number): Promise<TaxReport> {
   const reportYear = year || new Date().getFullYear();
@@ -49,16 +51,12 @@ export async function generateTaxReport(year?: number): Promise<TaxReport> {
 }
 
 /**
- * Process a subscription email routed from EmailGolem
- *
- * Handles:
- * 1. Payment failure detection and alerting
- * 2. Expense categorization into IRS Schedule C categories
- * 3. Payment recording
- * 4. Subscription tracking
- * 5. Event logging
+ * Process a subscription email routed from EmailGolem.
+ * Handles payment failure detection, expense categorization, payment recording,
+ * subscription tracking, and event logging.
  *
  * @param emailGolemEmail - The scored email from email-golem router
+ * @returns Promise that resolves when email processing is complete
  */
 export async function processSubscriptionEmail(
   emailGolemEmail: EmailGolemScoredEmail
@@ -135,7 +133,8 @@ export async function processSubscriptionEmail(
     "tellergolem"
   );
 
-  console.log(
+  // Log processing result for operational visibility (launchd logs)
+  console.warn(
     `[teller-golem] Processed: ${expense.vendor} (${expense.category}${expense.amount ? ` - $${expense.amount.toFixed(2)}` : ""})`
   );
 }

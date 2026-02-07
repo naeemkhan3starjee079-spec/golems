@@ -14,7 +14,7 @@ import { dirname } from 'path';
 import type { Email, Subscription, Payment, QueuedItem, SubscriptionSummary, SafeResult } from './types';
 import { GOLEM_CATEGORIES } from './router';
 
-// Offline queue path - in golems state directory
+/** Offline queue path for storing failed DB operations */
 export const OFFLINE_QUEUE_PATH = process.env.HOME + '/.golems-zikaron/offline-queue.json';
 
 /**

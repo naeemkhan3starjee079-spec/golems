@@ -23,6 +23,7 @@ import {
   type MessageType,
 } from "./outreach-db";
 
+/** A high-scoring job match from JobGolem */
 export interface JobMatch {
   id: string;
   title: string;
@@ -35,6 +36,7 @@ export interface JobMatch {
   reason?: string;
 }
 
+/** Result of processing a hot job match through the outreach pipeline */
 export interface HotMatchResult {
   jobId: string;
   company: string;
@@ -46,6 +48,7 @@ export interface HotMatchResult {
   error?: string;
 }
 
+/** Options for controlling the outreach processing pipeline */
 export interface ProcessOptions {
   /** Skip contact search (for testing or when rate limited) */
   skipContactSearch?: boolean;
@@ -135,7 +138,7 @@ export async function processHotMatch(
 
       // Skip unreachable contacts (no email AND no linkedin)
       if (!contact.email && !contact.linkedinUrl) {
-        console.log(`[Outreach] Skipping unreachable contact (no email or LinkedIn)`);
+        console.warn(`[Outreach] Skipping unreachable contact (no email or LinkedIn)`);
         continue;
       }
 

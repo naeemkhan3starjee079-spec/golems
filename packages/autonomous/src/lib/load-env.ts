@@ -32,6 +32,7 @@ function findPackageRoot(startPath: string): string {
 
 let _loaded = false;
 
+/** Load .env from package root, returns true if loaded successfully */
 export function loadEnv(): boolean {
   if (_loaded) return true;
 

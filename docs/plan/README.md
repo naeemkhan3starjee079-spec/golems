@@ -10,9 +10,9 @@
 | [Phase 2: Cloud](phase-2-cloud/) | ✅ DONE | #9 | Railway deploy, Haiku backend, Supabase state, smart scheduling |
 | [Phase 2.5: Infra](phase-2.5-infra/) | ✅ DONE | #10, #14, #16, #17 | Docs site, wizard, admin UI, monitoring, security, doctor |
 | [Phase 3: TellerGolem](phase-3-teller/) | ✅ DONE | #15 | Financial domain expert: categorizer, alerts, reports, MCP, 29 tests |
-| [Phase 4: Tooling](phase-4-tooling/) | 🏗️ ACTIVE | #28, #29 | Helpers layer, DeepSource, Highlight, Exa, skills catalog |
+| [Phase 4: Tooling](phase-4-tooling/) | ✅ DONE | #28, #29, #30, #32 | Helpers layer, DeepSource, Exa, skills catalog, docsite redesign |
 
-**Overall: 34/35 parts done (97%) — Only Exa MCP (needs API key) remains**
+**Overall: 35/35 parts done (100%) — Plan complete!**
 
 ## Phase 4 TODOs (Current)
 
@@ -20,7 +20,7 @@
 |---|------|------|------|--------|
 | 1 | 29 | DeepSource (replace Dependabot) | S | ✅ DONE |
 | 2 | 30 | Highlight.io (observability) | M | ❌ CANCELLED |
-| 3 | 31 | Exa MCP (AI web search) | M | ⏸️ BLOCKED (needs API key) |
+| 3 | 31 | Exa MCP (AI web search) | M | ✅ DONE |
 | 4 | 32 | Skills discovery catalog | M | ✅ DONE |
 | 5 | 33 | Plan restructure + session handoff | M | ✅ DONE |
 
@@ -40,7 +40,7 @@
 
 **Highlight.io (Part 30):** ❌ CANCELLED - Service shutting down Feb 28 2026, absorbed by LaunchDarkly. No action needed.
 
-**Exa MCP (Part 31):** 📋 TODO - Awaiting API key setup. Ready to implement when credentials available.
+**Exa MCP (Part 31):** ✅ DONE - Exa wired into contact-finder.ts as search source (GitHub > Exa > Hunter priority). API key configured in `.mcp.json`.
 
 ## How to Use This Plan
 

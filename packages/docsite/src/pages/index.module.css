@@ -1,23 +1,523 @@
-/**
- * CSS files with the .module.css suffix will be treated as CSS modules
- * and scoped locally.
- */
-
+/* Hero section */
 .heroBanner {
-  padding: 4rem 0;
-  text-align: center;
   position: relative;
   overflow: hidden;
+  background: linear-gradient(135deg, #111110 0%, #1a1510 50%, #111110 100%);
+  padding: 0;
+  min-height: 520px;
+  display: flex;
+  align-items: center;
 }
 
-@media screen and (max-width: 996px) {
-  .heroBanner {
-    padding: 2rem;
-  }
+.heroBanner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 600px 400px at 20% 50%, rgba(229, 149, 0, 0.08) 0%, transparent 70%),
+    radial-gradient(ellipse 400px 300px at 80% 30%, rgba(196, 109, 60, 0.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.heroInner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3rem;
+  width: 100%;
+  padding: 3rem 2rem;
+  position: relative;
+  z-index: 1;
+}
+
+.heroContent {
+  flex: 0 1 420px;
+}
+
+.heroLogo {
+  width: 140px;
+  height: 140px;
+  margin-bottom: 1.5rem;
+  filter: drop-shadow(0 0 30px rgba(229, 149, 0, 0.4));
+}
+
+/* Terminal + Telegram side by side */
+.heroShowcase {
+  flex: 1;
+  display: flex;
+  gap: 1.25rem;
+  align-items: flex-start;
+  max-width: 680px;
+}
+
+.heroTitle {
+  font-size: 3rem;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+  color: #e8e2d6;
+  margin-bottom: 0.5rem;
+}
+
+.heroSubtitle {
+  font-size: 1.15rem;
+  color: #e59500;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.heroTagline {
+  font-family: 'IBM Plex Mono', 'Fira Code', Monaco, monospace;
+  font-size: 0.9rem;
+  color: #7c6f5e;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.heroTagline span {
+  color: #a09080;
+}
+
+.heroTaglineArrow {
+  color: #c46d3c;
+}
+
+.heroTaglineHighlight {
+  color: #2dd4a8 !important;
+  text-shadow: 0 0 12px rgba(45, 212, 168, 0.3);
 }
 
 .buttons {
   display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.primaryButton {
+  background: linear-gradient(135deg, #e59500, #c46d3c);
+  color: #111110 !important;
+  border: none;
+  padding: 0.75rem 2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  text-decoration: none !important;
+}
+
+.primaryButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(229, 149, 0, 0.4);
+  color: #111110 !important;
+}
+
+.primaryButton:focus-visible {
+  outline: 2px solid #2dd4a8;
+  outline-offset: 2px;
+}
+
+.primaryButton:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 15px rgba(229, 149, 0, 0.3);
+}
+
+.secondaryButton {
+  background: transparent;
+  color: #2dd4a8 !important;
+  border: 1px solid rgba(45, 212, 168, 0.3);
+  padding: 0.75rem 2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  text-decoration: none !important;
+}
+
+.secondaryButton:hover {
+  border-color: #2dd4a8;
+  background: rgba(45, 212, 168, 0.08);
+  color: #2dd4a8 !important;
+}
+
+.secondaryButton:focus-visible {
+  outline: 2px solid #2dd4a8;
+  outline-offset: 2px;
+}
+
+.secondaryButton:active {
+  background: rgba(45, 212, 168, 0.15);
+}
+
+/* Golems grid */
+.golemsSection {
+  padding: 4rem 0;
+  background: linear-gradient(180deg, #111110 0%, #0d0d0c 100%);
+}
+
+.sectionTitle {
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 800;
+  color: #e8e2d6;
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.03em;
+}
+
+.sectionSubtitle {
+  text-align: center;
+  color: #7c6f5e;
+  margin-bottom: 3rem;
+  font-size: 1rem;
+}
+
+.golemGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+.golemCard {
+  background: rgba(26, 21, 16, 0.8);
+  border: 1px solid rgba(196, 109, 60, 0.12);
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+  text-decoration: none !important;
+  color: inherit !important;
+  display: block;
+}
+
+.golemCard:hover {
+  border-color: rgba(229, 149, 0, 0.4);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(229, 149, 0, 0.1);
+}
+
+.golemCard:focus-visible {
+  outline: 2px solid #2dd4a8;
+  outline-offset: 2px;
+}
+
+.golemCard:active {
+  transform: translateY(-1px);
+}
+
+.golemCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.golemEmoji {
+  font-size: 1.8rem;
+  width: 48px;
+  height: 48px;
+  display: flex;
   align-items: center;
   justify-content: center;
+  background: rgba(229, 149, 0, 0.08);
+  border-radius: 10px;
+}
+
+.golemName {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #e8e2d6;
+}
+
+.golemDesc {
+  color: #a09080;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Architecture section */
+.archSection {
+  padding: 4rem 0;
+  background: #111110;
+}
+
+.archDiagram {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.archBox {
+  flex: 1;
+  background: rgba(26, 21, 16, 0.8);
+  border: 1px solid rgba(196, 109, 60, 0.15);
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.archBoxTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #e59500;
+  margin-bottom: 0.75rem;
+}
+
+.archList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.archList li {
+  color: #a09080;
+  font-size: 0.85rem;
+  padding: 0.25rem 0;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.archList li::before {
+  content: '\2022 ';
+  color: #c46d3c;
+}
+
+.archArrow {
+  font-size: 1.5rem;
+  color: #2dd4a8;
+  flex-shrink: 0;
+}
+
+/* Light mode overrides */
+:global([data-theme='light']) .heroBanner {
+  background: linear-gradient(135deg, #f5f0e8 0%, #ede6d9 50%, #f5f0e8 100%);
+}
+
+:global([data-theme='light']) .heroBanner::before {
+  background:
+    radial-gradient(ellipse 600px 400px at 20% 50%, rgba(229, 149, 0, 0.06) 0%, transparent 70%),
+    radial-gradient(ellipse 400px 300px at 80% 30%, rgba(196, 109, 60, 0.04) 0%, transparent 70%);
+}
+
+:global([data-theme='light']) .heroTitle {
+  color: #1a1510;
+}
+
+:global([data-theme='light']) .heroSubtitle {
+  color: #b07400;
+}
+
+:global([data-theme='light']) .heroTagline {
+  color: #7c6f5e;
+}
+
+:global([data-theme='light']) .heroTagline span {
+  color: #5a5040;
+}
+
+:global([data-theme='light']) .heroTaglineArrow {
+  color: #c46d3c;
+}
+
+:global([data-theme='light']) .heroTaglineHighlight {
+  color: #1a8a6e !important;
+  text-shadow: none;
+}
+
+:global([data-theme='light']) .primaryButton {
+  background: linear-gradient(135deg, #c48000, #a85a30);
+  color: #fff !important;
+}
+
+:global([data-theme='light']) .primaryButton:hover {
+  box-shadow: 0 8px 30px rgba(180, 120, 0, 0.3);
+  color: #fff !important;
+}
+
+:global([data-theme='light']) .secondaryButton {
+  color: #1a8a6e !important;
+  border-color: rgba(26, 138, 110, 0.4);
+}
+
+:global([data-theme='light']) .secondaryButton:hover {
+  border-color: #1a8a6e;
+  background: rgba(26, 138, 110, 0.06);
+  color: #1a8a6e !important;
+}
+
+:global([data-theme='light']) .golemsSection {
+  background: linear-gradient(180deg, #f5f0e8 0%, #ede6d9 100%);
+}
+
+:global([data-theme='light']) .sectionTitle {
+  color: #1a1510;
+}
+
+:global([data-theme='light']) .sectionSubtitle {
+  color: #7c6f5e;
+}
+
+:global([data-theme='light']) .golemCard {
+  background: rgba(255, 255, 255, 0.7);
+  border-color: rgba(196, 109, 60, 0.15);
+}
+
+:global([data-theme='light']) .golemCard:hover {
+  border-color: rgba(180, 120, 0, 0.4);
+  box-shadow: 0 12px 40px rgba(180, 120, 0, 0.08);
+}
+
+:global([data-theme='light']) .golemEmoji {
+  background: rgba(229, 149, 0, 0.06);
+}
+
+:global([data-theme='light']) .golemName {
+  color: #1a1510;
+}
+
+:global([data-theme='light']) .golemDesc {
+  color: #5a5040;
+}
+
+:global([data-theme='light']) .archSection {
+  background: #f5f0e8;
+}
+
+:global([data-theme='light']) .archBox {
+  background: rgba(255, 255, 255, 0.7);
+  border-color: rgba(196, 109, 60, 0.15);
+}
+
+:global([data-theme='light']) .archBoxTitle {
+  color: #b07400;
+}
+
+:global([data-theme='light']) .archList li {
+  color: #5a5040;
+}
+
+:global([data-theme='light']) .heroLogo {
+  filter: drop-shadow(0 0 20px rgba(180, 120, 0, 0.25));
+}
+
+/* Responsive */
+@media screen and (max-width: 996px) {
+  .heroInner {
+    flex-direction: column;
+    gap: 2rem;
+    padding: 2rem 1.5rem;
+  }
+
+  .heroContent {
+    text-align: center;
+    flex: none;
+    max-width: 100%;
+  }
+
+  .heroTagline {
+    justify-content: center;
+  }
+
+  .buttons {
+    justify-content: center;
+  }
+
+  .heroShowcase {
+    max-width: 100%;
+    justify-content: center;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .heroTitle {
+    font-size: 2.5rem;
+  }
+
+  .heroLogo {
+    width: 100px;
+    height: 100px;
+  }
+
+  .heroBanner {
+    min-height: auto;
+  }
+
+  .heroShowcase {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .golemsSection {
+    padding: 3rem 0;
+  }
+
+  .golemGrid {
+    grid-template-columns: 1fr;
+    padding: 0 1rem;
+  }
+
+  .archSection {
+    padding: 3rem 0;
+  }
+
+  .archDiagram {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .archArrow {
+    transform: rotate(90deg);
+  }
+
+  .buttons {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .primaryButton,
+  .secondaryButton {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .heroInner {
+    padding: 1.5rem 1rem;
+    gap: 1.5rem;
+  }
+
+  .heroTitle {
+    font-size: 2rem;
+  }
+
+  .heroSubtitle {
+    font-size: 1.1rem;
+  }
+
+  .heroTagline {
+    font-size: 0.85rem;
+  }
+
+  .heroLogo {
+    width: 80px;
+    height: 80px;
+  }
+
+  .sectionTitle {
+    font-size: 1.6rem;
+  }
+
+  .golemGrid {
+    gap: 1rem;
+  }
+
+  .golemCard {
+    padding: 1.25rem;
+  }
 }

@@ -12,9 +12,10 @@ import { homedir } from "os";
 import { join } from "path";
 import type { TopicStyle, SemanticStyleData } from "../lib/shared-types";
 
-// Re-export for backward compatibility
+/** Re-export shared style types for backward compatibility */
 export type { TopicStyle, SemanticStyleData } from "../lib/shared-types";
 
+/** Style rules derived from Zikaron analysis for outreach messages */
 export interface StyleGuidelines {
   /** Target formality (0=casual, 1=formal) */
   formality: number;

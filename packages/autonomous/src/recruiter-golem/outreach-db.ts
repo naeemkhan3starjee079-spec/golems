@@ -12,11 +12,14 @@ import { join } from "path";
 import { homedir } from "os";
 import { mkdirSync, existsSync } from "fs";
 
-// Types
-export type ContactSource = "github" | "linkedin" | "hunter" | "lusha" | "website" | "manual";
+/** Source where a contact was discovered */
+export type ContactSource = "github" | "linkedin" | "hunter" | "lusha" | "exa" | "website" | "manual";
+/** Type of outreach message */
 export type MessageType = "email" | "linkedin_connect" | "linkedin_message";
+/** Lifecycle status of an outreach message */
 export type OutreachStatus = "draft" | "sent" | "responded" | "no_response";
 
+/** A person at a target company */
 export interface Contact {
   id: string;
   name: string;
@@ -28,6 +31,7 @@ export interface Contact {
   createdAt: string;
 }
 
+/** An outreach message sent to a contact */
 export interface Outreach {
   id: string;
   jobId: string;
@@ -40,6 +44,7 @@ export interface Outreach {
   respondedAt: string | null;
 }
 
+/** Aggregated outreach statistics across all messages */
 export interface OutreachStats {
   total: number;
   draft: number;
@@ -49,6 +54,7 @@ export interface OutreachStats {
   responseRate: number;
 }
 
+/** Raw research data gathered about a company */
 export interface CompanyResearchData {
   website?: string;
   techStack?: string[];
@@ -59,6 +65,7 @@ export interface CompanyResearchData {
   [key: string]: unknown;
 }
 
+/** Persisted company research record with metadata */
 export interface CompanyResearch {
   id: string;
   companyName: string;
@@ -178,6 +185,7 @@ function generateId(): string {
 
 // ============ Contact Functions ============
 
+/** Input for creating a new contact record */
 export interface CreateContactInput {
   name: string;
   email?: string;
@@ -274,6 +282,7 @@ export function getContactsByCompany(company: string): Contact[] {
 
 // ============ Outreach Functions ============
 
+/** Input for creating a new outreach record */
 export interface CreateOutreachInput {
   jobId: string;
   contactId: string;
@@ -474,6 +483,7 @@ export function getOutreachStats(): OutreachStats {
 
 // ============ Company Research Functions ============
 
+/** Input for saving or updating company research */
 export interface SaveCompanyResearchInput {
   companyName: string;
   data: CompanyResearchData;

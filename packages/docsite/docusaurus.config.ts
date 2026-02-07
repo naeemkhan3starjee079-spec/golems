@@ -11,6 +11,11 @@ const config: Config = {
     v4: true,
   },
 
+  markdown: {
+    mermaid: true,
+  },
+  themes: ['@docusaurus/theme-mermaid'],
+
   url: 'https://etanhey.github.io',
   baseUrl: '/golems/',
 
@@ -43,16 +48,31 @@ const config: Config = {
   themeConfig: {
     image: 'img/golems-social-card.jpg',
     colorMode: {
-      respectPrefersColorScheme: true,
+      defaultMode: 'dark',
+      respectPrefersColorScheme: false,
     },
     navbar: {
       title: 'Golems',
+      logo: {
+        alt: 'Golems Logo',
+        src: 'img/golems-logo.svg',
+      },
       items: [
         {
           type: 'docSidebar',
           sidebarId: 'mainSidebar',
           position: 'left',
           label: 'Docs',
+        },
+        {
+          to: '/docs/journey',
+          label: 'Journey',
+          position: 'left',
+        },
+        {
+          to: '/docs/llm',
+          label: 'For LLMs',
+          position: 'left',
         },
         {
           href: 'https://github.com/EtanHey/golems',
@@ -84,6 +104,8 @@ const config: Config = {
           title: 'More',
           items: [
             { label: 'GitHub', href: 'https://github.com/EtanHey/golems' },
+            { label: 'Journey', to: '/docs/journey' },
+            { label: 'etanheyman.com', href: 'https://etanheyman.com' },
           ],
         },
       ],

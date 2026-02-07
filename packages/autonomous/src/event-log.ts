@@ -18,7 +18,7 @@ const DEFAULT_EVENT_LOG_PATH = join(homedir(), ".golems-zikaron", "event-log.jso
 // Maximum events to keep
 const MAX_EVENTS = 100;
 
-// Golem actors
+/** Golem actors that can produce events */
 export type GolemActor =
   | "claudegolem"
   | "ollamagolem"
@@ -28,7 +28,7 @@ export type GolemActor =
   | "recruitergolem"
   | "tellergolem";
 
-// Event types
+/** Types of events that golems can log */
 export type EventType =
   | "soltome_post"
   | "draft_approved"
@@ -40,7 +40,7 @@ export type EventType =
   | "nightshift_pr"
   | "job_match";
 
-// Event structure
+/** A logged event from any golem actor */
 export interface GolemEvent {
   id: string;
   timestamp: string;

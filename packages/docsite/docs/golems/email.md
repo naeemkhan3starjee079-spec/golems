@@ -4,14 +4,15 @@ sidebar_position: 1
 
 # EmailGolem
 
-EmailGolem is the intake layer for all external communication. It polls Gmail every 10 minutes, scores emails for urgency, routes them to domain experts, and manages reply drafting and follow-ups.
+EmailGolem is the intake layer for all external communication. It polls Gmail on a schedule (hourly 6am-7pm in cloud with 12pm lunch skip and 10pm check, or every 10 minutes via local launchd), scores emails for urgency, routes them to domain experts, and manages reply drafting and follow-ups.
 
 ## Core Pipeline
 
-```
-Gmail → OAuth2 Poll (10min) → Scoring (Haiku) → Routing → Domain Golems
-                                                  ↓
-                              Reply Drafting ← Follow-up Tracking
+```mermaid
+flowchart LR
+    A[Gmail] --> B[OAuth2 Poll<br/>hourly / 10min] --> C[Scoring<br/>Haiku LLM] --> D[Routing] --> E[Domain Golems]
+    D --> F[Follow-up Tracking]
+    F --> G[Reply Drafting]
 ```
 
 ### Scoring System (1-10)
@@ -21,7 +22,7 @@ Gmail → OAuth2 Poll (10min) → Scoring (Haiku) → Routing → Domain Golems
 - **5-6** — Monthly tracking (archive, but revisit montly)
 - **1-4** — Ignore (auto-archive)
 
-Scoring is done via Haiku LLM (switched from Ollama in Phase 2) analyzing subject, sender, and body context.
+Scoring is done via Ollama by default (or Haiku when `LLM_BACKEND=haiku`) analyzing subject, sender, and body context.
 
 ### Email Routing
 
@@ -30,21 +31,23 @@ Routes emails to domain golems based on content patterns:
 | Email Type | Router | GolemActor | Notes |
 |------------|--------|-----------|-------|
 | Job offers, interview requests | Contact pattern + keywords | `recruitergolem` | Outreach DB updated |
-| Subscription/billing | Domain `@stripe.com`, `@paddle.com`, etc | `tellergolem` | Planned: cost tracking |
+| Subscription/billing | Domain `@stripe.com`, `@paddle.com`, etc | `tellergolem` | Expense categorization, payment alerts, reports |
 | Tech updates, urgent notifications | `[urgent]` tag, mention of code/PR | `claudegolem` | Fast-track to ClaudeGolem |
-| General | Fallback | Briefing log | Score determines visibility |
+| General | Fallback | EmailGolem queue | Score determines visibility, queryable via `email_getByGolem` |
 
 ## Files
 
 **Core Engine:**
 - `src/email-golem/index.ts` — Main entry point, Gmail client initialization
 - `src/email-golem/gmail-client.ts` — OAuth2 auth, polling logic
-- `src/email-golem/scorer.ts` — Haiku scoring pipeline with caching
-- `src/email-golem/db-client.ts` — SQLite/Supabase adapter for email storage
+- `src/email-golem/scorer.ts` — Ollama/Haiku scoring pipeline (no caching)
+- `src/email-golem/db-client.ts` — Supabase adapter with offline queue
+- `src/email-golem/mcp-server.ts` — MCP server (7 email tools + 2 teller tools)
+- `src/email-golem/types.ts` — TypeScript interfaces
 
 **Routing & Processing:**
 - `src/email-golem/router.ts` — Domain golem routing logic
-- `src/email-golem/draft-reply.ts` — AI reply generation with intents
+- `src/email-golem/draft-reply.ts` — Template-based reply generation with intents
 - `src/email-golem/followup.ts` — Follow-up scheduling and tracking
 
 ## Key Features
@@ -73,18 +76,19 @@ Category-based due dates:
 | Category | Due Date |
 |----------|----------|
 | Interview | 3 days |
-| Job application | 5 days |
-| Urgent/PR | 1 day |
-| General | 30 days |
+| Job | 5 days |
+| Urgent | 1 day |
+| Tech-update | 7 days |
+| Other | 7 days |
 
 Follow-ups trigger alerts if not completed by due date.
 
 ## MCP Tools
 
-Available via the Zikaron MCP server:
+Available via the `golems-email` MCP server (`email-golem/mcp-server.ts`):
 
 - **`email_getRecent`** — Fetch last N emails from inbox
-- **`email_search`** — Search emails by sender, subject, date range
+- **`email_search`** — Search emails by keyword (subject/sender, last 7 days only)
 - **`email_subscriptions`** — Get subscription/billing emails (Stripe, Paddle, etc)
 - **`email_urgent`** — Get emails flagged as urgent
 - **`email_stats`** — Summary: total, by score, by routing
@@ -95,11 +99,12 @@ Available via the Zikaron MCP server:
 
 ```bash
 # 1Password items (store in any vault)
-export GMAIL_OAUTH_REFRESH_TOKEN=$(op read op://YOUR_VAULT/YOUR_GMAIL_ITEM/refresh_token)
+export GMAIL_REFRESH_TOKEN=$(op read op://YOUR_VAULT/YOUR_GMAIL_ITEM/refresh_token)
 export ANTHROPIC_API_KEY=$(op read op://YOUR_VAULT/YOUR_ANTHROPIC_ITEM/credential)
+export SUPABASE_SERVICE_KEY=$(op read op://YOUR_VAULT/YOUR_SUPABASE_ITEM/service_key)
 
 # Scoring model (Phase 2+)
-export LLM_BACKEND=haiku  # or 'ollama' for local
+export LLM_BACKEND=haiku  # or 'ollama' (default)
 ```
 
 ## Database Schema
@@ -118,20 +123,22 @@ CREATE TABLE emails (
   follow_up_due_at TIMESTAMP
 );
 
--- Email threads (for conversation tracking)
-CREATE TABLE email_threads (
+-- Subscriptions table (for TellerGolem)
+CREATE TABLE subscriptions (
   id TEXT PRIMARY KEY,
-  root_email_id TEXT,
-  emails JSONB (array of email IDs in thread)
+  vendor TEXT,
+  amount NUMERIC,
+  category TEXT,
+  created_at TIMESTAMP
 );
 
--- Drafts (reply suggestions)
-CREATE TABLE email_drafts (
+-- Payments table (for TellerGolem)
+CREATE TABLE payments (
   id TEXT PRIMARY KEY,
-  email_id TEXT,
-  intent TEXT,
-  body TEXT,
-  sent_at TIMESTAMP
+  vendor TEXT,
+  amount NUMERIC,
+  category TEXT,
+  payment_date TIMESTAMP
 );
 ```
 
@@ -143,42 +150,45 @@ cd packages/autonomous
 # Manually trigger poll cycle (normally runs every 10min)
 bun src/email-golem/index.ts
 
-# Score a single email
-bun src/email-golem/scorer.ts --email-id <id>
+# Search emails (dry run mode)
+bun src/email-golem/index.ts search --dry-run
 
-# Test reply drafting
-bun src/email-golem/draft-reply.ts --email-id <id> --intent accept
+# Limit processing to N emails
+bun src/email-golem/index.ts --max 10
 ```
 
 ## Integration with Other Golems
 
 - **RecruiterGolem** — Job emails trigger outreach DB updates
-- **TellerGolem** — Subscription emails routed for expense tracking
+- **TellerGolem** — Subscription emails routed for expense categorization, payment alerts, and reports
 - **ClaudeGolem** — Urgent emails fast-tracked to code/PR context
 - **Telegram Bot** — High-score (10) emails sent as instant alerts
 
 ## Troubleshooting
 
 **Emails not being scored:**
+
 ```bash
-# Check Haiku API key
-op read op://YOUR_VAULT/YOUR_ANTHROPIC_ITEM/credential
+# Check LLM backend is running (Ollama or Haiku)
+echo $LLM_BACKEND
 
 # Check Gmail OAuth token
 op read op://YOUR_VAULT/YOUR_GMAIL_ITEM/refresh_token
 ```
 
 **Routing to wrong golem:**
+
 ```bash
-# Review scorer output (check routing patterns in router.ts)
-bun src/email-golem/router.ts --debug
+# Review routing patterns in router.ts
+# Router invokes handlers for each golem type (Recruiter, Teller, Claude)
 ```
 
 **Follow-ups not triggering:**
+
 ```bash
 # Check launchd job (runs via cron or launchd)
 launchctl list | grep golems-email
 cat ~/Library/LaunchAgents/golems-email.plist
 ```
 
-See `/docs/configuration.md` for Gmail OAuth setup.
+See `/docs/configuration/env-vars.md` for Gmail OAuth setup.

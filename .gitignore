@@ -12,3 +12,6 @@ packages/tax-helper/
 skills/golem-powers/tax-helper/
 packages/ralph/skills/golem-powers/tax-helper
 docs/tax-helper-plan.md
+
+# DeepSource CLI
+packages/docsite/bin/

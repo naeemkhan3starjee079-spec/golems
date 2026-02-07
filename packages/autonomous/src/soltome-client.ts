@@ -25,7 +25,7 @@ function getStateFile(): string {
 }
 const STATE_FILE = getStateFile();
 
-// Post structure
+/** A post on the Soltome discussion platform */
 export interface SoltomePost {
   id: string;
   title: string;

@@ -2217,6 +2217,7 @@ async function sendNotificationToTelegram(data: {
 // Start HTTP server for receiving notifications from hooks
 Bun.serve({
   port: NOTIFY_PORT,
+  hostname: "127.0.0.1", // Bind to localhost only — prevents network exposure
   fetch: async (req) => {
     const url = new URL(req.url);
 

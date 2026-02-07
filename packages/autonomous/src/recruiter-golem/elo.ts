@@ -12,7 +12,7 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
 
-// Interview modes from the skill (7 total)
+/** Interview practice modes (7 total) */
 export type InterviewMode =
   | "leetcode"
   | "system-design"
@@ -22,18 +22,22 @@ export type InterviewMode =
   | "optimization"
   | "complexity";
 
+/** Question difficulty level */
 export type Difficulty = "easy" | "medium" | "hard";
 
+/** Elo rating system configuration */
 export interface EloConfig {
   kFactor: number; // How much ratings change (default 32)
   initialRating: number; // Starting rating (default 1200)
 }
 
+/** Persisted Elo ratings for all interview modes */
 export interface EloState {
   ratings: Record<InterviewMode, number>;
   updatedAt: string;
 }
 
+/** Rating change result after a practice session */
 export interface SessionResult {
   oldRating: number;
   newRating: number;
@@ -48,7 +52,7 @@ const DEFAULT_CONFIG: EloConfig = {
   initialRating: 1200,
 };
 
-// All interview modes - exported for reuse in other modules
+/** All interview modes, exported for reuse */
 export const ALL_MODES: InterviewMode[] = [
   "leetcode",
   "system-design",

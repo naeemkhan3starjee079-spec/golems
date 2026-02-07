@@ -69,6 +69,5 @@ Single Node process with independent schedules per golem:
 
 ## See Also
 
-- [Deployment Guide](./deployment.md)
 - [Railway Setup](./deployment/railway.md)
 - [Config Reference](./configuration/env-vars.md)

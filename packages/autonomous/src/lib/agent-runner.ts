@@ -17,8 +17,10 @@ import { homedir } from "os";
 // TYPES
 // ═══════════════════════════════════════════════════════
 
+/** Supported AI agent backends */
 export type AgentBackend = "cursor" | "ollama" | "claude";
 
+/** Result from running an agent task */
 export interface AgentRunResult {
   output: string;
   success: boolean;
@@ -27,6 +29,7 @@ export interface AgentRunResult {
   outputPath?: string;
 }
 
+/** Options for configuring an agent run */
 export interface AgentRunOptions {
   backend?: AgentBackend;
   timeoutMs?: number;
@@ -36,6 +39,7 @@ export interface AgentRunOptions {
   saveTo?: string; // Save output to this path
 }
 
+/** Result from verifying a draft against research */
 export interface VerificationResult {
   confidence: number;
   corrections: string[];
@@ -288,6 +292,7 @@ Only output JSON.`;
 // RESEARCH UTILITIES
 // ═══════════════════════════════════════════════════════
 
+/** Get the filesystem path for a research file */
 export function getResearchPath(repo: string, topic: string): string {
   const fullPath = join(RESEARCH_BASE, repo, `${sanitizeFilename(topic)}.md`);
   if (!fullPath.startsWith(RESEARCH_BASE + "/")) {
@@ -296,6 +301,7 @@ export function getResearchPath(repo: string, topic: string): string {
   return fullPath;
 }
 
+/** Check if research exists for a repo/topic */
 export function hasResearch(repo: string, topic: string): boolean {
   try {
     return existsSync(getResearchPath(repo, topic));
@@ -304,6 +310,7 @@ export function hasResearch(repo: string, topic: string): boolean {
   }
 }
 
+/** Read research content for a repo/topic, or null if not found */
 export function readResearch(repo: string, topic: string): string | null {
   let path: string;
   try {

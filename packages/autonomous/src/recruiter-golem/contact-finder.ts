@@ -1,16 +1,18 @@
 /**
  * Contact Finder Module
  *
- * Finds contacts at companies using free sources:
+ * Finds contacts at companies using multiple sources:
  * - GitHub (org contributors, public emails)
+ * - Exa (AI-powered web search for company contacts)
  * - Hunter.io (50 free credits/month)
  * - Lusha (5 free credits/month)
  *
- * Priority: GitHub (free) > Hunter (50/mo) > Lusha (5/mo)
+ * Priority: GitHub (free) > Exa (1000/day free) > Hunter (50/mo) > Lusha (5/mo)
  */
 
 import { createContact, getContactsByCompany, type Contact, type ContactSource } from "./outreach-db";
 
+/** A contact discovered through GitHub, Hunter, Exa, or Lusha */
 export interface FoundContact {
   name: string;
   email: string | null;
@@ -20,6 +22,7 @@ export interface FoundContact {
   confidence: "high" | "medium" | "low";
 }
 
+/** Options for filtering and limiting contact search */
 export interface ContactSearchOptions {
   githubOrg?: string;
   companyDomain?: string;  // For Hunter.io
@@ -67,7 +70,21 @@ export async function findContacts(
     contacts.push(...githubContacts);
   }
 
-  // 2. Try Hunter.io if we have domain and need more contacts
+  // 2. Try Exa web search if we need more contacts
+  if (contacts.length < maxResults) {
+    const exaApiKey = process.env.EXA_API_KEY;
+    if (exaApiKey) {
+      const exaContacts = await findExaContacts(
+        companyName,
+        exaApiKey,
+        targetRoles,
+        maxResults - contacts.length
+      );
+      contacts.push(...exaContacts);
+    }
+  }
+
+  // 3. Try Hunter.io if we have domain and need more contacts
   if (options?.companyDomain && contacts.length < maxResults) {
     const hunterApiKey = process.env.HUNTER_API_KEY;
     if (hunterApiKey) {
@@ -80,7 +97,7 @@ export async function findContacts(
     }
   }
 
-  // 3. Save new contacts to database
+  // 4. Save new contacts to database
   for (const contact of contacts) {
     // Check if this contact already exists
     const existingContact = existing.find(
@@ -313,6 +330,97 @@ export async function findLushaContact(
     console.error("[Lusha] Check network and API key at: https://dashboard.lusha.com/");
     return null;
   }
+}
+
+/**
+ * Find contacts using Exa AI-powered web search (1000 req/day free tier)
+ */
+async function findExaContacts(
+  companyName: string,
+  apiKey: string,
+  targetRoles: string[],
+  maxResults: number
+): Promise<FoundContact[]> {
+  const contacts: FoundContact[] = [];
+
+  try {
+    const query = `${companyName} ${targetRoles.slice(0, 3).join(" OR ")} email LinkedIn`;
+
+    const response = await fetch("https://api.exa.ai/search", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+      },
+      body: JSON.stringify({
+        query,
+        numResults: maxResults * 2,
+        type: "neural",
+        contents: {
+          text: { maxCharacters: 1000 },
+          highlights: { numSentences: 3 },
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      console.error(`[Exa] API error ${response.status}: ${text}`);
+      return contacts;
+    }
+
+    const data = (await response.json()) as {
+      results?: Array<{
+        title?: string;
+        url?: string;
+        text?: string;
+        highlights?: string[];
+      }>;
+    };
+
+    if (!data.results) return contacts;
+
+    for (const result of data.results) {
+      if (contacts.length >= maxResults) break;
+
+      const text = [result.title, result.text, ...(result.highlights || [])].join(" ");
+
+      // Extract email from result text
+      const emailMatch = text.match(/[\w.+-]+@[\w-]+\.[\w.]+/);
+      // Extract LinkedIn URL
+      const linkedinMatch = text.match(/linkedin\.com\/in\/[\w-]+/);
+
+      if (!emailMatch && !linkedinMatch) continue;
+
+      // Try to extract name from title or text
+      const name = result.title?.split(/[|–-]/)[0]?.trim() || "Unknown";
+      const role = inferRoleFromText(text, targetRoles) || "Unknown";
+
+      contacts.push({
+        name,
+        email: emailMatch?.[0] || null,
+        linkedinUrl: linkedinMatch ? `https://www.${linkedinMatch[0]}` : null,
+        role,
+        source: "exa",
+        confidence: emailMatch ? "medium" : "low",
+      });
+    }
+  } catch (err) {
+    console.error("[Exa] Search failed:", err);
+  }
+
+  return contacts;
+}
+
+/**
+ * Infer role from arbitrary text using target role keywords
+ */
+function inferRoleFromText(text: string, targetRoles: string[]): string | null {
+  const lowerText = text.toLowerCase();
+  for (const role of targetRoles) {
+    if (lowerText.includes(role.toLowerCase())) return role;
+  }
+  return inferRoleFromBio(text);
 }
 
 /**

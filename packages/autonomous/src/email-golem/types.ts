@@ -1,6 +1,6 @@
-// EmailGolem Types
+/** EmailGolem Types */
 
-// Re-export GmailEmail from gmail-client for convenience
+/** Re-export GmailEmail from gmail-client for convenience */
 export type { GmailEmail } from "./gmail-client";
 
 /**
@@ -25,6 +25,7 @@ export interface ScoredEmail {
   reasoning?: string;     // AI's explanation
 }
 
+/** Stored email record in Supabase */
 export interface Email {
   id?: string;
   gmail_id: string;
@@ -38,6 +39,7 @@ export interface Email {
   notified: boolean;
 }
 
+/** Tracked subscription service */
 export interface Subscription {
   id?: string;
   service_name: string;
@@ -50,6 +52,7 @@ export interface Subscription {
   created_at?: Date;
 }
 
+/** Recorded payment event */
 export interface Payment {
   id?: string;
   subscription_id: string | null;
@@ -60,6 +63,7 @@ export interface Payment {
   created_at?: Date;
 }
 
+/** Item queued for offline sync */
 export interface QueuedItem {
   table: string;
   data: any;
@@ -67,6 +71,7 @@ export interface QueuedItem {
   id: string;
 }
 
+/** Monthly subscription spending summary */
 export interface SubscriptionSummary {
   totalMonthly: number;
   services: Array<{
@@ -79,6 +84,7 @@ export interface SubscriptionSummary {
   cancelledThisMonth: string[];
 }
 
+/** Result of a safe DB operation with offline fallback */
 export interface SafeResult {
   success: boolean;
   queued?: boolean;

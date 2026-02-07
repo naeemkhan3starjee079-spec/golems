@@ -43,6 +43,7 @@ const SOURCE_FORMAT: Record<string, { icon: string; format: (t: string, b: strin
   default: { icon: "📨", format: (t, b) => `📨 *${t}*\n\n${b}` },
 };
 
+/** Payload for sending a Telegram notification */
 export interface NotificationPayload {
   title: string;
   body: string;

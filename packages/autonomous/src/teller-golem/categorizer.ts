@@ -23,8 +23,10 @@ const VALID_CATEGORIES: TaxCategory[] = [
 
 /**
  * Categorize a subscription email into an IRS Schedule C tax category using LLM.
- *
  * Falls back to "other" with confidence 0 if the LLM returns null or an invalid category.
+ *
+ * @param email - The scored email to categorize
+ * @returns Promise resolving to categorized expense with category, confidence, and reasoning
  */
 export async function categorizeExpense(
   email: ScoredEmail
@@ -62,11 +64,10 @@ Respond in JSON:
 
 /**
  * Extract vendor name from an email sender string.
+ * Handles formats like "Netflix <billing@netflix.com>", "billing@netflix.com", and "Netflix".
  *
- * Handles formats like:
- * - "Netflix <billing@netflix.com>" → "Netflix"
- * - "billing@netflix.com" → "billing@netflix.com"
- * - "Netflix" → "Netflix"
+ * @param from - Email sender string to extract vendor name from
+ * @returns Extracted vendor name or "Unknown" if parsing fails
  */
 export function extractVendor(from: string): string {
   const match = from.match(/^([^<]+)/);

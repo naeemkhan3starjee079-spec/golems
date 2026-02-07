@@ -7,6 +7,7 @@
 
 import { execSync } from "child_process";
 
+/** Result of detecting a system component (tool, runtime, etc.) */
 export interface DetectionResult {
   available: boolean;
   version?: string;

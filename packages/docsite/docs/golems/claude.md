@@ -10,17 +10,17 @@ ClaudeGolem is the external-facing personality of the Golems ecosystem. It runs 
 
 ### 1. Telegram Chat
 
-Persistent Claude Code session via `--resume telegram-chat`:
+Persistent Claude Code session via `--continue`:
 
 ```bash
-claude code --from-pr --resume telegram-chat
+claude --continue
 ```
 
 **Features:**
 - **5-minute timeout** with typing heartbeat every 60s
 - **Event log injection** — "While You Were Down" context from other agents' events
 - **Casual tone** — 2/10 formality, Hebrew-English code-switching
-- **No push without approval** — All commits staged, ready for review
+- **Autonomous commits** — Creates commits and pushes to PRs
 
 ### 2. Soltome Posts
 
@@ -52,14 +52,15 @@ Learn more: [link to blog post]
 Autonomous code improvements running at **4am daily**:
 
 ```bash
-bun src/night-shift/runner.ts --target songscript
+bun src/night-shift.ts
 ```
 
 **Per-repo sessions:**
-- Repository rotation: `songscript` → `zikaron` → `golems/packages/ralph`
+- Repository rotation: `songscript` → `zikaron` → `claude-golem`
 - Scans for TODOs, linting issues, test gaps
 - Creates worktrees for isolated changes
 - Commits with auto-generated messages
+- Creates PRs and pushes changes
 - Telegram notification of PRs created
 
 **Quality gates:**
@@ -80,30 +81,22 @@ bun src/night-shift/runner.ts --target songscript
 
 ### Context Awareness
 
-ClaudeGolem maintains persistent state:
+ClaudeGolem maintains persistent state and personality defined in `SOUL.md`.
 
-```typescript
-// soul.ts — Persistent personality settings
-interface GolemaPersonality {
-  name: "ClaudeGolem";
-  voice: "casual" | "technical" | "playful";
-  projects: string[];  // Repos it works on
-  communication_style: {
-    formality: 2,
-    languages: ["en", "he"],
-    tone: "friendly_with_sarcasm"
-  };
-}
-```
+Communication style:
+- **Formality:** 2/10 (very casual)
+- **Languages:** Hebrew ↔ English code-switching
+- **Tone:** Friendly with occasional sarcasm
+- **Projects:** songscript, zikaron, claude-golem
 
-Stored in `~/.golems-zikaron/state.json`, loaded on every session spawn.
+State stored in `~/.golems-zikaron/state.json`, loaded on every session spawn.
 
 ## Event Log Injection
 
 When ClaudeGolem spawns, it receives:
 
 ```markdown
-# While You Were Down (last 4 hours)
+# While You Were Down (last 24 hours)
 
 ## EmailGolem Activity
 - Scored 12 emails (3 high priority)
@@ -122,24 +115,26 @@ When ClaudeGolem spawns, it receives:
 - Memory: 12.4k embeddings, 2.3GB
 ```
 
-This comes from `event-log.json` maintained by infrastructure.
+This comes from `event-log.json` maintained by infrastructure (last 24 hours via `getRecentEvents(24)`).
 
 ## Files
 
 **Core Engine:**
-- `src/claude-golem/index.ts` — Main entry point
-- `src/claude-golem/soul.ts` — Personality + persistent state
-- `src/claude-golem/event-logger.ts` — Event log ingestion
-- `src/claude-golem/night-shift.ts` — Autonomous runner
+- `src/telegram-bot.ts` — Telegram bot + notification server (port 3847)
+- `src/night-shift.ts` — Autonomous runner (4am)
+- `src/event-log.ts` — Event log for ClaudeGolem memory
+- `src/briefing.ts` — Morning briefing (8am)
+- `src/cloud-worker.ts` — Railway entry point for all cloud golems
 
-**Telegram Integration:**
-- `src/telegram/bot.ts` — Bot entry point
-- `src/telegram/handlers.ts` — Command routing
-- `src/telegram/state-bridge.ts` — Sync with local state
+**Content & Style:**
+- `src/post-generator.ts` — Critique-wave content generation
+- `src/soltome-client.ts` — Soltome API client
+- `src/soltome-learner.ts` — Content pattern learning (2am)
+- `src/lib/style-export.ts` — Semantic style data export
 
-**Content Creation:**
-- `src/content-golem/` — Soltome posts, ghostwriting
-- `src/content-golem/style-export.ts` — Semantic style data
+**State:**
+- `~/.golems-zikaron/state.json` — Night Shift target, session state
+- `~/.golems-zikaron/event-log.json` — Golem actions log
 
 ## Running ClaudeGolem
 
@@ -149,7 +144,7 @@ This comes from `event-log.json` maintained by infrastructure.
 cd packages/autonomous
 
 # Start persistent session
-claude code --from-pr --resume telegram-chat
+claude --continue
 
 # From Telegram, any message arrives here and gets routed
 # Bot handles standard commands, others go to Claude session
@@ -158,20 +153,19 @@ claude code --from-pr --resume telegram-chat
 ### Soltome Posting
 
 ```bash
-# Draft a post
-bun src/content-golem/index.ts --draft
+# Draft posts are created by post-generator.ts
 
-# Review in Telegram, then approve:
-# /post approve <post-id>
+# Review in Telegram with /drafts command
+# Then approve using inline buttons (approve:<id>)
 
-# Auto-posts to Soltome
+# Auto-posts to Soltome when approved
 ```
 
 ### Night Shift
 
 ```bash
 # Manual trigger (normally 4am via launchd)
-bun src/night-shift/runner.ts --target songscript
+bun src/night-shift.ts
 
 # Output:
 # ✓ Scanning for TODOs in songscript...
@@ -179,7 +173,7 @@ bun src/night-shift/runner.ts --target songscript
 # ✓ Created worktree: night-shift-2026-02-06
 # ✓ Applied fixes, tests pass
 # ✓ Committed: chore: cleanup TODOs and unused imports
-# ✓ PR created: #143
+# ✓ Pushed and created PR: #143
 # ✓ Telegram notified
 ```
 
@@ -191,15 +185,13 @@ export TELEGRAM_BOT_TOKEN=$(op read op://development/TELEGRAM_BOT_TOKEN/credenti
 export TELEGRAM_CHAT_ID=$(op read op://development/TELEGRAM_CHAT_ID/credential)
 
 # Claude Code API
-export ANTHROPIC_GOLEMS_API_KEY=$(op read op://development/ANTHROPIC_GOLEMS_API_KEY/credential)
+export ANTHROPIC_API_KEY=$(op read op://development/ANTHROPIC_GOLEMS_API_KEY/credential)
 
 # Night Shift targets
-export NIGHT_SHIFT_REPOS="songscript zikaron golems/packages/ralph"
-export NIGHT_SHIFT_HOUR=4  # 4am
+export REPOS_PATH=~/Gits  # Base path for repos
 
 # Soltome (content posting)
 export SOLTOME_API_KEY=$(op read op://development/SOLTOME_API_KEY/credential)
-export SOLTOME_ACCOUNT_ID=$(op read op://development/SOLTOME/username)
 ```
 
 ## Integration with Other Golems
@@ -237,11 +229,13 @@ Stored in `~/.golems-zikaron/state.json`.
 
 **Telegram session keeps timing out:**
 ```bash
-# Check typing heartbeat is running (60s interval)
-bun src/telegram/state-bridge.ts --debug
+# Check the telegram bot is running
+pgrep -fl "telegram-bot"
 
 # Restart bot
-launchctl restart golems-telegram
+launchctl kickstart gui/$(id -u)/com.golemszikaron.telegram
+# Or use CLI
+./packages/autonomous/bin/golems start telegram
 ```
 
 **Night Shift not running at 4am:**
@@ -253,7 +247,7 @@ launchctl list | grep golems-night-shift
 log show --predicate 'process == "Bun"' --last 1h
 
 # Manually trigger
-bun src/night-shift/runner.ts --target songscript --debug
+bun src/night-shift.ts
 ```
 
 **Posts not posting to Soltome:**
@@ -261,15 +255,15 @@ bun src/night-shift/runner.ts --target songscript --debug
 # Check API key
 op read op://development/SOLTOME_API_KEY/credential
 
-# Review post in queue
-bun src/content-golem/index.ts --list-pending
+# Review pending drafts via Telegram
+# /drafts
 ```
 
 **Memory issues during long sessions:**
 ```bash
 # Increase Node.js heap
 export NODE_OPTIONS="--max-old-space-size=8192"
-claude code --from-pr --resume telegram-chat
+claude --continue
 ```
 
-See `/docs/configuration.md` for full setup, and `packages/autonomous/CLAUDE.md` for development notes.
+See `docs/configuration/env-vars.md` for full setup, and `packages/autonomous/CLAUDE.md` for development notes.

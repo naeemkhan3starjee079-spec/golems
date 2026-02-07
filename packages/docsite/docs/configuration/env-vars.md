@@ -10,10 +10,10 @@ All environment variables used by Golems v2. Store sensitive values in 1Password
 
 | Variable | Default | Description | Required For |
 |----------|---------|-------------|--------------|
-| `LLM_BACKEND` | `haiku` | Which LLM to use: `haiku` (cloud) or `ollama` (local) | Cloud agent execution |
+| `LLM_BACKEND` | `ollama` | Which LLM to use: `haiku` (cloud) or `ollama` (local); cloud-worker sets `haiku` explicitly | Agent execution |
 | `STATE_BACKEND` | `file` | State storage: `supabase` (cloud) or `file` (local) | Persistent state |
 | `TELEGRAM_MODE` | `local` | Notification mode: `direct` (cloud) or `local` (launchd) | Telegram notifications |
-| `TZ` | `UTC` | Timezone for scheduling, set to `Asia/Jerusalem` for local time | Night Shift scheduling |
+| `TZ` | `UTC` | Timezone (only used in helpers-status.ts); cloud-worker hardcodes `Asia/Jerusalem` | Status display |
 | `GOLEMS_STATE_DIR` | `~/.golems-zikaron` | Override state directory for tests or alternate environments | Test isolation |
 
 ## LLM Configuration
@@ -35,6 +35,7 @@ Requires Ollama running locally on `http://localhost:11434`.
 |----------|---------|-------------|--------------|
 | `SUPABASE_URL` | — | Your Supabase project URL (format: `https://YOUR_PROJECT.supabase.co`) | Cloud state backend |
 | `SUPABASE_SERVICE_KEY` | — | Service role key (bypasses RLS, for cloud worker only) from 1Password | Cloud database access |
+| `SUPABASE_ANON_KEY` | — | Anonymous key for job sync | Job golem sync |
 
 ## Gmail Configuration
 
@@ -61,9 +62,9 @@ Requires Ollama running locally on `http://localhost:11434`.
 
 | Variable | Default | Description | Required For |
 |----------|---------|-------------|--------------|
-| `OLLAMA_MODEL` | `qwen3-coder-64k` | Local Ollama model name | Email scoring, categorization |
+| `OLLAMA_MODEL` | `qwen2.5-coder:7b` (direct), `qwen3-coder-64k` (sandboxed) | Local Ollama model name | Email scoring, categorization |
 | `OLLAMA_HOST` | `http://localhost:11434` | Ollama server URL | Local LLM calls |
-| `OLLAMA_URL` | `http://127.0.0.1:11434` | Ollama URL (sandboxed mode) | Sandboxed execution |
+| `OLLAMA_URL` | `http://127.0.0.1:11434` | Alias for `OLLAMA_HOST` (sandboxed mode) | Sandboxed execution |
 | `OLLAMA_SANDBOXED` | — | Set to `1` to enable sandboxed Ollama execution | Sandboxed mode |
 | `VALIDATION_DIR` | `~/.golems-zikaron/validation-queue` | Directory for sandboxed validation queue | Sandboxed execution |
 
@@ -80,6 +81,7 @@ Requires Ollama running locally on `http://localhost:11434`.
 | Variable | Default | Description | Required For |
 |----------|---------|-------------|--------------|
 | `HUNTER_API_KEY` | — | Hunter.io API key for finding contact emails | Contact finder |
+| `EXA_API_KEY` | — | Exa API key for web search and contact finding | Contact finder |
 
 ## Night Shift & Bot Configuration
 
@@ -90,6 +92,7 @@ Requires Ollama running locally on `http://localhost:11434`.
 | `TELEGRAM_ALLOWED_IDS` | — | Comma-separated Telegram user IDs allowed to interact | Telegram bot security |
 | `OLLAMA_CHAT_BOT_TOKEN` | — | Separate bot token for Ollama chat bot | Ollama chat bot |
 | `ZIKARON_STYLE_PATH` | — | Path to semantic style data JSON | Soltome learner |
+| `SOLTOME_API_KEY` | — | Soltome API key for content posting | Soltome client |
 
 ## Setup Examples
 
@@ -147,11 +150,11 @@ All LLM calls are logged to `~/.golems-zikaron/api_costs.jsonl` as JSONL:
 ```json
 {
   "timestamp": "2026-02-06T10:30:00Z",
-  "model": "claude-3-5-haiku-20241022",
+  "model": "claude-haiku-4-5-20251001",
   "source": "email-golem",
   "input_tokens": 1250,
   "output_tokens": 342,
-  "cost_usd": 0.00812
+  "cost_usd": 0.002352
 }
 ```
 

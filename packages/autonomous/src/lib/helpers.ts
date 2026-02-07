@@ -7,14 +7,17 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
 import { join } from "path";
 import { runHaiku as runCloudLLM } from "./cloud-llm";
 
+/** Available external CLI helper backends */
 export type HelperBackend = "gemini" | "cursor" | "codex" | "kiro" | "haiku";
 
+/** Result from running an external helper */
 export interface HelperResult {
   output: string;
   backend: HelperBackend;
   durationMs: number;
 }
 
+/** Options for running a helper backend */
 export interface HelperOptions {
   backend?: HelperBackend;
   file?: string;
@@ -31,6 +34,7 @@ type RateLimitsFile = Record<HelperBackend, RateLimitEntry>;
 
 const ALL_BACKENDS: HelperBackend[] = ["gemini", "kiro", "codex", "cursor", "haiku"];
 
+/** Default fallback order when a backend is rate-limited */
 export const FALLBACK_CHAIN: HelperBackend[] = ["gemini", "kiro", "codex", "cursor", "haiku"];
 
 function getStateDir(): string {
@@ -220,7 +224,6 @@ async function runCliHelper(backend: HelperBackend, prompt: string, opts: Helper
  * Run a helper, with automatic fallback on rate limit.
  */
 export async function runHelper(prompt: string, opts: HelperOptions = {}): Promise<HelperResult> {
-  const timeout = opts.timeout || 120_000;
   const now = new Date();
 
   // If specific backend requested, try it first then fall back

@@ -14,9 +14,10 @@ import { mkdirSync, existsSync } from "fs";
 
 import type { InterviewMode, Difficulty } from "./elo";
 
-// Types
+/** Lifecycle status of a practice session */
 export type SessionStatus = "in_progress" | "passed" | "failed" | "abandoned";
 
+/** A single interview practice session with rating tracking */
 export interface PracticeSession {
   id: string;
   mode: InterviewMode;
@@ -30,6 +31,7 @@ export interface PracticeSession {
   ratingAfter: number | null;
 }
 
+/** A question asked during a practice session */
 export interface SessionQuestion {
   id: string;
   sessionId: string;
@@ -38,6 +40,7 @@ export interface SessionQuestion {
   askedAt: string;
 }
 
+/** Aggregated practice statistics with streaks and time tracking */
 export interface PracticeStats {
   totalSessions: number;
   passedSessions: number;

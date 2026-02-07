@@ -8,18 +8,14 @@ JobGolem searches Israeli job boards, matches positions against your profile usi
 
 ## Pipeline
 
-```
-Job Boards (LinkedIn, Hezbul)
-    ↓
-Scraper (daily 6am, 9am, 1pm)
-    ↓
-Prefilter (removes obvious mismatches)
-    ↓
-Matcher (LLM scores 1-10)
-    ↓
-Hot Matches (8+)
-    ├→ RecruiterGolem (auto-outreach)
-    └→ Telegram alert
+```mermaid
+flowchart TD
+    A["Job Boards<br/><small>Indeed, SecretTLV, Drushim, Goozali</small>"] --> B["Scraper<br/><small>6am, 9am, 1pm Sun–Thu</small>"]
+    B --> C[Prefilter<br/>removes mismatches]
+    C --> D["Matcher<br/>LLM scores 1–10"]
+    D --> E{"Hot Matches<br/>score 8+"}
+    E --> F[RecruiterGolem<br/>auto-outreach]
+    E --> G[Telegram alert]
 ```
 
 ## Scoring System (1-10)
@@ -85,7 +81,7 @@ cat ~/.golems-zikaron/job-golem/results/jobs-*.json
 # /jobs command shows formatted list
 
 # Manage blocklist
-# /exclude company-name
+# Edit src/job-golem/profile.json excludeKeywords
 ```
 
 ## Environment Variables
@@ -96,7 +92,7 @@ LLM_BACKEND=haiku  # or "ollama" (default)
 
 # Supabase (for cloud deployment)
 SUPABASE_URL=...
-SUPABASE_ANON_KEY=...
+SUPABASE_SERVICE_KEY=...
 ```
 
 ## MCP Tools
@@ -106,17 +102,18 @@ JobGolem provides MCP tools for querying job data (via `golems-jobs` server):
 ```typescript
 // Available tools
 tools: [
-  "job_getRecent",      // Recent matches
-  "job_search",         // Search by keyword
-  "job_byCompany",      // Filter by company
-  "job_stats"           // Stats: matches, hot count, avg score
+  "jobs_getRecent",     // Recent matches (latest results file)
+  "jobs_getHot",        // Hot matches (score 8+)
+  "jobs_search",        // Search by keyword (no score filter)
+  "jobs_watchlist",     // Company watchlist
+  "jobs_stats"          // Stats: scraped, seen, hot/warm/cold counts
 ]
 ```
 
 ## Files
 
 - `index.ts` — Main runner, scheduling, formatting
-- `scraper.ts` — Job board scraper (LinkedIn, Hezbul, etc.)
+- `scraper.ts` — Job board scraper (Indeed, SecretTLV, Drushim, Goozali)
 - `matcher.ts` — Ollama-based job matching (scores 1-10)
 - `profile.json` — Your profile (skills, roles, preferences)
 - `watchlist.ts` — Company watchlist and filtering
@@ -125,21 +122,21 @@ tools: [
 
 ## Scheduling
 
-Runs via launchd (macOS) at:
+Runs via cloud-worker.ts schedule:
 - **6am** — Morning scan
 - **9am** — Mid-morning scan
 - **1pm** — Afternoon scan
 - **Sun-Thu only** — Israeli work week
 
-Controlled by `.plist` file in `launchd/`.
+Scheduling logic in `src/cloud-worker.ts`.
 
 ## Data Storage
 
 Results saved to `~/.golems-zikaron/job-golem/results/jobs-DATE-TIME.json`
 
 Database tables (if using Supabase):
-- `golem_seen_jobs` — Deduplication
-- `job_matches` — Scored matches
+- `golem_jobs` — Job sync and storage
+- `golem_seen_jobs` — Deduplication tracking
 
 ## Troubleshooting
 
@@ -156,6 +153,4 @@ Database tables (if using Supabase):
 **Not sending to RecruiterGolem:**
 - Ensure RecruiterGolem db is initialized
 - Check outreach-db.ts for connection errors
-- Manual override: Pass `--skip-outreach` flag
-
-See `packages/autonomous/src/job-golem/README.md` for detailed setup.
+- Check integration in processHotMatches()

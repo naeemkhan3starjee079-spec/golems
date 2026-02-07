@@ -36,6 +36,7 @@ for (const [golem, cats] of Object.entries(GOLEM_CATEGORIES)) {
   }
 }
 
+/** Result of email routing to a domain golem */
 export interface RoutingResult {
   targetGolem: GolemActor;
   reason: string;
@@ -92,10 +93,10 @@ export async function routeAndProcessEmail(
       // RecruiterGolem handler - to be implemented
       // const { processJobEmail } = await import("../recruiter-golem/index");
       // await processJobEmail(email);
-      console.log(`[router] Job email routed to RecruiterGolem: ${email.email?.subject || ""}`);
+      console.warn(`[router] Job email routed to RecruiterGolem (handler not implemented): ${email.email?.subject || ""}`);
     } else if (result.targetGolem === "claudegolem") {
       // ClaudeGolem handler - to be implemented
-      console.log(`[router] Urgent email routed to ClaudeGolem: ${email.email?.subject || ""}`);
+      console.warn(`[router] Tech-update/urgent email routed to ClaudeGolem (handler not implemented): ${email.email?.subject || ""}`);
     }
     // emailgolem stays with router (no invocation needed)
 

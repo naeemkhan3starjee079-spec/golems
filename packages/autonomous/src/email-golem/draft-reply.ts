@@ -5,6 +5,7 @@
  * Used by the email_draftReply MCP tool and ClaudeGolem chat.
  */
 
+/** Input for generating a reply draft */
 export interface ReplyDraftInput {
   originalSubject: string;
   originalFrom: string;
@@ -14,6 +15,7 @@ export interface ReplyDraftInput {
   customNote?: string;
 }
 
+/** Generated reply draft ready for review */
 export interface ReplyDraft {
   subject: string;
   to: string;

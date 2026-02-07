@@ -14,7 +14,7 @@
 
 import { runOllamaJSON } from "../ollama-wrapper";
 
-// Types
+/** Raw email input for scoring */
 export interface EmailInput {
   id: string;
   subject: string;
@@ -23,12 +23,14 @@ export interface EmailInput {
   receivedAt: string;
 }
 
+/** Extracted subscription details from a payment email */
 export interface SubscriptionInfo {
   serviceName: string;
   amount: number | null;
   frequency: "monthly" | "yearly" | "one-time" | "unknown";
 }
 
+/** Email after scoring with urgency, category, and optional subscription info */
 export interface ScoredEmail {
   id: string;
   subject: string;
@@ -49,7 +51,7 @@ interface OllamaScoreResult {
   subscription: SubscriptionInfo | null;
 }
 
-// Score thresholds
+/** Score thresholds for email triage actions */
 export const SCORE_THRESHOLDS = {
   IMMEDIATE: 10,
   BRIEFING_MIN: 7,

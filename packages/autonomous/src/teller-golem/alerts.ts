@@ -15,9 +15,11 @@ const FAILURE_PATTERNS = [
 ];
 
 /**
- * Detect if an email indicates a payment failure using regex pre-check + LLM confirmation.
- *
+ * Detect if an email indicates a payment failure using regex pre-check and LLM confirmation.
  * Returns a PaymentFailure object if confirmed, null otherwise.
+ *
+ * @param email - The scored email to check for payment failure indicators
+ * @returns Promise resolving to PaymentFailure object if detected, null otherwise
  */
 export async function detectPaymentFailure(
   email: ScoredEmail
@@ -60,7 +62,10 @@ Respond JSON: {"isFailure": true/false, "vendor": "...", "amount": null_or_numbe
 }
 
 /**
- * Send a Telegram alert for a payment failure and log the event.
+ * Send a Telegram alert for a payment failure and log the event for operational visibility.
+ *
+ * @param failure - The payment failure to alert about
+ * @returns Promise that resolves when alert and logging are complete
  */
 export async function sendPaymentAlert(
   failure: PaymentFailure

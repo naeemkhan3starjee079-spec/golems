@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <defs>
+    <linearGradient id="golemGrad" x1="0" y1="0" x2="200" y2="200">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="50%" stop-color="#8b5cf6"/>
+      <stop offset="100%" stop-color="#a78bfa"/>
+    </linearGradient>
+    <linearGradient id="eyeGlow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#22d3ee"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="innerShadow">
+      <feOffset dx="0" dy="2"/>
+      <feGaussianBlur stdDeviation="2"/>
+      <feComposite operator="out" in="SourceGraphic"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.3"/>
+      </feComponentTransfer>
+      <feBlend in="SourceGraphic" mode="normal"/>
+    </filter>
+  </defs>
+
+  <!-- Outer circle - subtle ring -->
+  <circle cx="100" cy="100" r="96" stroke="#6366f1" stroke-width="1" fill="none" opacity="0.3"/>
+
+  <!-- Main body - golem head shape (rounded square) -->
+  <rect x="35" y="30" width="130" height="140" rx="28" fill="url(#golemGrad)" filter="url(#innerShadow)"/>
+
+  <!-- Forehead - Hebrew letter Aleph (א) hint / emet mark -->
+  <text x="100" y="68" text-anchor="middle" font-family="serif" font-size="28" fill="#c4b5fd" opacity="0.6" font-weight="bold">&#x05D0;&#x05DE;&#x05EA;</text>
+
+  <!-- Left eye -->
+  <rect x="55" y="82" width="30" height="14" rx="7" fill="url(#eyeGlow)" filter="url(#glow)">
+    <animate attributeName="opacity" values="1;0.6;1" dur="3s" repeatCount="indefinite"/>
+  </rect>
+
+  <!-- Right eye -->
+  <rect x="115" y="82" width="30" height="14" rx="7" fill="url(#eyeGlow)" filter="url(#glow)">
+    <animate attributeName="opacity" values="1;0.6;1" dur="3s" repeatCount="indefinite"/>
+  </rect>
+
+  <!-- Mouth - code bracket -->
+  <text x="100" y="130" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', Monaco, monospace" font-size="22" fill="#c4b5fd" opacity="0.8">{...}</text>
+
+  <!-- Circuit lines - left -->
+  <line x1="35" y1="100" x2="15" y2="100" stroke="#6366f1" stroke-width="2" opacity="0.4"/>
+  <circle cx="12" cy="100" r="3" fill="#6366f1" opacity="0.4"/>
+
+  <!-- Circuit lines - right -->
+  <line x1="165" y1="100" x2="185" y2="100" stroke="#6366f1" stroke-width="2" opacity="0.4"/>
+  <circle cx="188" cy="100" r="3" fill="#6366f1" opacity="0.4"/>
+
+  <!-- Circuit lines - bottom -->
+  <line x1="80" y1="170" x2="80" y2="190" stroke="#6366f1" stroke-width="2" opacity="0.4"/>
+  <circle cx="80" cy="193" r="3" fill="#6366f1" opacity="0.4"/>
+  <line x1="120" y1="170" x2="120" y2="190" stroke="#6366f1" stroke-width="2" opacity="0.4"/>
+  <circle cx="120" cy="193" r="3" fill="#6366f1" opacity="0.4"/>
+</svg>

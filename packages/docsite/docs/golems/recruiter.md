@@ -8,19 +8,13 @@ RecruiterGolem is the outreach and hiring domain expert. It maintains a contact 
 
 ## Pipeline Stages
 
-```
-E1: Contact Finder
-   ↓ (LinkedIn profiles, past conversations)
-E2: Outreach Database
-   ↓ (SQLite/Supabase storage)
-E3: Style Adapter
-   ↓ (anti-AI, recipient tone matching)
-E4: Auto-Outreach
-   ↓ (Telegram + email delivery)
-E5: Practice Mode
-   ↓ (7 interview scenarios)
-E6: CLI Commands
-   ↓ (/outreach, /followup, /practice)
+```mermaid
+flowchart TD
+    E1["E1: Contact Finder<br/><small>LinkedIn, past conversations</small>"] --> E2["E2: Outreach Database<br/><small>SQLite / Supabase</small>"]
+    E2 --> E3["E3: Style Adapter<br/><small>anti-AI, tone matching</small>"]
+    E3 --> E4["E4: Auto-Outreach<br/><small>Telegram + email</small>"]
+    E4 --> E5["E5: Practice Mode<br/><small>7 interview scenarios</small>"]
+    E5 --> E6["E6: CLI Commands<br/><small>/outreach, /followup, /practice</small>"]
 ```
 
 ## Core Components
@@ -28,8 +22,10 @@ E6: CLI Commands
 ### E1: Contact Finder
 
 Discovers contacts from:
-- LinkedIn profiles (URL → parsed)
-- Past email conversations (EmailGolem integration)
+- GitHub profiles (URL → parsed)
+- Exa (web search API)
+- Hunter (email finder)
+- Lusha (contact enrichment)
 - Manual entry via CLI
 
 ```typescript
@@ -51,13 +47,17 @@ interface Contact {
 Stores contacts and conversation history (SQLite local or Supabase cloud):
 
 **Local (SQLite):**
-- `packages/autonomous/data/outreach.db`
-- Syncs to Supabase on startup (Phase 2+)
+- `~/.golems-zikaron/recruiter/outreach.db`
+- Local `outreach_contacts` table (maps to Supabase during cloud sync)
+- Local `outreach_messages` table
+- Local `practice_questions` table
+- No automatic sync to Supabase
 
 **Cloud (Supabase):**
-- `outreach_contacts` table
+- `outreach_contacts` table (cloud version of local contacts)
 - `outreach_messages` table (per contact)
-- `company_research` table (cached research on companies)
+- `outreach_companies` table (cached research on companies)
+- `practice_questions` table (interview practice questions)
 
 ### E3: Style Adapter
 
@@ -77,25 +77,15 @@ interface StyleContext {
 const message = await adaptMessage(template, context);
 ```
 
-**Anti-AI Rules:**
-- No em dashes (`—`)
-- Varied sentence length
-- Genuine compliments based on company/work
-- Typo-like natural phrasing (optional)
+**Style Adaptation:**
+- Tweaks emoji usage
+- Adjusts contractions
+- Matches recipient's communication style
+- Natural, human-like tone
 
 ### E4: Auto-Outreach
 
-Batches outreach with rate limiting:
-
-```typescript
-// auto-outreach.ts
-const config = {
-  max_per_day: 5,          // Max daily outreach
-  delay_between: 2 * 60,   // 2 min between sends
-  verify_email_before_send: true,
-  channels: ['email', 'linkedin', 'telegram']
-};
-```
+Batches outreach with guards against unreachable contacts.
 
 Outreach status tracked:
 - `sending` → `sent` → `replied` or `no-reply` (30d timeout)
@@ -108,15 +98,15 @@ Outreach status tracked:
 const practiceMode = [
   'leetcode',        // Coding problem solving
   'system-design',   // Architecture questions
+  'debugging',       // Debug scenarios
+  'code-review',     // Code review practice
   'behavioral',      // STAR method questions
-  'product-sense',   // Product thinking
-  'startup-pitch',   // Pitch feedback
-  'technical-depth', // Deep technical Q&A
-  'culture-fit'      // Company values discussion
+  'optimization',    // Performance optimization
+  'complexity'       // Algorithm complexity
 ];
 ```
 
-Each mode runs 5 questions with Haiku feedback on communication clarity, depth, and interviewer rapport.
+Each mode uses Claude for interview simulation with Elo rating system and manual pass/fail evaluation.
 
 ### E6: CLI Commands
 
@@ -125,8 +115,7 @@ Telegram commands routed to RecruiterGolem:
 - `/outreach` — Send personalized message to contact
 - `/followup` — Follow up on previous outreach
 - `/practice {mode}` — Start interview practice
-- `/contacts` — List all contacts
-- `/status` — Outreach stats
+- `/stats` — Outreach stats
 
 ## Files
 
@@ -135,8 +124,12 @@ Telegram commands routed to RecruiterGolem:
 - `src/recruiter-golem/outreach-db-cloud.ts` — Supabase adapter (Phase 2+)
 - `src/recruiter-golem/style-adapter.ts` — Anti-AI message generation
 - `src/recruiter-golem/auto-outreach.ts` — Batch sending with rate limits
-- `src/recruiter-golem/practice-db.ts` — Interview practice sessions
-- `src/recruiter-golem/index.ts` — Main golem orchestrator
+- `src/recruiter-golem/practice-db.ts` — Interview practice sessions (local)
+- `src/recruiter-golem/practice-db-cloud.ts` — Interview practice sessions (Supabase)
+- `src/recruiter-golem/outreach.ts` — Outreach message generation
+- `src/recruiter-golem/company-research.ts` — Company research (GitHub, tech stack)
+- `src/recruiter-golem/elo.ts` — ELO ranking for contacts
+- `src/recruiter-golem/obsidian-export.ts` — Export contacts to Obsidian
 
 ## Database Schema
 
@@ -174,7 +167,7 @@ CREATE TABLE company_research (
   cached_at TIMESTAMP
 );
 
-CREATE TABLE interview_sessions (
+CREATE TABLE practice_sessions (
   id TEXT PRIMARY KEY,
   mode TEXT,  -- 'leetcode', 'system-design', etc
   started_at TIMESTAMP,
@@ -191,15 +184,14 @@ Same schema + RLS policies for data isolation per account.
 ## Environment Variables
 
 ```bash
-# LinkedIn scraper (if using)
-export LINKEDIN_EMAIL=$(op read op://YOUR_VAULT/YOUR_LINKEDIN_ITEM/username)
-export LINKEDIN_PASSWORD=$(op read op://YOUR_VAULT/YOUR_LINKEDIN_ITEM/password)
+# Contact finder APIs
+export EXA_API_KEY=$(op read op://YOUR_VAULT/YOUR_EXA_ITEM/credential)
 
 # Outreach DB
 export LLM_BACKEND=haiku  # For style adaptation
 export STATE_BACKEND=supabase  # Phase 2+ uses cloud
 export SUPABASE_URL=$(op read op://YOUR_VAULT/YOUR_SUPABASE_ITEM/url)
-export SUPABASE_ANON_KEY=$(op read op://YOUR_VAULT/YOUR_SUPABASE_ITEM/anon_key)
+export SUPABASE_SERVICE_KEY=$(op read op://YOUR_VAULT/YOUR_SUPABASE_ITEM/service_key)
 ```
 
 ## Running RecruiterGolem
@@ -207,25 +199,14 @@ export SUPABASE_ANON_KEY=$(op read op://YOUR_VAULT/YOUR_SUPABASE_ITEM/anon_key)
 ```bash
 cd packages/autonomous
 
-# List all contacts
-bun src/recruiter-golem/index.ts --list-contacts
+# Use Telegram commands for outreach
+# /outreach - Send personalized message
+# /followup - Follow up on previous outreach
+# /practice {mode} - Start interview practice
+# /stats - View outreach statistics
 
-# Add a new contact (interactive)
-bun src/recruiter-golem/contact-finder.ts --interactive
-
-# Test style adapter
-bun src/recruiter-golem/style-adapter.ts \
-  --name "John Doe" \
-  --company "Google" \
-  --role "Senior Engineer" \
-  --template "Generic intro"
-
-# Start interview practice
-bun src/recruiter-golem/practice-db.ts --mode leetcode
-
-# Send outreach (via Telegram /outreach command)
-# or manually:
-bun src/recruiter-golem/auto-outreach.ts --contact-id <id>
+# Or use CLI script
+./bin/recruiterGolem
 ```
 
 ## Integration Points
@@ -238,70 +219,43 @@ bun src/recruiter-golem/auto-outreach.ts --contact-id <id>
 ## Example: Full Outreach Workflow
 
 ```bash
-# 1. Add a contact from LinkedIn
-bun src/recruiter-golem/contact-finder.ts --linkedin "https://linkedin.com/in/..."
+# 1. Send outreach via Telegram
+# /outreach
 
-# 2. View contact
-bun src/recruiter-golem/index.ts --show-contact "john-doe-google"
+# 2. Follow up on previous outreach
+# /followup
 
-# 3. Generate personalized message
-bun src/recruiter-golem/style-adapter.ts \
-  --contact-id "john-doe-google" \
-  --template "intro"
+# 3. Check outreach statistics
+# /stats
 
-# 4. Send via Telegram
-# /outreach john-doe-google
-
-# 5. Track response
-bun src/recruiter-golem/index.ts --status
-
-# 6. Practice interview for role
+# 4. Practice interview for role
 # /practice system-design
 ```
 
-## Anti-AI Detection
+## Style Adaptation
 
-RecruiterGolem avoids patterns that trigger spam filters and anti-AI detection:
+RecruiterGolem adapts outreach style to match recipient communication patterns:
 
-✅ Do:
-- Use recipient's own work/achievements as reference
-- Ask genuine questions
-- Vary sentence structure
-- Include specific company knowledge
-- Use contractions naturally
-
-❌ Don't:
-- Use em dashes (`—`)
-- Overly formal opening
-- Generic "great work" phrases
-- Perfect punctuation in every sentence
-- Keywords like "leverage", "synergize", "holistic"
-
-See `docs.local/research/anti-ai-detection.md` for full analysis.
+- Adjusts emoji usage based on recipient's style
+- Modifies contractions naturally
+- Matches tone (formal/casual/technical)
+- Personalizes based on company/role context
 
 ## Troubleshooting
 
-**Outreach getting marked as spam:**
-```bash
-# Check style adapter output
-bun src/recruiter-golem/style-adapter.ts --debug
-
-# Review message for anti-AI patterns
-```
-
-**Interview practice not scoring:**
-```bash
-# Check Haiku feedback is running
-bun src/recruiter-golem/practice-db.ts --debug
-```
-
 **Contacts not syncing to Supabase:**
 ```bash
-# Phase 2+: run migration
+# Phase 2+: run migration (from packages/autonomous directory)
 bun scripts/migrate-to-supabase.ts --execute
 
 # Check STATE_BACKEND env var
 echo $STATE_BACKEND
 ```
 
-See `/docs/deployment.md` for Supabase setup.
+**Practice mode issues:**
+```bash
+# Check Claude API access
+echo $ANTHROPIC_API_KEY
+
+# Practice uses Elo ratings, not automated scoring
+```

@@ -8,6 +8,7 @@
 # Models:
 #   gemini  (default) - Free, fast, good for summaries
 #   cursor  - GPT-5.2 Codex (paid $20/mo), deep analysis
+#   codex   - OpenAI Codex CLI (ChatGPT Plus), non-interactive agent
 #   kiro    - Free, AWS-backed, good for code analysis
 #
 # Examples:
@@ -64,6 +65,16 @@ case "$MODEL" in
       exit 1
     fi
     ;;
+  codex)
+    # OpenAI Codex CLI - ChatGPT Plus, non-interactive agent
+    CODEX_BIN="${CODEX_BIN:-$(command -v codex || echo "$HOME/.nvm/versions/node/v22.22.0/bin/codex")}"
+    if [ -x "$CODEX_BIN" ]; then
+      $CODEX_BIN exec --full-auto -o "$OUTFILE" "$FULL_PROMPT" 2>/dev/null
+    else
+      echo "Error: codex CLI not installed. Run: npm i -g @openai/codex" >&2
+      exit 1
+    fi
+    ;;
   kiro)
     # Kiro CLI - Free tier, AWS-backed
     if command -v kiro-cli &>/dev/null; then
@@ -97,7 +108,7 @@ case "$MODEL" in
     rm -f "$PROMPTFILE"
     ;;
   *)
-    echo "Error: Unknown model '$MODEL'. Use: gemini, cursor, kiro, haiku" >&2
+    echo "Error: Unknown model '$MODEL'. Use: gemini, cursor, codex, kiro, haiku" >&2
     exit 1
     ;;
 esac

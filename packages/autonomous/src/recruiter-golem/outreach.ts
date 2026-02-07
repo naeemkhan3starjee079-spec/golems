@@ -17,10 +17,9 @@ import {
   applyStyleToMessage,
   getStyleAppropriateGreeting,
   getStyleAppropriateSignOff,
-  getStyleSummary,
-  type StyleGuidelines,
 } from "./style-adapter";
 
+/** Job posting context for outreach message generation */
 export interface JobContext {
   title: string;
   company: string;
@@ -29,6 +28,7 @@ export interface JobContext {
   url: string;
 }
 
+/** A generated outreach message with personalization details */
 export interface OutreachMessage {
   type: MessageType;
   subject?: string;  // For email
@@ -36,6 +36,7 @@ export interface OutreachMessage {
   personalization: string[];  // What made it personal
 }
 
+/** Full context needed to generate an outreach message */
 export interface OutreachContext {
   job: JobContext;
   company?: CompanyInfo;
@@ -43,6 +44,7 @@ export interface OutreachContext {
   userProfile: UserProfile;
 }
 
+/** User profile data used to personalize outreach messages */
 export interface UserProfile {
   name: string;
   title: string;

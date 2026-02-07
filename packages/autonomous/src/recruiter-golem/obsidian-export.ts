@@ -11,7 +11,6 @@ import { mkdirSync, existsSync, writeFileSync } from "fs";
 import { join } from "path";
 import {
   getContact,
-  getOutreachByContact,
   getCompanyResearch,
   type Contact,
   type Outreach,

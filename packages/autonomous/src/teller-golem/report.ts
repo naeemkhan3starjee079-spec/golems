@@ -14,9 +14,10 @@ const ALL_CATEGORIES: TaxCategory[] = [
 
 /**
  * Generate a monthly spending report for the given month.
- * Queries the payments table and aggregates by category and vendor.
+ * Queries the payments table and aggregates spending by category and vendor.
+ *
  * @param month - Month in YYYY-MM format
- * @returns Monthly report with totals by category and vendor
+ * @returns Promise resolving to monthly report with totals by category and vendor
  */
 export async function generateMonthlyReport(month: string): Promise<MonthlyReport> {
   const supabase = createDbClient();
@@ -72,9 +73,10 @@ export async function generateMonthlyReport(month: string): Promise<MonthlyRepor
 
 /**
  * Generate an annual tax report for the given year.
- * Groups all payments by tax category with individual line items.
+ * Groups all payments by IRS Schedule C tax category with individual line items per vendor.
+ *
  * @param year - Tax year (e.g. 2026)
- * @returns Tax report with deductible totals and item breakdowns
+ * @returns Promise resolving to tax report with deductible totals and item breakdowns
  */
 export async function generateTaxReport(year: number): Promise<TaxReport> {
   const supabase = createDbClient();
@@ -119,10 +121,10 @@ export async function generateTaxReport(year: number): Promise<TaxReport> {
 }
 
 /**
- * Format a monthly report as a readable Telegram message.
+ * Format a monthly report as a readable Telegram message with category and vendor breakdowns.
  *
  * @param report - The monthly report to format
- * @returns Formatted text string
+ * @returns Formatted text string ready for Telegram display
  */
 export function formatMonthlyReportText(report: MonthlyReport): string {
   const lines: string[] = [];
@@ -145,10 +147,10 @@ export function formatMonthlyReportText(report: MonthlyReport): string {
 }
 
 /**
- * Format a tax report as readable text.
+ * Format a tax report as readable text with line items per category for tax filing.
  *
  * @param report - The tax report to format
- * @returns Formatted text string
+ * @returns Formatted text string with category totals and vendor itemizations
  */
 export function formatTaxReportText(report: TaxReport): string {
   const lines: string[] = [];

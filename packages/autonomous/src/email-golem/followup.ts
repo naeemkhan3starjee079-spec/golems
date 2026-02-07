@@ -11,8 +11,10 @@ import { randomUUID } from "crypto";
 // TYPES
 // ═══════════════════════════════════════════════════════
 
+/** Status of a follow-up tracker */
 export type FollowupStatus = "pending" | "done" | "dismissed";
 
+/** A follow-up reminder for an important email */
 export interface Followup {
   id: string;
   emailSubject: string;
@@ -25,6 +27,7 @@ export interface Followup {
   completedAt?: string;
 }
 
+/** Input for creating a new follow-up */
 export interface CreateFollowupInput {
   emailSubject: string;
   emailFrom: string;

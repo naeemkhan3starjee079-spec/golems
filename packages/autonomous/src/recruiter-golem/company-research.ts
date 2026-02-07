@@ -11,6 +11,7 @@
 
 import { saveCompanyResearch, getCompanyResearch, type CompanyResearchData } from "./outreach-db";
 
+/** Aggregated company information from multiple research sources */
 export interface CompanyInfo {
   name: string;
   website: string | null;
@@ -23,6 +24,7 @@ export interface CompanyInfo {
   linkedinUrl: string | null;
 }
 
+/** A single data source used during company research */
 export interface ResearchSource {
   source: "github" | "website" | "job_posting" | "cache";
   data: Partial<CompanyInfo>;

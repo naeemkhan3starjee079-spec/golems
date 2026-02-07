@@ -7,6 +7,7 @@
 
 import { google, type gmail_v1 } from "googleapis";
 
+/** Parsed Gmail email with extracted header fields */
 export interface GmailEmail {
   id: string;
   subject: string;

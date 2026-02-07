@@ -35,6 +35,7 @@ function getClient(): SupabaseClient {
 
 // ============ Contact Functions ============
 
+/** Create a new contact in Supabase */
 export async function createContact(input: CreateContactInput): Promise<Contact> {
   const { data, error } = await getClient()
     .from("outreach_contacts")
@@ -54,6 +55,7 @@ export async function createContact(input: CreateContactInput): Promise<Contact>
   return mapContact(data);
 }
 
+/** Get a contact by ID from Supabase */
 export async function getContact(id: string): Promise<Contact | null> {
   const { data } = await getClient()
     .from("outreach_contacts")
@@ -64,6 +66,7 @@ export async function getContact(id: string): Promise<Contact | null> {
   return data ? mapContact(data) : null;
 }
 
+/** Get all contacts for a company from Supabase */
 export async function getContactsByCompany(company: string): Promise<Contact[]> {
   const { data } = await getClient()
     .from("outreach_contacts")
@@ -76,6 +79,7 @@ export async function getContactsByCompany(company: string): Promise<Contact[]> 
 
 // ============ Outreach Functions ============
 
+/** Create a new outreach message in Supabase */
 export async function createOutreach(input: CreateOutreachInput): Promise<Outreach> {
   const { data, error } = await getClient()
     .from("outreach_messages")
@@ -94,6 +98,7 @@ export async function createOutreach(input: CreateOutreachInput): Promise<Outrea
   return mapOutreach(data);
 }
 
+/** Get an outreach message by ID from Supabase */
 export async function getOutreach(id: string): Promise<Outreach | null> {
   const { data } = await getClient()
     .from("outreach_messages")
@@ -104,6 +109,7 @@ export async function getOutreach(id: string): Promise<Outreach | null> {
   return data ? mapOutreach(data) : null;
 }
 
+/** Get all outreach messages for a job from Supabase */
 export async function getOutreachByJob(jobId: string): Promise<Outreach[]> {
   const { data } = await getClient()
     .from("outreach_messages")
@@ -114,6 +120,7 @@ export async function getOutreachByJob(jobId: string): Promise<Outreach[]> {
   return (data || []).map(mapOutreach);
 }
 
+/** Update outreach message status in Supabase */
 export async function updateOutreachStatus(id: string, status: OutreachStatus): Promise<Outreach> {
   const updates: Record<string, unknown> = { status };
   const now = new Date().toISOString();
@@ -131,6 +138,7 @@ export async function updateOutreachStatus(id: string, status: OutreachStatus): 
   return (await getOutreach(id))!;
 }
 
+/** Get outreach messages sent more than N days ago with no response */
 export async function getPendingFollowups(daysOld: number = 5): Promise<Outreach[]> {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - daysOld);
@@ -145,6 +153,7 @@ export async function getPendingFollowups(daysOld: number = 5): Promise<Outreach
   return (data || []).map(mapOutreach);
 }
 
+/** Get aggregated outreach statistics from Supabase */
 export async function getOutreachStats(): Promise<OutreachStats> {
   const { data } = await getClient()
     .from("outreach_messages")
@@ -172,6 +181,7 @@ export async function getOutreachStats(): Promise<OutreachStats> {
 
 // ============ Company Research ============
 
+/** Save or update company research in Supabase (upsert by company name) */
 export async function saveCompanyResearch(input: SaveCompanyResearchInput): Promise<CompanyResearch> {
   const { data, error } = await getClient()
     .from("outreach_companies")
@@ -193,6 +203,7 @@ export async function saveCompanyResearch(input: SaveCompanyResearchInput): Prom
   };
 }
 
+/** Get company research by name from Supabase */
 export async function getCompanyResearch(companyName: string): Promise<CompanyResearch | null> {
   const { data } = await getClient()
     .from("outreach_companies")

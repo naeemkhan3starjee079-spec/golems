@@ -15,6 +15,7 @@
 import { readdirSync, readFileSync, existsSync } from "fs";
 import { join } from "path";
 
+/** A plugin that injects context based on file type triggers */
 export interface Plugin {
   name: string;
   triggers: string[];

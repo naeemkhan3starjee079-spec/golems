@@ -99,7 +99,6 @@ Quick email statistics for the last 24 hours.
 - Total email count
 - Urgent count (score 10)
 - Breakdown by category (job, interview, subscription, etc.)
-- Avg score
 
 ### email_getByGolem
 
@@ -136,7 +135,7 @@ Generate a reply draft to an email.
 
 ---
 
-## Financial Tools (golems-email)
+## Financial Tools (golems-email — via TellerGolem)
 
 ### teller_monthlyReport
 
@@ -181,48 +180,51 @@ Generate my 2025 tax report for Schedule C
 
 ## Job Tools (golems-jobs)
 
-### job_getRecent
+### jobs_getRecent
 
-Get recently matched jobs (from last 24 hours by default).
+Get recently scraped jobs from the latest results file.
 
 **Parameters:**
-- `hours` (number, default: 24) — How many hours back
-- `minScore` (number, default: 7) — Minimum score to include
+- `limit` (number, default: 20) — Max results to return
 
-**Returns:** Job matches with company, title, score, reason, and URL
+**Returns:** Latest jobs with company, title, and URL
 
-### job_search
+### jobs_search
 
 Search jobs by keyword (title, company, or description).
 
 **Parameters:**
 - `query` (string, required) — Search term
-- `limit` (number, default: 20) — Max results
 
-**Returns:** Matching jobs with scores
+**Returns:** Matching scraped jobs without scores
 
-### job_byCompany
+### jobs_getHot
 
-Filter jobs by specific company.
+Get hot job matches (score 8+).
 
-**Parameters:**
-- `company` (string, required) — Company name
-- `limit` (number, default: 20) — Max results
+**Parameters:** None
 
-**Returns:** All jobs from that company with scores
+**Returns:** Hot matches with company, title, score, reason, and URL
 
-### job_stats
+### jobs_watchlist
+
+Get jobs from watchlist companies.
+
+**Parameters:** None
+
+**Returns:** Jobs from companies in the watchlist
+
+### jobs_stats
 
 Quick job statistics.
 
 **Parameters:** None
 
 **Returns:**
+- Total jobs scraped
 - Total jobs seen
-- Hot matches (8+) count
-- Average score
-- Top companies
-- Top skills required
+- Total batches
+- Hot/warm/cold counts
 
 ---
 
@@ -234,7 +236,7 @@ Quick job statistics.
 1. Get urgent emails: email_urgent
 2. For each urgent email about an interview:
    - Draft reply with intent="interested"
-3. Check if jobs matched: job_getRecent with minScore=8
+3. Check if jobs matched: jobs_getHot
 ```
 
 ### Monthly Budget Review
@@ -250,8 +252,8 @@ Quick job statistics.
 
 ```
 1. Get recent interview emails: email_getRecent with minScore=8
-2. Search related job postings: job_search with company name
-3. Get company research: job_byCompany
+2. Search related job postings: jobs_search with company name
+3. Check if company is in watchlist: jobs_watchlist
 4. Draft followup emails
 ```
 
@@ -268,9 +270,9 @@ Quick job statistics.
 
 ## Integration Notes
 
-- **Email tools** run queries against Supabase (cloud) or SQLite (local)
-- **Job tools** query local state files or Supabase (if `STATE_BACKEND=supabase`)
-- **All tools handle offline gracefully** — queued locally, synced on reconnect
+- **Email tools** use Supabase with offline queue (no SQLite)
+- **Job MCP tools** read local JSON files. Jobs can be synced to Supabase via `sync-to-supabase.ts` for cloud access
+- **All tools handle offline gracefully** — email tools queue locally, sync on reconnect
 - **Scoring:** Email scores 1-10 (10=urgent), Job scores 1-10 (8+=hot match)
 - **Categories:** Email categories are semantic (job, interview, subscription, tech-update, newsletter, promo, social, other)
 

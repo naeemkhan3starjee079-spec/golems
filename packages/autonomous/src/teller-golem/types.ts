@@ -17,7 +17,10 @@ export type TaxCategory =
   | "professional-services"
   | "other";
 
-/** Result of LLM categorization */
+/**
+ * Result of LLM categorization for an expense
+ * @interface CategorizedExpense
+ */
 export interface CategorizedExpense {
   /** IRS Schedule C category */
   category: TaxCategory;
@@ -31,7 +34,10 @@ export interface CategorizedExpense {
   vendor?: string;
 }
 
-/** Payment failure detected from email */
+/**
+ * Payment failure detected from an email
+ * @interface PaymentFailure
+ */
 export interface PaymentFailure {
   /** Vendor where payment failed */
   vendor: string;
@@ -47,7 +53,10 @@ export interface PaymentFailure {
   detectedAt: string;
 }
 
-/** Monthly spending report */
+/**
+ * Monthly spending report with aggregated expenses by category and vendor
+ * @interface MonthlyReport
+ */
 export interface MonthlyReport {
   /** Month in YYYY-MM format */
   month: string;
@@ -61,7 +70,10 @@ export interface MonthlyReport {
   subscriptionCount: number;
 }
 
-/** Annual tax report */
+/**
+ * Annual tax report with deductible expenses broken down by IRS Schedule C categories
+ * @interface TaxReport
+ */
 export interface TaxReport {
   /** Tax year */
   year: number;
@@ -74,7 +86,10 @@ export interface TaxReport {
   >;
 }
 
-/** Email input (matches email-golem scorer output) */
+/**
+ * Scored email input from email-golem scorer
+ * @interface ScoredEmail
+ */
 export interface ScoredEmail {
   /** Unique email ID */
   id: string;
