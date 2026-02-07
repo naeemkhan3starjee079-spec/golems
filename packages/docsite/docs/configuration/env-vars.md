@@ -57,6 +57,40 @@ Requires Ollama running locally on `http://localhost:11434`.
 | `TELEGRAM_TOPIC_RECRUITER` | — | Topic ID for 👥 Recruiter (outreach events) | Recruiter notifications |
 | `TELEGRAM_TOPIC_UPTIME` | — | Topic ID for ⏰ Uptime (health checks) | Uptime monitoring |
 
+## Ollama Configuration
+
+| Variable | Default | Description | Required For |
+|----------|---------|-------------|--------------|
+| `OLLAMA_MODEL` | `qwen3-coder-64k` | Local Ollama model name | Email scoring, categorization |
+| `OLLAMA_HOST` | `http://localhost:11434` | Ollama server URL | Local LLM calls |
+| `OLLAMA_URL` | `http://127.0.0.1:11434` | Ollama URL (sandboxed mode) | Sandboxed execution |
+| `OLLAMA_SANDBOXED` | — | Set to `1` to enable sandboxed Ollama execution | Sandboxed mode |
+| `VALIDATION_DIR` | `~/.golems-zikaron/validation-queue` | Directory for sandboxed validation queue | Sandboxed execution |
+
+## Job Scraper Configuration
+
+| Variable | Default | Description | Required For |
+|----------|---------|-------------|--------------|
+| `SKIP_DRUSHIM` | — | Set to `1` to skip Drushim.co.il scraper | Job scraper |
+| `SKIP_INDEED` | — | Set to `1` to skip Indeed scraper | Job scraper |
+| `SKIP_SECRETLV` | — | Set to `1` to skip Secret Tel Aviv scraper | Job scraper |
+
+## Recruiter Configuration
+
+| Variable | Default | Description | Required For |
+|----------|---------|-------------|--------------|
+| `HUNTER_API_KEY` | — | Hunter.io API key for finding contact emails | Contact finder |
+
+## Night Shift & Bot Configuration
+
+| Variable | Default | Description | Required For |
+|----------|---------|-------------|--------------|
+| `REPOS_PATH` | `~/Gits` | Base path for git repositories | Night Shift |
+| `ACTIVITY_DAYS_TO_KEEP` | `7` | Days of session history to retain | Session archiver |
+| `TELEGRAM_ALLOWED_IDS` | — | Comma-separated Telegram user IDs allowed to interact | Telegram bot security |
+| `OLLAMA_CHAT_BOT_TOKEN` | — | Separate bot token for Ollama chat bot | Ollama chat bot |
+| `ZIKARON_STYLE_PATH` | — | Path to semantic style data JSON | Soltome learner |
+
 ## Setup Examples
 
 ### Development (Local)

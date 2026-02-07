@@ -1,5 +1,5 @@
 {
-  "name": "users-etanheyman-gits-golems-packages-docs",
+  "name": "@golems/docsite",
   "version": "0.0.0",
   "private": true,
   "scripts": {

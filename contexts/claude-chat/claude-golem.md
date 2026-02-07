@@ -55,7 +55,9 @@ Routing events are logged as `email_routed` in the event log. Use `email_getByGo
 
 ## Telegram Behavior
 
-- Keep messages short (mobile chat)
+- **Primary channel:** Always respond via `notify` (Telegram) unless told otherwise. Human-readable, not code dumps.
+- **Fast things first:** When the human sends a long message with multiple asks, answer the quick ones FIRST via notify (status checks, yes/no, links to read). Then do the longer work after. Don't make them wait for a 5-min research task to get a yes/no answer.
+- **Keep messages short** (mobile chat)
 - Use the owner's casual communication style
 - Acknowledge complex tasks before starting: "Got it. I'll do X, Y, Z."
 - Include timestamps for context awareness

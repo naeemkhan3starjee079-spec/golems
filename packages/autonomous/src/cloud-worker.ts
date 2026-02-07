@@ -9,12 +9,12 @@
  * SCHEDULE (All times Israel/Asia/Jerusalem)
  * ══════════════════════════════════════════════════════════════
  *
- *   Email Golem:     Every 1h during work hours (8am-8pm)
- *                    Every 3h overnight (8pm-8am)
- *                    ~14 runs/day vs old 144 runs/day → 90% cost savings
+ *   Email Golem:     Every 1h during 6am-7pm (skip 12pm lunch)
+ *                    One final check at 10pm, OFF overnight (10pm-6am)
+ *                    ~12 runs/day vs old 144 runs/day → 92% cost savings
  *
- *   Job Golem:       9am and 1pm, Sun-Thu only (Israeli work week)
- *                    ~10 runs/week vs old 336 runs/week → 97% cost savings
+ *   Job Golem:       6am, 9am, 1pm Sun-Thu (Israeli work week)
+ *                    ~15 runs/week vs old 336 runs/week → 95% cost savings
  *
  *   Briefing:        8am daily
  *   Soltome Learner: 2am daily
@@ -116,10 +116,20 @@ function isIsraeliWorkday(): boolean {
   return day >= 0 && day <= 4; // Sun=0, Mon=1, Tue=2, Wed=3, Thu=4
 }
 
-/** Work hours: 8am-8pm Israel time */
-function isWorkHours(): boolean {
+/** Active hours: 6am-7pm Israel time (email runs hourly, skip lunch) */
+function isActiveHours(): boolean {
   const hour = getIsraelHour();
-  return hour >= 8 && hour < 20;
+  return hour >= 6 && hour < 19;
+}
+
+/** Lunch hour: 12pm Israel time (skip email check) */
+function isLunchHour(): boolean {
+  return getIsraelHour() === 12;
+}
+
+/** Late night check: 10pm Israel time (one final email check) */
+function isLateNightCheck(): boolean {
+  return getIsraelHour() === 22;
 }
 
 // ═══════════════════════════════════════════════════════
@@ -143,33 +153,52 @@ function scheduleDaily(name: string, hour: number, fn: () => Promise<unknown>): 
 }
 
 /**
- * Email Golem scheduler: every 1h during work hours (8am-8pm), every 3h overnight.
- * Uses setInterval(60min) and checks if enough time has passed.
+ * Email Golem scheduler:
+ *   6am-7pm: hourly (skip 12pm lunch)
+ *   10pm: one final check
+ *   10pm-6am: OFF completely
  */
 function scheduleEmail(fn: () => Promise<unknown>): void {
-  let lastRunTime = 0;
+  let lastRunKey = "";
 
   const check = () => {
-    const now = Date.now();
-    const intervalMs = isWorkHours() ? 60 * 60_000 : 3 * 60 * 60_000;
+    const hour = getIsraelHour();
+    const today = new Date().toISOString().slice(0, 10);
+    const runKey = `${today}-${hour}`;
 
-    if (now - lastRunTime >= intervalMs) {
-      lastRunTime = now;
+    // Already ran this hour
+    if (lastRunKey === runKey) return;
+
+    // Active hours (6am-7pm) but skip lunch (12pm)
+    if (isActiveHours() && !isLunchHour()) {
+      lastRunKey = runKey;
       safeRun("EmailGolem", fn);
+      return;
     }
+
+    // Late night check (10pm)
+    if (isLateNightCheck()) {
+      lastRunKey = runKey;
+      safeRun("EmailGolem (night)", fn);
+      return;
+    }
+
+    // Otherwise: OFF (7pm-10pm gap, 10pm-6am sleep)
   };
 
-  // Run immediately on startup
-  lastRunTime = Date.now();
-  safeRun("EmailGolem (initial)", fn);
+  // Run immediately on startup if within active hours
+  if (isActiveHours() || isLateNightCheck()) {
+    lastRunKey = `${new Date().toISOString().slice(0, 10)}-${getIsraelHour()}`;
+    safeRun("EmailGolem (initial)", fn);
+  }
 
-  // Check every 10 minutes (granular enough, not too chatty)
+  // Check every 10 minutes
   setInterval(check, 10 * 60_000);
 }
 
 /**
- * Job Golem scheduler: only at 9am and 1pm Israel time, Sun-Thu.
- * Uses setInterval(60s) minute-check pattern.
+ * Job Golem scheduler: 6am, 9am, 1pm Israel time, Sun-Thu only.
+ * 6am catches overnight postings, 9am + 1pm catch daytime.
  */
 function scheduleJobs(fn: () => Promise<unknown>): void {
   let lastRunKey = "";
@@ -179,8 +208,8 @@ function scheduleJobs(fn: () => Promise<unknown>): void {
     const today = new Date().toISOString().slice(0, 10);
     const runKey = `${today}-${hour}`;
 
-    // Only run at 9am or 1pm on Israeli workdays
-    if ((hour === 9 || hour === 13) && isIsraeliWorkday() && lastRunKey !== runKey) {
+    // Run at 6am, 9am, or 1pm on Israeli workdays
+    if ((hour === 6 || hour === 9 || hour === 13) && isIsraeliWorkday() && lastRunKey !== runKey) {
       lastRunKey = runKey;
       safeRun("JobGolem", fn);
     }
@@ -201,7 +230,7 @@ console.log(`[CloudWorker] LLM_BACKEND=${process.env.LLM_BACKEND}`);
 console.log(`[CloudWorker] STATE_BACKEND=${process.env.STATE_BACKEND}`);
 console.log(`[CloudWorker] TELEGRAM_MODE=${process.env.TELEGRAM_MODE}`);
 console.log(`[CloudWorker] Israel time: ${new Date().toLocaleString("en-US", { timeZone: "Asia/Jerusalem" })}`);
-console.log(`[CloudWorker] Work hours now: ${isWorkHours()}, Workday: ${isIsraeliWorkday()}`);
+console.log(`[CloudWorker] Work hours now: ${isActiveHours()}, Workday: ${isIsraeliWorkday()}`);
 
 if (!singleMode) {
   // ── Email Golem: adaptive schedule ──
@@ -221,20 +250,20 @@ if (!singleMode) {
   scheduleDaily("SoltomeLearner", 2, learnFromSoltome);
 
   console.log("[CloudWorker] All services scheduled:");
-  console.log("  - EmailGolem: every 1h (8am-8pm), every 3h overnight");
-  console.log("  - JobGolem: 9am + 1pm Sun-Thu (Israeli work week)");
+  console.log("  - EmailGolem: hourly 6am-7pm (skip lunch), 10pm final, OFF overnight");
+  console.log("  - JobGolem: 6am + 9am + 1pm Sun-Thu (Israeli work week)");
   console.log("  - Briefing: 8am Israel");
   console.log("  - SoltomeLearner: 2am Israel");
 } else if (emailOnly) {
   const processEmails = await getEmailGolem();
   scheduleEmail(processEmails);
-  console.log("[CloudWorker] Email-only mode: every 1h (work hours), every 3h (overnight)");
+  console.log("[CloudWorker] Email-only mode: hourly 6am-7pm, 10pm final, OFF overnight");
 } else if (jobsOnly) {
   const runJobSearch = await getJobGolem();
   // In jobs-only mode, run immediately then schedule
   safeRun("JobGolem (initial)", runJobSearch);
   scheduleJobs(runJobSearch);
-  console.log("[CloudWorker] Jobs-only mode: 9am + 1pm Sun-Thu");
+  console.log("[CloudWorker] Jobs-only mode: 6am + 9am + 1pm Sun-Thu");
 }
 
 // ═══════════════════════════════════════════════════════
@@ -257,7 +286,7 @@ Bun.serve({
         stateBackend: process.env.STATE_BACKEND,
         telegramMode: process.env.TELEGRAM_MODE,
         israelTime: new Date().toLocaleString("en-US", { timeZone: "Asia/Jerusalem" }),
-        isWorkHours: isWorkHours(),
+        isWorkHours: isActiveHours(),
         isWorkday: isIsraeliWorkday(),
       });
     }

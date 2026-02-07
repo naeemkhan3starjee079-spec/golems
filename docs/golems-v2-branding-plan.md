@@ -1,6 +1,6 @@
 # Golems v2: Architecture, Plugins & Strategic Plan
 
-> Created: 2026-02-05 | Updated: 2026-02-06
+> Created: 2026-02-05 | Updated: 2026-02-07
 > Status: Active - continuously updated
 
 ## Table of Contents
@@ -25,6 +25,11 @@
 - [Part 17: Plugin Security](#part-17-plugin-security--distribution-research-2026-02-06)
 - [Part 18: Cloud Offload](#part-18-cloud-offload---stop-mac-247-2026-02-06) (Railway)
 - [Part 19: Claude Code Audit](#part-19-claude-code-2130-2133-audit-2026-02-06)
+- [Part 21: Wizard v2](#part-21-wizard-v2---consent-first-onboarding-2026-02-07)
+- [Part 22: Smart Scheduling](#part-22-smart-scheduling-done---2026-02-07)
+- [Part 23: Docs-from-Code](#part-23-docs-from-code-pipeline-2026-02-07)
+- [Part 24: Distribution Model](#part-24-distribution-model-2026-02-07)
+- [Part 25: Autonomous Pipeline](#part-25-autonomous-pipeline--multi-model-orchestration-2026-02-07)
 - [Research References](#research-references)
 
 ---
@@ -1559,6 +1564,203 @@ Flip to local mode by changing 3 vars:
 ```bash
 railway variables --set "LLM_BACKEND=ollama" --set "STATE_BACKEND=file" --set "TELEGRAM_MODE=local"
 ```
+
+---
+
+## Part 21: Wizard v2 - Consent-First Onboarding (2026-02-07)
+
+> **Core principle:** The wizard NEVER reads files, scans directories, or checks anything without asking first. Every step starts with a question, not an action. The user is always in control.
+
+### Entry Paths
+
+```
+Welcome to Golems! I can help you set up. Would you like to:
+
+a) "Tell me about your projects and I'll suggest what fits"
+b) "Let me scan your repos folder so I can see what you work with"  (explicit opt-in)
+c) "Just show me what Golems offers and I'll pick manually"
+d) "I already know what I want - let me choose directly"
+```
+
+### Layer Selection (multi-select per layer)
+
+| Layer | Options | What It Configures |
+|-------|---------|-------------------|
+| **Infra** | Railway, Supabase, 1Password, local-only | Cloud deploy, DB backend, secrets |
+| **Cloud** | Polling frequency (light/standard/aggressive), timezone | Smart scheduling in cloud-worker.ts |
+| **Context** | Which projects to monitor, CLAUDE.md hierarchy | Per-project plugin injection |
+| **Personas** | Style card from Zikaron, custom personas, templates | Output styles, SOUL.md |
+| **Integrations** | Telegram, email, job boards, Soltome | MCP servers, OAuth, API keys |
+
+### Context Export for claude.ai
+
+```bash
+golems export-context
+# Generates scrubbed files for claude.ai Project Knowledge:
+# - style-card.md (template, not personal data)
+# - CLAUDE.md hierarchy summary
+# - MCP server configs
+# - Persona templates (skeleton, not soul)
+```
+
+### Output
+
+- CLAUDE.md hierarchy created
+- MCP configs wired (.mcp.json)
+- Launchd plists or Railway env vars set
+- `SETUP_LOG.md` documenting exactly what was configured
+
+---
+
+## Part 22: Smart Scheduling (DONE - 2026-02-07)
+
+> **Status:** Implemented in `cloud-worker.ts` (commit `7e7c3b0`).
+
+### Israel Timezone Awareness
+
+```typescript
+getIsraelHour()      // Current hour in Asia/Jerusalem
+getIsraelDay()       // 0=Sun, 6=Sat
+isIsraeliWorkday()   // Sun-Thu (0-4)
+isWorkHours()        // 8am-8pm Israel time
+```
+
+### Schedules
+
+| Service | Old | New | Savings |
+|---------|-----|-----|---------|
+| **Email** | Every 10min (144/day) | 1h work hours, 3h overnight (~14/day) | 90% |
+| **Jobs** | Every 30min (48/day, 336/week) | 9am + 1pm Sun-Thu (~10/week) | 97% |
+| **Briefing** | 8am daily | 8am daily (unchanged) | — |
+| **Soltome** | 2am daily | 2am daily (unchanged) | — |
+
+### UptimeRobot Webhook
+
+Cloud worker exposes `POST /webhook/uptimerobot` → sends alerts to Telegram uptime topic.
+
+---
+
+## Part 23: Docs-from-Code Pipeline (2026-02-07)
+
+> **Goal:** Auto-generate API docs from TSDoc comments. No fake examples — use real code structure.
+
+### Stack
+
+- **TypeDoc** extracts TSDoc comments → JSON
+- **docusaurus-plugin-typedoc** renders API reference in Docusaurus
+- Integrates with existing `packages/docs` site
+
+### What Gets Documented
+
+| Module | Key Exports |
+|--------|-------------|
+| `lib/cloud-llm.ts` | `runHaiku()`, `runHaikuJSON()`, `getUsageStats()` |
+| `lib/state-store.ts` | `getState()`, `setState()`, `logEvent()` |
+| `lib/telegram-direct.ts` | `sendNotification()` |
+| `lib/agent-runner.ts` | `runAgent()` |
+| `email-golem/router.ts` | `routeEmail()` |
+| `email-golem/followup.ts` | `createFollowup()`, `getOverdueFollowups()` |
+
+### Tools to Investigate
+
+- Augmented code, Soy Dev sponsors, Theo.gg tools for docs-from-code
+- Cursor CLI `@codebase` for automated codebase mapping
+
+---
+
+## Part 24: Distribution Model (2026-02-07)
+
+> **Two distribution paths, not one.**
+
+### Path 1: MCP Servers (Broader Reach)
+
+Works in ANY MCP-compatible editor (Zed, Cursor, VS Code, Claude Code).
+- `golems-email` — 7 tools for email triage
+- `golems-jobs` — job search tools
+- `zikaron` — semantic memory search
+
+### Path 2: Claude Code Plugins (Deeper Integration)
+
+Skills, contexts, personas, CLAUDE.md hierarchy, hooks.
+- Richer experience but Claude Code only
+- Plugin manifests in `.claude-plugin/plugin.json`
+
+### Distribution Tiers
+
+| Tier | Audience | What They Get |
+|------|----------|---------------|
+| **1 (Easy)** | Anyone | MCP servers + `golems setup`. Job scraping, email, Telegram OOB |
+| **2 (Power User)** | CLI-comfortable | + Style card via Zikaron, custom scheduling, personas |
+| **3 (Developer)** | Contributors | + Custom skills, new golems, modify contexts, contribute back |
+
+### Public vs Local Rule
+
+| Public (in repo) | Local (never push) |
+|------|------|
+| Example contexts, example personas | Real style-card.md, profile.json |
+| MCP server code, skills framework | Golem personas with personal rules |
+| Wizard, docs site, templates | docs.local/, Zikaron data, archives |
+
+**Principle: "Ship the skeleton, keep the soul local"**
+
+---
+
+## Part 25: Autonomous Pipeline & Multi-Model Orchestration (2026-02-07)
+
+> **Goal:** Enable Claude Code to work autonomously through remaining tracks using parallel multi-model pipelines.
+
+### Multi-Model File Processing
+
+**Problem:** Reading large files (>100 lines) into Opus context causes compaction and context loss.
+
+**Solution:** `scripts/summarize-file.sh` — sends files to external models for processing:
+
+```bash
+./scripts/summarize-file.sh docs/plan.md "What's DONE vs NOT DONE?" gemini
+./scripts/summarize-file.sh src/big-file.ts "Summarize key functions" cursor
+```
+
+| Backend | Best For | Cost |
+|---------|----------|------|
+| **Gemini CLI** | Quick summaries | Free (1K/day) |
+| **Cursor CLI** | Deep code analysis (GPT-5.3) | Subscription |
+| **Kiro CLI** | Code review | Free tier |
+| **Haiku** | Cheap API summaries | $0.25/M tokens |
+| **Ollama** (Qwen Coder) | Offline code analysis | Free (local) |
+
+### Claude Code Agent Teams
+
+```bash
+CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
+```
+
+- `memory: project` in agent frontmatter = all agents share MEMORY.md
+- `TeammateIdle` / `TaskCompleted` hooks for event-driven golem collaboration
+- Replace event-log.ts notification pattern for inter-golem communication
+
+### Context7 Quality Gate
+
+After each code change, agents verify library usage:
+1. Check imports against Context7 docs
+2. If library used incorrectly → log to `docs.local/issues-concerns.md`
+3. If change breaks because of Context7 finding → leave explanation in issues file
+
+### Parallel Pipeline Pattern
+
+```
+Main Agent (Opus)
+├── Spawns research agents (Sonnet/Haiku) for exploration
+├── Spawns Gemini/Cursor for file summarization
+├── All agents write to shared scratchpad
+├── Main reads only summaries (never raw files)
+└── Context7 verification on all code changes
+```
+
+### Known Bug: `classifyHandoffIfNeeded`
+
+Task agents crash on exit (CC bug, not ours). Agents complete work but get marked "failed".
+- GitHub issues: #22544, #22312, #22098, #22087
+- Workaround: Have agents write results to files before exit
 
 ---
 

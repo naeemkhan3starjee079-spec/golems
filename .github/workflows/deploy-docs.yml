@@ -4,7 +4,7 @@ on:
   push:
     branches: [master]
     paths:
-      - 'packages/docs/**'
+      - 'packages/docsite/**'
   workflow_dispatch:
 
 permissions:
@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: packages/docs
+        working-directory: packages/docsite
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
@@ -31,7 +31,7 @@ jobs:
       - run: bun run build
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: packages/docs/build
+          path: packages/docsite/build
 
   deploy:
     environment:

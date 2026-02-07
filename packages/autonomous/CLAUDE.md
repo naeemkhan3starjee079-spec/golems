@@ -34,7 +34,9 @@
 
 ### Track 6: Cloud Worker
 - **`cloud-worker.ts`** — single Railway service running all cloud golems on schedules
-- Email (10min), Jobs (30min), Briefing (8am IL), Soltome (2am IL)
+- **Email:** hourly 6am-7pm (skip 12pm lunch), one 10pm check, OFF overnight
+- **Jobs:** 6am + 9am + 1pm, Sun-Thu only (Israeli work week)
+- **Briefing:** 8am daily | **Soltome:** 2am daily
 - Health endpoint on `$PORT`, usage tracking endpoint
 
 ### Track 7: Railway Config
