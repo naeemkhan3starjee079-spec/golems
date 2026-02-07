@@ -12,7 +12,35 @@
 | [Phase 3: TellerGolem](phase-3-teller/) | ✅ DONE | #15 | Financial domain expert: categorizer, alerts, reports, MCP, 29 tests |
 | [Phase 4: Tooling](phase-4-tooling/) | ✅ DONE | #28, #29, #30, #32 | Helpers layer, DeepSource, Exa, skills catalog, docsite redesign |
 
-**Overall: 35/35 parts done (100%) — Plan complete!**
+**Epoch 1: 35/35 parts done (100%) — Complete!**
+
+---
+
+## Epoch 2: Golems v2 Vision (Feb 2026+)
+
+**Full plan:** `~/.claude/plans/compressed-fluttering-torvalds.md`
+
+| # | Phase | Status |
+|---|-------|--------|
+| 0 | Pre-flight + CLI helper health check | ✅ |
+| 1 | Hero improvements (tab pop, sync, 3rd button, bigger) | ✅ |
+| 2 | Plan org + Obsidian sync | 🏗️ |
+| 3 | Golem character research | ✅ |
+| 4 | React Ink TUI | ✅ |
+| 5 | etanheyman.com integration | ⏳ |
+| 6 | Per-repo sessions | ⏳ |
+| 7 | Teaching vision | ⏳ |
+| 8 | Content + Claude 4.6 research | ⏳ |
+| 9 | Admin dashboard | ⏳ |
+| 10 | NightShift upgrade | ⏳ |
+| 11 | Centralized config | ⏳ |
+| 12 | Axiom + cost tracking | ⏳ |
+| 13 | README improvements | ⏳ |
+| 14 | Content & privacy sweep | ⏳ |
+| 15 | Layout stability (no CLS) | ⏳ |
+| 16 | Mobile-first responsiveness | ⏳ |
+| 17 | Accessibility audit | ⏳ |
+| 18 | Wizard (full build + wiring tests) | ⏳ |
 
 ## Phase 4 TODOs (Current)
 

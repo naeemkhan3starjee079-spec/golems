@@ -651,6 +651,9 @@ _ralph_aggregate_parallel_results() {
 # REPOGENOM - Project launcher generator
 # ═══════════════════════════════════════════════════════════════════
 
+  # Load web mode helper (ttyd + cloudflare)
+[[ -f "$HOME/.config/ralphtools/lib/repoclaude-web.zsh" ]] && source "$HOME/.config/ralphtools/lib/repoclaude-web.zsh"
+
 function repoGolem() {
   local name="$1"
   local path="$2"
@@ -705,6 +708,7 @@ function repoGolem() {
   # Create {name}Claude function with flag shortcuts
   eval "function ${lowercase_name}Claude() {
     local should_update=false
+    local remote_mode=false
     local notify_mode=\"\"
     local claude_args=()
     local project_key=\"$lowercase_name\"
@@ -722,6 +726,10 @@ function repoGolem() {
           ;;
         -c|--continue)
           claude_args+=(\"--continue\")
+          shift
+          ;;
+        --web)
+          remote_mode=true
           shift
           ;;
         -QN|--quiet-notify)
@@ -744,6 +752,21 @@ function repoGolem() {
     done
 
     cd \"$path\" || return 1
+
+    # Set tab title + iTerm2 badge (read emoji at runtime from registry)
+    local _emoji
+    _emoji=\$(jq -r --arg proj \"$lowercase_name\" '.projects[\$proj].emoji // \"\"' \"\$HOME/.config/ralphtools/registry.json\" 2>/dev/null)
+    local _title
+    if [[ -n \"\$_emoji\" ]]; then
+      _title=\"\$_emoji ${capitalized_name}\"
+    else
+      _title=\"${capitalized_name} Claude\"
+    fi
+    echo -ne \"\\e]2;\${_title}\\a\"
+    printf \"\\e]1337;SetBadgeFormat=%s\\a\" \"\$(echo -n \"\${_title}\" | base64)\"
+    echo \"\${_title}\"
+    echo \"📂 \$(pwd)\"
+    echo \"\"
 
     # Setup notifications
     rm -f \"/tmp/.claude_notify_config_\${project_key}.json\" 2>/dev/null
@@ -790,8 +813,33 @@ function repoGolem() {
       fi
     fi
 
-    claude \"\${claude_args[@]}\"
+    # Launch (web mode or direct)
+    if \$remote_mode; then
+      local _ttyd_port
+      _ttyd_port=\$(jq -r --arg proj \"$lowercase_name\" '.projects[\$proj].ttydPort // 0' \"\$HOME/.config/ralphtools/registry.json\" 2>/dev/null)
+      if [[ \"\$_ttyd_port\" -gt 0 ]]; then
+        _repoclaude_web_mode \"$lowercase_name\" \"\$_title\" \"\$_ttyd_port\" \"\${claude_args[@]}\"
+      else
+        echo \"Web mode not configured for $lowercase_name (no ttydPort in registry)\"
+        claude \"\${claude_args[@]}\"
+      fi
+    else
+      claude \"\${claude_args[@]}\"
+    fi
+
+    # Reset tab title on exit
+    echo -ne \"\\e]2;Terminal\\a\"
+    rm -f \"/tmp/.claude_notify_config_\${project_key}.json\" 2>/dev/null
   }"
+
+  # Create alias if configured (e.g., songscript -> songClaude)
+  if [[ -f "$RALPH_REGISTRY_FILE" ]]; then
+    local func_alias
+    func_alias=$(jq -r --arg proj "$lowercase_name" '.projects[$proj].funcAlias // ""' "$RALPH_REGISTRY_FILE" 2>/dev/null)
+    if [[ -n "$func_alias" && "$func_alias" != "${lowercase_name}Claude" ]]; then
+      eval "function ${func_alias}() { ${lowercase_name}Claude \"\$@\"; }"
+    fi
+  fi
 
   # Create {name}OpenCode function with UNIFIED FLAGS (same as Claude)
   # -s = skip permissions (no-op for OpenCode, it's permissive by default)
@@ -947,6 +995,16 @@ HEADER
     path="${path/#\~/$HOME}"
     echo "repoGolem $name \"$path\" $mcps" >> "$launchers_file"
   done
+
+  # Generate aliases for backward compatibility (funcAlias in registry)
+  echo "" >> "$launchers_file"
+  echo "# Aliases (from funcAlias in registry)" >> "$launchers_file"
+  local _reg="${RALPH_REGISTRY_FILE:-$HOME/.config/ralphtools/registry.json}"
+  local _aliases
+  _aliases=$(jq -r '.projects | to_entries[] | select(.value.funcAlias) | select(.value.funcAlias | length > 0) | "alias \(.value.funcAlias)=\(.key)Claude"' "$_reg" 2>/dev/null)
+  if [[ -n "$_aliases" ]]; then
+    echo "$_aliases" >> "$launchers_file"
+  fi
 
   echo "${GREEN}Launchers regenerated: $launchers_file${NC}"
 }

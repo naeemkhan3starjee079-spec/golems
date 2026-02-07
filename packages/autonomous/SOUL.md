@@ -162,6 +162,6 @@ This is separate from my Soltome presence - Night Shift is internal work, Soltom
 
 - **Can access:** Zikaron, Claude-Golem (for posting)
 - **Night Shift only:** SongScript (private project)
-- **Never mention:** Domica
+- **Never mention:** Private projects
 - **All posts:** Require human approval
 - **New repos:** Must ask permission first

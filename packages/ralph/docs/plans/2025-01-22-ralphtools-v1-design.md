@@ -523,7 +523,7 @@ ralph --help                   # Show help
 - Auto-generate `runProject`, `openProject`, `ralphProject` functions
 - Per-project MCP configuration
 - Replace repo-claude-v2.zsh functionality
-- **Success:** `runUnion`, `openDomica` etc. work with proper MCPs
+- **Success:** Project launchers work with proper MCPs
 
 ### Phase 7: 1Password Integration (v1.5.0)
 - `ralph secrets migrate .env` - convert to 1Password
@@ -749,10 +749,10 @@ _ralph_load_secrets() {
       local item=$(jq -r '.secrets.item' "$RALPH_CONFIG")
 
       # Load each secret from 1Password
-      SUPABASE_TOKENS[domica]=$(op read "op://$vault/$item/supabase-domica" 2>/dev/null)
-      SUPABASE_TOKENS[union]=$(op read "op://$vault/$item/supabase-union" 2>/dev/null)
-      LINEAR_TOKENS[domica]=$(op read "op://$vault/$item/linear-domica" 2>/dev/null)
-      LINEAR_TOKENS[union]=$(op read "op://$vault/$item/linear-union" 2>/dev/null)
+      SUPABASE_TOKENS[project1]=$(op read "op://$vault/$item/supabase-project1" 2>/dev/null)
+      SUPABASE_TOKENS[project2]=$(op read "op://$vault/$item/supabase-project2" 2>/dev/null)
+      LINEAR_TOKENS[project1]=$(op read "op://$vault/$item/linear-project1" 2>/dev/null)
+      LINEAR_TOKENS[project2]=$(op read "op://$vault/$item/linear-project2" 2>/dev/null)
       ;;
     file)
       [[ -f "$RALPH_CONFIG_DIR/secrets.local" ]] && source "$RALPH_CONFIG_DIR/secrets.local"
@@ -771,10 +771,10 @@ _ralph_load_secrets() {
 **1Password Item Structure:**
 ```
 Item: ralphtools (in "Development" vault)
-├── supabase-domica: sbp_1bb193...
-├── supabase-union: sbp_fac649...
-├── linear-domica: lin_api_nfKne...
-├── linear-union: lin_api_TOEZbe...
+├── supabase-project1: sbp_1bb193...
+├── supabase-project2: sbp_fac649...
+├── linear-project1: lin_api_nfKne...
+├── linear-project2: lin_api_TOEZbe...
 ├── tempmail-api-key: mk_L5sEK7...
 └── ntfy-topic: etans-ralph
 ```
@@ -786,7 +786,7 @@ Item: ralphtools (in "Development" vault)
 ### The Problem
 
 Currently `repo-claude-v2.zsh` has hardcoded project configs with tokens. We want:
-1. Per-project launch commands (`runUnion`, `openDomica`)
+1. Per-project launch commands (`runProject1`, `openProject2`)
 2. Secrets pulled from 1Password (or local file)
 3. Auto-configure MCPs per project
 
@@ -797,23 +797,22 @@ In `~/.config/claude-golem/projects.json`:
 ```json
 {
   "projects": {
-    "union": {
-      "path": "~/Desktop/Gits/union",
-      "displayName": "Union",
-      "codename": "cantaloupe",
+    "project1": {
+      "path": "~/Desktop/Gits/project1",
+      "displayName": "Project 1",
       "mcps": ["Context7", "linear", "supabase", "browser-tools", "figma"],
       "secrets": {
-        "vault": "cantaloupe",
+        "vault": "project1",
         "supabase": "supabase-token",
         "linear": "linear-token"
       }
     },
-    "domica": {
-      "path": "~/Desktop/Gits/domica",
-      "displayName": "Domica",
+    "project2": {
+      "path": "~/Desktop/Gits/project2",
+      "displayName": "Project 2",
       "mcps": ["Context7", "linear", "supabase", "browser-tools", "figma"],
       "secrets": {
-        "vault": "domica",
+        "vault": "project2",
         "supabase": "supabase-token",
         "linear": "linear-token"
       }
@@ -835,25 +834,25 @@ Ralph generates shell functions for each project:
 ```bash
 # Auto-generated in ~/.config/claude-golem/projects.sh (sourced in .zshrc)
 
-runUnion() {
-  cd ~/Desktop/Gits/union || return 1
-  _ralph_setup_mcps "union"
+runProject1() {
+  cd ~/Desktop/Gits/project1 || return 1
+  _ralph_setup_mcps "project1"
   op run --env-file .env.template -- claude "$@"
 }
 
-openUnion() {
-  cd ~/Desktop/Gits/union || return 1
+openProject1() {
+  cd ~/Desktop/Gits/project1 || return 1
   code .
-  runUnion
+  runProject1
 }
 
-ralphUnion() {
-  cd ~/Desktop/Gits/union || return 1
-  _ralph_setup_mcps "union"
+ralphProject1() {
+  cd ~/Desktop/Gits/project1 || return 1
+  _ralph_setup_mcps "project1"
   ralph "$@"
 }
 
-# Same pattern for domica, songscript, etc.
+# Same pattern for each project
 ```
 
 ### Add/Remove Projects

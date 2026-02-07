@@ -7,7 +7,7 @@
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6), 0 0 60px rgba(229, 149, 0, 0.06);
   font-family: 'IBM Plex Mono', 'Fira Code', Monaco, monospace;
   width: 100%;
-  max-width: 560px;
+  max-width: 620px;
 }
 
 /* Title bar — macOS window chrome */
@@ -89,10 +89,14 @@
 }
 
 .tabActive {
-  color: #BBBBBB;
+  color: #e8e2d6;
   border-bottom-color: #e59500;
-  background: rgba(229, 149, 0, 0.05);
-  transform: scale(1.02);
+  background: rgba(229, 149, 0, 0.1);
+  transform: scale(1.05);
+  transform-origin: center bottom;
+  font-weight: 700;
+  box-shadow: 0 2px 12px rgba(229, 149, 0, 0.15);
+  z-index: 1;
 }
 
 .tabEmoji {
@@ -103,10 +107,11 @@
   font-weight: 500;
 }
 
-/* Terminal content area */
+/* Terminal content area — fixed height prevents CLS on tab switch */
 .content {
   padding: 16px 18px;
-  min-height: 140px;
+  height: 200px;
+  overflow: hidden;
   transition: opacity 0.3s ease;
 }
 
@@ -198,7 +203,7 @@
 
   .content {
     padding: 12px 14px;
-    min-height: 120px;
+    height: 140px;
   }
 
   .line {

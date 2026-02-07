@@ -1,7 +1,8 @@
-# Golems Monorepo
+# Golems
 
-> Autonomous AI agent ecosystem: coding loops, memory systems, and digital presence.
+> Autonomous AI agent ecosystem — coding loops, memory, and orchestration.
 
+[![Docs](https://img.shields.io/badge/Docs-etanhey.github.io/golems-blue)](https://etanhey.github.io/golems/)
 [![Ralph](https://img.shields.io/badge/Ralph-Autonomous_Coding-purple)](packages/ralph/)
 [![Zikaron](https://img.shields.io/badge/Zikaron-Memory_Layer-blue)](packages/zikaron/)
 [![Autonomous](https://img.shields.io/badge/Autonomous-Telegram_Bots-green)](packages/autonomous/)
@@ -9,12 +10,15 @@
 ```
 golems/
 ├── packages/
-│   ├── ralph/        # Autonomous AI coding loop (PRD → implement → review → commit)
-│   ├── zikaron/      # Memory layer - indexes Claude conversations for search
-│   └── autonomous/   # Telegram bot, Night Shift, Soltome presence
-├── contexts/         # Shared Claude context files
-├── skills/           # Golem-powers skills (symlinked to ralph)
-└── docs/             # Architecture notes
+│   ├── ralph/          # Autonomous AI coding loop (PRD → implement → review → commit)
+│   ├── zikaron/        # Memory layer - indexes Claude conversations for search
+│   ├── autonomous/     # Telegram bot, Night Shift, golem orchestration
+│   ├── docsite/        # Documentation site (Docusaurus)
+│   ├── golems-tui/     # React Ink CLI dashboard
+│   └── admin-ui/       # Web admin dashboard (Vite + React)
+├── skills/             # 34 golem-powers skills
+├── contexts/           # Shared Claude context files
+└── docs/               # Architecture + plan
 ```
 
 ---
@@ -77,33 +81,47 @@ bun install && bun run bot
 ## Quick Start
 
 ```bash
-# Clone
-git clone https://github.com/YOUR_USERNAME/golems.git
+git clone https://github.com/EtanHey/golems.git
 cd golems
 
-# Ralph (autonomous coding)
-cd packages/ralph && bun install
+# CLI dashboard
+golems status
 
-# Zikaron (memory layer)
-cd packages/zikaron && pip install -e .
+# Autonomous coding loop
+cd packages/ralph && ./ralph.zsh 5
 
-# Autonomous (Telegram bot)
+# Memory search
+cd packages/zikaron && pip install -e . && zikaron search-fast "auth patterns"
+
+# Telegram bot
 cd packages/autonomous && bun install && bun run bot
 ```
 
+Full setup: [Getting Started](https://etanhey.github.io/golems/getting-started)
+
 ---
 
-## Coming Soon
+## Golems
 
-| Feature | Status | Description |
-|---------|--------|-------------|
-| **Content Pipeline v2** | 🔜 Planning | Multi-agent content creation with researchers + influencer |
-| **Gemini CLI Integration** | 🔜 Research | Replace local Ollama with Gemini for scoring |
-| **Kiro CLI Integration** | 🔜 Research | Knowledge base + custom agents for complex analysis |
-| **Collab Skill** | 🔜 Planning | Inter-Claude communication via shared files |
-| **Zikaron Dashboard** | ⏳ Testing | Web UI for browsing indexed conversations |
+| Golem | Role | Status |
+|-------|------|--------|
+| **ClaudeGolem** | Orchestrator — runs Claude Code sessions per project | ✅ Active |
+| **EmailGolem** | Smart email triage, routing, draft replies | ✅ Active |
+| **RecruiterGolem** | Job matching, outreach, interview practice (7 modes) | ✅ Active |
+| **TellerGolem** | Financial tracking, subscription alerts | ✅ Active |
+| **JobGolem** | Job board scraping + LLM filtering | ✅ Active |
+| **NightShift** | 4am autonomous improvements → PR | ✅ Active |
 
-See [mega-plan-feb-2026.md](packages/autonomous/docs.local/planning/mega-plan-feb-2026.md) for full roadmap.
+## CLI Helpers
+
+Golems orchestrates 4 free CLI AI tools alongside Claude:
+
+| Tool | Use | Cost |
+|------|-----|------|
+| **Gemini** | Research, opinions, web search | Free |
+| **Cursor** | Codebase sweeps, CSS, frontend | $20/mo |
+| **Codex** | Isolated code gen, reviews | ChatGPT Plus |
+| **Kiro** | Knowledge base, custom agents | Free |
 
 ---
 
@@ -136,14 +154,13 @@ See [mega-plan-feb-2026.md](packages/autonomous/docs.local/planning/mega-plan-fe
 
 ---
 
-## Related
+## Links
 
-- [@GolemZikaronBot](https://t.me/GolemZikaronBot) - Telegram bot
-- [soltome.com/u/claudegolem](https://soltome.com) - AI agent discussion platform
-- [etanheyman.com](https://etanheyman.com) - Creator's portfolio
+- [Documentation](https://etanhey.github.io/golems/) — full docs
+- [etanheyman.com/projects/golems](https://etanheyman.com/projects/golems) — project page
+- [@GolemZikaronBot](https://t.me/GolemZikaronBot) — Telegram bot
+- [soltome.com](https://soltome.com) — AI agent discussion (ClaudeGolem posts here)
 
 ---
 
-## License
-
-Private repository. Contact [@EtanHey](https://github.com/EtanHey) for access.
+Built by [@EtanHey](https://github.com/EtanHey) with Claude Code.

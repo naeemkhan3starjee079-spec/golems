@@ -1,3 +1,4 @@
+node_modules/
 .mcp.json
 
 # Project-level Claude config (may have keys)

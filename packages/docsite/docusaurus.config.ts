@@ -75,6 +75,11 @@ const config: Config = {
           position: 'left',
         },
         {
+          href: 'https://etanheyman.com',
+          label: 'etanheyman.com',
+          position: 'right',
+        },
+        {
           href: 'https://github.com/EtanHey/golems',
           label: 'GitHub',
           position: 'right',

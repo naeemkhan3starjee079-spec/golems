@@ -47,7 +47,7 @@
   display: flex;
   gap: 1.25rem;
   align-items: flex-start;
-  max-width: 680px;
+  max-width: 780px;
 }
 
 .heroTitle {
@@ -149,6 +149,31 @@
 
 .secondaryButton:active {
   background: rgba(45, 212, 168, 0.15);
+}
+
+/* 3rd dynamic button — changes with active golem */
+.golemButton {
+  background: transparent;
+  color: #e59500 !important;
+  border: 1px solid rgba(229, 149, 0, 0.3);
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+  text-decoration: none !important;
+  white-space: nowrap;
+}
+
+.golemButton:hover {
+  border-color: #e59500;
+  background: rgba(229, 149, 0, 0.08);
+  color: #e59500 !important;
+}
+
+.golemButton:focus-visible {
+  outline: 2px solid #e59500;
+  outline-offset: 2px;
 }
 
 /* Golems grid */
@@ -348,6 +373,17 @@
   border-color: #1a8a6e;
   background: rgba(26, 138, 110, 0.06);
   color: #1a8a6e !important;
+}
+
+:global([data-theme='light']) .golemButton {
+  color: #b07400 !important;
+  border-color: rgba(176, 116, 0, 0.3);
+}
+
+:global([data-theme='light']) .golemButton:hover {
+  border-color: #b07400;
+  background: rgba(176, 116, 0, 0.06);
+  color: #b07400 !important;
 }
 
 :global([data-theme='light']) .golemsSection {

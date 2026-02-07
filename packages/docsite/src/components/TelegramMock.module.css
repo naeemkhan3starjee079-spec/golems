@@ -7,7 +7,7 @@
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
   font-family: 'IBM Plex Sans', -apple-system, sans-serif;
   width: 100%;
-  max-width: 340px;
+  max-width: 380px;
 }
 
 /* Header */
@@ -50,30 +50,54 @@
   color: #6b7c8e;
 }
 
-/* Topic bar */
-.topicBar {
+/* Topic tabs — clickable, mirrors terminal tabs */
+.topicTabs {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  background: rgba(229, 149, 0, 0.08);
+  overflow-x: auto;
+  scrollbar-width: none;
+  background: #17212b;
   border-bottom: 1px solid #1e2c3a;
 }
 
-.topicEmoji {
-  font-size: 0.8rem;
+.topicTabs::-webkit-scrollbar {
+  display: none;
 }
 
-.topicName {
-  font-size: 0.72rem;
-  color: #e59500;
+.topicTab {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #6b7c8e;
+  font-family: inherit;
+  font-size: 0.68rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.topicTab:hover {
+  color: #8899aa;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.topicTabActive {
+  color: #e8e2d6;
+  border-bottom-color: #e59500;
+  background: rgba(229, 149, 0, 0.08);
   font-weight: 600;
+  transform: scale(1.05);
 }
 
 /* Messages */
+/* Fixed height prevents CLS on tab switch */
 .messages {
   padding: 12px 14px;
-  min-height: 120px;
+  height: 200px;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -164,9 +188,19 @@
   color: #888;
 }
 
-:global([data-theme='light']) .topicBar {
-  background: rgba(229, 149, 0, 0.06);
+:global([data-theme='light']) .topicTabs {
+  background: #f8f8f8;
   border-bottom-color: #e0e0e0;
+}
+
+:global([data-theme='light']) .topicTab {
+  color: #888;
+}
+
+:global([data-theme='light']) .topicTabActive {
+  color: #1a1510;
+  border-bottom-color: #b07400;
+  background: rgba(176, 116, 0, 0.06);
 }
 
 :global([data-theme='light']) .message {

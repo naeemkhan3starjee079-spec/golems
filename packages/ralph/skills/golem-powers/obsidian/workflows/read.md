@@ -22,7 +22,7 @@ cat "$VAULT/Diary/01-24-2026.md"
 |------|---------|
 | Ralph Ideas | `cat "$VAULT/Ralph/Ralph Ideas.md"` |
 | Today's Diary | `cat "$VAULT/Diary/$(date +%m-%d-%Y).md"` |
-| Domica Notes | `cat "$VAULT/Domica notes.md"` |
+| Project Notes | `cat "$VAULT/Project notes.md"` |
 | Memos | `cat "$VAULT/מזכרות.md"` |
 
 ## Using Read Tool

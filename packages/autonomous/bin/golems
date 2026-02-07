@@ -34,6 +34,7 @@ USAGE:
 
 COMMANDS:
   status        Show all services status (default)
+  tui           Interactive React Ink dashboard (keyboard navigation)
   doctor        Health check all services + diagnostics
   services      Detailed launchd service status
   scrape        Trigger job scrape now
@@ -466,6 +467,9 @@ case "${1:-status}" in
     ;;
   status)
     cmd_status
+    ;;
+  tui|dashboard)
+    cd "$HOME/Gits/golems/packages/golems-tui" && bun src/index.tsx
     ;;
   doctor)
     cd "$GOLEMS_HOME" && bun run src/doctor.ts

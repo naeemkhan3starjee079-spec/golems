@@ -132,7 +132,7 @@ ralph --prd path # Use specific PRD
 
 **Persona**: Collaborative researcher + open source evangelist
 **Topics**: Zikaron, Ralph, autonomous coding patterns
-**Never post about**: Private projects (domica, union)
+**Never post about**: Private projects
 
 ---
 

@@ -28,7 +28,7 @@ Wrapper scripts (one auth for all):
    ```bash
    TEMPMAIL_API_KEY="op://development/tempmail/password"
    CONTEXT7_API_KEY="op://development/context7/API_KEY"
-   SUPABASE_ACCESS_TOKEN="op://Domica/mcp-supabase/ACCESS_TOKEN"
+   SUPABASE_ACCESS_TOKEN="op://my-project/mcp-supabase/ACCESS_TOKEN"
    ```
 
 2. **Wrapper scripts** use `op run`:

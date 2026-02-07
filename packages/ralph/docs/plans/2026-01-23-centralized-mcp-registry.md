@@ -15,7 +15,7 @@
 ### What Exists:
 1. `~/.config/claude-golem/projects.json` - basic project list (name, path, mcps array)
 2. `~/.claude/shared-project-mcps.json` - global MCPs (tempmail, Context7)
-3. Manual `domicaClaude()`, `songClaude()` functions in `.zshrc` with hardcoded MCP logic
+3. Manual project-specific Claude functions in `.zshrc` with hardcoded MCP logic
 4. `_ralph_setup_mcps()` function in ralph.zsh
 5. US-019 completed: 1Password organization with project/service nesting
 6. US-020, US-022 blocked: waiting for registry architecture
@@ -52,20 +52,20 @@
     }
   },
   "projects": {
-    "domica": {
-      "path": "~/Desktop/Gits/domica",
+    "my-project": {
+      "path": "~/Desktop/Gits/my-project",
       "mcps": ["supabase", "browser-tools"],
       "secrets": {
-        "SUPABASE_URL": "op://Dev/domica/supabase/url",
-        "SUPABASE_ANON_KEY": "op://Dev/domica/supabase/anon_key"
+        "SUPABASE_URL": "op://Dev/my-project/supabase/url",
+        "SUPABASE_ANON_KEY": "op://Dev/my-project/supabase/anon_key"
       },
-      "ntfy_topic": "etans-domicaClaude"
+      "ntfy_topic": "etans-myprojectClaude"
     },
-    "rudy": {
-      "path": "~/Desktop/Gits/rudy-monorepo",
+    "another-project": {
+      "path": "~/Desktop/Gits/another-project",
       "mcps": ["firebase"],
       "secrets": {
-        "FIREBASE_PROJECT_ID": "op://Dev/rudy/firebase/project_id"
+        "FIREBASE_PROJECT_ID": "op://Dev/another-project/firebase/project_id"
       }
     },
     "ralphtools": {
@@ -778,7 +778,7 @@ US-027     US-028     US-020
 **Before:**
 ```bash
 # Manual setup in .zshrc
-function domicaClaude() {
+function projectClaude() {
   # 50+ lines of boilerplate per project
 }
 ```
@@ -787,13 +787,13 @@ function domicaClaude() {
 ```bash
 # One-time setup
 $ ralph setup
-? Project name: domica
+? Project name: my-project
 ? Select MCPs: [x] supabase  [x] browser-tools
 ? Migrate .env to 1Password? Yes
-✓ Added project: domica
+✓ Added project: my-project
 
 # Now works everywhere
-$ cd ~/Desktop/Gits/domica
-$ domicaClaude        # Uses registry
+$ cd ~/Desktop/Gits/my-project
+$ myprojectClaude        # Uses registry
 $ ralph               # Uses same registry
 ```

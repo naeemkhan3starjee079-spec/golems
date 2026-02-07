@@ -8,7 +8,7 @@ This spec is written so you can copy it into `claude-golem` as:
 
 - `claude-golem/docs/skill-lookup-pattern.md`
 
-And then wire individual projects (like `domica`) to follow it.
+And then wire individual projects to follow it.
 
 ---
 

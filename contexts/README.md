@@ -66,18 +66,18 @@ When you fix or improve a context, ALL projects using that context benefit autom
 ### Example: Discovering a Gap
 
 ```bash
-# Working on domica project, realize RTL flex rules are incomplete
+# Working on a project, realize RTL flex rules are incomplete
 
 # 1. Fix it in the shared context
 edit ~/.claude/contexts/workflow/rtl.md
 
-# 2. Commit to claude-golem
-cd ~/Gits/claude-golem
+# 2. Commit to golems repo
+cd ~/Gits/golems
 git add contexts/workflow/rtl.md
 git commit -m "fix: improve RTL flex container rules"
 git push
 
-# 3. All RTL projects benefit - domica, portfolio-hebrew, etc.
+# 3. All RTL projects benefit from the improvement
 ```
 
 ### One Fix, Many Benefits

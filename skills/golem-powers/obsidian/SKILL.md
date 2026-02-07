@@ -34,7 +34,7 @@ description: Use when accessing Obsidian vault notes - reading, searching, listi
 personal/
 ├── Diary/              # Daily entries (MM-DD-YYYY.md)
 ├── Ralph/              # Ralph-related ideas and notes
-├── Domica notes.md     # Project notes
+├── Project notes.md    # Project notes
 ├── מזכרות.md           # Memos (Hebrew)
 └── *.md                # Other notes
 ```
@@ -74,7 +74,7 @@ cat "/Users/etanheyman/Library/Mobile Documents/iCloud~md~obsidian/Documents/per
 |------|---------|
 | `Ralph/Ralph Ideas.md` | Ideas for Ralph improvements |
 | `Diary/MM-DD-YYYY.md` | Daily diary entries |
-| `Domica notes.md` | Domica project notes |
+| `Project notes.md` | Project notes |
 | `מזכרות.md` | General memos |
 
 ---

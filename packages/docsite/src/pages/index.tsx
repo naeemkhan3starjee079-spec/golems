@@ -1,4 +1,4 @@
-import {useState, useEffect} from 'react';
+import {useState, useEffect, useCallback} from 'react';
 import type {ReactNode} from 'react';
 import Link from '@docusaurus/Link';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
@@ -52,13 +52,21 @@ function HomepageHero() {
   const {siteConfig} = useDocusaurusContext();
   const [activeTab, setActiveTab] = useState(0);
 
-  // Sync terminal and telegram cycling
+  // Auto-cycle through tabs
   useEffect(() => {
     const interval = setInterval(() => {
       setActiveTab((prev) => (prev + 1) % 5);
     }, 5000);
     return () => clearInterval(interval);
   }, []);
+
+  // Bidirectional sync — clicking either component updates both
+  const handleTabChange = useCallback((index: number) => {
+    setActiveTab(index);
+  }, []);
+
+  // Dynamic 3rd button based on active golem
+  const activeGolem = golems[activeTab % golems.length];
 
   return (
     <header className={styles.heroBanner}>
@@ -83,11 +91,14 @@ function HomepageHero() {
             <Link className={styles.secondaryButton} to="/docs/architecture">
               Architecture
             </Link>
+            <Link className={styles.golemButton} to={activeGolem.link}>
+              {activeGolem.emoji} {activeGolem.name} &rarr;
+            </Link>
           </div>
         </div>
         <div className={styles.heroShowcase}>
-          <TerminalHero activeIndex={activeTab} />
-          <TelegramMock activeIndex={activeTab} />
+          <TerminalHero activeIndex={activeTab} onTabClick={handleTabChange} />
+          <TelegramMock activeIndex={activeTab} onTopicClick={handleTabChange} />
         </div>
       </div>
     </header>

@@ -426,7 +426,7 @@ autonomous/
 
 - **Can access:** Zikaron, Claude-Golem
 - **Night Shift only:** SongScript (private)
-- **Never mention:** Domica
+- **Never mention:** Private projects
 - **All posts:** Require approval
 
 ---

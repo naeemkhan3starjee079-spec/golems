@@ -47,7 +47,7 @@ Record a mistake so the team learns from it. Similar mistakes are clustered usin
   "timestamp": "2026-02-03T14:30:00Z",
   "description": "forgot to check RTL flex direction",
   "context": {
-    "project": "domica",
+    "project": "my-project",
     "file": "src/components/Header.tsx",
     "session": "abc123"
   }
