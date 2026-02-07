@@ -15,6 +15,12 @@ import { createDbClient, recordPayment, trackSubscription } from "../email-golem
 import { logEvent } from "../event-log";
 import { categorizeExpense } from "./categorizer";
 import { detectPaymentFailure, sendPaymentAlert } from "./alerts";
+import {
+  generateMonthlyReport as generateMonthlyReportImpl,
+  generateTaxReport as generateTaxReportImpl,
+  formatMonthlyReportText,
+  formatTaxReportText,
+} from "./report";
 import type { ScoredEmail, MonthlyReport, TaxReport } from "./types";
 import type { ScoredEmail as EmailGolemScoredEmail } from "../email-golem/types";
 
@@ -28,16 +34,7 @@ export async function generateMonthlyReport(
   month?: string
 ): Promise<MonthlyReport> {
   const reportMonth = month || new Date().toISOString().slice(0, 7);
-
-  // In a real implementation, this would query the database
-  // For now, return a stub
-  return {
-    month: reportMonth,
-    totalSpend: 0,
-    byCategory: {},
-    byVendor: {},
-    subscriptionCount: 0,
-  };
+  return generateMonthlyReportImpl(reportMonth);
 }
 
 /**
@@ -48,90 +45,7 @@ export async function generateMonthlyReport(
  */
 export async function generateTaxReport(year?: number): Promise<TaxReport> {
   const reportYear = year || new Date().getFullYear();
-
-  // In a real implementation, this would query the database
-  // For now, return a stub
-  return {
-    year: reportYear,
-    totalDeductible: 0,
-    byCategory: {
-      advertising: { total: 0, items: [] },
-      insurance: { total: 0, items: [] },
-      office: { total: 0, items: [] },
-      software: { total: 0, items: [] },
-      education: { total: 0, items: [] },
-      travel: { total: 0, items: [] },
-      meals: { total: 0, items: [] },
-      "professional-services": { total: 0, items: [] },
-      other: { total: 0, items: [] },
-    },
-  };
-}
-
-/**
- * Format monthly report as text
- *
- * @param report - The monthly report to format
- * @returns Formatted text
- */
-export function formatMonthlyReportText(report: MonthlyReport): string {
-  let output = `\n📊 Monthly Financial Report: ${report.month}\n`;
-  output += `${"=".repeat(50)}\n\n`;
-  output += `Total Spent: $${report.totalSpend.toFixed(2)}\n`;
-  output += `Active Subscriptions: ${report.subscriptionCount}\n\n`;
-
-  if (Object.keys(report.byCategory).length > 0) {
-    output += "By IRS Category:\n";
-    for (const [category, amount] of Object.entries(report.byCategory)) {
-      if (amount > 0) {
-        output += `  ${category}: $${amount.toFixed(2)}\n`;
-      }
-    }
-    output += "\n";
-  }
-
-  if (Object.keys(report.byVendor).length > 0) {
-    output += "By Vendor:\n";
-    const vendors = Object.entries(report.byVendor).sort(
-      ([, a], [, b]) => b - a
-    );
-    vendors.slice(0, 10).forEach(([vendor, amount]) => {
-      output += `  ${vendor}: $${amount.toFixed(2)}\n`;
-    });
-  }
-
-  output += `${"=".repeat(50)}\n`;
-  return output;
-}
-
-/**
- * Format tax report as text
- *
- * @param report - The tax report to format
- * @returns Formatted text
- */
-export function formatTaxReportText(report: TaxReport): string {
-  let output = `\n💰 Tax Deduction Report (Schedule C): ${report.year}\n`;
-  output += `${"=".repeat(50)}\n\n`;
-  output += `Total Deductible Expenses: $${report.totalDeductible.toFixed(2)}\n\n`;
-
-  output += "By IRS Category:\n";
-  for (const [category, data] of Object.entries(report.byCategory)) {
-    if (data.total > 0) {
-      output += `  ${category}: $${data.total.toFixed(2)}\n`;
-      if (data.items.length > 0) {
-        data.items.slice(0, 3).forEach(({ vendor, amount }) => {
-          output += `    - ${vendor}: $${amount.toFixed(2)}\n`;
-        });
-        if (data.items.length > 3) {
-          output += `    ... and ${data.items.length - 3} more\n`;
-        }
-      }
-    }
-  }
-
-  output += `${"=".repeat(50)}\n`;
-  return output;
+  return generateTaxReportImpl(reportYear);
 }
 
 /**

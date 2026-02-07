@@ -26,8 +26,8 @@ export async function generateMonthlyReport(month: string): Promise<MonthlyRepor
   const { data, error } = await supabase
     .from("payments")
     .select("*")
-    .gte("date", startDate)
-    .lte("date", endDate);
+    .gte("paid_at", startDate)
+    .lte("paid_at", endDate);
 
   const emptyCategories = Object.fromEntries(
     ALL_CATEGORIES.map((c) => [c, 0])
@@ -49,7 +49,9 @@ export async function generateMonthlyReport(month: string): Promise<MonthlyRepor
 
   for (const row of data) {
     const amount = Number(row.amount) || 0;
-    const category = (row.tax_category as TaxCategory) || "other";
+    const category: TaxCategory = ALL_CATEGORIES.includes(row.tax_category as TaxCategory)
+      ? (row.tax_category as TaxCategory)
+      : "other";
     const vendor = row.service_name || "Unknown";
 
     totalSpend += amount;
@@ -82,8 +84,8 @@ export async function generateTaxReport(year: number): Promise<TaxReport> {
   const { data, error } = await supabase
     .from("payments")
     .select("*")
-    .gte("date", startDate)
-    .lte("date", endDate);
+    .gte("paid_at", startDate)
+    .lte("paid_at", endDate);
 
   const emptyByCategory = Object.fromEntries(
     ALL_CATEGORIES.map((c) => [c, { total: 0, items: [] as Array<{ vendor: string; amount: number }> }])
@@ -103,7 +105,9 @@ export async function generateTaxReport(year: number): Promise<TaxReport> {
 
   for (const row of data) {
     const amount = Number(row.amount) || 0;
-    const category = (row.tax_category as TaxCategory) || "other";
+    const category: TaxCategory = ALL_CATEGORIES.includes(row.tax_category as TaxCategory)
+      ? (row.tax_category as TaxCategory)
+      : "other";
     const vendor = row.service_name || "Unknown";
 
     totalDeductible += amount;

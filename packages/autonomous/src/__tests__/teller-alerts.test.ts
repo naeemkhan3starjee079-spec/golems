@@ -221,14 +221,14 @@ describe("sendPaymentAlert", () => {
     );
   });
 
-  test("logs subscription_alert event", async () => {
+  test("logs email_alert event", async () => {
     await sendPaymentAlert(failure);
 
     expect(mockLogEvent).toHaveBeenCalledTimes(1);
-    expect(mockLogEvent).toHaveBeenCalledWith("subscription_alert", "tellergolem", {
+    expect(mockLogEvent).toHaveBeenCalledWith("email_alert", {
       vendor: "Netflix",
       reason: "Card declined",
       emailId: "email-1",
-    });
+    }, "tellergolem");
   });
 });

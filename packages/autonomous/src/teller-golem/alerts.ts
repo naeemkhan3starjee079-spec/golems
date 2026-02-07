@@ -67,17 +67,18 @@ export async function sendPaymentAlert(
 ): Promise<void> {
   const amountStr = failure.amount ? ` ($${failure.amount})` : "";
 
-  await sendNotification({
-    title: `Payment Failed: ${failure.vendor}`,
-    body: `${failure.reason}${amountStr}. ${failure.actionNeeded}`,
-    source: "email",
-    priority: "high",
-  });
-
-  await logEvent("subscription_alert", "tellergolem", {
-    vendor: failure.vendor,
-    reason: failure.reason,
-    emailId: failure.emailId,
-  });
+  await Promise.allSettled([
+    sendNotification({
+      title: `Payment Failed: ${failure.vendor}`,
+      body: `${failure.reason}${amountStr}. ${failure.actionNeeded}`,
+      source: "email",
+      priority: "high",
+    }),
+    logEvent("email_alert", {
+      vendor: failure.vendor,
+      reason: failure.reason,
+      emailId: failure.emailId,
+    }, "tellergolem"),
+  ]);
 }
 
