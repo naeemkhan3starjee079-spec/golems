@@ -3,7 +3,7 @@
  * Shows status of all external helper backends.
  */
 
-import { getHelperStatus, type HelperBackend } from "./lib/helpers";
+import { getHelperStatus, FALLBACK_CHAIN, type HelperBackend } from "./lib/helpers";
 
 const RED = "\x1b[0;31m";
 const GREEN = "\x1b[0;32m";
@@ -33,7 +33,7 @@ function formatResetTime(resetsAt: string): string {
 
 function formatMinutesUntil(resetsAt: string, now: Date): string {
   const diff = new Date(resetsAt).getTime() - now.getTime();
-  const mins = Math.ceil(diff / 60_000);
+  const mins = Math.max(0, Math.ceil(diff / 60_000));
   if (mins < 60) return `${mins}min`;
   const hours = Math.floor(mins / 60);
   const remainMins = mins % 60;
@@ -88,7 +88,7 @@ function tableMode(): void {
   }
 
   console.log();
-  console.log(`  Fallback chain: gemini \u2192 kiro \u2192 codex \u2192 cursor \u2192 haiku`);
+  console.log(`  Fallback chain: ${FALLBACK_CHAIN.join(" \u2192 ")}`);
 }
 
 // Main

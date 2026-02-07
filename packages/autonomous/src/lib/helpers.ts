@@ -5,6 +5,7 @@
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
 import { join } from "path";
+import { runHaiku as runCloudLLM } from "./cloud-llm";
 
 export type HelperBackend = "gemini" | "cursor" | "codex" | "kiro" | "haiku";
 
@@ -30,13 +31,7 @@ type RateLimitsFile = Record<HelperBackend, RateLimitEntry>;
 
 const ALL_BACKENDS: HelperBackend[] = ["gemini", "kiro", "codex", "cursor", "haiku"];
 
-const FALLBACK_CHAIN: HelperBackend[] = ["gemini", "kiro", "codex", "cursor", "haiku"];
-
-const DEFAULT_TIMEZONE = "Asia/Jerusalem";
-
-function getTimezone(): string {
-  return process.env.TZ || DEFAULT_TIMEZONE;
-}
+export const FALLBACK_CHAIN: HelperBackend[] = ["gemini", "kiro", "codex", "cursor", "haiku"];
 
 function getStateDir(): string {
   return process.env.GOLEMS_STATE_DIR || join(process.env.HOME || "~", ".golems-zikaron");
@@ -84,20 +79,11 @@ function computeResetsAt(backend: HelperBackend, now: Date = new Date()): string
       return reset.toISOString();
     }
     case "kiro": {
-      // Resets at end of current month in user's timezone
-      const tz = getTimezone();
-      const localized = new Date(now.toLocaleString("en-US", { timeZone: tz }));
-      const year = localized.getFullYear();
-      const month = localized.getMonth();
-      // Last day of current month, 23:59:59
-      const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59, 999);
-      // Convert back: create a date in the target timezone
-      const resetStr = endOfMonth.toLocaleString("en-US", { timeZone: tz });
-      // Store as ISO by reconstructing
-      const parts = new Date(resetStr);
-      // Approximate: offset from UTC
-      const offset = now.getTime() - new Date(now.toLocaleString("en-US", { timeZone: tz })).getTime();
-      return new Date(endOfMonth.getTime() + offset).toISOString();
+      // Resets at end of current month (UTC)
+      const year = now.getUTCFullYear();
+      const month = now.getUTCMonth();
+      // Day 0 of next month = last day of current month
+      return new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999)).toISOString();
     }
     case "codex": {
       // 1 minute RPM
@@ -174,79 +160,41 @@ export function getHelperStatus(now: Date = new Date()): Record<HelperBackend, {
 /**
  * Build the CLI command for a given backend.
  */
-function buildCommand(backend: HelperBackend, prompt: string, opts: HelperOptions): string[] {
+function buildCommand(backend: HelperBackend, opts: HelperOptions): string[] {
   switch (backend) {
     case "gemini":
-      // Pipe mode
-      return ["bash", "-c", `echo ${JSON.stringify(prompt)} | gemini`];
+      return ["gemini"];
     case "cursor":
-      return ["cursor", "agent", prompt, "--model", "gpt-5.2-codex-high", "--output-format", "text"];
+      // Cursor will receive prompt via stdin
+      return ["cursor", "agent", "--model", "gpt-5.2-codex-high", "--output-format", "text"];
     case "codex":
-      return ["codex", prompt];
+      return ["codex"];
     case "kiro":
-      return ["kiro-cli", "chat", "--no-interactive", "-w", "never", prompt];
+      return ["kiro-cli", "chat", "--no-interactive", "-w", "never"];
     case "haiku":
-      // Handled separately via fetch
+      // Handled separately via cloud-llm
       return [];
   }
 }
 
-/**
- * Run haiku via Anthropic API.
- */
-async function runHaiku(prompt: string, timeout: number): Promise<string> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
-
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeout);
-
-  try {
-    const resp = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-haiku-4-5-20250514",
-        max_tokens: 4096,
-        messages: [{ role: "user", content: prompt }],
-      }),
-      signal: controller.signal,
-    });
-
-    if (resp.status === 429) {
-      throw new Error("RATE_LIMITED");
-    }
-
-    if (!resp.ok) {
-      throw new Error(`Haiku API error: ${resp.status} ${resp.statusText}`);
-    }
-
-    const data = (await resp.json()) as { content: { type: string; text: string }[] };
-    return data.content
-      .filter((c) => c.type === "text")
-      .map((c) => c.text)
-      .join("\n");
-  } finally {
-    clearTimeout(timer);
-  }
-}
 
 /**
- * Run a CLI helper command via subprocess.
+ * Run a CLI helper command via subprocess with stdin piping.
  */
 async function runCliHelper(backend: HelperBackend, prompt: string, opts: HelperOptions): Promise<string> {
-  const args = buildCommand(backend, prompt, opts);
+  const args = buildCommand(backend, opts);
   const timeout = opts.timeout || 120_000;
 
   const proc = Bun.spawn(args, {
+    stdin: "pipe",
     stdout: "pipe",
     stderr: "pipe",
     env: { ...process.env },
   });
+
+  // Write prompt to stdin
+  proc.stdin.write(prompt);
+  proc.stdin.end();
 
   const timer = setTimeout(() => proc.kill(), timeout);
 
@@ -280,6 +228,8 @@ export async function runHelper(prompt: string, opts: HelperOptions = {}): Promi
     ? [opts.backend, ...FALLBACK_CHAIN.filter((b) => b !== opts.backend)]
     : [...FALLBACK_CHAIN];
 
+  const errors: Array<{ backend: string; error: string }> = [];
+
   for (const backend of chain) {
     if (!isHelperAvailable(backend, now)) continue;
 
@@ -287,7 +237,7 @@ export async function runHelper(prompt: string, opts: HelperOptions = {}): Promi
     try {
       let output: string;
       if (backend === "haiku") {
-        output = await runHaiku(prompt, timeout);
+        output = await runCloudLLM(prompt, "helpers");
       } else {
         output = await runCliHelper(backend, prompt, opts);
       }
@@ -300,12 +250,16 @@ export async function runHelper(prompt: string, opts: HelperOptions = {}): Promi
     } catch (err: any) {
       if (err.message === "RATE_LIMITED") {
         helperLimitReached(backend, new Date());
+        errors.push({ backend, error: "Rate limited" });
         continue;
       }
-      // Non-rate-limit error, try next backend
+      // Non-rate-limit error, collect and try next backend
+      errors.push({ backend, error: err.message || String(err) });
       continue;
     }
   }
 
-  throw new Error("All helper backends are rate-limited or unavailable");
+  throw new Error(
+    `All backends failed: ${errors.map((e) => `${e.backend}: ${e.error}`).join(", ")}`
+  );
 }
