@@ -1830,21 +1830,61 @@ isHelperAvailable("cursor"); // checks limited && resets_at > now
 
 **Fallback chain:** gemini (free, 1000/day) → kiro (free) → codex (pay-per-token) → cursor ($20/mo) → haiku (our API)
 
+**Centralized state (multi-session aware):**
+
+Primary: Supabase `helper_rate_limits` table (all sessions share)
+Fallback: `~/.golems-zikaron/rate-limits.json` (if Supabase offline)
+Pattern: Same as `state-store.ts` — write both, read Supabase first
+
+```sql
+CREATE TABLE helper_rate_limits (
+  backend TEXT PRIMARY KEY,
+  limited BOOLEAN DEFAULT false,
+  limited_at TIMESTAMPTZ,
+  resets_at TIMESTAMPTZ,
+  updated_by TEXT,  -- 'nightshift', 'gitsclaude', 'interactive', 'ralph'
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+```
+
+Why centralized: Night Shift hits Gemini limit → gitsClaude reads Supabase → skips Gemini → uses Kiro. Without this, each session wastes a call discovering the limit.
+
+**CodeRabbit:** Track PR and CLI separately (`coderabbit_pr`, `coderabbit_cli`) until confirmed whether they share quotas.
+
 **When rate limited:**
-1. `helperLimitReached(backend)` → updates rate-limits.json with reset time
+1. `helperLimitReached(backend)` → writes to Supabase + local JSON
 2. `runHelper()` auto-skips limited backends, tries next in fallback chain
 3. If ALL backends exhausted → notify via Telegram + log earliest reset time
-4. `golems doctor` shows: "Cursor: ⚠ rate limited (resets in 23min)"
 
-**Integration with `golems doctor`:**
-- New check: "Helper Backends" — shows status of each CLI (available/limited/not installed)
-- If limited, shows time until reset
+**CLI commands:**
+
+`golems doctor` — existing health check (services, state, env)
+`golems helpers` — NEW: two output modes:
+
+**Human (terminal):**
+```
+Backend     Status      Resets In    Last Used By
+─────────────────────────────────────────────────
+Gemini      ✓ available              nightshift
+Cursor      ⚠ limited   23min        interactive
+Codex       ✓ available              gitsclaude
+Kiro        ✗ not installed
+Haiku       ✓ available              ralph
+```
+
+**Agent (compact, `--compact` flag):**
+```
+helpers: gemini ✓ | cursor ⚠ 23min | codex ✓ | kiro ✗ | haiku ✓
+```
+One line for Claude/agent context. Pick first ✓, move on.
 
 **Files:**
 - `src/lib/helpers.ts` — Unified interface, `runHelper()`, `helperLimitReached()`, `isHelperAvailable()`, `HELPER_RESET_DURATIONS`
-- `scripts/summarize-file.sh` — Thin shell wrapper that calls `bun run src/lib/helpers.ts`
-- `~/.golems-zikaron/rate-limits.json` — Persistent rate limit state (auto-cleared on reset)
-- `src/doctor.ts` — Add helper backend status check
+- `src/helpers-status.ts` — `golems helpers` CLI command
+- `scripts/summarize-file.sh` — Thin shell wrapper calling helpers.ts
+- `~/.golems-zikaron/rate-limits.json` — Local fallback (synced with Supabase)
+- `supabase/migrations/005_helper_rate_limits.sql` — Centralized state
+- `src/doctor.ts` — Keep as-is (services only), link to `golems helpers` for rate limits
 
 **CLI backends reference:**
 
