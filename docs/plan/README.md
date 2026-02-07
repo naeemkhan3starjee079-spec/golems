@@ -10,29 +10,37 @@
 | [Phase 2: Cloud](phase-2-cloud/) | ✅ DONE | #9 | Railway deploy, Haiku backend, Supabase state, smart scheduling |
 | [Phase 2.5: Infra](phase-2.5-infra/) | ✅ DONE | #10, #14, #16, #17 | Docs site, wizard, admin UI, monitoring, security, doctor |
 | [Phase 3: TellerGolem](phase-3-teller/) | ✅ DONE | #15 | Financial domain expert: categorizer, alerts, reports, MCP, 29 tests |
-| [Phase 4: Tooling](phase-4-tooling/) | 🏗️ ACTIVE | #28 | Helpers layer, DeepSource, Highlight, Exa, skills catalog |
+| [Phase 4: Tooling](phase-4-tooling/) | 🏗️ ACTIVE | #28, #29 | Helpers layer, DeepSource, Highlight, Exa, skills catalog |
 
-**Overall: 26/33 parts done (79%)**
+**Overall: 34/35 parts done (97%) — Only Exa MCP (needs API key) remains**
 
 ## Phase 4 TODOs (Current)
 
 | # | Part | What | Size | Status |
 |---|------|------|------|--------|
-| 1 | 29 | DeepSource (replace Dependabot) | S | 📋 TODO |
-| 2 | 30 | Highlight.io (observability) | M | 📋 TODO |
-| 3 | 31 | Exa MCP (AI web search) | M | 📋 TODO |
-| 4 | 32 | Skills discovery catalog | M | 📋 TODO |
-| 5 | 33 | Plan restructure + session handoff | M | 🏗️ IN PROGRESS |
+| 1 | 29 | DeepSource (replace Dependabot) | S | ✅ DONE |
+| 2 | 30 | Highlight.io (observability) | M | ❌ CANCELLED |
+| 3 | 31 | Exa MCP (AI web search) | M | ⏸️ BLOCKED (needs API key) |
+| 4 | 32 | Skills discovery catalog | M | ✅ DONE |
+| 5 | 33 | Plan restructure + session handoff | M | ✅ DONE |
 
 ## Remaining from Earlier Phases
 
-| Part | What | Size | Notes |
-|------|------|------|-------|
-| 2 | Plugin architecture | M | Design done, implementation deferred |
-| 4 | Outreach → Obsidian | M | RecruiterGolem data export |
-| 5 | Session forking (Telegram) | S | --fork-session pattern |
-| 11 | Puppeteer E2E testing | M | Playwright from recordings |
-| 12 | WhatsApp semantic search | M | Zikaron indexes WhatsApp |
+| Part | What | Size | Status |
+|------|------|------|--------|
+| 2 | Plugin architecture | M | ✅ DONE |
+| 4 | Outreach → Obsidian | M | ✅ DONE |
+| 5 | Session forking (Telegram) | S | ✅ DONE |
+| 11 | Playwright E2E testing | M | ✅ DONE |
+| 12 | WhatsApp semantic search | M | ✅ DONE |
+| NEW | System detection shared lib | M | ✅ DONE |
+| NEW | Autopilot mode (Stop hook) | S | ✅ DONE |
+
+## Phase 4 Completion Notes
+
+**Highlight.io (Part 30):** ❌ CANCELLED - Service shutting down Feb 28 2026, absorbed by LaunchDarkly. No action needed.
+
+**Exa MCP (Part 31):** 📋 TODO - Awaiting API key setup. Ready to implement when credentials available.
 
 ## How to Use This Plan
 

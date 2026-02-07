@@ -33,6 +33,12 @@ import {
   formatOutreachStats,
   type Outreach,
 } from "./recruiter-golem/outreach-db";
+import {
+  shouldSuggestForking,
+  extractTaskName,
+  createForkSession,
+  type ForkSessionMetadata,
+} from "./lib/session-fork";
 
 // Mac notification helper
 async function notify(title: string, message: string) {
@@ -544,6 +550,85 @@ ${eventSummary}`;
   }
 }
 
+// Spawn Claude in a forked session for complex tasks
+async function askClaudeForked(
+  sessionId: string,
+  message: string,
+  onHeartbeat?: () => void
+): Promise<string> {
+  const now = new Date();
+  const timeStr = now.toLocaleString("en-IL", { timeZone: "Asia/Jerusalem", hour: "2-digit", minute: "2-digit", hour12: false });
+  const dateStr = now.toLocaleDateString("en-IL", { timeZone: "Asia/Jerusalem", weekday: "short", month: "short", day: "numeric" });
+  const prompt = `[${dateStr} ${timeStr} IL] ${message}`;
+
+  const BOT_WORKING_DIR = join(HOME, "Gits");
+
+  try {
+    const { mkdirSync, existsSync } = await import("fs");
+    if (!existsSync(BOT_WORKING_DIR)) {
+      mkdirSync(BOT_WORKING_DIR, { recursive: true });
+    }
+
+    // Inject recent events into system prompt
+    const recentEvents = await getRecentEvents(24);
+    const eventSummary = formatEventsForClaude(recentEvents);
+    const soulContent = getSystemPromptContent();
+    const personaPrompt = PERSONAS[activePersona]?.prompt || "";
+    const systemPrompt = `${soulContent}${personaPrompt}
+
+## While You Were Down
+${eventSummary}
+
+## Session Context
+This is a forked session for a specific task. Work on this task independently, then summarize your results.`;
+
+    // Use --resume with the specific session ID for this fork
+    const args = [
+      "/Users/etanheyman/.local/bin/claude",
+      "--dangerously-skip-permissions",
+      "--print",
+      "--resume", sessionId,  // Use forked session ID
+      "--system-prompt", systemPrompt,
+      prompt,
+    ];
+
+    const proc = Bun.spawn(args, {
+      cwd: BOT_WORKING_DIR,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+
+    // Longer timeout for complex tasks (10 minutes)
+    const timeout = setTimeout(() => {
+      proc.kill();
+      console.error("Claude forked session timeout (10 min)");
+    }, 600000);
+
+    // Heartbeat every 60s
+    const heartbeat = onHeartbeat ? setInterval(() => {
+      console.log(`[Claude Fork ${sessionId}] Still working...`);
+      onHeartbeat();
+    }, 60000) : null;
+
+    await proc.exited;
+    clearTimeout(timeout);
+    if (heartbeat) clearInterval(heartbeat);
+
+    const output = await new Response(proc.stdout).text();
+    const stderr = await new Response(proc.stderr).text();
+    if (stderr) {
+      console.error(`[Claude Fork ${sessionId}] stderr:`, stderr.slice(0, 200));
+    }
+    if (!output.trim()) {
+      console.warn(`[Claude Fork ${sessionId}] Empty stdout, exit code:`, proc.exitCode);
+    }
+    return output.trim() || "No response.";
+  } catch (error) {
+    console.error(`Claude forked session error (${sessionId}):`, error);
+    return "⚠️ Error.";
+  }
+}
+
 // Process queue
 async function processQueue() {
   if (isProcessing || queue.length === 0) return;
@@ -635,6 +720,9 @@ let activePersona = "default";
 // Using Map to support multiple concurrent users
 const pendingContentTopics = new Map<number, { type: string }>();
 
+// Track active forked sessions
+const activeForkSessions = new Map<number, ForkSessionMetadata>();
+
 // Commands
 bot.command("start", (ctx) => {
   const state = loadState();
@@ -673,6 +761,85 @@ bot.command("morning", async (ctx) => {
     await sendBriefing();
   } catch (err) {
     ctx.reply(`❌ Briefing failed: ${err}`);
+  }
+});
+
+// Fork command - create a dedicated session for a complex task
+bot.command("fork", async (ctx) => {
+  const taskPrompt = ctx.message?.text?.replace("/fork", "").trim();
+
+  if (!taskPrompt) {
+    await ctx.reply(`🔀 *Session Fork*
+
+Fork a complex task into its own Claude session to keep the main chat clean.
+
+*Usage:* \`/fork <task description>\`
+
+*Examples:*
+• \`/fork research React patterns in this codebase\`
+• \`/fork analyze the database schema\`
+• \`/fork build a new API endpoint\`
+
+_Forked sessions run independently with their own memory._`, { parse_mode: "Markdown" });
+    return;
+  }
+
+  // Create fork metadata
+  const taskName = extractTaskName(taskPrompt);
+  const forkMetadata = createForkSession(taskName, taskPrompt, ctx.chat.id);
+
+  // Track active fork
+  activeForkSessions.set(ctx.chat.id, forkMetadata);
+
+  await ctx.reply(`🔀 *Forked Session Created*
+
+📋 Task: ${taskName}
+🆔 Session: \`${forkMetadata.sessionId.slice(0, 40)}...\`
+
+_Starting work in forked session..._`, { parse_mode: "Markdown" });
+
+  try {
+    await ctx.replyWithChatAction("typing");
+
+    console.log(`🔀 Spawning Claude fork for: "${taskPrompt.slice(0, 50)}..."`);
+    await notify("🔀 Fork Started", `Task: ${taskName}`);
+
+    // Spawn in forked session
+    const response = await askClaudeForked(forkMetadata.sessionId, taskPrompt, async () => {
+      await ctx.replyWithChatAction("typing");
+    });
+
+    console.log(`✅ Claude fork completed (${response.length} chars)`);
+
+    // Mark fork as completed
+    forkMetadata.completedAt = new Date().toISOString();
+    forkMetadata.result = "Success";
+    activeForkSessions.delete(ctx.chat.id);
+
+    await notify("✅ Fork Done", taskName);
+
+    // Send response
+    if (response.length > 4000) {
+      const chunks = response.match(/.{1,4000}/gs) || [response];
+      for (const chunk of chunks) {
+        await ctx.reply(chunk);
+      }
+    } else {
+      await ctx.reply(response);
+    }
+
+    await ctx.reply(`✅ *Fork Complete*
+
+Session: \`${forkMetadata.sessionId}\`
+
+_You can continue this task by using \`/fork\` again with the same topic._`, { parse_mode: "Markdown" });
+
+  } catch (error) {
+    console.error("Fork error:", error);
+    forkMetadata.completedAt = new Date().toISOString();
+    forkMetadata.result = "Error";
+    activeForkSessions.delete(ctx.chat.id);
+    await ctx.reply("⚠️ Error in forked session.");
   }
 });
 
@@ -1568,6 +1735,112 @@ bot.callbackQuery(/^persona:/, async (ctx) => {
   }
 });
 
+// Fork task callback - user accepted the fork suggestion
+bot.callbackQuery(/^fork-task:/, async (ctx) => {
+  const taskName = ctx.callbackQuery.data?.replace("fork-task:", "") || "task";
+  const chatId = ctx.chat?.id;
+
+  if (!chatId) {
+    await ctx.answerCallbackQuery({ text: "Error: no chat ID" });
+    return;
+  }
+
+  // Retrieve the original prompt from pending topics
+  const pending = pendingContentTopics.get(chatId);
+  if (!pending || !pending.type.startsWith("fork:")) {
+    await ctx.answerCallbackQuery({ text: "Prompt not found" });
+    await ctx.editMessageText("⚠️ Session expired. Please send your message again.");
+    return;
+  }
+
+  const taskPrompt = pending.type.replace("fork:", "");
+  pendingContentTopics.delete(chatId);
+
+  // Create fork metadata
+  const forkMetadata = createForkSession(taskName, taskPrompt, chatId);
+  activeForkSessions.set(chatId, forkMetadata);
+
+  await ctx.editMessageText(`🔀 *Forking Session...*
+
+📋 Task: ${taskName.replace(/-/g, " ")}
+🆔 Session: \`${forkMetadata.sessionId.slice(0, 40)}...\`
+
+_Starting work..._`, { parse_mode: "Markdown" });
+  await ctx.answerCallbackQuery({ text: "Forking..." });
+
+  try {
+    await ctx.replyWithChatAction("typing");
+
+    console.log(`🔀 Spawning Claude fork for: "${taskPrompt.slice(0, 50)}..."`);
+    await notify("🔀 Fork Started", `Task: ${taskName}`);
+
+    const response = await askClaudeForked(forkMetadata.sessionId, taskPrompt, async () => {
+      await ctx.replyWithChatAction("typing");
+    });
+
+    console.log(`✅ Claude fork completed (${response.length} chars)`);
+
+    forkMetadata.completedAt = new Date().toISOString();
+    forkMetadata.result = "Success";
+    activeForkSessions.delete(chatId);
+
+    await notify("✅ Fork Done", taskName);
+
+    if (response.length > 4000) {
+      const chunks = response.match(/.{1,4000}/gs) || [response];
+      for (const chunk of chunks) {
+        await ctx.reply(chunk);
+      }
+    } else {
+      await ctx.reply(response);
+    }
+
+    await ctx.reply(`✅ *Fork Complete*
+
+Session: \`${forkMetadata.sessionId}\``, { parse_mode: "Markdown" });
+
+  } catch (error) {
+    console.error("Fork error:", error);
+    forkMetadata.completedAt = new Date().toISOString();
+    forkMetadata.result = "Error";
+    activeForkSessions.delete(chatId);
+    await ctx.reply("⚠️ Error in forked session.");
+  }
+});
+
+// Fork decline callback - user wants to use main chat
+bot.callbackQuery("fork-decline", async (ctx) => {
+  const chatId = ctx.chat?.id;
+
+  if (!chatId) {
+    await ctx.answerCallbackQuery({ text: "Error: no chat ID" });
+    return;
+  }
+
+  const pending = pendingContentTopics.get(chatId);
+  if (!pending || !pending.type.startsWith("fork:")) {
+    await ctx.answerCallbackQuery({ text: "Session expired" });
+    await ctx.editMessageText("⚠️ Session expired. Please send your message again.");
+    return;
+  }
+
+  const taskPrompt = pending.type.replace("fork:", "");
+  pendingContentTopics.delete(chatId);
+
+  await ctx.editMessageText("💬 *Using Main Chat*\n\n_Adding to queue..._", { parse_mode: "Markdown" });
+  await ctx.answerCallbackQuery({ text: "Queued in main chat" });
+
+  // Queue in main session
+  queue.push({ ctx, text: taskPrompt });
+  console.log(`📥 Queued (declined fork): "${taskPrompt.slice(0, 50)}..."`);
+
+  if (!isProcessing) {
+    processQueue();
+  } else if (queue.length > 1) {
+    await ctx.reply(`⏳ Queued (${queue.length - 1} ahead)`);
+  }
+});
+
 // Catch-all for unknown callbacks
 bot.on("callback_query:data", async (ctx) => {
   console.log("Unknown callback:", ctx.callbackQuery.data);
@@ -1793,6 +2066,30 @@ _Changes how ClaudeGolem responds_`, { parse_mode: "Markdown", reply_markup: key
       await logEvent("draft_rejected", { title: d.title, id: d.id, reason: "skipped" }, "claudegolem");
     }
     ctx.reply(`⏭️ Skipped ${drafts.length} drafts.`);
+    return;
+  }
+
+  // Auto-detect complex tasks and suggest forking
+  if (shouldSuggestForking(text)) {
+    const taskName = extractTaskName(text);
+    const keyboard = new InlineKeyboard()
+      .text("🔀 Fork It", `fork-task:${taskName}`)
+      .text("💬 Main Chat", "fork-decline");
+
+    await ctx.reply(`🔀 *Detected Complex Task*
+
+This looks like a task that might benefit from its own session:
+"${taskName.replace(/-/g, " ")}"
+
+*Fork benefits:*
+• Keeps main chat clean
+• Independent memory for this task
+• Can resume later
+
+*Choose:*`, { parse_mode: "Markdown", reply_markup: keyboard });
+
+    // Store the prompt temporarily for the fork callback
+    pendingContentTopics.set(ctx.chat.id, { type: `fork:${text}` });
     return;
   }
 

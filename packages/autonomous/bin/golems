@@ -56,6 +56,10 @@ COMMANDS:
   instructions  Show Claude Chat project files to upload
   regen-style   Regenerate style card from Zikaron data
   setup         Interactive setup wizard for new machines
+  autopilot     Toggle autonomous plan execution (on/off/status)
+  skills        Show available integrations and their status
+  e2e           Run Playwright E2E tests (admin-ui + docsite)
+  index-whatsapp <file> --chat "Name"  Index WhatsApp export in Zikaron
 
   help          Show this help
 
@@ -516,12 +520,40 @@ case "${1:-status}" in
   skills)
     cd "$GOLEMS_HOME" && bun run src/skills-list.ts "${@:2}"
     ;;
+  autopilot)
+    ENABLE_FILE="$HOME/.claude/hooks/keep-going.enabled"
+    case "${2:-status}" in
+      on)
+        touch "$ENABLE_FILE"
+        echo -e "${GREEN}Autopilot ON${NC} — Claude will keep working until plan is done"
+        echo "Disable with: golems autopilot off"
+        ;;
+      off)
+        rm -f "$ENABLE_FILE"
+        echo -e "${YELLOW}Autopilot OFF${NC} — Claude will stop normally"
+        ;;
+      status|"")
+        if [ -f "$ENABLE_FILE" ]; then
+          echo -e "${GREEN}● Autopilot is ON${NC}"
+        else
+          echo -e "${GRAY}○ Autopilot is OFF${NC}"
+        fi
+        ;;
+    esac
+    ;;
   regen-style|style)
     cmd_regen_style
     ;;
   setup|wizard)
     echo -e "${BLUE}=== GOLEMS SETUP WIZARD ===${NC}"
     cd "$GOLEMS_HOME" && bun run src/wizard.ts
+    ;;
+  e2e)
+    echo -e "${BLUE}=== E2E TESTS ===${NC}"
+    cd "$HOME/Gits/golems/packages/e2e" && npx playwright test "${@:2}"
+    ;;
+  index-whatsapp)
+    cd "$GOLEMS_HOME" && bun run src/whatsapp-index-cli.ts "${@:2}"
     ;;
   *)
     echo "Unknown command: $1"

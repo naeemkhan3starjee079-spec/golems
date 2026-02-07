@@ -32,6 +32,11 @@ interface SkillsCatalog {
   skills: Skill[];
 }
 
+/**
+ * Get colored status icon for a skill
+ * @param status - Skill status (active/planned/evaluation)
+ * @returns Colored icon string (● for active, ○ for planned, ◌ for evaluation)
+ */
 function statusIcon(status: string): string {
   switch (status) {
     case "active": return `${GREEN}●${NC}`;
@@ -41,17 +46,30 @@ function statusIcon(status: string): string {
   }
 }
 
+/**
+ * Load skills catalog from available-skills.json
+ * @returns Parsed skills catalog with version, updated date, and skills list
+ * @throws If catalog file is missing or contains invalid JSON
+ */
 function loadCatalog(): SkillsCatalog {
   const catalogPath = join(import.meta.dir, "available-skills.json");
   return JSON.parse(readFileSync(catalogPath, "utf-8"));
 }
 
+/**
+ * Print skills in compact single-line format
+ * @param catalog - Skills catalog to display
+ */
 function compactMode(catalog: SkillsCatalog): void {
   const active = catalog.skills.filter(s => s.status === "active").map(s => s.name);
   const planned = catalog.skills.filter(s => s.status === "planned").map(s => s.name);
   console.log(`skills: ${active.join(", ")} | planned: ${planned.join(", ")}`);
 }
 
+/**
+ * Print skills in formatted table with categories and details
+ * @param catalog - Skills catalog to display
+ */
 function tableMode(catalog: SkillsCatalog): void {
   console.log(`\n${BLUE}=== GOLEMS SKILLS ===${NC}\n`);
 
@@ -78,6 +96,11 @@ function tableMode(catalog: SkillsCatalog): void {
   console.log(`${GRAY}Updated: ${catalog.updated}${NC}\n`);
 }
 
+/**
+ * Print skills filtered by category, project type, or status
+ * @param catalog - Skills catalog to filter
+ * @param filter - Filter string (category/project type/status)
+ */
 function filterMode(catalog: SkillsCatalog, filter: string): void {
   const filtered = catalog.skills.filter(s =>
     s.category === filter ||

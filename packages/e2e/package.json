@@ -1,0 +1,16 @@
+{
+  "name": "@golems/e2e",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed",
+    "test:admin-ui": "playwright test tests/admin-ui",
+    "test:docsite": "playwright test tests/docsite"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0"
+  }
+}
