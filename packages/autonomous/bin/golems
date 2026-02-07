@@ -34,6 +34,7 @@ USAGE:
 
 COMMANDS:
   status        Show all services status (default)
+  doctor        Health check all services + diagnostics
   services      Detailed launchd service status
   scrape        Trigger job scrape now
   sessions      Running Claude sessions
@@ -59,6 +60,7 @@ COMMANDS:
 
 EXAMPLES:
   golems                # Quick status overview
+  golems doctor         # Health check all services
   golems services       # Detailed service status
   golems logs telegram  # Tail telegram bot logs
   golems restart telegram
@@ -459,6 +461,9 @@ case "${1:-status}" in
     ;;
   status)
     cmd_status
+    ;;
+  doctor)
+    cd "$GOLEMS_HOME" && bun run src/doctor.ts
     ;;
   services|svc)
     cmd_services
