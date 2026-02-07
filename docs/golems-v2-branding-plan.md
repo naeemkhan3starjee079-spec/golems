@@ -1401,15 +1401,9 @@ Interactive setup for new projects or new Macs. Modular — user picks which ser
 
 ---
 
-### Track 13: Coverage Sweep
+### Track 13: Coverage Sweep → **MOVED TO PART 28 (runs LAST)**
 
-Final pass after all other tracks:
-- Cursor CLI `@codebase` full mapping
-- Cross-reference docs vs actual code
-- Context7 verify ALL library imports against current docs
-- Find undocumented env vars, MCP tools, skills
-- Fill gaps, remove stale references
-- Verify all tests pass, no orphaned test files
+See Part 28 for full details. This track runs after ALL other tracks are complete so it catches everything.
 
 ---
 
