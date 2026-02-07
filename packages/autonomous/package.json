@@ -12,7 +12,7 @@
     "validate": "bun run src/validation-service.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.72.1",
+    "@anthropic-ai/sdk": "^0.73.0",
     "@modelcontextprotocol/sdk": "^1.26.0",
     "@supabase/supabase-js": "^2.49.1",
     "chromadb": "^3.2.2",
