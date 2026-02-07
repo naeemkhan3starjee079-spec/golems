@@ -15,6 +15,7 @@ const FAILURE_PATTERNS = [
 
 /**
  * Detect if an email indicates a payment failure using regex pre-check + LLM confirmation.
+ *
  * Returns a PaymentFailure object if confirmed, null otherwise.
  */
 export async function detectPaymentFailure(

@@ -116,6 +116,7 @@ export async function generateTaxReport(year: number): Promise<TaxReport> {
 
 /**
  * Format a monthly report as a readable Telegram message.
+ *
  * @param report - The monthly report to format
  * @returns Formatted text string
  */
@@ -141,6 +142,7 @@ export function formatMonthlyReportText(report: MonthlyReport): string {
 
 /**
  * Format a tax report as readable text.
+ *
  * @param report - The tax report to format
  * @returns Formatted text string
  */
