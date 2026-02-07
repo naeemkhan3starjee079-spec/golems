@@ -52,6 +52,7 @@ COMMANDS:
   off           Turn off all services (hibernation mode)
 
   cloud         Show Railway cloud worker health + usage
+  helpers       Show external CLI helper backends status
   instructions  Show Claude Chat project files to upload
   regen-style   Regenerate style card from Zikaron data
   setup         Interactive setup wizard for new machines
@@ -508,6 +509,9 @@ case "${1:-status}" in
     ;;
   cloud|railway)
     cmd_cloud
+    ;;
+  helpers)
+    cd "$GOLEMS_HOME" && bun run src/helpers-status.ts "${@:2}"
     ;;
   regen-style|style)
     cmd_regen_style
