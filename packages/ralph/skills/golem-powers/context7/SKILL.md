@@ -106,6 +106,17 @@ This skill calls the Context7 REST API:
 - **Docs endpoint:** `GET /v2/context?query=...&libraryId=...&type=txt`
 - **Auth:** Bearer token header
 
+## Large File Processing
+
+When Context7 returns large documentation blocks (>100 lines), avoid reading them directly into Opus context. Instead use:
+
+```bash
+# Summarize large docs with external model
+scripts/summarize-file.sh <file> "<what you need>" [gemini|cursor|kiro|haiku]
+```
+
+Or delegate to a subagent that writes a summary to a scratchpad file.
+
 ## See Also
 
 - [Context7 Documentation](https://context7.com/docs)

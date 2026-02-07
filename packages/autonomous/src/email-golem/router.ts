@@ -10,9 +10,15 @@
  * - tech-update → ClaudeGolem (knowledge/learning domain)
  * - urgent → ClaudeGolem (needs human-facing response)
  * - newsletter, promo, social, other → EmailGolem (stays triaged, no routing)
+ *
+ * After routing, domain golems are invoked to process their category:
+ * - TellerGolem.processSubscriptionEmail() for subscriptions
+ * - RecruiterGolem handlers for jobs/interviews (see recruiter-golem/)
+ * - ClaudeGolem handlers for tech-update/urgent (see CLAUDE.md)
  */
 
 import type { GolemActor } from "../event-log";
+import type { ScoredEmail } from "./types";
 
 /** Canonical golem → category mapping. Single source of truth for routing. */
 export const GOLEM_CATEGORIES: Record<string, string[]> = {
@@ -37,6 +43,10 @@ export interface RoutingResult {
 
 /**
  * Determine which golem should handle an email based on its category and score.
+ *
+ * @param category - Email category from scorer
+ * @param _score - Email importance score (1-10)
+ * @returns Routing result with target golem and reason
  */
 // TODO: Use score for priority-based routing (e.g., score 10 → fast-track to ClaudeGolem)
 export function determineTargetGolem(category: string, _score: number): RoutingResult {
@@ -53,4 +63,46 @@ export function determineTargetGolem(category: string, _score: number): RoutingR
     targetGolem,
     reason: `${category} email routed to ${targetGolem}`,
   };
+}
+
+/**
+ * Route a scored email to the appropriate domain golem and invoke its handler.
+ *
+ * This function:
+ * 1. Determines the target golem based on category
+ * 2. Invokes the golem's processor if available
+ * 3. Handles errors gracefully to ensure single-email failures don't block the batch
+ *
+ * @param email - The scored email to route
+ * @returns Routing result and processing status
+ */
+export async function routeAndProcessEmail(
+  email: ScoredEmail
+): Promise<{ result: RoutingResult; success: boolean; error?: string }> {
+  const result = determineTargetGolem(email.category, email.score);
+
+  try {
+    // Invoke domain golem handlers based on target
+    if (result.targetGolem === "tellergolem") {
+      const { processSubscriptionEmail } = await import(
+        "../teller-golem/index"
+      );
+      await processSubscriptionEmail(email);
+    } else if (result.targetGolem === "recruitergolem") {
+      // RecruiterGolem handler - to be implemented
+      // const { processJobEmail } = await import("../recruiter-golem/index");
+      // await processJobEmail(email);
+      console.log(`[router] Job email routed to RecruiterGolem: ${email.email?.subject || ""}`);
+    } else if (result.targetGolem === "claudegolem") {
+      // ClaudeGolem handler - to be implemented
+      console.log(`[router] Urgent email routed to ClaudeGolem: ${email.email?.subject || ""}`);
+    }
+    // emailgolem stays with router (no invocation needed)
+
+    return { result, success: true };
+  } catch (err: any) {
+    const errorMsg = err?.message || String(err);
+    console.error(`[router] Error processing email: ${errorMsg}`);
+    return { result, success: false, error: errorMsg };
+  }
 }

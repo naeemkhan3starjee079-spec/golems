@@ -21,6 +21,7 @@ import {
 } from "./email-golem/db-client";
 import type { Email, SubscriptionSummary } from "./email-golem/types";
 import { getRecentEvents, type GolemEvent } from "./event-log";
+import { generateMonthlyReport } from "./teller-golem/report";
 
 const HOME = process.env.HOME || "/Users/etanheyman";
 const STATE_FILE = join(HOME, ".golems-zikaron/state.json");
@@ -179,6 +180,40 @@ function formatSubscriptionSummary(summary: SubscriptionSummary): string {
 }
 
 /**
+ * Format TellerGolem spending section for Telegram (current month)
+ */
+async function formatTellerSummary(): Promise<string | null> {
+  try {
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    const report = await generateMonthlyReport(currentMonth);
+
+    if (report.totalSpend === 0) {
+      return null;
+    }
+
+    let msg = `💰 *Spending - ${currentMonth}*\n`;
+    msg += `Total: $${report.totalSpend.toFixed(2)}\n`;
+
+    // Top 3 vendors by spend
+    const vendors = Object.entries(report.byVendor)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 3);
+
+    if (vendors.length > 0) {
+      msg += "\n*Top Vendors:*\n";
+      for (const [vendor, amount] of vendors) {
+        msg += `   → ${vendor}: $${amount.toFixed(2)}\n`;
+      }
+    }
+
+    return msg;
+  } catch (err) {
+    console.log("[Briefing] Could not fetch TellerGolem summary:", err);
+    return null;
+  }
+}
+
+/**
  * Check if today is the 1st of the month
  */
 function isFirstOfMonth(): boolean {
@@ -267,6 +302,13 @@ async function sendBriefing() {
   }
 
   msg += separator;
+
+  // TellerGolem Spending Section (current month)
+  const tellerSummary = await formatTellerSummary();
+  if (tellerSummary) {
+    msg += tellerSummary;
+    msg += "\n" + separator;
+  }
 
   // Email Digest Section (24h)
   const emailDigest = await getEmailDigest();
