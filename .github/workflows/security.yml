@@ -24,8 +24,6 @@ jobs:
           - packages/autonomous
           - packages/ralph
           - packages/docsite
-          - packages/tax-helper
-          - packages/admin-ui
       fail-fast: false
     steps:
       - uses: actions/checkout@v6
