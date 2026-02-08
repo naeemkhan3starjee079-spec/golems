@@ -117,38 +117,20 @@ async function checkOllama() {
   }
 }
 
-// Check 3: Notification server (POST /notify with empty body returns "ok")
+// Check 3: Notification server (TCP connect test — no side effects)
 async function checkNotificationServer() {
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 2000);
-    const response = await fetch("http://127.0.0.1:3847/notify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: "healthcheck", body: "doctor ping" }),
-      signal: controller.signal,
+  const portOpen = runCommand("lsof -i :3847 -sTCP:LISTEN | grep -q LISTEN");
+  if (portOpen.success) {
+    results.push({
+      name: "Notification Server",
+      status: "pass",
+      message: "Listening on port 3847",
     });
-    clearTimeout(timeout);
-    const text = await response.text();
-    if (text === "ok") {
-      results.push({
-        name: "Notification Server",
-        status: "pass",
-        message: "Responding on 127.0.0.1:3847",
-      });
-    } else {
-      results.push({
-        name: "Notification Server",
-        status: "warn",
-        message: `Unexpected response: ${text.slice(0, 50)}`,
-        fix: "golems start telegram  (includes notification server)",
-      });
-    }
-  } catch {
+  } else {
     results.push({
       name: "Notification Server",
       status: "fail",
-      message: "Not responding on 127.0.0.1:3847",
+      message: "Not listening on port 3847",
       fix: "golems start telegram  (includes notification server)",
     });
   }
