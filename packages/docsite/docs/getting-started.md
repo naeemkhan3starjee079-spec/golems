@@ -24,7 +24,7 @@ flowchart TD
         EG["EmailGolem<br/><small>routing, replies, follow-ups</small>"]
         TG["TellerGolem<br/><small>finance, tax reports</small>"]
         JG["JobGolem<br/><small>job scraping, matching</small>"]
-        CG["ClaudeGolem<br/><small>Telegram, Night Shift, Soltome</small>"]
+        CG["ClaudeGolem<br/><small>Telegram, Night Shift</small>"]
     end
     golems --> infra["Shared Infrastructure<br/><small>Supabase · Telegram · Railway</small>"]
 ```

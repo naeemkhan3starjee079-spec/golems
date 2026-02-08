@@ -65,8 +65,8 @@ JobGolem scraped SecretTLV, Goozali, and Drushim for Israeli tech jobs. Built an
 Mac (Brain)              Railway (Body)
 ├── Telegram bot         ├── Email poller
 ├── Night Shift          ├── Job scraper
-├── Notifications        ├── Briefing generator
-└── Ollama (local LLM)   └── Soltome learner
+├── Notifications        └── Briefing generator
+└── Ollama (local LLM)
 ```
 
 The Mac makes decisions. The cloud collects data. Supabase sits in between as the shared state layer.
@@ -329,7 +329,7 @@ The concept: every golem tab is a "trailer" showing what it actually does, not a
 - NightShift self-healing (retry strategies, hang detection)
 - Centralized config (`golems.config.ts`)
 - Axiom observability + cost tracking
-- ContentGolem for autonomous Soltome posting
+- ContentGolem for autonomous content generation
 
 ### Long-term
 - Plugin marketplace for Claude Code extensions

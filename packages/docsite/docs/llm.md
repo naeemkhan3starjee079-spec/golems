@@ -33,7 +33,7 @@ flowchart TB
     subgraph rail["Railway (Body)"]
         direction LR
         EP[Email Poller] ~~~ JS[Job Scraper]
-        BG[Briefing Generator] ~~~ SL[Soltome Learner]
+        BG[Briefing Generator]
     end
     mac <-->|"HTTPS API + State Sync"| rail
     rail --> DB[(Supabase)]
@@ -50,7 +50,6 @@ The Railway cloud worker runs these jobs on a timer:
 | Email Poller | Hourly (6am-7pm, skip noon, +10pm) | Fetch Gmail, route to Golems | Ollama/Haiku |
 | Job Scraper | 6am, 9am, 1pm Sun-Thu | Find relevant jobs, score | Ollama/Haiku |
 | Briefing | 8:00 AM | Daily Telegram summary | Ollama/Haiku |
-| Soltome Learner | 2:00 AM | Learn from past content | Ollama/Haiku |
 
 Cloud jobs use **Ollama by default** (local models) or **Haiku when `LLM_BACKEND=haiku`** for cost efficiency. Each job publishes events to Supabase that trigger Mac-side Golems.
 
@@ -241,7 +240,6 @@ Railway entry point running all cloud golems on timezone-aware schedules.
 | Email | 6am–7pm hourly (skip noon), 10pm | ~12/day |
 | Jobs | 6am, 9am, 1pm Sun–Thu | ~15/week |
 | Briefing | 8am daily | 1/day |
-| Learner | 2am daily | 1/day |
 
 Cost: 92% savings (email), 95% (jobs) vs always-on.
 
@@ -328,7 +326,7 @@ flowchart TD
         EG["EmailGolem<br/><small>routing, replies, follow-ups</small>"]
         TG["TellerGolem<br/><small>finance, tax reports</small>"]
         JG["JobGolem<br/><small>job scraping, matching</small>"]
-        CG["ClaudeGolem<br/><small>Telegram, Night Shift, Soltome</small>"]
+        CG["ClaudeGolem<br/><small>Telegram, Night Shift</small>"]
     end
     golems --> infra["Shared Infrastructure<br/><small>Supabase · Telegram · Railway</small>"]
 ```
@@ -551,8 +549,8 @@ JobGolem scraped SecretTLV, Goozali, and Drushim for Israeli tech jobs. Built an
 Mac (Brain)              Railway (Body)
 ├── Telegram bot         ├── Email poller
 ├── Night Shift          ├── Job scraper
-├── Notifications        ├── Briefing generator
-└── Ollama (local LLM)   └── Soltome learner
+├── Notifications        └── Briefing generator
+└── Ollama (local LLM)
 ```
 
 The Mac makes decisions. The cloud collects data. Supabase sits in between as the shared state layer.
@@ -755,7 +753,7 @@ Docusaurus documentation site with an alchemical workshop theme (ember/obsidian 
 
 - Deploy cloud worker to Railway (cost-efficient Israeli timezone scheduling)
 - Supabase data migration
-- ContentGolem for autonomous posting
+- ContentGolem for autonomous content generation
 - Mobile dashboard (Expo + React Native)
 - Plugin marketplace for Claude Code extensions
 - MCP server distribution (works in Zed, Cursor, VS Code)
@@ -1055,7 +1053,7 @@ sidebar_position: 3
 
 # ClaudeGolem
 
-ClaudeGolem is the external-facing personality of the Golems ecosystem. It runs persistent Claude Code sessions, posts content to Soltome (social network), and performs autonomous night-shift code improvements.
+ClaudeGolem is the external-facing personality of the Golems ecosystem. It runs persistent Claude Code sessions and performs autonomous night-shift code improvements.
 
 ## Core Modes
 
@@ -1073,32 +1071,7 @@ claude --continue
 - **Casual tone** — 2/10 formality, Hebrew-English code-switching
 - **Autonomous commits** — Creates commits and pushes to PRs
 
-### 2. Soltome Posts
-
-AI social network posts about:
-- Zikaron (memory systems for agents)
-- Claude-Golem (autonomous coding patterns)
-- Open-source learnings
-- Tech insights (not private business)
-
-**Posting workflow:**
-1. Draft content (via ClaudeGolem)
-2. Stage for human approval (Telegram review)
-3. Auto-post when approved (Soltome API)
-
-Example post:
-```markdown
-# Teaching Golems to Remember
-
-We built Zikaron so Claude Code agents can query past sessions.
-This lets us run cheaper agents (Haiku) without losing context.
-
-Key insight: embedding cost is 10x cheaper than re-running agents.
-
-Learn more: [link to blog post]
-```
-
-### 3. Night Shift
+### 2. Night Shift
 
 Autonomous code improvements running at **4am daily**:
 
@@ -1177,12 +1150,6 @@ This comes from `event-log.json` maintained by infrastructure (last 24 hours via
 - `src/briefing.ts` — Morning briefing (8am)
 - `src/cloud-worker.ts` — Railway entry point for all cloud golems
 
-**Content & Style:**
-- `src/post-generator.ts` — Critique-wave content generation
-- `src/soltome-client.ts` — Soltome API client
-- `src/soltome-learner.ts` — Content pattern learning (2am)
-- `src/lib/style-export.ts` — Semantic style data export
-
 **State:**
 - `~/.golems-zikaron/state.json` — Night Shift target, session state
 - `~/.golems-zikaron/event-log.json` — Golem actions log
@@ -1199,17 +1166,6 @@ claude --continue
 
 # From Telegram, any message arrives here and gets routed
 # Bot handles standard commands, others go to Claude session
-```
-
-### Soltome Posting
-
-```bash
-# Draft posts are created by post-generator.ts
-
-# Review in Telegram with /drafts command
-# Then approve using inline buttons (approve:<id>)
-
-# Auto-posts to Soltome when approved
 ```
 
 ### Night Shift
@@ -1240,9 +1196,6 @@ export ANTHROPIC_API_KEY=$(op read op://development/ANTHROPIC_GOLEMS_API_KEY/cre
 
 # Night Shift targets
 export REPOS_PATH=~/Gits  # Base path for repos
-
-# Soltome (content posting)
-export SOLTOME_API_KEY=$(op read op://development/SOLTOME_API_KEY/credential)
 ```
 
 ## Integration with Other Golems
@@ -1299,15 +1252,6 @@ log show --predicate 'process == "Bun"' --last 1h
 
 # Manually trigger
 bun src/night-shift.ts
-```
-
-**Posts not posting to Soltome:**
-```bash
-# Check API key
-op read op://development/SOLTOME_API_KEY/credential
-
-# Review pending drafts via Telegram
-# /drafts
 ```
 
 **Memory issues during long sessions:**

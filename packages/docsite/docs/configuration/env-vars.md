@@ -91,8 +91,6 @@ Requires Ollama running locally on `http://localhost:11434`.
 | `ACTIVITY_DAYS_TO_KEEP` | `7` | Days of session history to retain | Session archiver |
 | `TELEGRAM_ALLOWED_IDS` | — | Comma-separated Telegram user IDs allowed to interact | Telegram bot security |
 | `OLLAMA_CHAT_BOT_TOKEN` | — | Separate bot token for Ollama chat bot | Ollama chat bot |
-| `ZIKARON_STYLE_PATH` | — | Path to semantic style data JSON | Soltome learner |
-| `SOLTOME_API_KEY` | — | Soltome API key for content posting | Soltome client |
 
 ## Setup Examples
 

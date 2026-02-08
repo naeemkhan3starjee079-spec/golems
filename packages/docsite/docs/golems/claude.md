@@ -4,7 +4,7 @@ sidebar_position: 3
 
 # ClaudeGolem
 
-ClaudeGolem is the external-facing personality of the Golems ecosystem. It runs persistent Claude Code sessions, posts content to Soltome (social network), and performs autonomous night-shift code improvements.
+ClaudeGolem is the external-facing personality of the Golems ecosystem. It runs persistent Claude Code sessions and performs autonomous night-shift code improvements.
 
 ## Core Modes
 
@@ -22,32 +22,7 @@ claude --continue
 - **Casual tone** — 2/10 formality, Hebrew-English code-switching
 - **Autonomous commits** — Creates commits and pushes to PRs
 
-### 2. Soltome Posts
-
-AI social network posts about:
-- Zikaron (memory systems for agents)
-- Claude-Golem (autonomous coding patterns)
-- Open-source learnings
-- Tech insights (not private business)
-
-**Posting workflow:**
-1. Draft content (via ClaudeGolem)
-2. Stage for human approval (Telegram review)
-3. Auto-post when approved (Soltome API)
-
-Example post:
-```markdown
-# Teaching Golems to Remember
-
-We built Zikaron so Claude Code agents can query past sessions.
-This lets us run cheaper agents (Haiku) without losing context.
-
-Key insight: embedding cost is 10x cheaper than re-running agents.
-
-Learn more: [link to blog post]
-```
-
-### 3. Night Shift
+### 2. Night Shift
 
 Autonomous code improvements running at **4am daily**:
 
@@ -126,12 +101,6 @@ This comes from `event-log.json` maintained by infrastructure (last 24 hours via
 - `src/briefing.ts` — Morning briefing (8am)
 - `src/cloud-worker.ts` — Railway entry point for all cloud golems
 
-**Content & Style:**
-- `src/post-generator.ts` — Critique-wave content generation
-- `src/soltome-client.ts` — Soltome API client
-- `src/soltome-learner.ts` — Content pattern learning (2am)
-- `src/lib/style-export.ts` — Semantic style data export
-
 **State:**
 - `~/.golems-zikaron/state.json` — Night Shift target, session state
 - `~/.golems-zikaron/event-log.json` — Golem actions log
@@ -148,17 +117,6 @@ claude --continue
 
 # From Telegram, any message arrives here and gets routed
 # Bot handles standard commands, others go to Claude session
-```
-
-### Soltome Posting
-
-```bash
-# Draft posts are created by post-generator.ts
-
-# Review in Telegram with /drafts command
-# Then approve using inline buttons (approve:<id>)
-
-# Auto-posts to Soltome when approved
 ```
 
 ### Night Shift
@@ -189,9 +147,6 @@ export ANTHROPIC_API_KEY=$(op read op://development/ANTHROPIC_GOLEMS_API_KEY/cre
 
 # Night Shift targets
 export REPOS_PATH=~/Gits  # Base path for repos
-
-# Soltome (content posting)
-export SOLTOME_API_KEY=$(op read op://development/SOLTOME_API_KEY/credential)
 ```
 
 ## Integration with Other Golems
@@ -248,15 +203,6 @@ log show --predicate 'process == "Bun"' --last 1h
 
 # Manually trigger
 bun src/night-shift.ts
-```
-
-**Posts not posting to Soltome:**
-```bash
-# Check API key
-op read op://development/SOLTOME_API_KEY/credential
-
-# Review pending drafts via Telegram
-# /drafts
 ```
 
 **Memory issues during long sessions:**

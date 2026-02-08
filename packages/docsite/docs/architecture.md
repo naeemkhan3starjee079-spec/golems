@@ -20,7 +20,7 @@ flowchart TB
     subgraph rail["Railway (Body)"]
         direction LR
         EP[Email Poller] ~~~ JS[Job Scraper]
-        BG[Briefing Generator] ~~~ SL[Soltome Learner]
+        BG[Briefing Generator]
     end
     mac <-->|"HTTPS API + State Sync"| rail
     rail --> DB[(Supabase)]
@@ -37,7 +37,6 @@ The Railway cloud worker runs these jobs on a timer:
 | Email Poller | Hourly (6am-7pm, skip noon, +10pm) | Fetch Gmail, route to Golems | Ollama/Haiku |
 | Job Scraper | 6am, 9am, 1pm Sun-Thu | Find relevant jobs, score | Ollama/Haiku |
 | Briefing | 8:00 AM | Daily Telegram summary | Ollama/Haiku |
-| Soltome Learner | 2:00 AM | Learn from past content | Ollama/Haiku |
 
 Cloud jobs use **Ollama by default** (local models) or **Haiku when `LLM_BACKEND=haiku`** for cost efficiency. Each job publishes events to Supabase that trigger Mac-side Golems.
 
