@@ -139,6 +139,7 @@ const TASKS_DIR = join(HOME, ".golems-zikaron/tasks");
 const DRAFTS_DIR = join(HOME, ".golems-zikaron/drafts");
 const MAX_VERIFICATION_ATTEMPTS = 2;
 const CONFIDENCE_THRESHOLD = 75;
+const RAILWAY_HEALTH_URL = process.env.RAILWAY_HEALTH_URL || "https://golems-production.up.railway.app/health";
 
 // Ensure directories exist
 function ensureContentDirs(): void {
@@ -467,6 +468,40 @@ function getSystemPromptContent(): string {
   }
 }
 
+// Shared: Railway health check
+async function checkRailwayHealth(): Promise<string> {
+  try {
+    const res = await fetch(RAILWAY_HEALTH_URL, { signal: AbortSignal.timeout(3000) });
+    if (res.ok) {
+      const data = await res.json() as { golemStatus?: string; isWorkHours?: boolean; uptime?: number; israelTime?: string };
+      return `${data.golemStatus || "ok"} (up ${Math.round((data.uptime || 0) / 60)}min)`;
+    }
+    return "down";
+  } catch {
+    return "unreachable";
+  }
+}
+
+// Shared: Supabase daily stats
+async function getDailyStats(): Promise<{ emailStats: string; jobStats: string }> {
+  try {
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
+    const today = new Date().toISOString().slice(0, 10);
+    const [emailsToday, urgentEmails, jobsToday] = await Promise.all([
+      supabase.from("emails").select("id", { count: "exact", head: true }).gte("received_at", today),
+      supabase.from("emails").select("id", { count: "exact", head: true }).gte("score", 8).eq("notified", false),
+      supabase.from("golem_jobs").select("id", { count: "exact", head: true }).gte("created_at", today),
+    ]);
+    return {
+      emailStats: `\n📧 Emails today: ${emailsToday.count || 0}${(urgentEmails.count || 0) > 0 ? ` (${urgentEmails.count} urgent!)` : ""}`,
+      jobStats: `\n💼 Jobs today: ${jobsToday.count || 0}`,
+    };
+  } catch {
+    return { emailStats: "", jobStats: "" };
+  }
+}
+
 // Queue for processing (one at a time)
 let isProcessing = false;
 const queue: Array<{ ctx: any; text: string }> = [];
@@ -670,9 +705,9 @@ async function processQueue() {
 
 // Persistent Reply Keyboard (menu at bottom)
 const menuKeyboard = new Keyboard()
-  .text("📝 Drafts").text("🌙 Tonight").text("📊 Status")
+  .text("📊 Status").text("🌙 Tonight").text("📝 Drafts")
   .row()
-  .text("✍️ Content").text("📅 Queue").text("🎭 Persona")
+  .text("✍️ Content").text("📅 Queue").text("🖥️ Admin")
   .resized()
   .persistent();
 
@@ -731,26 +766,87 @@ bot.command("start", (ctx) => {
 
   ctx.reply(`🤖 *ClaudeGolem v5*
 
-Master Golem + Night Shift workers.
+*Quick commands:*
+/status — System health + stats
+/trigger email|jobs|briefing — Run now
+/admin — Dashboard links
+/tonight — Night Shift target
+/jobs — Job pipeline
+/morning — Daily briefing
 
-Use the buttons below or just chat!`, {
+Or just chat — I'll spawn Claude.`, {
     parse_mode: "Markdown",
     reply_markup: menuKeyboard
   });
 });
 
-bot.command("status", (ctx) => {
+bot.command("status", async (ctx) => {
   const state = loadState();
   const queueLen = queue.length;
+  const [railwayStatus, { emailStats, jobStats }] = await Promise.all([
+    checkRailwayHealth(),
+    getDailyStats(),
+  ]);
 
-  ctx.reply(`📊 *Status*
+  await ctx.reply(`📊 *Status*
 
 🎯 Night Shift: \`${state.nightShiftTarget}\`
 📬 Queue: ${queueLen} messages
 ⚙️ Processing: ${isProcessing ? "yes" : "idle"}
-🧠 Mode: gitsClaude (~/Gits)
+🚂 Railway: ${railwayStatus}
+🧠 Bot: ${Math.round(process.uptime() / 60)}min uptime${emailStats}${jobStats}
 
-_Using -s (skip) + SOUL.md_`, { parse_mode: "Markdown" });
+[Dashboard](https://etanheyman.com/admin/golem) • /trigger email • /trigger jobs`, { parse_mode: "Markdown" });
+});
+
+// Admin dashboard link
+bot.command("admin", (ctx) => {
+  ctx.reply(`🖥️ *Admin Dashboard*
+
+[Open Dashboard](https://etanheyman.com/admin/golem)
+
+Pages: Overview • Jobs • Emails • Activity • Outreach • Night Shift • Content`, {
+    parse_mode: "Markdown",
+  });
+});
+
+// Trigger manual golem runs via Railway
+bot.command("trigger", async (ctx) => {
+  const arg = ctx.match?.trim().toLowerCase();
+  if (!arg || !["email", "jobs", "briefing"].includes(arg)) {
+    await ctx.reply(`⚡ *Trigger Golem Run*
+
+Usage: \`/trigger <golem>\`
+
+Available:
+• \`/trigger email\` - Run email check now
+• \`/trigger jobs\` - Run job scrape now
+• \`/trigger briefing\` - Send morning briefing`, { parse_mode: "Markdown" });
+    return;
+  }
+
+  await ctx.reply(`⚡ Triggering ${arg}...`);
+  try {
+    if (arg === "jobs") {
+      // Use local job scraper
+      const result = await runJobSearch();
+      if (result) {
+        await ctx.reply(`✅ Job scrape done: ${result.scraped} scraped, ${result.filtered} filtered, ${result.matched} matched`);
+      } else {
+        await ctx.reply("✅ Job scrape completed (no results object)");
+      }
+    } else if (arg === "email") {
+      const { processEmails } = await import("./email-golem/index");
+      await processEmails();
+      await ctx.reply("✅ Email check completed");
+    } else if (arg === "briefing") {
+      const { sendBriefing } = await import("./briefing");
+      await sendBriefing();
+      await ctx.reply("✅ Briefing sent");
+    }
+  } catch (err) {
+    await ctx.reply(`❌ Trigger failed: ${err instanceof Error ? err.message : String(err)}`);
+  }
 });
 
 // Morning briefing command
@@ -1980,14 +2076,21 @@ ${draftContent.content.slice(0, 2000)}${draftContent.content.length > 2000 ? "..
   }
 
   if (text === "📊 Status") {
-    // Trigger /status command
     const queueLen = queue.length;
+    const [railwayStatus, { emailStats, jobStats }] = await Promise.all([
+      checkRailwayHealth(),
+      getDailyStats(),
+    ]);
+
     await ctx.reply(`📊 *Status*
 
 🎯 Night Shift: \`${state.nightShiftTarget}\`
 📬 Queue: ${queueLen} messages
 ⚙️ Processing: ${isProcessing ? "yes" : "idle"}
-🧠 Session: \`${CHAT_SESSION_ID}\``, { parse_mode: "Markdown" });
+🚂 Railway: ${railwayStatus}
+🧠 Bot: ${Math.round(process.uptime() / 60)}min uptime${emailStats}${jobStats}
+
+[Dashboard](https://etanheyman.com/admin/golem)`, { parse_mode: "Markdown" });
     return;
   }
 
@@ -2014,42 +2117,52 @@ _Uses soltome-influencer agent_`, { parse_mode: "Markdown", reply_markup: keyboa
   }
 
   if (text === "📅 Queue") {
-    // Show content queue from content-series files
+    // Show golem activity queue from Supabase events
     try {
-      const seriesPath = join(GITS, "golems/packages/autonomous/data/content-series/week-1-philosophy.md");
-      const { existsSync, readFileSync } = await import("fs");
-      if (existsSync(seriesPath)) {
-        const content = readFileSync(seriesPath, "utf-8");
-        const statusMatch = content.match(/## Series Status[\s\S]*?\|[\s\S]*?\|([\s\S]*?)(?=\n\n##|$)/);
-        if (statusMatch) {
-          await ctx.reply(`📅 *Content Queue*
+      const { createClient } = await import("@supabase/supabase-js");
+      const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
 
-${statusMatch[0]}`, { parse_mode: "Markdown" });
-        } else {
-          await ctx.reply("📅 Content queue is empty. Use ✍️ Content to create posts.");
-        }
-      } else {
-        await ctx.reply("📅 No content series found. Create one with ✍️ Content → Week Plan.");
+      const { data: events } = await supabase
+        .from("golem_events")
+        .select("actor, type, data, created_at")
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      if (!events || events.length === 0) {
+        await ctx.reply("📅 No recent activity. Golems are idle.");
+        return;
       }
-    } catch (err) {
-      await ctx.reply("📅 Error reading content queue.");
+
+      let msg = "📅 *Recent Activity*\n\n";
+      for (const ev of events) {
+        const ago = Math.round((Date.now() - new Date(ev.created_at).getTime()) / 60000);
+        const agoStr = ago < 60 ? `${ago}m` : `${Math.round(ago / 60)}h`;
+        const icon = ev.actor === "emailgolem" ? "📧" : ev.actor === "jobgolem" ? "💼" : ev.actor === "nightshift" ? "🌙" : "🤖";
+        msg += `${icon} \`${agoStr}\` ${ev.type.replace(/_/g, " ")}`;
+        if (ev.data?.repo) msg += ` (${ev.data.repo})`;
+        if (ev.data?.subject) msg += `: ${String(ev.data.subject).slice(0, 40)}`;
+        msg += "\n";
+      }
+
+      msg += "\n[Full Activity](https://etanheyman.com/admin/golem/alerts)";
+      await ctx.reply(msg, { parse_mode: "Markdown" });
+    } catch {
+      await ctx.reply("📅 Could not load activity. Check /status for system health.");
     }
     return;
   }
 
-  if (text === "🎭 Persona") {
-    // Show persona selector
-    const current = PERSONAS[activePersona];
-    const keyboard = new InlineKeyboard();
-    Object.entries(PERSONAS).forEach(([key, persona]) => {
-      const isActive = key === activePersona ? "✓ " : "";
-      keyboard.text(`${isActive}${persona.emoji} ${persona.name}`, `persona:${key}`);
-    });
-    await ctx.reply(`🎭 *Persona Selector*
-
-Current: ${current.emoji} *${current.name}*
-
-_Changes how ClaudeGolem responds_`, { parse_mode: "Markdown", reply_markup: keyboard });
+  if (text === "🖥️ Admin") {
+    const keyboard = new InlineKeyboard()
+      .url("📊 Overview", "https://etanheyman.com/admin/golem")
+      .url("💼 Jobs", "https://etanheyman.com/admin/golem/jobs")
+      .row()
+      .url("📧 Emails", "https://etanheyman.com/admin/golem/emails")
+      .url("📋 Activity", "https://etanheyman.com/admin/golem/alerts")
+      .row()
+      .url("🌙 Night Shift", "https://etanheyman.com/admin/golem/nightshift")
+      .url("👥 Outreach", "https://etanheyman.com/admin/golem/outreach");
+    await ctx.reply("🖥️ *Admin Dashboard*\n\nTap to open:", { parse_mode: "Markdown", reply_markup: keyboard });
     return;
   }
 

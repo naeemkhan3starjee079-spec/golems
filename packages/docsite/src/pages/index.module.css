@@ -516,9 +516,31 @@
   }
 
   .primaryButton,
-  .secondaryButton {
+  .secondaryButton,
+  .golemButton {
     width: 100%;
     text-align: center;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .primaryButton,
+  .secondaryButton,
+  .golemButton,
+  .golemCard {
+    transition: none;
+  }
+
+  .primaryButton:hover,
+  .secondaryButton:hover,
+  .golemButton:hover,
+  .golemCard:hover {
+    transform: none;
   }
 }
 
