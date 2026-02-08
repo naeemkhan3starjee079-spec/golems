@@ -14,7 +14,7 @@ import "../lib/load-env";
 import { scrapeAllJobs } from "./scraper";
 import { syncJobs, syncScores } from "./sync-to-supabase";
 import { matchJobs, prefilterJobs, type MatchResult } from "./matcher";
-import { readFileSync, writeFileSync, existsSync, readdirSync, unlinkSync, statSync, mkdirSync } from "fs";
+import { writeFileSync, existsSync, readdirSync, unlinkSync, statSync, mkdirSync } from "fs";
 import { join } from "path";
 import {
   processHotMatches,
@@ -22,11 +22,10 @@ import {
   type JobMatch,
 } from "../recruiter-golem/auto-outreach";
 import { logEvent } from "../event-log";
+import { sendNotification } from "../lib/telegram-direct";
 
 const HOME = process.env.HOME;
 if (!HOME) throw new Error("HOME environment variable is required");
-const STATE_FILE = join(HOME, ".golems-zikaron/state.json");
-const NOTIFY_URL = "http://localhost:3847/notify";
 const RESULTS_DIR = join(HOME, ".golems-zikaron/job-golem/results");
 
 // Ensure results directory exists
@@ -36,41 +35,14 @@ function ensureResultsDir() {
   }
 }
 
-// Load Telegram chat ID from state
-function getTelegramChatId(): number | null {
-  try {
-    const state = JSON.parse(readFileSync(STATE_FILE, "utf-8"));
-    return state.telegramChatId;
-  } catch {
-    return null;
-  }
-}
-
-// Send Telegram notification
+// Send Telegram notification via telegram-direct (supports both local and cloud modes)
 async function sendTelegram(title: string, body: string, priority: "default" | "high" = "default") {
-  const chatId = getTelegramChatId();
-  if (!chatId) {
-    console.error("[Telegram] No chat ID configured. Message the bot first to register.");
-    return;
-  }
-
-  try {
-    console.log(`[Telegram] Sending notification: "${title}"`);
-    const response = await fetch(NOTIFY_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, body, source: "jobs", priority }),  // Routes to 🎯 Jobs topic
-    });
-
-    if (!response.ok) {
-      const text = await response.text();
-      console.error(`[Telegram] Server error ${response.status}: ${text}`);
-    } else {
-      console.log("[Telegram] Notification sent successfully");
-    }
-  } catch (err) {
-    console.error("[Telegram] Failed to connect to notification server:", err);
-    console.error("[Telegram] Is telegram-bot running? Check: pgrep -fl telegram-bot");
+  console.log(`[Telegram] Sending notification: "${title}"`);
+  const success = await sendNotification({ title, body, source: "jobs", priority });
+  if (success) {
+    console.log("[Telegram] Notification sent successfully");
+  } else {
+    console.error("[Telegram] Failed to send notification");
   }
 }
 

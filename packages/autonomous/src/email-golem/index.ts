@@ -29,12 +29,13 @@ import {
 } from "./db-client";
 import { determineTargetGolem } from "./router";
 import { logEvent } from "../event-log";
+import { sendNotification as sendTelegramNotification } from "../lib/telegram-direct";
+import { getState, setState } from "../lib/state-store";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 // Configuration
 const HOME = process.env.HOME || "/Users/etanheyman";
 const STATE_FILE = join(HOME, ".golems-zikaron/state.json");
-const NOTIFICATION_PORT = 3847;
 
 // Category emojis for notifications
 const CATEGORY_EMOJIS: Record<string, string> = {
@@ -56,6 +57,30 @@ interface State {
   processedEmailIds?: string[];
 }
 
+async function loadStateAsync(): Promise<State> {
+  // Try state-store first (works with both file and supabase backends)
+  try {
+    const lastEmailCheck = await getState<string>("lastEmailCheck");
+    const processedEmailIds = await getState<string[]>("processedEmailIds");
+    if (lastEmailCheck !== null) {
+      return { lastEmailCheck, processedEmailIds: processedEmailIds || [] };
+    }
+  } catch {
+    // Fall through to file
+  }
+
+  // Fallback to direct file read
+  try {
+    if (existsSync(STATE_FILE)) {
+      return JSON.parse(readFileSync(STATE_FILE, "utf-8"));
+    }
+  } catch (err) {
+    console.error("[EmailGolem] Failed to load state:", err);
+  }
+  return {};
+}
+
+// Legacy sync version for backward compat
 function loadState(): State {
   try {
     if (existsSync(STATE_FILE)) {
@@ -67,9 +92,34 @@ function loadState(): State {
   return {};
 }
 
+async function saveStateAsync(state: Partial<State>) {
+  // Write to state-store (handles both file and supabase)
+  try {
+    if (state.lastEmailCheck) {
+      await setState("lastEmailCheck", state.lastEmailCheck);
+    }
+    if (state.processedEmailIds) {
+      await setState("processedEmailIds", state.processedEmailIds);
+    }
+  } catch (err) {
+    console.error("[EmailGolem] Failed to save state via state-store:", err);
+  }
+
+  // Also write to local file for backward compat (if file backend)
+  try {
+    const existing = loadState();
+    const merged = { ...existing, ...state };
+    writeFileSync(STATE_FILE, JSON.stringify(merged, null, 2));
+  } catch (err) {
+    // On Railway there's no local state file — that's fine
+    if (process.env.STATE_BACKEND !== "supabase") {
+      console.error("[EmailGolem] Failed to save local state:", err);
+    }
+  }
+}
+
 function saveState(state: State) {
   try {
-    // Merge with existing state to preserve other fields
     const existing = loadState();
     const merged = { ...existing, ...state };
     writeFileSync(STATE_FILE, JSON.stringify(merged, null, 2));
@@ -79,30 +129,20 @@ function saveState(state: State) {
 }
 
 /**
- * Send notification to Telegram via local notification server
+ * Send notification to Telegram via telegram-direct (supports both local and cloud modes)
  */
 async function sendNotification(title: string, body: string) {
-  try {
-    const response = await fetch(`http://localhost:${NOTIFICATION_PORT}/notify`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title,
-        body,
-        source: "email",  // Routes to 📧 Email topic
-        priority: "high",
-      }),
-    });
-
-    if (!response.ok) {
-      const text = await response.text();
-      console.error(`[EmailGolem] Notification server error ${response.status}: ${text}`);
-    } else {
-      console.log(`[EmailGolem] Notification sent: "${title}"`);
-    }
-  } catch (err) {
-    console.error("[EmailGolem] Could not connect to notification server:", err);
-    console.error("[EmailGolem] Is telegram-bot running? Check: pgrep -fl telegram-bot");
+  console.log(`[EmailGolem] Sending notification: "${title}"`);
+  const success = await sendTelegramNotification({
+    title,
+    body,
+    source: "email",
+    priority: "high",
+  });
+  if (success) {
+    console.log(`[EmailGolem] Notification sent: "${title}"`);
+  } else {
+    console.error("[EmailGolem] Failed to send notification");
   }
 }
 
@@ -253,8 +293,8 @@ async function processEmails(options: { dryRun?: boolean; maxEmails?: number } =
     console.log("⚠️  DRY-RUN MODE - No changes will be made\n");
   }
 
-  // Load state
-  const state = loadState();
+  // Load state (uses state-store: supabase on Railway, file locally)
+  const state = await loadStateAsync();
   const processedIds = new Set(state.processedEmailIds || []);
 
   // Initialize DB client (may fail if offline)
@@ -325,9 +365,9 @@ async function processEmails(options: { dryRun?: boolean; maxEmails?: number } =
   console.log(`  💳 Subscriptions: ${subscriptions.length}`);
   console.log(`  📭 Ignored: ${ignored.length}`);
 
-  // Update state
+  // Update state (writes to both state-store and local file)
   if (!dryRun) {
-    saveState({
+    await saveStateAsync({
       lastEmailCheck: new Date().toISOString(),
       processedEmailIds: Array.from(processedIds).slice(-500), // Keep last 500 IDs
     });
