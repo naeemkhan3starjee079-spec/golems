@@ -232,46 +232,14 @@ console.log(`[CloudWorker] TELEGRAM_MODE=${process.env.TELEGRAM_MODE}`);
 console.log(`[CloudWorker] Israel time: ${new Date().toLocaleString("en-US", { timeZone: "Asia/Jerusalem" })}`);
 console.log(`[CloudWorker] Work hours now: ${isActiveHours()}, Workday: ${isIsraeliWorkday()}`);
 
-if (!singleMode) {
-  // ── Email Golem: adaptive schedule ──
-  const processEmails = await getEmailGolem();
-  scheduleEmail(processEmails);
-
-  // ── Job Golem: 9am + 1pm, Sun-Thu only ──
-  const runJobSearch = await getJobGolem();
-  scheduleJobs(runJobSearch);
-
-  // ── Morning Briefing: 8am Israel time ──
-  const sendBriefing = await getBriefing();
-  scheduleDaily("Briefing", 8, sendBriefing);
-
-  // ── Soltome Learner: 2am Israel time ──
-  const learnFromSoltome = await getSoltomeLearner();
-  scheduleDaily("SoltomeLearner", 2, learnFromSoltome);
-
-  console.log("[CloudWorker] All services scheduled:");
-  console.log("  - EmailGolem: hourly 6am-7pm (skip lunch), 10pm final, OFF overnight");
-  console.log("  - JobGolem: 6am + 9am + 1pm Sun-Thu (Israeli work week)");
-  console.log("  - Briefing: 8am Israel");
-  console.log("  - SoltomeLearner: 2am Israel");
-} else if (emailOnly) {
-  const processEmails = await getEmailGolem();
-  scheduleEmail(processEmails);
-  console.log("[CloudWorker] Email-only mode: hourly 6am-7pm, 10pm final, OFF overnight");
-} else if (jobsOnly) {
-  const runJobSearch = await getJobGolem();
-  // In jobs-only mode, run immediately then schedule
-  safeRun("JobGolem (initial)", runJobSearch);
-  scheduleJobs(runJobSearch);
-  console.log("[CloudWorker] Jobs-only mode: 6am + 9am + 1pm Sun-Thu");
-}
-
 // ═══════════════════════════════════════════════════════
-// Health endpoint (Railway requires this)
+// Health endpoint FIRST (Railway healthcheck must respond fast)
+// Starts before golem imports so crashes don't kill healthcheck.
 // ═══════════════════════════════════════════════════════
 
 const PORT = parseInt(process.env.PORT || "8080", 10);
 const startTime = Date.now();
+let golemStatus = "loading";
 
 Bun.serve({
   port: PORT,
@@ -281,6 +249,7 @@ Bun.serve({
     if (url.pathname === "/health") {
       return Response.json({
         status: "ok",
+        golemStatus,
         uptime: Math.round((Date.now() - startTime) / 1000),
         backend: process.env.LLM_BACKEND,
         stateBackend: process.env.STATE_BACKEND,
@@ -291,7 +260,6 @@ Bun.serve({
       });
     }
 
-    // API usage tracking endpoint - check cost at any time
     if (url.pathname === "/usage") {
       return Response.json({
         ...getUsageStats(),
@@ -299,13 +267,10 @@ Bun.serve({
       });
     }
 
-    // UptimeRobot webhook → Telegram uptime topic
-    // Set UptimeRobot alert contact webhook to: POST https://golems-production.up.railway.app/webhook/uptimerobot
     if (url.pathname === "/webhook/uptimerobot" && req.method === "POST") {
       try {
         const form = await req.formData().catch(() => null);
         const text = await req.text().catch(() => "");
-        // UptimeRobot sends form-encoded: monitorFriendlyName, alertType (1=down, 2=up), alertDetails
         const monitorName = form?.get("monitorFriendlyName") || "Unknown";
         const alertType = form?.get("alertType") || "";
         const alertDetails = form?.get("alertDetails") || text || "No details";
@@ -329,11 +294,57 @@ Bun.serve({
 
 console.log(`[CloudWorker] Health endpoint on port ${PORT}`);
 
+// ═══════════════════════════════════════════════════════
+// Load and schedule golems (after health endpoint is up)
+// ═══════════════════════════════════════════════════════
+
+try {
+  if (!singleMode) {
+    const processEmails = await getEmailGolem();
+    scheduleEmail(processEmails);
+
+    const runJobSearch = await getJobGolem();
+    scheduleJobs(runJobSearch);
+
+    const sendBriefing = await getBriefing();
+    scheduleDaily("Briefing", 8, sendBriefing);
+
+    const learnFromSoltome = await getSoltomeLearner();
+    scheduleDaily("SoltomeLearner", 2, learnFromSoltome);
+
+    console.log("[CloudWorker] All services scheduled:");
+    console.log("  - EmailGolem: hourly 6am-7pm (skip lunch), 10pm final, OFF overnight");
+    console.log("  - JobGolem: 6am + 9am + 1pm Sun-Thu (Israeli work week)");
+    console.log("  - Briefing: 8am Israel");
+    console.log("  - SoltomeLearner: 2am Israel");
+  } else if (emailOnly) {
+    const processEmails = await getEmailGolem();
+    scheduleEmail(processEmails);
+    console.log("[CloudWorker] Email-only mode");
+  } else if (jobsOnly) {
+    const runJobSearch = await getJobGolem();
+    safeRun("JobGolem (initial)", runJobSearch);
+    scheduleJobs(runJobSearch);
+    console.log("[CloudWorker] Jobs-only mode");
+  }
+
+  golemStatus = "running";
+} catch (err) {
+  const message = err instanceof Error ? err.message : String(err);
+  console.error("[CloudWorker] Failed to load golems:", message);
+  golemStatus = `error: ${message}`;
+
+  await sendNotification({
+    title: "Golem Load Failed",
+    body: message.slice(0, 200),
+    source: "healthcheck",
+    priority: "high",
+  }).catch(() => {});
+}
+
 // Send startup notification
 await sendNotification({
   title: "Cloud Worker Started",
-  body: singleMode
-    ? `Mode: ${emailOnly ? "email-only" : "jobs-only"}`
-    : "All services active",
+  body: `Golems: ${golemStatus}`,
   source: "healthcheck",
 }).catch(() => {});
