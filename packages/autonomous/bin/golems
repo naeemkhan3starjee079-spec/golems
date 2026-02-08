@@ -62,6 +62,8 @@ COMMANDS:
   costs         API cost tracking (summary, by-source, by-model, daily, log)
   maintain      Run maintenance checks (deps, files, config, services)
   config        Show/init/edit centralized config (~/.golems/config.yaml)
+  update        Self-update golems (pull, install deps, restart services)
+  version       Show current version info
   e2e           Run Playwright E2E tests (admin-ui + docsite)
   index-whatsapp <file> --chat "Name"  Index WhatsApp export in Zikaron
 
@@ -687,6 +689,25 @@ case "${1:-status}" in
         echo "  (no subcommand) Run interactive setup wizard"
         ;;
     esac
+    ;;
+  update)
+    echo -e "${BLUE}=== GOLEMS UPDATE ===${NC}"
+    cd "$GOLEMS_HOME" && bun -e "
+      import { runUpdate, formatUpdateReport, saveUpdateHistory } from './src/lib/self-update';
+      const repoPath = '$HOME/Gits/golems';
+      const report = runUpdate(repoPath);
+      console.log(formatUpdateReport(report));
+      saveUpdateHistory(report);
+    "
+    ;;
+  version)
+    cd "$GOLEMS_HOME" && bun -e "
+      import { getVersionInfo } from './src/lib/self-update';
+      const info = getVersionInfo('$HOME/Gits/golems');
+      console.log('golems ' + info.version + ' (' + info.commit + ')');
+      console.log('branch: ' + info.branch);
+      console.log('date: ' + info.date);
+    "
     ;;
   e2e)
     echo -e "${BLUE}=== E2E TESTS ===${NC}"
