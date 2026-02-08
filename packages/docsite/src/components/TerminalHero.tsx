@@ -1,4 +1,6 @@
 import {useState, useEffect} from 'react';
+import GolemMascot from './mascots/GolemMascot';
+import type {MascotVariant} from './mascots/GolemMascot';
 import styles from './TerminalHero.module.css';
 
 interface GolemScene {
@@ -10,6 +12,7 @@ interface GolemScene {
 interface TerminalHeroProps {
   activeIndex: number;
   onTabClick?: (index: number) => void;
+  mascotVariant?: MascotVariant;
 }
 
 const scenes: GolemScene[] = [
@@ -71,17 +74,25 @@ const scenes: GolemScene[] = [
   },
 ];
 
-// Default "golems status" overview — shown when no tab is manually selected
-const statusOverview = [
-  '\uD83E\uDD16 ClaudeGolem    \u2713 connected      3 PRs tonight',
-  '\uD83D\uDCE7 EmailGolem     \u2713 12 scored       3 urgent',
-  '\uD83D\uDCBC RecruiterGolem \u2713 47 sent         3 interviews',
-  '\uD83D\uDCB0 TellerGolem    \u2713 $847 tracked    14 subs',
-  '\uD83C\uDFAF JobGolem       \u2713 3 hot matches   score 8+',
-  '\uD83C\uDF19 NightShift     \u2713 last: 4:02am    3 PRs',
+// Neofetch-style status lines (shown alongside mascot)
+const statusLines = [
+  {label: 'ClaudeGolem', value: '\u2713 connected \u00B7 3 PRs tonight', color: '#28c840'},
+  {label: 'EmailGolem', value: '\u2713 12 scored \u00B7 3 urgent', color: '#40d4d4'},
+  {label: 'RecruiterGolem', value: '\u2713 47 sent \u00B7 3 interviews', color: '#d4a040'},
+  {label: 'TellerGolem', value: '\u2713 $847 tracked \u00B7 14 subs', color: '#d440d4'},
+  {label: 'JobGolem', value: '\u2713 3 hot matches \u00B7 8+', color: '#ff5555'},
+  {label: 'NightShift', value: '\u2713 last: 4:02am \u00B7 3 PRs', color: '#5555ff'},
 ];
 
-export default function TerminalHero({activeIndex, onTabClick}: TerminalHeroProps) {
+// System info lines (like neofetch shows below the logo)
+const systemInfo = [
+  {label: 'OS', value: 'macOS + Railway'},
+  {label: 'Shell', value: 'zsh + Claude Code'},
+  {label: 'Memory', value: 'Zikaron (sqlite-vec)'},
+  {label: 'Uptime', value: '47d 12h (Railway)'},
+];
+
+export default function TerminalHero({activeIndex, onTabClick, mascotVariant = 'circuit'}: TerminalHeroProps) {
   const [manualTab, setManualTab] = useState<number | null>(null);
   const activeTab = manualTab ?? activeIndex;
   const scene = scenes[activeTab % scenes.length];
@@ -130,41 +141,62 @@ export default function TerminalHero({activeIndex, onTabClick}: TerminalHeroProp
 
       {/* Terminal content */}
       <div className={styles.content}>
-        <div className={styles.prompt}>
-          <span className={styles.promptSymbol}>🜔</span>
-          <span className={styles.promptPath}>golems</span>
-          <span className={styles.promptCaret}>&gt;</span>
-        </div>
         {isOverview ? (
-          <>
-            <div
-              className={styles.line}
-              style={{animationDelay: '0ms'}}
-            >
-              $ golems status
+          /* Neofetch-style layout: mascot left, status right */
+          <div className={styles.neofetch}>
+            <div className={styles.neofetchArt}>
+              <GolemMascot variant={mascotVariant} size="sm" />
             </div>
-            {statusOverview.map((line, i) => (
+            <div className={styles.neofetchInfo}>
+              <div className={styles.neofetchTitle}>
+                <span style={{color: '#e59500'}}>golems</span>
+                <span style={{color: '#666'}}>@</span>
+                <span style={{color: '#28c840'}}>railway</span>
+              </div>
+              <div className={styles.neofetchSep}>──────────────────────</div>
+              {statusLines.map((s, i) => (
+                <div
+                  key={s.label}
+                  className={styles.neofetchLine}
+                  style={{animationDelay: `${i * 80}ms`}}
+                >
+                  <span className={styles.neofetchLabel} style={{color: s.color}}>{s.label}</span>
+                  <span className={styles.neofetchValue}>{s.value}</span>
+                </div>
+              ))}
+              <div className={styles.neofetchSep}>──────────────────────</div>
+              {systemInfo.map((s, i) => (
+                <div
+                  key={s.label}
+                  className={styles.neofetchLine}
+                  style={{animationDelay: `${(i + statusLines.length + 1) * 80}ms`}}
+                >
+                  <span className={styles.neofetchLabel} style={{color: '#e59500'}}>{s.label}</span>
+                  <span className={styles.neofetchValue}>{s.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          /* Individual golem view */
+          <>
+            <div className={styles.prompt}>
+              <span className={styles.promptSymbol}>🜔</span>
+              <span className={styles.promptPath}>golems</span>
+              <span className={styles.promptCaret}>&gt;</span>
+            </div>
+            {scene.lines.map((line, i) => (
               <div
-                key={`overview-${i}`}
+                key={`${activeTab}-${i}`}
                 className={styles.line}
-                style={{animationDelay: `${(i + 1) * 100}ms`}}
+                style={{animationDelay: `${i * 120}ms`}}
               >
                 {line}
               </div>
             ))}
+            <div className={styles.cursor}>_</div>
           </>
-        ) : (
-          scene.lines.map((line, i) => (
-            <div
-              key={`${activeTab}-${i}`}
-              className={styles.line}
-              style={{animationDelay: `${i * 120}ms`}}
-            >
-              {line}
-            </div>
-          ))
         )}
-        <div className={styles.cursor}>_</div>
       </div>
     </div>
   );

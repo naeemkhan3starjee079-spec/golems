@@ -7,7 +7,7 @@
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6), 0 0 60px rgba(229, 149, 0, 0.06);
   font-family: 'IBM Plex Mono', 'Fira Code', Monaco, monospace;
   width: 100%;
-  max-width: 620px;
+  max-width: 680px;
 }
 
 /* Title bar — macOS window chrome */
@@ -51,7 +51,7 @@
 }
 
 .titleSpacer {
-  width: 54px; /* balance the traffic lights */
+  width: 54px;
 }
 
 /* Tab bar */
@@ -110,16 +110,63 @@
 /* Terminal content area — fixed height prevents CLS on tab switch */
 .content {
   padding: 16px 18px;
-  height: 200px;
+  height: 320px;
   overflow: hidden;
   transition: opacity 0.3s ease;
 }
 
-.contentFading {
-  opacity: 0.3;
+/* ═══ Neofetch layout ═══ */
+.neofetch {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
 }
 
-/* Prompt line */
+.neofetchArt {
+  flex-shrink: 0;
+  padding-top: 4px;
+}
+
+.neofetchInfo {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.neofetchTitle {
+  font-size: 0.82rem;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.neofetchSep {
+  color: #333;
+  font-size: 0.7rem;
+  margin: 4px 0;
+}
+
+.neofetchLine {
+  display: flex;
+  gap: 8px;
+  animation: fadeIn 0.3s ease forwards;
+  opacity: 0;
+}
+
+.neofetchLabel {
+  font-weight: 700;
+  white-space: nowrap;
+  min-width: 100px;
+}
+
+.neofetchValue {
+  color: #999;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ═══ Standard terminal lines ═══ */
 .prompt {
   display: flex;
   align-items: center;
@@ -142,7 +189,6 @@
   color: #BBBBBB;
 }
 
-/* Output lines */
 .line {
   font-size: 0.8rem;
   line-height: 1.6;
@@ -157,7 +203,6 @@
   }
 }
 
-/* Blinking cursor */
 .cursor {
   color: #BBBBBB;
   font-size: 0.82rem;
@@ -186,7 +231,7 @@
   background: #1e1e35;
 }
 
-/* Responsive */
+/* ═══ Responsive ═══ */
 @media screen and (max-width: 768px) {
   .terminal {
     max-width: 100%;
@@ -203,11 +248,27 @@
 
   .content {
     padding: 12px 14px;
-    height: 140px;
+    height: 280px;
   }
 
   .line {
     font-size: 0.72rem;
+  }
+
+  /* Neofetch stacks vertically on mobile */
+  .neofetch {
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .neofetchInfo {
+    font-size: 0.65rem;
+    width: 100%;
+  }
+
+  .neofetchLabel {
+    min-width: 80px;
   }
 }
 
@@ -218,5 +279,26 @@
 
   .tab {
     padding: 6px 8px;
+  }
+
+  .neofetchArt {
+    display: none;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .line,
+  .neofetchLine {
+    animation: none;
+    opacity: 1;
+  }
+
+  .cursor {
+    animation: none;
+  }
+
+  .tabActive {
+    transform: none;
   }
 }
