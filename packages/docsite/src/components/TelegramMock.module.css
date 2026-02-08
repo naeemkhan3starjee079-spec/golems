@@ -1,13 +1,12 @@
-/* Telegram-style chat mock */
+/* Telegram-style chat mock — stretches to fill phone frame */
 .telegram {
-  border-radius: 10px;
   overflow: hidden;
   background: #0e1621;
-  border: 1px solid rgba(196, 109, 60, 0.15);
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
   font-family: 'IBM Plex Sans', -apple-system, sans-serif;
   width: 100%;
-  max-width: 380px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Header */
@@ -92,15 +91,15 @@
   transform: scale(1.05);
 }
 
-/* Messages */
-/* Fixed height prevents CLS on tab switch */
+/* Messages — flex-grow fills remaining phone frame height */
 .messages {
   padding: 12px 14px;
-  height: 200px;
+  flex: 1;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  justify-content: center;
 }
 
 .message {
@@ -171,8 +170,6 @@
 /* Light mode */
 :global([data-theme='light']) .telegram {
   background: #f0f0f0;
-  border-color: rgba(196, 109, 60, 0.2);
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.1);
 }
 
 :global([data-theme='light']) .header {
@@ -227,10 +224,6 @@
     padding: 8px 10px;
     min-height: 44px;
   }
-
-  .messages {
-    height: 180px;
-  }
 }
 
 @media screen and (max-width: 480px) {
@@ -243,7 +236,6 @@
   }
 
   .messages {
-    height: 160px;
     padding: 10px 12px;
     gap: 8px;
   }

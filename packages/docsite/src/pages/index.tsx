@@ -5,6 +5,7 @@ import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Layout from '@theme/Layout';
 import GolemMascot from '@site/src/components/mascots/GolemMascot';
 import TelegramMock from '@site/src/components/TelegramMock';
+import GolemsLogo from '@site/static/img/golems-logo.svg';
 
 import styles from './index.module.css';
 
@@ -275,10 +276,10 @@ function HomepageHero() {
         <div className={styles.terminalArea}>
           {/* Compact header with logo + title inline */}
           <div className={styles.heroHeader}>
-            <img
-              src="/img/golems-logo.svg"
-              alt="Golems"
+            <GolemsLogo
               className={styles.heroLogoSmall}
+              role="img"
+              aria-label="Golems logo"
             />
             <div className={styles.heroTitleGroup}>
               <h1 className={styles.heroTitle}>{siteConfig.title}</h1>
@@ -374,9 +375,12 @@ function HomepageHero() {
           </div>
         </div>
 
-        {/* ── TELEGRAM (right sidebar, full height) ── */}
+        {/* ── TELEGRAM (right sidebar, phone frame, full height) ── */}
         <div className={styles.telegramArea}>
-          <TelegramMock activeIndex={activeTab} onTopicClick={handleTabChange} />
+          <div className={styles.phoneFrame}>
+            <div className={styles.phoneNotch} />
+            <TelegramMock activeIndex={activeTab} onTopicClick={handleTabChange} />
+          </div>
         </div>
       </div>
     </header>
