@@ -66,6 +66,7 @@ COMMANDS:
   version       Show current version info
   queue         Chat queue controls (list, add, edit, remove, clean)
   explore       Codebase exploration with CLI agents (templates, agents, latest)
+  i18n          Internationalization info (locale, keys, set)
   e2e           Run Playwright E2E tests (admin-ui + docsite)
   index-whatsapp <file> --chat "Name"  Index WhatsApp export in Zikaron
 
@@ -869,6 +870,49 @@ case "${1:-status}" in
         ;;
       edit)
         ${EDITOR:-vim} "$HOME/.golems/config.yaml"
+        ;;
+    esac
+    ;;
+  i18n|locale)
+    case "${2:-info}" in
+      info|"")
+        cd "$GOLEMS_HOME" && bun -e "
+          import { formatLocaleInfo, detectLocale } from './src/lib/i18n';
+          console.log(formatLocaleInfo(detectLocale()));
+        "
+        ;;
+      set)
+        if [ -z "$3" ]; then
+          echo "Usage: golems i18n set <en|he>"
+          exit 1
+        fi
+        cd "$GOLEMS_HOME" && bun -e "
+          import { setLocale, formatLocaleInfo } from './src/lib/i18n';
+          setLocale('$3');
+          console.log(formatLocaleInfo('$3'));
+        "
+        ;;
+      keys)
+        cd "$GOLEMS_HOME" && bun -e "
+          import { getTranslationKeys, getTranslationCount } from './src/lib/i18n';
+          console.log('Translation keys: ' + getTranslationCount());
+          for (const k of getTranslationKeys()) console.log('  ' + k);
+        "
+        ;;
+      help)
+        cat << 'I18N_EOF'
+golems i18n — Internationalization info
+
+  golems i18n              Show current locale info
+  golems i18n set <locale> Set locale (en or he)
+  golems i18n keys         List all translation keys
+  golems i18n help         This help
+I18N_EOF
+        ;;
+      *)
+        echo "Unknown i18n command: $2"
+        echo "Run 'golems i18n help' for usage"
+        exit 1
         ;;
     esac
     ;;
