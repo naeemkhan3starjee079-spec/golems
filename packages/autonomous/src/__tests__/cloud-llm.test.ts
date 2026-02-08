@@ -1,6 +1,8 @@
 import { describe, it, expect, mock, beforeEach, afterEach } from "bun:test";
 
-// Mock the Anthropic SDK before importing cloud-llm
+// NOTE: mock.module kept here because @anthropic-ai/sdk requires class constructor
+// mocking which spyOn cannot handle. This is LOW risk — no other test file imports
+// this SDK. If this causes pollution, refactor cloud-llm.ts to accept a client param.
 const mockCreate = mock(() =>
   Promise.resolve({
     content: [{ type: "text", text: '{"score": 8, "category": "job"}' }],

@@ -35,6 +35,8 @@ interface ColorTheme {
   btnGradient: string;
   btnText: string;
   swatch: string;
+  logoHueRotate: number;
+  mascotColors: { clay: string; accent: string; glow: string; bg: string };
 }
 
 const themes: ColorTheme[] = [
@@ -52,6 +54,8 @@ const themes: ColorTheme[] = [
     highlight: '#3fb6e0', highlightGlow: 'rgba(63, 182, 224, 0.35)',
     btnGradient: 'linear-gradient(135deg, #e07a3f, #f2b768)', btnText: '#1a110b',
     swatch: '#e07a3f',
+    logoHueRotate: 0,
+    mascotColors: { clay: '#c4783c', accent: '#8b7355', glow: '#ffb020', bg: '#1a1510' },
   },
   {
     id: 'deep-current',
@@ -67,6 +71,8 @@ const themes: ColorTheme[] = [
     highlight: '#3f6fe0', highlightGlow: 'rgba(63, 111, 224, 0.35)',
     btnGradient: 'linear-gradient(135deg, #2db7a3, #6ad3c7)', btnText: '#051015',
     swatch: '#2db7a3',
+    logoHueRotate: 148,
+    mascotColors: { clay: '#2db7a3', accent: '#1a7a70', glow: '#6ad3c7', bg: '#071016' },
   },
   {
     id: 'neon-arcade',
@@ -82,6 +88,8 @@ const themes: ColorTheme[] = [
     highlight: '#7cff57', highlightGlow: 'rgba(124, 255, 87, 0.40)',
     btnGradient: 'linear-gradient(135deg, #ff4fd8, #4fe8ff)', btnText: '#0a0612',
     swatch: '#ff4fd8',
+    logoHueRotate: 288,
+    mascotColors: { clay: '#ff4fd8', accent: '#a030a0', glow: '#4fe8ff', bg: '#0a0612' },
   },
   {
     id: 'tokyo-nocturne',
@@ -97,6 +105,8 @@ const themes: ColorTheme[] = [
     highlight: '#27d4a8', highlightGlow: 'rgba(39, 212, 168, 0.40)',
     btnGradient: 'linear-gradient(135deg, #7b5cff, #b39bff)', btnText: '#090b14',
     swatch: '#7b5cff',
+    logoHueRotate: 231,
+    mascotColors: { clay: '#7b5cff', accent: '#5040b0', glow: '#b39bff', bg: '#080b14' },
   },
   {
     id: 'mono-forest',
@@ -112,6 +122,8 @@ const themes: ColorTheme[] = [
     highlight: '#4d8bff', highlightGlow: 'rgba(77, 139, 255, 0.35)',
     btnGradient: 'linear-gradient(135deg, #44d17a, #8be8b0)', btnText: '#0a0c0d',
     swatch: '#44d17a',
+    logoHueRotate: 123,
+    mascotColors: { clay: '#44d17a', accent: '#2a8050', glow: '#8be8b0', bg: '#0b0c0d' },
   },
 ];
 
@@ -203,7 +215,7 @@ function ThemedHomepage({theme, onBack}: {theme: ColorTheme; onBack: () => void}
         <div className={styles.themeHeroInner}>
           <div className={styles.themeTermArea}>
             <div className={styles.themeHeader}>
-              <GolemsLogo className={styles.themeLogo} style={{filter: `drop-shadow(0 0 20px ${theme.accentGlow})`}} />
+              <GolemsLogo className={styles.themeLogo} style={{filter: `hue-rotate(${theme.logoHueRotate}deg) drop-shadow(0 0 20px ${theme.accentGlow})`}} />
               <div>
                 <h1 className={styles.themeTitle} style={{
                   background: `linear-gradient(135deg, ${theme.text} 0%, ${theme.accent} 100%)`,
@@ -239,7 +251,7 @@ function ThemedHomepage({theme, onBack}: {theme: ColorTheme; onBack: () => void}
               <div className={styles.themeTermContent} style={{color: theme.termText}}>
                 <div className={styles.themeWizardGrid}>
                   <div className={styles.themeWizardMascot}>
-                    <GolemMascot variant="guardian" size="sm" animated={false} />
+                    <GolemMascot variant="guardian" size="sm" animated={false} colors={theme.mascotColors} />
                   </div>
                   <div>
                     {termLines.map((line, i) => (
@@ -263,7 +275,7 @@ function ThemedHomepage({theme, onBack}: {theme: ColorTheme; onBack: () => void}
           <div className={styles.themePhone}>
             <div className={styles.themePhoneFrame}>
               <div className={styles.themePhoneDI} />
-              <TelegramMock activeIndex={0} />
+              <TelegramMock activeIndex={0} accentColor={theme.accent} />
               <div className={styles.themePhoneHome} />
             </div>
           </div>

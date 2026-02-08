@@ -5,26 +5,18 @@
  * Scoring: 10 = immediate, 7-9 = briefing, 5-6 = track, 1-4 = ignore
  */
 
-import { describe, it, expect, mock, beforeEach } from "bun:test";
+import { describe, it, expect, mock, beforeEach, afterEach, spyOn } from "bun:test";
+import * as ollamaWrapper from "../../ollama-wrapper";
+import { scoreEmail, scoreEmails, extractSubscriptionInfo, SCORE_THRESHOLDS } from "../../email-golem/scorer";
 import type { EmailInput, ScoredEmail } from "../../email-golem/scorer";
 
-// Mock ollama-wrapper before importing scorer
+// Use spyOn instead of mock.module to avoid global pollution
 const mockOllamaJSON = mock(() => Promise.resolve({
   score: 5,
   category: "unknown",
   reason: "Test default",
   subscription: null,
 }));
-
-mock.module("../../ollama-wrapper", () => ({
-  runOllamaJSON: mockOllamaJSON,
-  forEmailGolem: {
-    runOllamaJSON: mockOllamaJSON,
-  },
-}));
-
-// Import after mock
-const { scoreEmail, scoreEmails, extractSubscriptionInfo, SCORE_THRESHOLDS } = await import("../../email-golem/scorer");
 
 // Test fixtures from plan
 const FIXTURES: Record<string, EmailInput & { expectedScore: number; expectedCategory: string }> = {
@@ -99,6 +91,14 @@ const FIXTURES: Record<string, EmailInput & { expectedScore: number; expectedCat
     expectedCategory: "promo",
   },
 };
+
+beforeEach(() => {
+  spyOn(ollamaWrapper, "runOllamaJSON").mockImplementation(mockOllamaJSON);
+});
+
+afterEach(() => {
+  mock.restore();
+});
 
 describe("Email Scorer - Score Thresholds", () => {
   it("should define correct thresholds", () => {

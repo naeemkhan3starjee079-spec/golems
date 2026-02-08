@@ -52,7 +52,10 @@ const MOCK_POSTS = [
   },
 ];
 
-// Mock the ollama-wrapper module before imports
+// NOTE: mock.module kept here because soltome-learner needs complex conditional
+// mock implementations (scoring by content, pattern extraction). These mocks are
+// LOW risk — ollama-wrapper and soltome-client are only consumed by this test's
+// module under test. Prefer spyOn for new tests.
 mock.module("../ollama-wrapper", () => ({
   runOllamaJSON: async (prompt: string, source: string) => {
     // Mock scoring based on content

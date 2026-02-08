@@ -2,23 +2,15 @@
  * TellerGolem Categorizer Tests (TDD)
  *
  * Tests expense categorization and vendor extraction.
+ * Uses spyOn instead of mock.module to avoid global test pollution.
  */
 
-import { describe, it, expect, mock, beforeEach } from "bun:test";
+import { describe, it, expect, mock, beforeEach, afterEach, spyOn } from "bun:test";
+import * as ollamaWrapper from "../ollama-wrapper";
+import { categorizeExpense, extractVendor } from "../teller-golem/categorizer";
 import type { CategorizedExpense, ScoredEmail } from "../teller-golem/types";
 
-// Mock LLM before importing categorizer
 let mockRunOllamaJSON = mock<() => Promise<CategorizedExpense | null>>();
-
-mock.module("../ollama-wrapper", () => ({
-  runOllamaJSON: (...args: unknown[]) => mockRunOllamaJSON(),
-  runOllama: async () => "",
-}));
-
-// Import after mock setup
-const { categorizeExpense, extractVendor } = await import(
-  "../teller-golem/categorizer"
-);
 
 const makeEmail = (overrides: Partial<ScoredEmail> = {}): ScoredEmail => ({
   id: "test-1",
@@ -34,6 +26,12 @@ const makeEmail = (overrides: Partial<ScoredEmail> = {}): ScoredEmail => ({
 describe("TellerGolem Categorizer", () => {
   beforeEach(() => {
     mockRunOllamaJSON = mock<() => Promise<CategorizedExpense | null>>();
+    spyOn(ollamaWrapper, "runOllamaJSON").mockImplementation((...args: unknown[]) => mockRunOllamaJSON());
+    spyOn(ollamaWrapper, "runOllama").mockImplementation(async () => "");
+  });
+
+  afterEach(() => {
+    mock.restore();
   });
 
   describe("extractVendor", () => {

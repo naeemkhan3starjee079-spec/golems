@@ -1,16 +1,5 @@
-import { describe, test, expect, beforeEach, mock } from "bun:test";
-import { execSync } from "child_process";
-
-// Mock execSync
-const mockExecSync = mock((cmd: string, options?: any) => {
-  throw new Error("execSync not mocked for this test");
-});
-
-mock.module("child_process", () => ({
-  execSync: mockExecSync,
-}));
-
-// Import after mocking
+import { describe, test, expect, beforeEach, afterEach, mock, spyOn } from "bun:test";
+import * as childProcess from "child_process";
 import {
   detectOS,
   detectShell,
@@ -23,9 +12,19 @@ import {
   checkPort,
 } from "../lib/system-detect";
 
+// Use spyOn instead of mock.module to avoid global pollution of child_process
+const mockExecSync = mock((cmd: string, options?: any) => {
+  throw new Error("execSync not mocked for this test");
+});
+
 describe("system-detect", () => {
   beforeEach(() => {
     mockExecSync.mockReset();
+    spyOn(childProcess, "execSync").mockImplementation(mockExecSync as any);
+  });
+
+  afterEach(() => {
+    mock.restore();
   });
 
   describe("detectOS", () => {

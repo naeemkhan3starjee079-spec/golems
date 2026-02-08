@@ -64,13 +64,14 @@ const topicScenes: TopicScene[] = [
 interface TelegramMockProps {
   activeIndex: number;
   onTopicClick?: (index: number) => void;
+  accentColor?: string;
 }
 
-export default function TelegramMock({activeIndex, onTopicClick}: TelegramMockProps) {
+export default function TelegramMock({activeIndex, onTopicClick, accentColor}: TelegramMockProps) {
   const scene = topicScenes[activeIndex % topicScenes.length];
 
   return (
-    <div className={styles.telegram}>
+    <div className={styles.telegram} style={accentColor ? {'--tg-accent': accentColor} as React.CSSProperties : undefined}>
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.headerLeft}>

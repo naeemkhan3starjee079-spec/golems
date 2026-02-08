@@ -110,6 +110,7 @@ interface GolemMascotProps {
   size?: 'sm' | 'md' | 'lg';
   animated?: boolean;
   className?: string;
+  colors?: { clay: string; accent: string; glow: string; bg: string };
 }
 
 function colorLine(line: string, colors: { clay: string; accent: string; glow: string }): JSX.Element[] {
@@ -136,10 +137,10 @@ function colorLine(line: string, colors: { clay: string; accent: string; glow: s
   return parts;
 }
 
-export default function GolemMascot({ variant = 'guardian', size = 'md', animated = true, className }: GolemMascotProps) {
+export default function GolemMascot({ variant = 'guardian', size = 'md', animated = true, className, colors: colorOverride }: GolemMascotProps) {
   const [visible, setVisible] = useState(!animated);
   const lines = VARIANTS[variant] || VARIANTS.guardian;
-  const colors = VARIANT_COLORS[variant] || VARIANT_COLORS.guardian;
+  const colors = colorOverride || VARIANT_COLORS[variant] || VARIANT_COLORS.guardian;
 
   useEffect(() => {
     if (animated) {
