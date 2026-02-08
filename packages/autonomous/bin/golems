@@ -208,124 +208,122 @@ cmd_sessions() {
 
 cmd_logs() {
   local name="${1:-telegram}"
-  case "$name" in
-    telegram)
-      tail -f "$LOGS_DIR/telegram-bot.log" 2>/dev/null || tail -f /tmp/golemszikaron-telegram.log 2>/dev/null || echo "No telegram logs found"
-      ;;
-    nightshift)
-      tail -f /tmp/nightshift.log 2>/dev/null || echo "No nightshift logs found"
-      ;;
-    job-golem|job)
-      tail -f /tmp/job-golem.err /tmp/job-golem.log 2>/dev/null || echo "No job-golem logs found"
-      ;;
-    email-golem|email)
-      tail -f /tmp/golemszikaron-email-golem.log 2>/dev/null || echo "No email-golem logs found"
-      ;;
-    briefing)
-      tail -f /tmp/golemszikaron-briefing.log 2>/dev/null || echo "No briefing logs found"
-      ;;
-    archiver|session-archiver)
-      tail -f "$LOGS_DIR/session-archiver.log" 2>/dev/null || echo "No archiver logs found"
-      ;;
-    storage-cleanup|cleanup)
-      tail -f ~/.golems-zikaron/storage-cleanup-stdout.log 2>/dev/null || echo "No storage-cleanup logs found"
-      ;;
-    *)
-      echo "Unknown log: $name"
-      echo "Available: telegram, nightshift, job-golem, email-golem, briefing, archiver, storage-cleanup"
-      ;;
+  local svc="$(_svc_name "$name")"
+
+  if [ -z "$svc" ]; then
+    echo "Unknown service: $name"
+    echo "Available: telegram, nightshift, ollama, job-golem, email-golem, briefing, session-archiver, storage-cleanup"
+    return 1
+  fi
+
+  local logfile="$(_svc_log "$svc")"
+
+  if [ -f "$logfile" ]; then
+    tail -f "$logfile"
+  else
+    # Fallback: check /tmp for legacy logs
+    local legacy_log="/tmp/golemszikaron-${svc}.log"
+    if [ -f "$legacy_log" ]; then
+      echo "(legacy log at $legacy_log — will use $logfile after next restart)"
+      tail -f "$legacy_log"
+    else
+      echo "No logs found at $logfile"
+      echo "Is $svc running? Check: golems status"
+    fi
+  fi
+}
+
+# Resolve service alias to canonical name
+_svc_name() {
+  case "$1" in
+    telegram|bot)          echo "telegram" ;;
+    nightshift)            echo "nightshift" ;;
+    ollama)                echo "ollama" ;;
+    job-golem|job)         echo "job-golem" ;;
+    email-golem|email)     echo "email-golem" ;;
+    briefing)              echo "briefing" ;;
+    session-archiver|archiver) echo "session-archiver" ;;
+    storage-cleanup|cleanup)   echo "storage-cleanup" ;;
+    *) echo "" ;;
   esac
+}
+
+# Resolve service name to launchd label
+_svc_label() {
+  case "$1" in
+    session-archiver)  echo "com.golems.session-archiver" ;;
+    storage-cleanup)   echo "com.golems.storage-cleanup" ;;
+    *)                 echo "com.golemszikaron.$1" ;;
+  esac
+}
+
+# Resolve service name to log file path
+_svc_log() {
+  echo "$LOGS_DIR/$1.log"
+}
+
+# Resolve service name to plist path
+_svc_plist() {
+  echo "$HOME/Library/LaunchAgents/$(_svc_label "$1").plist"
 }
 
 cmd_start() {
-  local svc="$1"
-  case "$svc" in
-    telegram|bot)
-      cd "$GOLEMS_HOME" && bun run bot &
-      echo "Started telegram bot"
-      ;;
-    nightshift)
-      launchctl load ~/Library/LaunchAgents/com.golemszikaron.nightshift.plist 2>/dev/null
-      echo "Loaded nightshift launchd"
-      ;;
-    ollama)
-      launchctl load ~/Library/LaunchAgents/com.golemszikaron.ollama.plist 2>/dev/null
-      echo "Started ollama via launchd"
-      ;;
-    job-golem|job)
-      launchctl load ~/Library/LaunchAgents/com.golemszikaron.job-golem.plist 2>/dev/null
-      echo "Loaded job-golem launchd"
-      ;;
-    email-golem|email)
-      launchctl load ~/Library/LaunchAgents/com.golemszikaron.email-golem.plist 2>/dev/null
-      echo "Loaded email-golem launchd"
-      ;;
-    briefing)
-      launchctl load ~/Library/LaunchAgents/com.golemszikaron.briefing.plist 2>/dev/null
-      echo "Loaded briefing launchd"
-      ;;
-    session-archiver|archiver)
-      launchctl load ~/Library/LaunchAgents/com.golems.session-archiver.plist 2>/dev/null
-      echo "Loaded session-archiver launchd"
-      ;;
-    storage-cleanup|cleanup)
-      launchctl load ~/Library/LaunchAgents/com.golems.storage-cleanup.plist 2>/dev/null
-      echo "Loaded storage-cleanup launchd"
-      ;;
-    *)
-      echo "Unknown service: $svc"
-      echo "Available: telegram, nightshift, ollama, job-golem, email-golem, briefing, session-archiver, storage-cleanup"
-      ;;
-  esac
+  local svc="$(_svc_name "$1")"
+  if [ -z "$svc" ]; then
+    echo "Unknown service: $1"
+    echo "Available: telegram, nightshift, ollama, job-golem, email-golem, briefing, session-archiver, storage-cleanup"
+    return 1
+  fi
+
+  local label="$(_svc_label "$svc")"
+  local plist="$(_svc_plist "$svc")"
+
+  # Ensure logs dir exists
+  mkdir -p "$LOGS_DIR"
+
+  if ! [ -f "$plist" ]; then
+    echo "Plist not found: $plist"
+    return 1
+  fi
+
+  launchctl bootstrap gui/$(id -u) "$plist" 2>/dev/null || true
+  echo "Started $svc"
 }
 
 cmd_stop() {
-  local svc="$1"
-  case "$svc" in
-    telegram|bot)
-      pkill -f "bun.*telegram-bot" 2>/dev/null || echo "Not running"
-      echo "Stopped telegram bot"
-      ;;
-    nightshift)
-      launchctl bootout gui/$(id -u)/com.golemszikaron.nightshift 2>/dev/null || true
-      pkill -f "night-shift" 2>/dev/null || true
-      echo "Stopped nightshift"
-      ;;
-    ollama)
-      launchctl unload ~/Library/LaunchAgents/com.golemszikaron.ollama.plist 2>/dev/null
-      pkill -f ollama 2>/dev/null || true
-      echo "Stopped ollama"
-      ;;
-    job-golem|job)
-      launchctl unload ~/Library/LaunchAgents/com.golemszikaron.job-golem.plist 2>/dev/null
-      echo "Stopped job-golem"
-      ;;
-    email-golem|email)
-      launchctl unload ~/Library/LaunchAgents/com.golemszikaron.email-golem.plist 2>/dev/null
-      echo "Stopped email-golem"
-      ;;
-    briefing)
-      launchctl unload ~/Library/LaunchAgents/com.golemszikaron.briefing.plist 2>/dev/null
-      echo "Stopped briefing"
-      ;;
-    session-archiver|archiver)
-      launchctl unload ~/Library/LaunchAgents/com.golems.session-archiver.plist 2>/dev/null
-      echo "Stopped session-archiver"
-      ;;
-    storage-cleanup|cleanup)
-      launchctl unload ~/Library/LaunchAgents/com.golems.storage-cleanup.plist 2>/dev/null
-      echo "Stopped storage-cleanup"
-      ;;
-    *)
-      echo "Unknown service: $svc"
-      ;;
-  esac
+  local svc="$(_svc_name "$1")"
+  if [ -z "$svc" ]; then
+    echo "Unknown service: $1"
+    return 1
+  fi
+
+  local label="$(_svc_label "$svc")"
+
+  # Unload from launchd (prevents auto-respawn)
+  launchctl bootout gui/$(id -u)/$label 2>/dev/null || true
+
+  # For telegram: also ensure port 3847 is freed
+  if [ "$svc" = "telegram" ]; then
+    for i in 1 2 3 4 5; do
+      local pid=$(lsof -ti:3847 2>/dev/null)
+      [ -z "$pid" ] && break
+      kill -9 $pid 2>/dev/null || true
+      sleep 1
+    done
+  fi
+
+  echo "Stopped $svc"
 }
 
 cmd_restart() {
-  local svc="$1"
+  local svc="$(_svc_name "$1")"
+  if [ -z "$svc" ]; then
+    echo "Unknown service: $1"
+    return 1
+  fi
+
   cmd_stop "$svc"
-  sleep 1
+  sleep 2
   cmd_start "$svc"
 }
 
@@ -360,19 +358,16 @@ cmd_latest() {
   echo "Restarting all services to pick up code changes..."
   echo
 
-  # TODO: Telegram uses `bun run bot &` not launchd, so `launchctl kickstart` fails for it.
-  # Fix: migrate telegram to use launchd consistently like other services.
-  # See PR #7 deferred bug #1.
-
-  # Restart via launchctl kickstart -k (keeps service running, just restarts)
   for svc in $CORE_SERVICES; do
     [ "$svc" = "ollama" ] && continue
-    label="com.golemszikaron.$svc"
+    local label="$(_svc_label "$svc")"
     echo -n "  Restarting $svc... "
     if launchctl kickstart -k gui/$(id -u)/$label 2>/dev/null; then
       echo -e "${GREEN}done${NC}"
     else
-      echo -e "${YELLOW}not running${NC}"
+      # Not running — try full restart
+      cmd_restart "$svc" >/dev/null 2>&1
+      echo -e "${YELLOW}reloaded${NC}"
     fi
   done
 

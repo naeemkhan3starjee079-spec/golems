@@ -568,7 +568,7 @@ launchctl load ~/Library/LaunchAgents/com.golemszikaron.email-golem.plist
 launchctl unload ~/Library/LaunchAgents/com.golemszikaron.email-golem.plist
 
 # View logs
-tail -f /tmp/golemszikaron-email-golem.log
+golems logs email-golem
 ```
 
 ### Environment Variables
