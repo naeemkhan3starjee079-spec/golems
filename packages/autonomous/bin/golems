@@ -509,7 +509,12 @@ case "${1:-status}" in
     cmd_status
     ;;
   tui|dashboard)
-    cd "$HOME/Gits/golems/packages/golems-tui" && bun src/index.tsx
+    echo -e "${BLUE}=== GOLEMS DASHBOARD ===${NC}"
+    cd "$GOLEMS_HOME" && bun -e "
+      import { getSystemHealth, formatDashboard } from './src/lib/tui';
+      const health = getSystemHealth();
+      console.log(formatDashboard(health));
+    "
     ;;
   doctor)
     cd "$GOLEMS_HOME" && bun run src/doctor.ts
