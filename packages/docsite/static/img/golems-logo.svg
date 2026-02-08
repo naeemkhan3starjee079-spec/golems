@@ -1,65 +1,101 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
   <defs>
-    <linearGradient id="golemGrad" x1="0" y1="0" x2="200" y2="200">
-      <stop offset="0%" stop-color="#e59500"/>
-      <stop offset="50%" stop-color="#c46d3c"/>
-      <stop offset="100%" stop-color="#e59500"/>
+    <!-- Clay gradient - warm terracotta -->
+    <linearGradient id="clayBody" x1="40" y1="20" x2="160" y2="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#d4915a"/>
+      <stop offset="35%" stop-color="#c4783c"/>
+      <stop offset="65%" stop-color="#a86230"/>
+      <stop offset="100%" stop-color="#8b5128"/>
     </linearGradient>
-    <linearGradient id="eyeGlow" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#2dd4a8"/>
-      <stop offset="100%" stop-color="#1a8a6e"/>
+    <!-- Dark clay for depth -->
+    <linearGradient id="clayDark" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#7a4420"/>
+      <stop offset="100%" stop-color="#5c3318"/>
     </linearGradient>
+    <!-- Emet glow -->
+    <linearGradient id="emetGlow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffcc44"/>
+      <stop offset="100%" stop-color="#ff9900"/>
+    </linearGradient>
+    <!-- Eye glow - warm amber -->
+    <radialGradient id="eyeGlow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0%" stop-color="#ffdd66"/>
+      <stop offset="60%" stop-color="#ffb020"/>
+      <stop offset="100%" stop-color="#cc8800"/>
+    </radialGradient>
     <filter id="glow">
-      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feGaussianBlur stdDeviation="2.5" result="blur"/>
       <feMerge>
-        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="blur"/>
         <feMergeNode in="SourceGraphic"/>
       </feMerge>
     </filter>
-    <filter id="innerShadow">
-      <feOffset dx="0" dy="2"/>
-      <feGaussianBlur stdDeviation="2"/>
-      <feComposite operator="out" in="SourceGraphic"/>
-      <feComponentTransfer>
-        <feFuncA type="linear" slope="0.3"/>
-      </feComponentTransfer>
-      <feBlend in="SourceGraphic" mode="normal"/>
+    <filter id="softGlow">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="crack">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="4" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="3" xChannelSelector="R" yChannelSelector="G"/>
     </filter>
   </defs>
 
-  <!-- Outer circle - subtle ring -->
-  <circle cx="100" cy="100" r="96" stroke="#e59500" stroke-width="1" fill="none" opacity="0.3"/>
+  <!-- === MAIN HEAD SHAPE === -->
+  <!-- Outer heavy silhouette - the massive clay block -->
+  <path d="M38 46 C38 28, 56 16, 100 16 C144 16, 162 28, 162 46 L162 148 C162 168, 144 180, 100 180 C56 180, 38 168, 38 148 Z"
+        fill="url(#clayBody)" stroke="#6b3d1a" stroke-width="1.5"/>
 
-  <!-- Main body - golem head shape (rounded square) -->
-  <rect x="35" y="30" width="130" height="140" rx="28" fill="url(#golemGrad)" filter="url(#innerShadow)"/>
+  <!-- Clay texture cracks -->
+  <path d="M65 30 L68 55 L60 80" stroke="#8b5128" stroke-width="0.8" fill="none" opacity="0.5"/>
+  <path d="M140 35 L135 60 L142 85" stroke="#8b5128" stroke-width="0.8" fill="none" opacity="0.5"/>
+  <path d="M55 120 L70 125 L65 150" stroke="#8b5128" stroke-width="0.7" fill="none" opacity="0.4"/>
+  <path d="M145 115 L132 122 L138 148" stroke="#8b5128" stroke-width="0.7" fill="none" opacity="0.4"/>
+  <path d="M85 170 L100 165 L115 172" stroke="#8b5128" stroke-width="0.6" fill="none" opacity="0.3"/>
 
-  <!-- Forehead - Hebrew emet mark -->
-  <text x="100" y="68" text-anchor="middle" font-family="serif" font-size="28" fill="#e8e2d6" opacity="0.6" font-weight="bold">&#x05D0;&#x05DE;&#x05EA;</text>
+  <!-- Forehead plate - raised area for אמת -->
+  <rect x="58" y="32" width="84" height="34" rx="6" fill="#b06830" stroke="#8b5128" stroke-width="1" opacity="0.6"/>
 
-  <!-- Left eye -->
-  <rect x="55" y="82" width="30" height="14" rx="7" fill="url(#eyeGlow)" filter="url(#glow)">
-    <animate attributeName="opacity" values="1;0.6;1" dur="3s" repeatCount="indefinite"/>
+  <!-- === אמת (EMET/TRUTH) === -->
+  <text x="100" y="58" text-anchor="middle" font-family="'David Libre', 'Frank Ruhl Libre', serif"
+        font-size="26" font-weight="700" fill="url(#emetGlow)" filter="url(#softGlow)" letter-spacing="4">אמת</text>
+
+  <!-- === EYES === -->
+  <!-- Left eye socket -->
+  <rect x="52" y="78" width="36" height="28" rx="4" fill="#5c3318"/>
+  <!-- Left eye inner -->
+  <rect x="56" y="82" width="28" height="20" rx="3" fill="url(#eyeGlow)" filter="url(#glow)">
+    <animate attributeName="opacity" values="1;0.7;1" dur="4s" repeatCount="indefinite"/>
   </rect>
+  <!-- Left eye diamond pupil -->
+  <polygon points="70,86 76,92 70,98 64,92" fill="#5c3318" opacity="0.7"/>
 
-  <!-- Right eye -->
-  <rect x="115" y="82" width="30" height="14" rx="7" fill="url(#eyeGlow)" filter="url(#glow)">
-    <animate attributeName="opacity" values="1;0.6;1" dur="3s" repeatCount="indefinite"/>
+  <!-- Right eye socket -->
+  <rect x="112" y="78" width="36" height="28" rx="4" fill="#5c3318"/>
+  <!-- Right eye inner -->
+  <rect x="116" y="82" width="28" height="20" rx="3" fill="url(#eyeGlow)" filter="url(#glow)">
+    <animate attributeName="opacity" values="1;0.7;1" dur="4s" repeatCount="indefinite"/>
   </rect>
+  <!-- Right eye diamond pupil -->
+  <polygon points="130,86 136,92 130,98 124,92" fill="#5c3318" opacity="0.7"/>
 
-  <!-- Mouth - code bracket -->
-  <text x="100" y="130" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', Monaco, monospace" font-size="22" fill="#e8e2d6" opacity="0.8">{...}</text>
+  <!-- === CODE MOUTH === -->
+  <!-- Mouth plate -->
+  <rect x="62" y="120" width="76" height="30" rx="5" fill="#5c3318"/>
+  <rect x="66" y="124" width="68" height="22" rx="3" fill="#7a4420"/>
+  <!-- {··} code text -->
+  <text x="100" y="141" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace"
+        font-size="16" fill="#d4a060" opacity="0.9" letter-spacing="2">{..}</text>
 
-  <!-- Circuit lines - left -->
-  <line x1="35" y1="100" x2="15" y2="100" stroke="#e59500" stroke-width="2" opacity="0.4"/>
-  <circle cx="12" cy="100" r="3" fill="#e59500" opacity="0.4"/>
+  <!-- === SHOULDERS === -->
+  <!-- Left shoulder block -->
+  <path d="M38 148 L22 155 L22 175 L38 180" fill="url(#clayBody)" stroke="#6b3d1a" stroke-width="1"/>
+  <!-- Right shoulder block -->
+  <path d="M162 148 L178 155 L178 175 L162 180" fill="url(#clayBody)" stroke="#6b3d1a" stroke-width="1"/>
 
-  <!-- Circuit lines - right -->
-  <line x1="165" y1="100" x2="185" y2="100" stroke="#e59500" stroke-width="2" opacity="0.4"/>
-  <circle cx="188" cy="100" r="3" fill="#e59500" opacity="0.4"/>
-
-  <!-- Circuit lines - bottom -->
-  <line x1="80" y1="170" x2="80" y2="190" stroke="#e59500" stroke-width="2" opacity="0.4"/>
-  <circle cx="80" cy="193" r="3" fill="#e59500" opacity="0.4"/>
-  <line x1="120" y1="170" x2="120" y2="190" stroke="#e59500" stroke-width="2" opacity="0.4"/>
-  <circle cx="120" cy="193" r="3" fill="#e59500" opacity="0.4"/>
+  <!-- Clay fragment details on shoulders -->
+  <rect x="24" y="158" width="12" height="3" rx="1" fill="#8b5128" opacity="0.3"/>
+  <rect x="164" y="162" width="12" height="3" rx="1" fill="#8b5128" opacity="0.3"/>
 </svg>
