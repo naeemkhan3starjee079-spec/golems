@@ -265,15 +265,79 @@ With tax season approaching, TellerGolem was born: IRS Schedule C expense catego
 
 Docusaurus documentation site with an alchemical workshop theme (ember/obsidian palette). Interactive terminal hero showcasing all golems, Telegram mock showing real notification flows, Mermaid architecture diagrams. Built with help from 5 CLI agents running in parallel (Gemini, Cursor, Codex, Kiro, Haiku).
 
+### Feb 7: Claude Cowork Research
+
+Researched Claude Cowork (web interface) as a distribution channel. Key findings:
+
+- **Claude Code plugin FIRST** — build Golems as CC plugin, same structure converts to Cowork later
+- **Cowork limitations:** No daemon management, single-session, no process spawning
+- **Verdict:** NOT viable as full plugin. Read-only dashboard OK (show status, recent jobs). "The README is the API" — any Claude can operate the golems CLI
+- **Non-technical users:** Ask their Claude "update my golems" — Claude reads the CHANGELOG and walks them through setup in natural language
+
+The CLAUDE.md files ARE the docs for both humans and Claude agents. This means any Claude — Code, Cowork, or API — can operate Golems by reading the repo.
+
+### Feb 7: Epoch 2 — The v2 Plan System
+
+With the foundation built, we created a **folder-based planning system** — each phase gets its own folder with a README.md (plan steps) and findings.md (research results, cross-phase knowledge).
+
+26 phases planned across the full vision:
+
+| Phase | What | Status |
+|-------|------|--------|
+| Hero v2 | Tab pop animation, logo in terminal, Telegram bidirectional sync, dynamic 3rd button | Done |
+| Character Research | Authentic golem identity from Jewish folklore — Prague Golem, Emet/Met, clay creatures | Done |
+| React Ink TUI | Terminal dashboard with GolemCard components, expandable "trailers" per golem | Done |
+| Content + Claude 4.6 | Research pipeline, Claude 4.6 capabilities audit | Done |
+| README + Privacy | Scrub personal data, improve public-facing docs | Done |
+| Unified Shell | Centralized shell system across all golem sessions | Done |
+| etanheyman.com Integration | Supabase migration, slug URLs, docs link | Done |
+| Per-Repo Sessions | Each repo gets its own persistent Claude session | Done |
+| Teaching Vision | Design doc + memory folders for guided CLI | Done |
+| Admin Dashboard | TypeScript fix, partial wiring (jobs live) | Done |
+| Security Hardening | Gibberish detection, RLS, headers, API audit | Done |
+| Test Maintenance | Isolated test runner for bun env pollution | Done |
+| NightShift Upgrade | Self-healing agent patterns, smarter retry | Planned |
+| Wizard | Interactive `golems setup` installer | Planned |
+| `/large-plan` Skill | Extract this planning system into a reusable skill | Planned |
+
+**Key pattern discovered:** The findings.md files in each phase folder ARE the async collaboration layer. Agents write research to them, and cross-phase routing in the main README connects knowledge across phases. This is the same collab protocol from Jan 26, formalized.
+
+### Feb 7: Golem Trailers — Show Don't Tell
+
+Each golem tab in the docsite terminal hero now shows a real action demo instead of generic status lines:
+
+- **ClaudeGolem:** `$ claude -c --resume` — context-loaded session, Zikaron memory
+- **EmailGolem:** `$ golems email --triage` — inbox scan, category routing, draft replies
+- **RecruiterGolem:** `$ golems recruit --find` — Exa search, scoring, outreach drafting, interview practice
+- **TellerGolem:** `$ golems teller --briefing` — spend tracking, category breakdown, tax deductions
+- **JobGolem:** `$ golems jobs --matches` — fit scoring, auto-apply tracking
+
+The concept: every golem tab is a "trailer" showing what it actually does, not a dashboard of numbers.
+
+---
+
 ## What's Next
 
+### Immediate
 - Deploy cloud worker to Railway (cost-efficient Israeli timezone scheduling)
-- Supabase data migration
-- ContentGolem for autonomous posting
-- Mobile dashboard (Expo + React Native)
+- Admin dashboard wiring (jobs, email scores, golem status)
+- Telegram bot restart with updated autonomous package
+- Per-repo session management (iTerm/terminal tab automation)
+
+### Medium-term
+- Teaching mode — CLI that explains what it's doing and why
+- NightShift self-healing (retry strategies, hang detection)
+- Centralized config (`golems.config.ts`)
+- Axiom observability + cost tracking
+- ContentGolem for autonomous Soltome posting
+
+### Long-term
 - Plugin marketplace for Claude Code extensions
 - MCP server distribution (works in Zed, Cursor, VS Code)
+- Mobile dashboard (Expo + React Native)
 - Homebrew distribution via homebrew-ralphtools
+- Context sharing Claude Code ↔ Cowork (via repo)
+- `/large-plan` skill — formalize the folder-based async collab planning into a reusable pattern
 
 ---
 

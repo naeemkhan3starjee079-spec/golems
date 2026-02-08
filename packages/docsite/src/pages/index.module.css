@@ -1,7 +1,7 @@
 /* Hero section */
 .heroBanner {
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   background: linear-gradient(135deg, #111110 0%, #1a1510 50%, #111110 100%);
   padding: 0;
   min-height: 520px;
