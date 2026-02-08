@@ -252,7 +252,7 @@ let golemStatus = "loading";
 
 Bun.serve({
   port: PORT,
-  fetch(req) {
+  async fetch(req) {
     const url = new URL(req.url);
 
     if (url.pathname === "/health") {
