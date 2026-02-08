@@ -5,15 +5,24 @@
  * This module sends Telegram messages directly via Bot API when TELEGRAM_MODE=direct,
  * or falls back to the local notification server when TELEGRAM_MODE=local (default).
  *
+ * Chat ID and topic IDs are resolved in order:
+ *   1. Environment variables (TELEGRAM_CHAT_ID, TELEGRAM_TOPIC_*)
+ *   2. Supabase golem_state table (when STATE_BACKEND=supabase)
+ *   3. Local state.json file
+ *
  * ENV:
  *   TELEGRAM_MODE      - "local" (default) | "direct"
  *   TELEGRAM_BOT_TOKEN - Required for direct mode
- *   TELEGRAM_CHAT_ID   - Required for direct mode (group chat ID)
- *   TELEGRAM_TOPIC_*   - Thread IDs for topic routing (direct mode)
+ *   TELEGRAM_CHAT_ID   - Group chat ID (or read from state-store)
+ *   TELEGRAM_TOPIC_*   - Thread IDs for topic routing (or read from state-store)
  */
 
 const TELEGRAM_API = "https://api.telegram.org";
 const LOCAL_NOTIFY_URL = "http://localhost:3847/notify";
+
+// Cache resolved values to avoid repeated DB calls
+let cachedChatId: string | null = null;
+let cachedTopics: Record<string, number> | null = null;
 
 /** Source → topic mapping (matches telegram-bot.ts SOURCE_CONFIG) */
 const SOURCE_TO_TOPIC: Record<string, string> = {
@@ -52,15 +61,80 @@ export interface NotificationPayload {
 }
 
 /**
- * Resolve the thread ID for a given topic name from environment variables.
+ * Resolve chat ID: env var → Supabase state → local state.json
+ */
+async function resolveChatId(): Promise<string | null> {
+  // 1. Env var (fastest)
+  if (process.env.TELEGRAM_CHAT_ID) return process.env.TELEGRAM_CHAT_ID;
+
+  // 2. Cache
+  if (cachedChatId) return cachedChatId;
+
+  // 3. State-store (reads from Supabase or file based on STATE_BACKEND)
+  try {
+    const { getState } = await import("./state-store");
+    const id = await getState<number>("telegramChatId");
+    if (id) {
+      cachedChatId = String(id);
+      return cachedChatId;
+    }
+  } catch {
+    // state-store not available
+  }
+
+  return null;
+}
+
+/**
+ * Resolve topic thread IDs: env vars → Supabase state → local state.json
+ */
+async function resolveTopics(): Promise<Record<string, number>> {
+  if (cachedTopics) return cachedTopics;
+
+  // Check env vars first
+  const fromEnv: Record<string, number> = {};
+  for (const [source, topic] of Object.entries(SOURCE_TO_TOPIC)) {
+    if (topic === "general") continue;
+    const envKey = `TELEGRAM_TOPIC_${topic.toUpperCase()}`;
+    const value = process.env[envKey];
+    if (value) fromEnv[topic] = parseInt(value, 10);
+  }
+  if (Object.keys(fromEnv).length > 0) {
+    cachedTopics = fromEnv;
+    return cachedTopics;
+  }
+
+  // Fall back to state-store (topics object in state)
+  try {
+    const { getState } = await import("./state-store");
+    const topics = await getState<Record<string, number>>("topics");
+    if (topics) {
+      cachedTopics = topics;
+      return cachedTopics;
+    }
+  } catch {
+    // state-store not available
+  }
+
+  return {};
+}
+
+/**
+ * Resolve the thread ID for a given topic name.
+ * Checks env vars first, then falls back to state-store (Supabase/file).
  * Returns undefined for "general" (no thread = main chat).
  */
-function getTopicThreadId(topicName: string): number | undefined {
+async function getTopicThreadId(topicName: string): Promise<number | undefined> {
   if (topicName === "general") return undefined;
 
+  // Try env var first (fast path)
   const envKey = `TELEGRAM_TOPIC_${topicName.toUpperCase()}`;
-  const value = process.env[envKey];
-  return value ? parseInt(value, 10) : undefined;
+  const envValue = process.env[envKey];
+  if (envValue) return parseInt(envValue, 10);
+
+  // Fall back to resolved topics from state-store
+  const topics = await resolveTopics();
+  return topics[topicName];
 }
 
 /**
@@ -99,18 +173,20 @@ async function sendLocal(payload: NotificationPayload): Promise<boolean> {
  */
 async function sendDirect(payload: NotificationPayload): Promise<boolean> {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
-  const chatId = process.env.TELEGRAM_CHAT_ID;
+  const chatId = await resolveChatId();
 
   if (!botToken || !chatId) {
     console.error(
-      "[TelegramDirect] TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID required for direct mode"
+      "[TelegramDirect] TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID required for direct mode.",
+      !botToken ? "Missing TELEGRAM_BOT_TOKEN." : "",
+      !chatId ? "Missing TELEGRAM_CHAT_ID (not in env, Supabase, or state.json)." : ""
     );
     return false;
   }
 
   const source = payload.source || "default";
   const topicName = SOURCE_TO_TOPIC[source] || SOURCE_TO_TOPIC.default;
-  const threadId = getTopicThreadId(topicName);
+  const threadId = await getTopicThreadId(topicName);
   const formatter = SOURCE_FORMAT[source] || SOURCE_FORMAT.default;
 
   const priorityIcon = payload.priority === "high" ? "🔔 " : "";
@@ -167,4 +243,10 @@ async function sendDirect(payload: NotificationPayload): Promise<boolean> {
     console.error("[TelegramDirect] Error:", err);
     return false;
   }
+}
+
+/** Reset cached values (for testing) */
+export function _resetCache() {
+  cachedChatId = null;
+  cachedTopics = null;
 }

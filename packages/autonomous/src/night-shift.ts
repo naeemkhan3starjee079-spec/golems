@@ -547,6 +547,19 @@ async function nightShift(): Promise<NightShiftResult[]> {
   state.nightShiftTarget = rotation[nextIdx];
   saveState(state);
 
+  // Sync key state values to Supabase (so dashboard can see night shift data)
+  try {
+    const { setState: setSupabaseState } = await import("./lib/state-store");
+    await setSupabaseState("lastNightShift", state.lastNightShift);
+    await setSupabaseState("nightShiftTarget", state.nightShiftTarget);
+    await setSupabaseState("nightShiftPRs", state.nightShiftPRs || []);
+    await setSupabaseState("rotation", state.rotation);
+    console.log("[NightShift] Synced state to Supabase");
+  } catch (err) {
+    console.error("[NightShift] Failed to sync to Supabase:", err);
+    // Non-fatal — local state is always the source of truth for night shift
+  }
+
   const successCount = results.filter((r) => r.success).length;
   const prUrls = results
     .filter((r) => r.prUrl)

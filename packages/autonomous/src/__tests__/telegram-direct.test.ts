@@ -23,7 +23,7 @@ globalThis.fetch = mock(async (url: string | URL | Request, options?: any) => {
   return new Response("not found", { status: 404 });
 }) as any;
 
-const { sendNotification } = await import("../lib/telegram-direct");
+const { sendNotification, _resetCache } = await import("../lib/telegram-direct");
 
 describe("telegram-direct", () => {
   beforeEach(() => {
@@ -35,6 +35,9 @@ describe("telegram-direct", () => {
         delete process.env[key];
       }
     });
+    // Isolate state-store from real state files + clear cached values
+    process.env.GOLEMS_STATE_DIR = "/tmp/telegram-direct-test-nonexistent";
+    _resetCache();
   });
 
   afterEach(() => {
