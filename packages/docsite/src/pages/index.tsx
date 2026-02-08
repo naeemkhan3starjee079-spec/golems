@@ -154,7 +154,7 @@ function ArchitectureSection() {
               <li>Email Poller</li>
               <li>Job Scraper</li>
               <li>Briefing Generator</li>
-              <li>Soltome Learner</li>
+              <li>Content Pipeline</li>
             </ul>
           </div>
         </div>
