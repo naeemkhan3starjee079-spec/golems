@@ -60,6 +60,7 @@ COMMANDS:
   autopilot     Toggle autonomous plan execution (on/off/status)
   skills        Show available integrations and their status
   costs         API cost tracking (summary, by-source, by-model, daily, log)
+  maintain      Run maintenance checks (deps, files, config, services)
   config        Show/init/edit centralized config (~/.golems/config.yaml)
   e2e           Run Playwright E2E tests (admin-ui + docsite)
   index-whatsapp <file> --chat "Name"  Index WhatsApp export in Zikaron
@@ -666,6 +667,18 @@ case "${1:-status}" in
         echo "  log                Recent raw entries"
         ;;
     esac
+    ;;
+  maintain|maintenance)
+    echo -e "${BLUE}=== MAINTENANCE CHECK ===${NC}"
+    cd "$GOLEMS_HOME" && bun -e "
+      import { runMaintenanceChecks, formatReport } from './src/lib/maintainer-golem';
+      const report = runMaintenanceChecks({
+        reposPath: '$HOME/Gits',
+        stateDir: '$HOME/.golems-zikaron',
+        configPath: '$HOME/.golems/config.yaml',
+      });
+      console.log(formatReport(report));
+    "
     ;;
   config)
     case "${2:-show}" in
