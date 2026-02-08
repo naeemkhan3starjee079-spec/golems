@@ -29,7 +29,7 @@
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #e59500, #c46d3c);
+  background: linear-gradient(135deg, var(--tg-accent, #e59500), color-mix(in srgb, var(--tg-accent, #c46d3c) 70%, #000));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -85,8 +85,8 @@
 
 .topicTabActive {
   color: #e8e2d6;
-  border-bottom-color: #e59500;
-  background: rgba(229, 149, 0, 0.08);
+  border-bottom-color: var(--tg-accent, #e59500);
+  background: color-mix(in srgb, var(--tg-accent, #e59500) 8%, transparent);
   font-weight: 600;
   transform: scale(1.05);
 }
@@ -135,7 +135,7 @@
 .msgSender {
   font-size: 0.72rem;
   font-weight: 600;
-  color: #e59500;
+  color: var(--tg-accent, #e59500);
 }
 
 .msgTime {
@@ -159,7 +159,7 @@
 
 .seeAll {
   font-size: 0.72rem;
-  color: #e59500;
+  color: var(--tg-accent, #e59500);
   cursor: pointer;
 }
 
