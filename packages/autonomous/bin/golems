@@ -64,6 +64,7 @@ COMMANDS:
   config        Show/init/edit centralized config (~/.golems/config.yaml)
   update        Self-update golems (pull, install deps, restart services)
   version       Show current version info
+  queue         Chat queue controls (list, add, edit, remove, clean)
   e2e           Run Playwright E2E tests (admin-ui + docsite)
   index-whatsapp <file> --chat "Name"  Index WhatsApp export in Zikaron
 
@@ -708,6 +709,59 @@ case "${1:-status}" in
       console.log('branch: ' + info.branch);
       console.log('date: ' + info.date);
     "
+    ;;
+  queue)
+    case "${2:-list}" in
+      list|"")
+        cd "$GOLEMS_HOME" && bun -e "
+          import { loadQueue, formatQueueSummary } from './src/lib/chat-queue';
+          const q = loadQueue();
+          console.log(formatQueueSummary(q));
+        "
+        ;;
+      add)
+        if [ -z "$3" ]; then
+          echo "Usage: golems queue add \"message\" [type] [source]"
+          exit 1
+        fi
+        cd "$GOLEMS_HOME" && bun -e "
+          import { loadQueue, saveQueue, enqueue } from './src/lib/chat-queue';
+          const q = loadQueue();
+          const item = enqueue(q, '$3', '${4:-chat}', '${5:-cli}');
+          saveQueue(q);
+          console.log('Queued: ' + item.id);
+        "
+        ;;
+      remove)
+        if [ -z "$3" ]; then
+          echo "Usage: golems queue remove <id>"
+          exit 1
+        fi
+        cd "$GOLEMS_HOME" && bun -e "
+          import { loadQueue, saveQueue, dequeue } from './src/lib/chat-queue';
+          const q = loadQueue();
+          const item = dequeue(q, '$3');
+          if (item) {
+            saveQueue(q);
+            console.log('Removed: ' + item.id);
+          } else {
+            console.log('Item not found: $3');
+          }
+        "
+        ;;
+      clean)
+        cd "$GOLEMS_HOME" && bun -e "
+          import { loadQueue, saveQueue, cleanOld } from './src/lib/chat-queue';
+          const q = loadQueue();
+          const removed = cleanOld(q, ${3:-7});
+          saveQueue(q);
+          console.log('Cleaned ' + removed + ' old items');
+        "
+        ;;
+      *)
+        echo "Usage: golems queue [list|add|remove|clean]"
+        ;;
+    esac
     ;;
   e2e)
     echo -e "${BLUE}=== E2E TESTS ===${NC}"
