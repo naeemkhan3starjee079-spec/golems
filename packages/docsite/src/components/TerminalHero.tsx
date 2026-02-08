@@ -9,6 +9,8 @@ interface GolemScene {
   lines: string[];
 }
 
+const MASCOT_CYCLE: MascotVariant[] = ['guardian', 'prague', 'neon', 'pixel', 'ink'];
+
 interface TerminalHeroProps {
   activeIndex: number;
   onTabClick?: (index: number) => void;
@@ -92,7 +94,8 @@ const systemInfo = [
   {label: 'Uptime', value: '47d 12h (Railway)'},
 ];
 
-export default function TerminalHero({activeIndex, onTabClick, mascotVariant = 'circuit'}: TerminalHeroProps) {
+export default function TerminalHero({activeIndex, onTabClick, mascotVariant}: TerminalHeroProps) {
+  const currentMascot = mascotVariant || MASCOT_CYCLE[activeIndex % MASCOT_CYCLE.length];
   const [manualTab, setManualTab] = useState<number | null>(null);
   const activeTab = manualTab ?? activeIndex;
   const scene = scenes[activeTab % scenes.length];
@@ -148,7 +151,7 @@ export default function TerminalHero({activeIndex, onTabClick, mascotVariant = '
           /* Neofetch-style layout: mascot left, status right */
           <div className={styles.neofetch}>
             <div className={styles.neofetchArt}>
-              <GolemMascot variant={mascotVariant} size="sm" />
+              <GolemMascot variant={currentMascot} size="sm" />
             </div>
             <div className={styles.neofetchInfo}>
               <div className={styles.neofetchTitle}>
