@@ -1,7 +1,7 @@
 /* Hero section */
 .heroBanner {
   position: relative;
-  overflow: visible;
+  overflow: hidden;
   background: linear-gradient(135deg, #111110 0%, #1a1510 50%, #111110 100%);
   padding: 0;
   min-height: 520px;
@@ -482,6 +482,10 @@
 
   .heroBanner {
     min-height: auto;
+  }
+
+  .heroShowcase {
+    gap: 0.75rem;
   }
 
   .golemsSection {

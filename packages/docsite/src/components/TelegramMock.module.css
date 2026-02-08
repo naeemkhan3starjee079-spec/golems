@@ -216,9 +216,20 @@
 }
 
 /* Responsive */
-@media screen and (max-width: 768px) {
+@media screen and (max-width: 996px) {
   .telegram {
     max-width: 100%;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .topicTab {
+    padding: 8px 10px;
+    min-height: 44px;
+  }
+
+  .messages {
+    height: 180px;
   }
 }
 
@@ -229,5 +240,27 @@
 
   .message {
     padding: 6px 10px;
+  }
+
+  .messages {
+    height: 160px;
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .topicTab {
+    font-size: 0.62rem;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .message {
+    animation: none;
+    opacity: 1;
+  }
+
+  .topicTabActive {
+    transform: none;
   }
 }

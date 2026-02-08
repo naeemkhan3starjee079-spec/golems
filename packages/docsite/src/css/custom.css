@@ -318,6 +318,13 @@ body::after {
   pointer-events: none !important;
 }
 
+/* Disable grain texture on mobile for performance */
+@media screen and (max-width: 768px) {
+  body::after {
+    display: none;
+  }
+}
+
 /* Mermaid diagrams — spacing and dark/light */
 .docusaurus-mermaid-container {
   margin: 2rem 0;

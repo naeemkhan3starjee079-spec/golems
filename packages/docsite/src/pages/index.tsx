@@ -69,7 +69,7 @@ function HomepageHero() {
   const activeGolem = golems[activeTab % golems.length];
 
   return (
-    <header className={styles.heroBanner}>
+    <header className={styles.heroBanner} aria-label="Golems hero section">
       <div className={`container ${styles.heroInner}`}>
         <div className={styles.heroContent}>
           <GolemsLogo className={styles.heroLogo} />
@@ -107,9 +107,9 @@ function HomepageHero() {
 
 function GolemsSection() {
   return (
-    <section className={styles.golemsSection}>
+    <section className={styles.golemsSection} aria-labelledby="golems-heading">
       <div className="container">
-        <h2 className={styles.sectionTitle}>Meet the Golems</h2>
+        <h2 id="golems-heading" className={styles.sectionTitle}>Meet the Golems</h2>
         <p className={styles.sectionSubtitle}>
           Each golem owns a domain, not an I/O channel
         </p>
@@ -131,9 +131,9 @@ function GolemsSection() {
 
 function ArchitectureSection() {
   return (
-    <section className={styles.archSection}>
+    <section className={styles.archSection} aria-labelledby="arch-heading">
       <div className="container">
-        <h2 className={styles.sectionTitle}>How It Works</h2>
+        <h2 id="arch-heading" className={styles.sectionTitle}>How It Works</h2>
         <p className={styles.sectionSubtitle}>
           Mac is the brain, Railway is the body
         </p>

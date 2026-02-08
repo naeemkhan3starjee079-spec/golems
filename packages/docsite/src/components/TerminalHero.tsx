@@ -125,22 +125,25 @@ export default function TerminalHero({activeIndex, onTabClick, mascotVariant = '
       </div>
 
       {/* Tab bar */}
-      <div className={styles.tabBar}>
+      <div className={styles.tabBar} role="tablist" aria-label="Golem terminal tabs">
         {scenes.map((s, i) => (
           <button
             key={s.name}
             className={`${styles.tab} ${i === activeTab ? styles.tabActive : ''}`}
             onClick={() => handleTabClick(i)}
             type="button"
+            role="tab"
+            aria-selected={i === activeTab}
+            aria-label={`${s.name} tab`}
           >
-            <span className={styles.tabEmoji}>{s.emoji}</span>
+            <span className={styles.tabEmoji} aria-hidden="true">{s.emoji}</span>
             <span className={styles.tabName}>{s.name}</span>
           </button>
         ))}
       </div>
 
       {/* Terminal content */}
-      <div className={styles.content}>
+      <div className={styles.content} role="tabpanel" aria-label={`${scene.name} output`}>
         {isOverview ? (
           /* Neofetch-style layout: mascot left, status right */
           <div className={styles.neofetch}>

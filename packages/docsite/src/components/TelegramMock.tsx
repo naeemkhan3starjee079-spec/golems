@@ -83,22 +83,25 @@ export default function TelegramMock({activeIndex, onTopicClick}: TelegramMockPr
       </div>
 
       {/* Topic tabs */}
-      <div className={styles.topicTabs}>
+      <div className={styles.topicTabs} role="tablist" aria-label="Telegram topic tabs">
         {topicScenes.map((t, i) => (
           <button
             key={t.topic}
             className={`${styles.topicTab} ${i === activeIndex % topicScenes.length ? styles.topicTabActive : ''}`}
             onClick={() => onTopicClick?.(i)}
             type="button"
+            role="tab"
+            aria-selected={i === activeIndex % topicScenes.length}
+            aria-label={`${t.topic} topic`}
           >
-            <span>{t.topicEmoji}</span>
+            <span aria-hidden="true">{t.topicEmoji}</span>
             <span>{t.topic}</span>
           </button>
         ))}
       </div>
 
       {/* Messages */}
-      <div className={styles.messages}>
+      <div className={styles.messages} role="tabpanel" aria-label={`${scene.topic} messages`}>
         {scene.messages.map((msg, i) => (
           <div
             key={`${activeIndex}-${i}`}
