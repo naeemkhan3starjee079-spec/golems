@@ -66,6 +66,7 @@ COMMANDS:
   version       Show current version info
   queue         Chat queue controls (list, add, edit, remove, clean)
   explore       Codebase exploration with CLI agents (templates, agents, latest)
+  mascot        ASCII mascot art (random, list, show <id>)
   sweep         Run quality sweep (package.json, tests, TS, docs, git)
   i18n          Internationalization info (locale, keys, set)
   e2e           Run Playwright E2E tests (admin-ui + docsite)
@@ -871,6 +872,40 @@ case "${1:-status}" in
         ;;
       edit)
         ${EDITOR:-vim} "$HOME/.golems/config.yaml"
+        ;;
+    esac
+    ;;
+  mascot)
+    case "${2:-random}" in
+      random|"")
+        cd "$GOLEMS_HOME" && bun -e "
+          import { formatSplash } from './src/lib/ascii-mascots';
+          console.log(formatSplash());
+        "
+        ;;
+      list)
+        cd "$GOLEMS_HOME" && bun -e "
+          import { formatCatalog } from './src/lib/ascii-mascots';
+          console.log(formatCatalog());
+        "
+        ;;
+      show)
+        if [ -z "$3" ]; then
+          echo "Usage: golems mascot show <id>"
+          echo "IDs: classic, circuit, minimal, runic, ember"
+          exit 1
+        fi
+        cd "$GOLEMS_HOME" && bun -e "
+          import { getMascot, formatMascotPreview } from './src/lib/ascii-mascots';
+          const m = getMascot('$3');
+          if (!m) { console.log('Unknown mascot: $3'); process.exit(1); }
+          console.log(formatMascotPreview(m));
+        "
+        ;;
+      *)
+        echo "Unknown mascot command: $2"
+        echo "Usage: golems mascot [random|list|show <id>]"
+        exit 1
         ;;
     esac
     ;;
