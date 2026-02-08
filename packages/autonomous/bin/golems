@@ -59,6 +59,7 @@ COMMANDS:
   setup         Interactive setup wizard for new machines
   autopilot     Toggle autonomous plan execution (on/off/status)
   skills        Show available integrations and their status
+  config        Show/init/edit centralized config (~/.golems/config.yaml)
   e2e           Run Playwright E2E tests (admin-ui + docsite)
   index-whatsapp <file> --chat "Name"  Index WhatsApp export in Zikaron
 
@@ -555,6 +556,26 @@ case "${1:-status}" in
   e2e)
     echo -e "${BLUE}=== E2E TESTS ===${NC}"
     cd "$HOME/Gits/golems/packages/e2e" && npx playwright test "${@:2}"
+    ;;
+  config)
+    case "${2:-show}" in
+      init)
+        cd "$GOLEMS_HOME" && bun -e 'import { initConfig } from "./src/lib/config"; console.log(initConfig())'
+        ;;
+      show|"")
+        if [ -f "$HOME/.golems/config.yaml" ]; then
+          cat "$HOME/.golems/config.yaml"
+        else
+          echo "No config file found. Run 'golems config init' to create one."
+        fi
+        ;;
+      path)
+        echo "$HOME/.golems/config.yaml"
+        ;;
+      edit)
+        ${EDITOR:-vim} "$HOME/.golems/config.yaml"
+        ;;
+    esac
     ;;
   index-whatsapp)
     cd "$GOLEMS_HOME" && bun run src/whatsapp-index-cli.ts "${@:2}"
