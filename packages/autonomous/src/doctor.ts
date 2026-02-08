@@ -100,37 +100,37 @@ async function checkTelegramBot() {
 
 // Check 2: Ollama
 async function checkOllama() {
-  const online = await httpCheck("http://localhost:11434/api/version", 2000);
+  const online = await httpCheck("http://127.0.0.1:11434/api/version", 2000);
   if (online) {
     results.push({
       name: "Ollama",
       status: "pass",
-      message: "Responding on localhost:11434",
+      message: "Responding on 127.0.0.1:11434",
     });
   } else {
     results.push({
       name: "Ollama",
       status: "fail",
-      message: "Not responding on localhost:11434",
+      message: "Not responding on 127.0.0.1:11434",
       fix: "golems start ollama",
     });
   }
 }
 
-// Check 3: Notification server
+// Check 3: Notification server (TCP connect test — no side effects)
 async function checkNotificationServer() {
-  const online = await httpCheck("http://localhost:3847/health", 2000);
-  if (online) {
+  const portOpen = runCommand("lsof -i :3847 -sTCP:LISTEN | grep -q LISTEN");
+  if (portOpen.success) {
     results.push({
       name: "Notification Server",
       status: "pass",
-      message: "Responding on localhost:3847",
+      message: "Listening on port 3847",
     });
   } else {
     results.push({
       name: "Notification Server",
       status: "fail",
-      message: "Not responding on localhost:3847",
+      message: "Not listening on port 3847",
       fix: "golems start telegram  (includes notification server)",
     });
   }
@@ -138,21 +138,19 @@ async function checkNotificationServer() {
 
 // Check 4: Launchd jobs
 async function checkLaunchd() {
-  const golems = ["nightshift", "briefing", "job-golem", "email-golem", "session-archiver"];
-  const launchResult = runCommand("launchctl list 2>/dev/null | grep golems || true");
+  // Map service names to their launchd label prefixes
+  const golems: Array<{ name: string; label: string }> = [
+    { name: "nightshift", label: "com.golemszikaron.nightshift" },
+    { name: "briefing", label: "com.golemszikaron.briefing" },
+    { name: "job-golem", label: "com.golemszikaron.job-golem" },
+    { name: "email-golem", label: "com.golemszikaron.email-golem" },
+    { name: "session-archiver", label: "com.golems.session-archiver" },
+    { name: "storage-cleanup", label: "com.golems.storage-cleanup" },
+  ];
+  const launchResult = runCommand("launchctl list 2>/dev/null | grep -E 'golem|zikaron' || true");
+  const loadedOutput = launchResult.output;
 
-  const loadedServices = launchResult.output.split("\n").filter((line) => line.includes("golem"));
-
-  const loadedLabels = new Set(
-    loadedServices
-      .map((line) => {
-        const match = line.match(/com\.golemszikaron\.([\w-]+)/);
-        return match ? match[1] : null;
-      })
-      .filter(Boolean)
-  );
-
-  const missingServices = golems.filter((g) => !loadedLabels.has(g));
+  const missingServices = golems.filter((g) => !loadedOutput.includes(g.label));
 
   if (missingServices.length === 0) {
     results.push({
@@ -164,8 +162,8 @@ async function checkLaunchd() {
     results.push({
       name: "Launchd Jobs",
       status: "warn",
-      message: `${missingServices.length}/${golems.length} not loaded: ${missingServices.join(", ")}`,
-      fix: missingServices.map(s => `launchctl load ~/Library/LaunchAgents/com.golemszikaron.${s}.plist`).join("\n  "),
+      message: `${missingServices.length}/${golems.length} not loaded: ${missingServices.map(s => s.name).join(", ")}`,
+      fix: missingServices.map(s => `launchctl load ~/Library/LaunchAgents/${s.label}.plist`).join("\n  "),
     });
   }
 }

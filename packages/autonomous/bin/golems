@@ -112,7 +112,7 @@ cmd_status() {
   # LaunchAgents summary
   echo
   echo -e "${BLUE}LaunchAgents:${NC}"
-  for svc in nightshift briefing job-golem email-golem session-archiver; do
+  for svc in nightshift briefing job-golem email-golem session-archiver storage-cleanup; do
     status=$(launchctl list 2>/dev/null | grep "com.golemszikaron.$svc\|com.golems.$svc" | awk '{print $1}')
     if [ -z "$status" ]; then
       echo -e "  $(status_icon 1) $svc (not loaded)"
@@ -141,13 +141,15 @@ cmd_services() {
   printf "%-25s %-8s %s\n" "SERVICE" "STATUS" "NOTES"
   printf "%-25s %-8s %s\n" "-------" "------" "-----"
 
-  launchctl list 2>/dev/null | grep -E "golem|zikaron" | while read status pid label; do
-    if [ "$status" = "-" ]; then
-      status="idle"
-    elif [ "$status" = "0" ]; then
-      status="ok"
+  launchctl list 2>/dev/null | grep -E "golem|zikaron" | while read pid exitcode label; do
+    if [ "$pid" = "-" ]; then
+      if [ "$exitcode" = "0" ]; then
+        status="idle"
+      else
+        status="err:$exitcode"
+      fi
     else
-      status="err:$status"
+      status="running"
     fi
     printf "%-25s %-8s %s\n" "$label" "$status" ""
   done
@@ -216,12 +218,21 @@ cmd_logs() {
     job-golem|job)
       tail -f /tmp/job-golem.err /tmp/job-golem.log 2>/dev/null || echo "No job-golem logs found"
       ;;
-    archiver)
+    email-golem|email)
+      tail -f /tmp/golemszikaron-email-golem.log 2>/dev/null || echo "No email-golem logs found"
+      ;;
+    briefing)
+      tail -f /tmp/golemszikaron-briefing.log 2>/dev/null || echo "No briefing logs found"
+      ;;
+    archiver|session-archiver)
       tail -f "$LOGS_DIR/session-archiver.log" 2>/dev/null || echo "No archiver logs found"
+      ;;
+    storage-cleanup|cleanup)
+      tail -f ~/.golems-zikaron/storage-cleanup-stdout.log 2>/dev/null || echo "No storage-cleanup logs found"
       ;;
     *)
       echo "Unknown log: $name"
-      echo "Available: telegram, nightshift, job-golem, archiver"
+      echo "Available: telegram, nightshift, job-golem, email-golem, briefing, archiver, storage-cleanup"
       ;;
   esac
 }
@@ -249,9 +260,21 @@ cmd_start() {
       launchctl load ~/Library/LaunchAgents/com.golemszikaron.email-golem.plist 2>/dev/null
       echo "Loaded email-golem launchd"
       ;;
+    briefing)
+      launchctl load ~/Library/LaunchAgents/com.golemszikaron.briefing.plist 2>/dev/null
+      echo "Loaded briefing launchd"
+      ;;
+    session-archiver|archiver)
+      launchctl load ~/Library/LaunchAgents/com.golems.session-archiver.plist 2>/dev/null
+      echo "Loaded session-archiver launchd"
+      ;;
+    storage-cleanup|cleanup)
+      launchctl load ~/Library/LaunchAgents/com.golems.storage-cleanup.plist 2>/dev/null
+      echo "Loaded storage-cleanup launchd"
+      ;;
     *)
       echo "Unknown service: $svc"
-      echo "Available: telegram, nightshift, ollama, job-golem, email-golem"
+      echo "Available: telegram, nightshift, ollama, job-golem, email-golem, briefing, session-archiver, storage-cleanup"
       ;;
   esac
 }
@@ -281,6 +304,18 @@ cmd_stop() {
       launchctl unload ~/Library/LaunchAgents/com.golemszikaron.email-golem.plist 2>/dev/null
       echo "Stopped email-golem"
       ;;
+    briefing)
+      launchctl unload ~/Library/LaunchAgents/com.golemszikaron.briefing.plist 2>/dev/null
+      echo "Stopped briefing"
+      ;;
+    session-archiver|archiver)
+      launchctl unload ~/Library/LaunchAgents/com.golems.session-archiver.plist 2>/dev/null
+      echo "Stopped session-archiver"
+      ;;
+    storage-cleanup|cleanup)
+      launchctl unload ~/Library/LaunchAgents/com.golems.storage-cleanup.plist 2>/dev/null
+      echo "Stopped storage-cleanup"
+      ;;
     *)
       echo "Unknown service: $svc"
       ;;
@@ -309,7 +344,7 @@ cmd_scrape() {
 
 cmd_clear_errors() {
   echo "Clearing launchd error states..."
-  for label in com.golemszikaron.job-golem com.golemszikaron.email-golem com.golemszikaron.ollama; do
+  for label in com.golemszikaron.job-golem com.golemszikaron.email-golem com.golemszikaron.ollama com.golems.session-archiver com.golems.storage-cleanup; do
     launchctl bootout gui/$(id -u)/$label 2>/dev/null || true
     launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/${label}.plist 2>/dev/null || true
   done
@@ -318,7 +353,7 @@ cmd_clear_errors() {
 
 # All core services (for on/off/latest)
 CORE_SERVICES="telegram job-golem email-golem ollama"
-SCHEDULED_SERVICES="nightshift briefing"
+SCHEDULED_SERVICES="nightshift briefing session-archiver storage-cleanup"
 
 cmd_latest() {
   echo -e "${BLUE}=== DEPLOYING LATEST CODE ===${NC}"
@@ -360,11 +395,33 @@ cmd_on() {
   # Load scheduled services
   for svc in $SCHEDULED_SERVICES; do
     echo -n "  Loading $svc... "
-    launchctl load ~/Library/LaunchAgents/com.golemszikaron.$svc.plist 2>/dev/null && echo -e "${GREEN}done${NC}" || echo -e "${YELLOW}already loaded${NC}"
+    cmd_start "$svc" 2>/dev/null
   done
 
   echo
-  echo -e "${GREEN}✓ All golems are awake${NC}"
+
+  # Verify all services actually loaded
+  local failed=0
+  for svc in job-golem email-golem; do
+    if ! launchctl list 2>/dev/null | grep -q "com.golemszikaron.$svc"; then
+      echo -e "  ${RED}WARNING: $svc failed to load!${NC}"
+      echo "  Try: launchctl load ~/Library/LaunchAgents/com.golemszikaron.$svc.plist"
+      failed=1
+    fi
+  done
+  for svc in session-archiver storage-cleanup; do
+    if ! launchctl list 2>/dev/null | grep -q "com.golems.$svc"; then
+      echo -e "  ${RED}WARNING: $svc failed to load!${NC}"
+      echo "  Try: launchctl load ~/Library/LaunchAgents/com.golems.$svc.plist"
+      failed=1
+    fi
+  done
+
+  if [ $failed -eq 0 ]; then
+    echo -e "${GREEN}✓ All golems are awake${NC}"
+  else
+    echo -e "${YELLOW}⚠ Some services failed — check above${NC}"
+  fi
   cmd_status
 }
 
@@ -383,7 +440,8 @@ cmd_off() {
   # Unload scheduled services
   for svc in $SCHEDULED_SERVICES; do
     echo -n "  Unloading $svc... "
-    launchctl unload ~/Library/LaunchAgents/com.golemszikaron.$svc.plist 2>/dev/null && echo -e "${GREEN}done${NC}" || echo -e "${YELLOW}not loaded${NC}"
+    cmd_stop "$svc" 2>/dev/null
+    echo -e "${GREEN}done${NC}"
   done
 
   # Kill any lingering Claude sessions
