@@ -38,7 +38,7 @@ COMMANDS:
   doctor        Health check all services + diagnostics
   services      Detailed launchd service status
   scrape        Trigger job scrape now
-  sessions      Running Claude sessions
+  sessions      Claude sessions (active, registry, spawn <repo>)
   logs [name]   Show logs (telegram, nightshift, job-golem, etc.)
 
   start [svc]   Start a service (telegram, nightshift, ollama)
@@ -155,8 +155,45 @@ cmd_docker() {
 }
 
 cmd_sessions() {
-  echo -e "${BLUE}=== CLAUDE SESSIONS ===${NC}"
-  ps aux | grep "[c]laude " | awk '{printf "PID: %s  CPU: %s%%  Started: %s\n", $2, $3, $9}'
+  case "${1:-active}" in
+    active|"")
+      echo -e "${BLUE}=== ACTIVE CLAUDE SESSIONS ===${NC}"
+      cd "$GOLEMS_HOME" && bun -e "
+        import { getActiveSessions, formatActiveSessions } from './src/lib/session-registry';
+        console.log(formatActiveSessions(getActiveSessions()));
+      "
+      ;;
+    registry|list)
+      echo -e "${BLUE}=== REPO SESSION REGISTRY ===${NC}"
+      cd "$GOLEMS_HOME" && bun -e "
+        import { resolveRepoPaths, formatRegistry } from './src/lib/session-registry';
+        console.log(formatRegistry(resolveRepoPaths('$HOME/Gits')));
+      "
+      ;;
+    spawn)
+      local repo="${2:-golems}"
+      echo -e "${BLUE}Spawning session for: ${repo}${NC}"
+      cd "$GOLEMS_HOME" && bun -e "
+        import { getRepoSession, setRepoTabTitle } from './src/lib/session-registry';
+        const session = getRepoSession('${repo}');
+        if (!session) { console.error('Unknown repo: ${repo}'); process.exit(1); }
+        setRepoTabTitle('${repo}');
+        console.log(JSON.stringify({
+          repo: session.repo,
+          sessionName: session.sessionName,
+          personality: session.personality,
+          command: 'claude --resume ' + session.sessionName + ' -c',
+        }, null, 2));
+      "
+      ;;
+    *)
+      echo "Usage: golems sessions [active|registry|spawn <repo>]"
+      echo ""
+      echo "  active     Show running Claude sessions (default)"
+      echo "  registry   Show all repo session configs"
+      echo "  spawn      Show spawn command for a repo"
+      ;;
+  esac
 }
 
 cmd_logs() {
@@ -483,7 +520,7 @@ case "${1:-status}" in
     cmd_scrape
     ;;
   sessions)
-    cmd_sessions
+    cmd_sessions "$2" "$3"
     ;;
   logs)
     cmd_logs "$2"
