@@ -65,6 +65,7 @@ COMMANDS:
   update        Self-update golems (pull, install deps, restart services)
   version       Show current version info
   queue         Chat queue controls (list, add, edit, remove, clean)
+  explore       Codebase exploration with CLI agents (templates, agents, latest)
   e2e           Run Playwright E2E tests (admin-ui + docsite)
   index-whatsapp <file> --chat "Name"  Index WhatsApp export in Zikaron
 
@@ -868,6 +869,57 @@ case "${1:-status}" in
         ;;
       edit)
         ${EDITOR:-vim} "$HOME/.golems/config.yaml"
+        ;;
+    esac
+    ;;
+  explore)
+    case "${2:-status}" in
+      status|"")
+        cd "$GOLEMS_HOME" && bun -e "
+          import { loadState, formatStateOverview } from './src/lib/exploration';
+          console.log(formatStateOverview(loadState()));
+        "
+        ;;
+      templates)
+        cd "$GOLEMS_HOME" && bun -e "
+          import { EXPLORATION_TEMPLATES } from './src/lib/exploration';
+          for (const t of EXPLORATION_TEMPLATES) {
+            console.log('  ' + t.name.padEnd(24) + t.description);
+          }
+        "
+        ;;
+      latest)
+        cd "$GOLEMS_HOME" && bun -e "
+          import { loadState, getLatestSession, formatSessionSummary } from './src/lib/exploration';
+          const s = loadState();
+          const session = getLatestSession(s);
+          if (!session) { console.log('No explorations yet.'); process.exit(0); }
+          console.log(formatSessionSummary(session));
+        "
+        ;;
+      agents)
+        cd "$GOLEMS_HOME" && bun -e "
+          import { getAvailableAgents } from './src/lib/exploration';
+          const agents = getAvailableAgents();
+          if (agents.length === 0) { console.log('No agents available.'); process.exit(0); }
+          console.log('Available agents: ' + agents.join(', '));
+        "
+        ;;
+      help)
+        cat << 'EXPLORE_EOF'
+golems explore — Codebase exploration with CLI agents
+
+  golems explore              Show exploration status
+  golems explore templates    List exploration templates
+  golems explore agents       Show available CLI agents
+  golems explore latest       Show latest session details
+  golems explore help         This help
+EXPLORE_EOF
+        ;;
+      *)
+        echo "Unknown explore command: $2"
+        echo "Run 'golems explore help' for usage"
+        exit 1
         ;;
     esac
     ;;
