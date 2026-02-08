@@ -56,7 +56,7 @@ COMMANDS:
   helpers       Show external CLI helper backends status
   instructions  Show Claude Chat project files to upload
   regen-style   Regenerate style card from Zikaron data
-  setup         Interactive setup wizard for new machines
+  setup|wizard  Setup wizard (check, status, continue, add-project <path>)
   autopilot     Toggle autonomous plan execution (on/off/status)
   skills        Show available integrations and their status
   costs         API cost tracking (summary, by-source, by-model, daily, log)
@@ -589,8 +589,99 @@ case "${1:-status}" in
     cmd_regen_style
     ;;
   setup|wizard)
-    echo -e "${BLUE}=== GOLEMS SETUP WIZARD ===${NC}"
-    cd "$GOLEMS_HOME" && bun run src/wizard.ts
+    case "${2:-interactive}" in
+      check)
+        echo -e "${BLUE}=== WIRING CHECK ===${NC}"
+        cd "$GOLEMS_HOME" && bun -e "
+          import { runWiringChecks, formatWiringReport, logWiringErrors } from './src/lib/wizard-state';
+          const checks = runWiringChecks({ checkHelpers: true, checkServices: ${3:-false} });
+          console.log(formatWiringReport(checks));
+          const newErrors = logWiringErrors(checks);
+          if (newErrors.length > 0) {
+            console.log('\nNew errors logged: ' + newErrors.length);
+          }
+        "
+        ;;
+      status)
+        echo -e "${BLUE}=== WIZARD STATUS ===${NC}"
+        cd "$GOLEMS_HOME" && bun -e "
+          import { loadState, formatStateReport, getUnresolvedErrors } from './src/lib/wizard-state';
+          const state = loadState();
+          console.log(formatStateReport(state));
+          const errors = getUnresolvedErrors();
+          if (errors.length > 0) {
+            console.log('\nUnresolved wiring errors: ' + errors.length);
+            for (const e of errors) {
+              console.log('  [' + e.category + '] ' + e.repo + ': ' + e.message);
+              if (e.suggestedFix) console.log('    Fix: ' + e.suggestedFix);
+            }
+          }
+        "
+        ;;
+      continue|-c)
+        echo -e "${BLUE}=== WIZARD (continue mode) ===${NC}"
+        cd "$GOLEMS_HOME" && bun -e "
+          import { loadState, getPendingSteps, formatStateReport } from './src/lib/wizard-state';
+          const state = loadState();
+          const pending = getPendingSteps(state);
+          if (pending.length === 0) {
+            console.log('All wizard steps completed!');
+          } else {
+            console.log('Pending steps:');
+            for (const s of pending) {
+              console.log('  [ ] ' + s.name);
+            }
+            console.log('\nRun golems wizard to complete remaining steps.');
+          }
+        "
+        ;;
+      add-project)
+        if [ -z "$3" ]; then
+          echo "Usage: golems wizard add-project <path>"
+          exit 1
+        fi
+        REPO_PATH="$(cd "$3" 2>/dev/null && pwd || echo "$3")"
+        REPO_NAME="$(basename "$REPO_PATH")"
+        echo -e "${BLUE}=== WIRE REPO: $REPO_NAME ===${NC}"
+        cd "$GOLEMS_HOME" && bun -e "
+          import { loadState, saveState, wireRepo, checkRepoClaudeMd, checkRepoMcpConfig, checkRepoSkillsDir } from './src/lib/wizard-state';
+          const state = loadState();
+          const repo = wireRepo(state, '$REPO_PATH', '$REPO_NAME');
+          saveState(state);
+          console.log('Wired: ' + repo.name);
+          console.log('  CLAUDE.md: ' + (repo.hasClaudeMd ? 'YES' : 'MISSING'));
+          console.log('  .mcp.json: ' + (repo.hasMcpConfig ? 'YES' : 'MISSING'));
+          console.log('  Skills:    ' + (repo.hasSkills ? 'YES' : 'MISSING'));
+          const checks = [
+            checkRepoClaudeMd('$REPO_PATH', '$REPO_NAME'),
+            checkRepoMcpConfig('$REPO_PATH', '$REPO_NAME'),
+            checkRepoSkillsDir('$REPO_PATH', '$REPO_NAME'),
+          ];
+          const issues = checks.filter(c => !c.passed);
+          if (issues.length > 0) {
+            console.log('\nIssues to fix:');
+            for (const c of issues) {
+              console.log('  - ' + c.message);
+              if (c.suggestedFix) console.log('    Fix: ' + c.suggestedFix);
+            }
+          }
+        "
+        ;;
+      interactive|"")
+        echo -e "${BLUE}=== GOLEMS SETUP WIZARD ===${NC}"
+        cd "$GOLEMS_HOME" && bun run src/wizard.ts
+        ;;
+      *)
+        echo "Usage: golems wizard [check|status|continue|add-project <path>]"
+        echo ""
+        echo "Subcommands:"
+        echo "  check          Run wiring checks on all repos"
+        echo "  status         Show wizard state (completed steps, repos, errors)"
+        echo "  continue       Show pending wizard steps"
+        echo "  add-project    Wire a new repo into golems"
+        echo "  (no subcommand) Run interactive setup wizard"
+        ;;
+    esac
     ;;
   e2e)
     echo -e "${BLUE}=== E2E TESTS ===${NC}"
