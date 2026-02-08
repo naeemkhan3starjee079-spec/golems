@@ -37,8 +37,16 @@ if (!process.env.LLM_BACKEND) process.env.LLM_BACKEND = "haiku";
 if (!process.env.STATE_BACKEND) process.env.STATE_BACKEND = "supabase";
 if (!process.env.TELEGRAM_MODE) process.env.TELEGRAM_MODE = "direct";
 
-import { sendNotification } from "./lib/telegram-direct";
-import { getUsageStats, getUsageBySource } from "./lib/cloud-llm";
+// ALL imports are lazy — health endpoint must start before any module loads
+async function getSendNotification() {
+  const mod = await import("./lib/telegram-direct");
+  return mod.sendNotification;
+}
+
+async function getUsage() {
+  const mod = await import("./lib/cloud-llm");
+  return { getUsageStats: mod.getUsageStats, getUsageBySource: mod.getUsageBySource };
+}
 
 // Lazy imports to avoid loading everything at startup
 async function getEmailGolem() {
@@ -79,7 +87,8 @@ async function safeRun(name: string, fn: () => Promise<unknown>): Promise<void> 
     console.error(`[CloudWorker] ${name} FAILED (${elapsed}s):`, message);
 
     // Notify on failure
-    await sendNotification({
+    const notify = await getSendNotification();
+    await notify({
       title: `${name} Failed`,
       body: message.slice(0, 200),
       source: "healthcheck",
@@ -261,6 +270,7 @@ Bun.serve({
     }
 
     if (url.pathname === "/usage") {
+      const { getUsageStats, getUsageBySource } = await getUsage();
       return Response.json({
         ...getUsageStats(),
         bySource: getUsageBySource(),
@@ -276,7 +286,8 @@ Bun.serve({
         const alertDetails = form?.get("alertDetails") || text || "No details";
         const isDown = String(alertType) === "1";
 
-        await sendNotification({
+        const notify = await getSendNotification();
+        await notify({
           title: isDown ? `DOWN: ${monitorName}` : `UP: ${monitorName}`,
           body: String(alertDetails),
           source: "uptime",
@@ -334,7 +345,8 @@ try {
   console.error("[CloudWorker] Failed to load golems:", message);
   golemStatus = `error: ${message}`;
 
-  await sendNotification({
+  const notifyFail = await getSendNotification();
+  await notifyFail({
     title: "Golem Load Failed",
     body: message.slice(0, 200),
     source: "healthcheck",
@@ -343,7 +355,8 @@ try {
 }
 
 // Send startup notification
-await sendNotification({
+const notifyStart = await getSendNotification();
+await notifyStart({
   title: "Cloud Worker Started",
   body: `Golems: ${golemStatus}`,
   source: "healthcheck",

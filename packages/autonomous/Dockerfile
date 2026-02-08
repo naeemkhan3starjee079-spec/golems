@@ -12,9 +12,5 @@ RUN bun install --frozen-lockfile --production
 COPY src/ src/
 COPY supabase/ supabase/
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget -q -O - http://localhost:${PORT:-8080}/health || exit 1
-
 # Run cloud worker
 CMD ["bun", "run", "src/cloud-worker.ts"]
