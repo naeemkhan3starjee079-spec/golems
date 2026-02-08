@@ -1,0 +1,326 @@
+/* ═══════════════════════════════════════════════════════════════
+   Hero Variants Preview Page
+   ═══════════════════════════════════════════════════════════════ */
+
+.page {
+  background: #080807;
+  min-height: 100vh;
+}
+
+.pageHeader {
+  text-align: center;
+  padding: 3rem 2rem 1rem;
+}
+
+.pageHeader h1 {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #f0ebe0;
+  margin-bottom: 0.5rem;
+}
+
+.pageHeader p {
+  color: #7c6f5e;
+  font-size: 1rem;
+}
+
+/* ── Each hero variant block ── */
+.heroVariant {
+  padding: 2rem;
+  margin: 1.5rem 0;
+  position: relative;
+}
+
+.heroVariant::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 10%; right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(229, 149, 0, 0.12), transparent);
+}
+
+.variantLabel {
+  max-width: 1200px;
+  margin: 0 auto 1.5rem;
+}
+
+.variantLabel h3 {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.variantLabel p {
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+/* Grid: terminal (wide) + telegram (sidebar) */
+.variantGrid {
+  display: grid;
+  grid-template-columns: 1fr 240px;
+  gap: 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  align-items: start;
+}
+
+.variantTerminal {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* ── Terminal variant ── */
+.termVariant {
+  overflow: hidden;
+}
+
+.termTitleBar {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  gap: 0.5rem;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.dots {
+  display: flex;
+  gap: 5px;
+}
+
+.dots span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: block;
+}
+
+.editorialLine {
+  width: 40px;
+  height: 1px;
+  background: rgba(0,0,0,0.2);
+}
+
+.termTitleText {
+  font-size: 0.7rem;
+  flex: 1;
+  text-align: center;
+}
+
+.termTabs {
+  display: flex;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  overflow-x: auto;
+}
+
+.termTab {
+  padding: 0.4rem 0.8rem;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-size: 0.7rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: 0.2s;
+}
+
+.termTab:hover { opacity: 0.8; }
+
+.termContent {
+  padding: 0.75rem 1rem;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  min-height: 240px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.termLine {
+  white-space: pre;
+}
+
+.wizardGrid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+.mascotCol {
+  opacity: 0.85;
+}
+
+.blinkCursor {
+  animation: cursorBlink 1s step-end infinite;
+}
+
+@keyframes cursorBlink {
+  50% { opacity: 0; }
+}
+
+/* Scanlines for CRT */
+.scanlines {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.15) 2px,
+    rgba(0, 0, 0, 0.15) 4px
+  );
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* ── Variant buttons ── */
+.variantButtons {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.btnPrimary, .btnSecondary {
+  padding: 0.5rem 1.2rem;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.btnSecondary {
+  background: transparent;
+  border: 1px solid;
+}
+
+/* ── Telegram mini ── */
+.telegramMini {
+  background: #1a1816;
+  border: 1px solid rgba(229, 149, 0, 0.08);
+  border-radius: 12px;
+  overflow: hidden;
+  font-size: 0.75rem;
+}
+
+.tgHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  background: #0c0b0a;
+  border-bottom: 1px solid rgba(229, 149, 0, 0.06);
+}
+
+.tgAvatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #e59500, #c46d3c);
+  color: #0c0b0a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.7rem;
+}
+
+.tgName {
+  color: #e8e2d6;
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+.tgStatus {
+  color: #28c840;
+  font-size: 0.6rem;
+}
+
+.tgMessages {
+  padding: 0.5rem 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.tgMsg {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  background: rgba(229, 149, 0, 0.06);
+  border-radius: 8px;
+}
+
+.tgMsgBot {
+  color: #c0b8a8;
+  font-size: 0.7rem;
+}
+
+.tgMsgUser {
+  background: rgba(45, 212, 168, 0.08);
+  align-self: flex-end;
+}
+
+.tgMsgUser span:first-child {
+  color: #2dd4a8;
+  font-size: 0.7rem;
+}
+
+.tgTime {
+  color: #555;
+  font-size: 0.55rem;
+  white-space: nowrap;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Responsive
+   ═══════════════════════════════════════════════════════════════ */
+
+@media screen and (max-width: 996px) {
+  .variantGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .telegramMini {
+    max-width: 360px;
+    margin: 0 auto;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .heroVariant {
+    padding: 1.5rem 1rem;
+  }
+
+  .termContent {
+    min-height: 200px;
+    font-size: 0.65rem;
+  }
+
+  .wizardGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .mascotCol {
+    display: none;
+  }
+
+  .variantButtons {
+    flex-direction: column;
+  }
+
+  .btnPrimary, .btnSecondary {
+    text-align: center;
+    width: 100%;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .pageHeader h1 { font-size: 1.5rem; }
+  .termContent { font-size: 0.6rem; min-height: 160px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blinkCursor { animation: none; }
+}
