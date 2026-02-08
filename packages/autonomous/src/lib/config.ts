@@ -58,6 +58,24 @@ export interface GolemsConfig {
     notifyPort: number;
   };
 
+  /** Observability (Axiom log drain) */
+  observability: {
+    /** Axiom dataset name (set after creating account at axiom.co) */
+    axiomDataset?: string;
+    /** Axiom API token (prefer env var AXIOM_TOKEN) */
+    axiomToken?: string;
+    /** Enable log drain to Axiom */
+    enabled: boolean;
+  };
+
+  /** Cost tracking */
+  costs: {
+    /** Path to JSONL cost log */
+    logPath: string;
+    /** Monthly budget alert threshold in USD */
+    budgetAlertUSD: number;
+  };
+
   /** Feature flags */
   features: {
     emailGolem: boolean;
@@ -90,6 +108,13 @@ const DEFAULTS: GolemsConfig = {
   },
   telegram: {
     notifyPort: 3847,
+  },
+  observability: {
+    enabled: false,
+  },
+  costs: {
+    logPath: `${HOME}/.golems-zikaron/api_costs.jsonl`,
+    budgetAlertUSD: 10,
   },
   features: {
     emailGolem: true,
@@ -208,6 +233,18 @@ nightshift:
 # Telegram bot
 telegram:
   notifyPort: 3847
+
+# Observability (Axiom log drain)
+# Sign up at axiom.co (free tier: 500MB/day)
+# Then set axiomDataset and AXIOM_TOKEN env var
+observability:
+  enabled: false
+  # axiomDataset: "golems"
+
+# API cost tracking
+costs:
+  logPath: "${HOME}/.golems-zikaron/api_costs.jsonl"
+  budgetAlertUSD: 10    # Alert when monthly costs exceed this
 
 # Feature flags (enable/disable golems)
 features:

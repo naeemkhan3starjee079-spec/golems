@@ -59,6 +59,7 @@ COMMANDS:
   setup         Interactive setup wizard for new machines
   autopilot     Toggle autonomous plan execution (on/off/status)
   skills        Show available integrations and their status
+  costs         API cost tracking (summary, by-source, by-model, daily, log)
   config        Show/init/edit centralized config (~/.golems/config.yaml)
   e2e           Run Playwright E2E tests (admin-ui + docsite)
   index-whatsapp <file> --chat "Name"  Index WhatsApp export in Zikaron
@@ -556,6 +557,78 @@ case "${1:-status}" in
   e2e)
     echo -e "${BLUE}=== E2E TESTS ===${NC}"
     cd "$HOME/Gits/golems/packages/e2e" && npx playwright test "${@:2}"
+    ;;
+  costs)
+    COST_LOG="$HOME/.golems-zikaron/api_costs.jsonl"
+    case "${2:-summary}" in
+      summary|"")
+        echo -e "${BLUE}=== API COSTS ===${NC}"
+        cd "$GOLEMS_HOME" && bun -e "
+          import { readCostLog, filterByPeriod, summarize, formatSummary } from './src/lib/cost-tracker';
+          const entries = readCostLog('$COST_LOG');
+          const periods = ['today', 'week', 'month', 'all'];
+          for (const p of periods) {
+            const filtered = filterByPeriod(entries, p);
+            console.log(formatSummary(summarize(filtered, p)));
+            console.log('');
+          }
+        "
+        ;;
+      by-source)
+        echo -e "${BLUE}=== COSTS BY SOURCE ===${NC}"
+        cd "$GOLEMS_HOME" && bun -e "
+          import { readCostLog, filterByPeriod, groupBySource, formatBySource } from './src/lib/cost-tracker';
+          const entries = readCostLog('$COST_LOG');
+          const period = '${3:-all}';
+          const filtered = filterByPeriod(entries, period);
+          console.log('Period: ' + period);
+          console.log(formatBySource(groupBySource(filtered)));
+        "
+        ;;
+      by-model)
+        echo -e "${BLUE}=== COSTS BY MODEL ===${NC}"
+        cd "$GOLEMS_HOME" && bun -e "
+          import { readCostLog, filterByPeriod, groupByModel, formatByModel } from './src/lib/cost-tracker';
+          const entries = readCostLog('$COST_LOG');
+          const period = '${3:-all}';
+          const filtered = filterByPeriod(entries, period);
+          console.log('Period: ' + period);
+          console.log(formatByModel(groupByModel(filtered)));
+        "
+        ;;
+      daily)
+        echo -e "${BLUE}=== DAILY BREAKDOWN ===${NC}"
+        cd "$GOLEMS_HOME" && bun -e "
+          import { readCostLog, groupByDay, formatDaily } from './src/lib/cost-tracker';
+          const entries = readCostLog('$COST_LOG');
+          console.log(formatDaily(groupByDay(entries)));
+        "
+        ;;
+      log)
+        if [ -f "$COST_LOG" ]; then
+          echo -e "${BLUE}=== RECENT COST LOG ===${NC}"
+          tail -20 "$COST_LOG" | while IFS= read -r line; do
+            echo "$line" | bun -e "
+              const line = await Bun.stdin.text();
+              const e = JSON.parse(line.trim());
+              const d = new Date(e.timestamp).toLocaleString('en-IL', {timeZone:'Asia/Jerusalem'});
+              console.log(d + '  ' + e.source.padEnd(20) + '  \$' + e.cost_usd.toFixed(6));
+            " 2>/dev/null || echo "$line"
+          done
+        else
+          echo "No cost log found at $COST_LOG"
+        fi
+        ;;
+      *)
+        echo "Usage: golems costs [summary|by-source|by-model|daily|log]"
+        echo ""
+        echo "  summary            Overview by period (default)"
+        echo "  by-source [period] Breakdown by source (today/week/month/all)"
+        echo "  by-model [period]  Breakdown by model"
+        echo "  daily              Day-by-day cost chart"
+        echo "  log                Recent raw entries"
+        ;;
+    esac
     ;;
   config)
     case "${2:-show}" in

@@ -10,9 +10,9 @@
  */
 
 import Anthropic from "@anthropic-ai/sdk";
-import { appendFileSync, mkdirSync, existsSync } from "fs";
-import { join, dirname } from "path";
+import { join } from "path";
 import { homedir } from "os";
+import { logCost, type CostEntry } from "./cost-tracker";
 
 const MODEL = "claude-haiku-4-5-20251001";
 
@@ -68,20 +68,16 @@ function trackUsage(source: string, inputTokens: number, outputTokens: number) {
     usageLog.splice(0, usageLog.length - 1000);
   }
 
-  // Persist to JSONL (same format as SongScript's api_costs.jsonl)
+  // Persist to JSONL via unified cost tracker
   try {
-    if (!existsSync(dirname(COST_LOG_PATH))) {
-      mkdirSync(dirname(COST_LOG_PATH), { recursive: true });
-    }
-    const entry = JSON.stringify({
+    logCost(COST_LOG_PATH, {
       timestamp,
       model: MODEL,
       source,
       input_tokens: inputTokens,
       output_tokens: outputTokens,
-      cost_usd: Math.round(costUsd * 1_000_000) / 1_000_000, // 6 decimal places
+      cost_usd: Math.round(costUsd * 1_000_000) / 1_000_000,
     });
-    appendFileSync(COST_LOG_PATH, entry + "\n");
   } catch {
     // Don't let logging failures break the main flow
   }
