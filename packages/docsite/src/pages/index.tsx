@@ -375,15 +375,75 @@ function HomepageHero() {
           </div>
         </div>
 
-        {/* ── TELEGRAM (right sidebar, phone frame, full height) ── */}
+        {/* ── TELEGRAM (right sidebar, iPhone 15 Pro frame) ── */}
         <div className={styles.telegramArea}>
           <div className={styles.phoneFrame}>
-            <div className={styles.phoneNotch} />
+            <div className={styles.phoneDynamicIsland} />
             <TelegramMock activeIndex={activeTab} onTopicClick={handleTabChange} />
+            <div className={styles.phoneHomeBar} />
           </div>
         </div>
       </div>
     </header>
+  );
+}
+
+/* ── Get Started Section ───────────────────────────────────────── */
+
+const installSteps = [
+  {
+    step: '1',
+    command: 'git clone https://github.com/EtanHey/golems && cd golems',
+    label: 'Clone',
+    desc: 'Get the monorepo',
+  },
+  {
+    step: '2',
+    command: 'bun install',
+    label: 'Install',
+    desc: 'One command, all packages',
+  },
+  {
+    step: '3',
+    command: 'golems wizard',
+    label: 'Setup',
+    desc: 'Interactive 7-phase wizard wires everything',
+  },
+  {
+    step: '4',
+    command: 'golems status',
+    label: 'Verify',
+    desc: 'See all your golems running',
+  },
+];
+
+function GetStartedSection() {
+  return (
+    <section className={styles.getStartedSection} aria-labelledby="get-started-heading">
+      <div className="container">
+        <h2 id="get-started-heading" className={styles.sectionTitle}>Get Started in 60 Seconds</h2>
+        <p className={styles.sectionSubtitle}>
+          Four commands. That's it.
+        </p>
+        <div className={styles.installGrid}>
+          {installSteps.map((s) => (
+            <div key={s.step} className={styles.installStep}>
+              <div className={styles.installStepNumber}>{s.step}</div>
+              <div className={styles.installStepContent}>
+                <div className={styles.installLabel}>{s.label}</div>
+                <code className={styles.installCommand}>{s.command}</code>
+                <p className={styles.installDesc}>{s.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className={styles.installCta}>
+          <Link className={styles.primaryButton} to="/docs/getting-started">
+            Full Setup Guide
+          </Link>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -463,6 +523,7 @@ export default function Home(): ReactNode {
       description="Autonomous AI agent ecosystem for Claude Code">
       <HomepageHero />
       <main>
+        <GetStartedSection />
         <GolemsSection />
         <ArchitectureSection />
       </main>

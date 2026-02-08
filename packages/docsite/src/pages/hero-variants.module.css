@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   Hero Variants Preview Page
+   Hero Variants Preview Page — 5 layouts + 5 terminal styles
    ═══════════════════════════════════════════════════════════════ */
 
 .page {
@@ -24,7 +24,7 @@
   font-size: 1rem;
 }
 
-/* ── Each hero variant block ── */
+/* ── Shared: each hero variant block ── */
 .heroVariant {
   padding: 2rem;
   margin: 1.5rem 0;
@@ -55,23 +55,7 @@
   margin: 0;
 }
 
-/* Grid: terminal (wide) + telegram (sidebar) */
-.variantGrid {
-  display: grid;
-  grid-template-columns: 1fr 240px;
-  gap: 1rem;
-  max-width: 1200px;
-  margin: 0 auto;
-  align-items: start;
-}
-
-.variantTerminal {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-/* ── Terminal variant ── */
+/* ── Shared: terminal component ── */
 .termVariant {
   overflow: hidden;
 }
@@ -131,8 +115,7 @@
   padding: 0.75rem 1rem;
   font-size: 0.72rem;
   line-height: 1.5;
-  min-height: 240px;
-  max-height: 320px;
+  height: 300px;
   overflow-y: auto;
 }
 
@@ -159,41 +142,36 @@
   50% { opacity: 0; }
 }
 
-/* Scanlines for CRT */
 .scanlines {
   position: absolute;
   inset: 0;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(0, 0, 0, 0.15) 2px,
-    rgba(0, 0, 0, 0.15) 4px
-  );
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.15) 4px);
   pointer-events: none;
   z-index: 10;
 }
 
-/* ── Variant buttons ── */
+/* ── Shared: buttons ── */
 .variantButtons {
   display: flex;
   gap: 0.6rem;
+  flex-wrap: wrap;
 }
 
-.btnPrimary, .btnSecondary {
+.btnPrimary, .btnSecondary, .btnTertiary {
   padding: 0.5rem 1.2rem;
   border-radius: 6px;
   font-size: 0.82rem;
   font-weight: 600;
   display: inline-block;
+  cursor: pointer;
 }
 
-.btnSecondary {
+.btnSecondary, .btnTertiary {
   background: transparent;
   border: 1px solid;
 }
 
-/* ── Telegram mini ── */
+/* ── Shared: telegram mini ── */
 .telegramMini {
   background: #1a1816;
   border: 1px solid rgba(229, 149, 0, 0.08);
@@ -274,51 +252,412 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   LAYOUT 1: Command Center
+   Wide terminal + phone frame sidebar
+   ═══════════════════════════════════════════════════════════════ */
+
+.layoutCommandCenter {
+  display: grid;
+  grid-template-columns: 1fr 260px;
+  gap: 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  align-items: stretch;
+}
+
+.lcLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.lcHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.lcLogo {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  min-height: 48px;
+  filter: drop-shadow(0 0 16px rgba(229, 149, 0, 0.3));
+}
+
+.lcLogo svg { width: 48px; height: 48px; display: block; }
+
+.lcTitle {
+  font-size: 1.6rem;
+  font-weight: 900;
+  color: #f0ebe0;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.lcTagline {
+  font-size: 0.75rem;
+  color: #7c6f5e;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.lcTagline em {
+  color: #2dd4a8;
+  font-style: normal;
+}
+
+.lcPhone {
+  display: flex;
+  align-items: stretch;
+}
+
+.phoneFrame {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #1a1a1a;
+  border-radius: 28px;
+  border: 3px solid #2a2a2a;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.05);
+  overflow: hidden;
+}
+
+.phoneNotch {
+  width: 100px;
+  height: 22px;
+  background: #1a1a1a;
+  border-radius: 0 0 14px 14px;
+  margin: 0 auto;
+  position: relative;
+}
+
+.phoneNotch::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background: #333;
+  border-radius: 50%;
+  position: absolute;
+  top: 6px;
+  right: 22px;
+}
+
+.phoneTelegram {
+  flex: 1;
+  border-radius: 0;
+  border: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LAYOUT 2: Split Screen
+   50/50 terminal & telegram, centered header
+   ═══════════════════════════════════════════════════════════════ */
+
+.layoutSplitHeader {
+  text-align: center;
+  max-width: 1200px;
+  margin: 0 auto 1.5rem;
+}
+
+.splitLogo {
+  width: 56px;
+  height: 56px;
+  min-width: 56px;
+  min-height: 56px;
+  margin: 0 auto 0.5rem;
+  display: block;
+  filter: drop-shadow(0 0 20px rgba(167,139,250,0.3));
+}
+
+.splitLogo svg { width: 56px; height: 56px; display: block; }
+
+.splitTitle {
+  font-size: 2rem;
+  font-weight: 900;
+  color: #e0dde5;
+  margin: 0 0 0.25rem;
+  background: linear-gradient(135deg, #e0dde5 0%, #a78bfa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.splitTagline {
+  color: #6b6880;
+  font-size: 0.85rem;
+}
+
+.layoutSplit {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  align-items: start;
+}
+
+.splitRight {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.splitButtons {
+  max-width: 1200px;
+  margin: 1rem auto 0;
+  display: flex;
+  justify-content: center;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LAYOUT 3: Cinema
+   Full-width terminal, floating telegram overlay
+   ═══════════════════════════════════════════════════════════════ */
+
+.layoutCinema {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.cinemaHeader {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.cinemaLogo {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  filter: drop-shadow(0 0 16px rgba(129,140,248,0.3));
+}
+
+.cinemaLogo svg { width: 44px; height: 44px; display: block; }
+
+.cinemaTitle {
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: #c8c8d0;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.cinemaButtons {
+  margin-left: auto;
+}
+
+.cinemaTermWrapper {
+  position: relative;
+}
+
+.cinemaOverlay {
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  width: 260px;
+  opacity: 0.95;
+  z-index: 20;
+}
+
+.cinemaOverlay .telegramMini {
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+  backdrop-filter: blur(8px);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LAYOUT 4: Hacker Den
+   CRT terminal + ASCII mascot, telegram as bottom strip
+   ═══════════════════════════════════════════════════════════════ */
+
+.layoutHacker {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.hackerCenter {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.hackerTitle {
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.hackerGlyph {
+  color: #00ff41;
+  opacity: 0.4;
+  font-size: 1.2rem;
+}
+
+.hackerMain {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.hackerMascot {
+  opacity: 0.9;
+}
+
+.hackerTerm {
+  width: 100%;
+}
+
+.hackerTelegram {
+  max-width: 100%;
+}
+
+.hackerTelegram .telegramMini {
+  background: #0a0f0a;
+  border-color: rgba(0, 255, 65, 0.1);
+}
+
+.hackerTelegram .tgHeader {
+  background: #060a06;
+  border-color: rgba(0, 255, 65, 0.06);
+}
+
+.hackerTelegram .tgMessages {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.5rem;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LAYOUT 5: Editorial
+   Light theme, magazine layout, typography-first
+   ═══════════════════════════════════════════════════════════════ */
+
+.layoutEditorial {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.edHeader {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.edLogo {
+  width: 64px;
+  height: 64px;
+  min-width: 64px;
+  min-height: 64px;
+  margin: 0 auto 0.75rem;
+  display: block;
+  filter: drop-shadow(0 0 8px rgba(176, 116, 0, 0.15));
+}
+
+.edLogo svg { width: 64px; height: 64px; display: block; }
+
+.edTitle {
+  font-size: 2.4rem;
+  font-weight: 900;
+  color: #1a1510;
+  margin: 0 0 0.75rem;
+  letter-spacing: -0.04em;
+  font-family: 'Georgia', 'Times New Roman', serif;
+}
+
+.edSubtitle {
+  color: #5a5040;
+  font-size: 1.05rem;
+  line-height: 1.7;
+  max-width: 600px;
+  margin: 0 auto 1.5rem;
+}
+
+.edContent {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 2rem;
+  align-items: start;
+}
+
+.edTermWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.edCaption {
+  font-size: 0.78rem;
+  color: #8a7a68;
+  font-style: italic;
+  text-align: center;
+}
+
+.edTelegram {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.edTgLabel {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #1a1510;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0;
+}
+
+.edTelegramMini {
+  background: #f0ece5;
+  border-color: rgba(0,0,0,0.08);
+}
+
+.edTelegramMini .tgHeader {
+  background: #e8e2d6;
+  border-color: rgba(0,0,0,0.06);
+}
+
+.edTelegramMini .tgName { color: #1a1510; }
+.edTelegramMini .tgMsgBot { color: #5a5040; }
+.edTelegramMini .tgMsg { background: rgba(0,0,0,0.04); }
+.edTelegramMini .tgMsgUser { background: rgba(26,138,110,0.08); }
+
+/* ═══════════════════════════════════════════════════════════════
    Responsive
    ═══════════════════════════════════════════════════════════════ */
 
 @media screen and (max-width: 996px) {
-  .variantGrid {
-    grid-template-columns: 1fr;
-  }
-
-  .telegramMini {
-    max-width: 360px;
-    margin: 0 auto;
-  }
+  .layoutCommandCenter { grid-template-columns: 1fr; }
+  .lcPhone { max-width: 300px; margin: 0 auto; max-height: 400px; }
+  .layoutSplit { grid-template-columns: 1fr; }
+  .splitRight { max-width: 400px; margin: 0 auto; }
+  .cinemaOverlay { position: static; width: 100%; max-width: 400px; margin: 1rem auto 0; }
+  .hackerMain { grid-template-columns: 1fr; }
+  .hackerMascot { display: none; }
+  .edContent { grid-template-columns: 1fr; }
+  .edTelegram { max-width: 400px; margin: 0 auto; }
 }
 
 @media screen and (max-width: 768px) {
-  .heroVariant {
-    padding: 1.5rem 1rem;
-  }
-
-  .termContent {
-    min-height: 200px;
-    font-size: 0.65rem;
-  }
-
-  .wizardGrid {
-    grid-template-columns: 1fr;
-  }
-
-  .mascotCol {
-    display: none;
-  }
-
-  .variantButtons {
-    flex-direction: column;
-  }
-
-  .btnPrimary, .btnSecondary {
-    text-align: center;
-    width: 100%;
-  }
+  .heroVariant { padding: 1.5rem 1rem; }
+  .termContent { height: 240px; font-size: 0.65rem; }
+  .wizardGrid { grid-template-columns: 1fr; }
+  .mascotCol { display: none; }
+  .variantButtons { flex-direction: column; }
+  .btnPrimary, .btnSecondary, .btnTertiary { text-align: center; width: 100%; }
+  .hackerTelegram .tgMessages { grid-template-columns: 1fr; }
 }
 
 @media screen and (max-width: 480px) {
   .pageHeader h1 { font-size: 1.5rem; }
-  .termContent { font-size: 0.6rem; min-height: 160px; }
+  .termContent { font-size: 0.6rem; height: 200px; }
+  .edTitle { font-size: 1.8rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {

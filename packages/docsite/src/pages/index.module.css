@@ -67,13 +67,20 @@
 .heroLogoSmall {
   width: 56px;
   height: 56px;
+  min-width: 56px;
+  min-height: 56px;
+  max-width: 56px;
+  max-height: 56px;
   flex-shrink: 0;
+  overflow: hidden;
   filter: drop-shadow(0 0 20px rgba(229, 149, 0, 0.4));
+  aspect-ratio: 1 / 1;
 }
 
 .heroLogoSmall svg {
-  width: 100%;
-  height: 100%;
+  width: 56px;
+  height: 56px;
+  display: block;
 }
 
 .heroTitleGroup {
@@ -319,48 +326,151 @@
   background: rgba(144, 133, 117, 0.06);
 }
 
-/* ── Telegram area (right sidebar — phone frame) ── */
+/* ── Telegram area (right sidebar — iPhone frame) ── */
 .telegramArea {
   align-self: stretch;
   display: flex;
   flex-direction: column;
 }
 
-/* Phone bezel wrapping the Telegram mock */
+/* iPhone 15 Pro frame */
 .phoneFrame {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: #1a1a1a;
-  border-radius: 28px;
-  border: 3px solid #2a2a2a;
+  background: #000;
+  border-radius: 44px;
+  border: 2px solid #3a3a3c;
   box-shadow:
-    0 20px 60px rgba(0, 0, 0, 0.5),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+    0 20px 60px rgba(0, 0, 0, 0.6),
+    0 0 0 1px #1c1c1e,
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
   overflow: hidden;
   position: relative;
+  padding: 0;
 }
 
-/* Notch */
-.phoneNotch {
-  width: 100px;
-  height: 22px;
-  background: #1a1a1a;
-  border-radius: 0 0 14px 14px;
-  margin: 0 auto;
+/* Side button (right) */
+.phoneFrame::before {
+  content: '';
+  position: absolute;
+  right: -4px;
+  top: 100px;
+  width: 3px;
+  height: 44px;
+  background: #3a3a3c;
+  border-radius: 0 2px 2px 0;
+  z-index: 10;
+}
+
+/* Dynamic Island */
+.phoneDynamicIsland {
+  width: 92px;
+  height: 28px;
+  background: #000;
+  border-radius: 20px;
+  margin: 10px auto 0;
   position: relative;
   z-index: 5;
+  flex-shrink: 0;
 }
 
-.phoneNotch::after {
+/* Home indicator bar */
+.phoneHomeBar {
+  width: 100px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  margin: 6px auto 8px;
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Get Started Section
+   ═══════════════════════════════════════════════════════════════ */
+
+.getStartedSection {
+  padding: 5rem 0;
+  background: linear-gradient(180deg, #0c0b0a 0%, #0a0908 100%);
+  position: relative;
+}
+
+.getStartedSection::before {
   content: '';
-  width: 8px;
-  height: 8px;
-  background: #333;
-  border-radius: 50%;
   position: absolute;
-  top: 6px;
-  right: 22px;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(229, 149, 0, 0.2), transparent);
+}
+
+.installGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  max-width: 1000px;
+  margin: 0 auto 2rem;
+  padding: 0 1.5rem;
+}
+
+.installStep {
+  background: rgba(20, 18, 14, 0.9);
+  border: 1px solid rgba(229, 149, 0, 0.08);
+  border-radius: 12px;
+  padding: 1.25rem;
+  position: relative;
+  transition: border-color 0.3s ease;
+}
+
+.installStep:hover {
+  border-color: rgba(229, 149, 0, 0.25);
+}
+
+.installStepNumber {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #e59500, #c46d3c);
+  color: #0c0b0a;
+  font-weight: 800;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.75rem;
+}
+
+.installStepContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.installLabel {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #e59500;
+}
+
+.installCommand {
+  background: rgba(0, 0, 0, 0.4);
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  color: #2dd4a8;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  word-break: break-all;
+  border: 1px solid rgba(45, 212, 168, 0.1);
+}
+
+.installDesc {
+  color: #7c6f5e;
+  font-size: 0.8rem;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.installCta {
+  text-align: center;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -646,7 +756,11 @@
   }
 
   .phoneFrame {
-    border-radius: 24px;
+    border-radius: 36px;
+  }
+
+  .installGrid {
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .heroHeader {
@@ -684,6 +798,9 @@
   .wizardMascot {
     display: none;
   }
+
+  .getStartedSection { padding: 3rem 0; }
+  .installGrid { grid-template-columns: 1fr; }
 
   .golemsSection { padding: 3rem 0; }
   .golemGrid {
