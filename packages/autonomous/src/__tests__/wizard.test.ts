@@ -1,22 +1,4 @@
-import { describe, it, expect, mock, beforeEach, afterEach } from "bun:test";
-import { join } from "path";
-
-// Mock execSync before importing
-const mockExecSync = mock(() => "");
-mock.module("child_process", () => ({
-  execSync: mockExecSync,
-}));
-
-// Mock fs
-const mockExistsSync = mock(() => true);
-const mockWriteFileSync = mock(() => {});
-const mockMkdirSync = mock(() => {});
-mock.module("fs", () => ({
-  existsSync: mockExistsSync,
-  writeFileSync: mockWriteFileSync,
-  mkdirSync: mockMkdirSync,
-  statSync: mock(() => ({ size: 1000 })),
-}));
+import { describe, it, expect } from "bun:test";
 
 import {
   checkPrerequisite,
@@ -24,36 +6,26 @@ import {
   generateSetupLog,
   shellExec,
 } from "../wizard";
-import type { SetupLogEntry } from "../wizard" with { type: "macro" };
 
 describe("wizard", () => {
-  beforeEach(() => {
-    mockExecSync.mockReset();
-    mockExistsSync.mockReset();
-    mockWriteFileSync.mockReset();
-  });
-
   describe("checkPrerequisite", () => {
     it("detects installed tool and returns version", () => {
-      mockExecSync.mockImplementation(() => "1.1.42\n");
+      // bun is always available in the test environment
       const result = checkPrerequisite("bun", "--version", "curl install");
 
       expect(result.name).toBe("bun");
       expect(result.found).toBe(true);
-      expect(result.version).toBe("1.1.42");
+      expect(result.version).toBeDefined();
       expect(result.installCmd).toBeUndefined();
     });
 
     it("detects missing tool and returns install command", () => {
-      mockExecSync.mockImplementation(() => {
-        throw new Error("not found");
-      });
-      const result = checkPrerequisite("railway", "--version", "npm i -g @railway/cli");
+      const result = checkPrerequisite("nonexistent-tool-xyz-999", "--version", "npm i -g xyz");
 
-      expect(result.name).toBe("railway");
+      expect(result.name).toBe("nonexistent-tool-xyz-999");
       expect(result.found).toBe(false);
       expect(result.version).toBeUndefined();
-      expect(result.installCmd).toBe("npm i -g @railway/cli");
+      expect(result.installCmd).toBe("npm i -g xyz");
     });
   });
 
@@ -98,7 +70,6 @@ describe("wizard", () => {
         { phase: "secrets", item: "TELEGRAM_BOT_TOKEN", status: "warning", detail: "missing" },
       ];
 
-      mockExecSync.mockImplementation(() => "test-machine");
       const md = generateSetupLog(log, ["telegram"]);
 
       expect(md).toContain("# Golems Setup Log");
@@ -113,7 +84,6 @@ describe("wizard", () => {
     });
 
     it("handles empty log gracefully", () => {
-      mockExecSync.mockImplementation(() => "host");
       const md = generateSetupLog([], []);
 
       expect(md).toContain("# Golems Setup Log");
@@ -124,18 +94,14 @@ describe("wizard", () => {
 
   describe("shellExec", () => {
     it("returns ok true on successful command", () => {
-      mockExecSync.mockImplementation(() => "hello world\n");
       const result = shellExec("echo hello");
 
       expect(result.ok).toBe(true);
-      expect(result.output).toBe("hello world");
+      expect(result.output).toContain("hello");
     });
 
     it("returns ok false on failed command", () => {
-      mockExecSync.mockImplementation(() => {
-        throw new Error("command not found");
-      });
-      const result = shellExec("nonexistent-cmd");
+      const result = shellExec("nonexistent-cmd-xyz-999");
 
       expect(result.ok).toBe(false);
       expect(result.output).toBe("");

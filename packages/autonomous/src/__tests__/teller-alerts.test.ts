@@ -1,22 +1,25 @@
-import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { describe, test, expect, mock, beforeEach, afterEach, spyOn } from "bun:test";
+import * as ollamaWrapper from "../ollama-wrapper";
+import * as telegramDirect from "../lib/telegram-direct";
+import * as eventLog from "../event-log";
+import { detectPaymentFailure, sendPaymentAlert } from "../teller-golem/alerts";
+import type { ScoredEmail } from "../teller-golem/types";
 
 const mockRunOllamaJSON = mock(async () => null);
 const mockSendNotification = mock(async () => true);
 const mockLogEvent = mock(async () => {});
 
-mock.module("../ollama-wrapper", () => ({
-  runOllamaJSON: mockRunOllamaJSON,
-  runOllama: async () => "",
-}));
-mock.module("../lib/telegram-direct", () => ({
-  sendNotification: mockSendNotification,
-}));
-mock.module("../event-log", () => ({
-  logEvent: mockLogEvent,
-}));
+// Use spyOn instead of mock.module to avoid global pollution
+beforeEach(() => {
+  spyOn(ollamaWrapper, "runOllamaJSON").mockImplementation(mockRunOllamaJSON);
+  spyOn(ollamaWrapper, "runOllama").mockImplementation(async () => "");
+  spyOn(telegramDirect, "sendNotification").mockImplementation(mockSendNotification);
+  spyOn(eventLog, "logEvent").mockImplementation(mockLogEvent);
+});
 
-import { detectPaymentFailure, sendPaymentAlert } from "../teller-golem/alerts";
-import type { ScoredEmail } from "../teller-golem/types";
+afterEach(() => {
+  mock.restore();
+});
 
 function makeEmail(overrides: Partial<ScoredEmail> = {}): ScoredEmail {
   return {

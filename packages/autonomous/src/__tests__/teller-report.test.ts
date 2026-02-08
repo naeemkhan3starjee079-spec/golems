@@ -1,4 +1,11 @@
-import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { describe, test, expect, mock, beforeEach, afterEach, spyOn } from "bun:test";
+import * as dbClientModule from "../email-golem/db-client";
+import {
+  generateMonthlyReport,
+  generateTaxReport,
+  formatMonthlyReportText,
+  formatTaxReportText,
+} from "../teller-golem/report";
 
 let mockPaymentsData: any[] = [];
 
@@ -8,23 +15,6 @@ const mockSelect = mock(() => ({ gte: mockGte }));
 const mockFrom = mock(() => ({ select: mockSelect }));
 const mockDbClient = { from: mockFrom };
 
-mock.module("../email-golem/db-client", () => ({
-  createDbClient: () => mockDbClient,
-  getSubscriptionSummary: async () => ({
-    totalMonthly: 50,
-    services: [{ name: "Netflix" }, { name: "Spotify" }],
-    newThisMonth: [],
-    cancelledThisMonth: [],
-  }),
-}));
-
-import {
-  generateMonthlyReport,
-  generateTaxReport,
-  formatMonthlyReportText,
-  formatTaxReportText,
-} from "../teller-golem/report";
-
 describe("TellerGolem Report", () => {
   beforeEach(() => {
     mockPaymentsData = [];
@@ -32,6 +22,18 @@ describe("TellerGolem Report", () => {
     mockSelect.mockClear();
     mockGte.mockClear();
     mockLte.mockClear();
+    // Use spyOn instead of mock.module to avoid global pollution
+    spyOn(dbClientModule, "createDbClient").mockReturnValue(mockDbClient as any);
+    spyOn(dbClientModule, "getSubscriptionSummary").mockImplementation(async () => ({
+      totalMonthly: 50,
+      services: [{ name: "Netflix" }, { name: "Spotify" }] as any[],
+      newThisMonth: [],
+      cancelledThisMonth: [],
+    }));
+  });
+
+  afterEach(() => {
+    mock.restore();
   });
 
   describe("generateMonthlyReport", () => {

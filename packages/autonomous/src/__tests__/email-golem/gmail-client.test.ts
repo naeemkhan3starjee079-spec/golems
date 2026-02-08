@@ -5,7 +5,9 @@
 
 import { describe, it, expect, mock, beforeEach, afterEach } from "bun:test";
 
-// Mock the googleapis module before importing gmail-client
+// NOTE: mock.module kept here because googleapis requires complex nested object
+// mocking (google.auth.OAuth2 class + google.gmail factory). This is LOW risk —
+// no other test file imports googleapis. Prefer spyOn for new tests.
 const mockMessages = {
   list: mock(() => Promise.resolve({ data: { messages: [] } })),
   get: mock(() => Promise.resolve({ data: {} })),

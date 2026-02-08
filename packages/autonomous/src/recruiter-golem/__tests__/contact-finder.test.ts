@@ -1,12 +1,16 @@
-import { describe, test, expect, mock, beforeEach } from "bun:test";
-
-// Mock outreach-db before importing contact-finder
-mock.module("../outreach-db", () => ({
-  createContact: mock(() => {}),
-  getContactsByCompany: mock(() => []),
-}));
-
+import { describe, test, expect, mock, beforeEach, afterEach, spyOn } from "bun:test";
+import * as outreachDb from "../outreach-db";
 import { findContacts, extractDomain, formatContacts, type FoundContact } from "../contact-finder";
+
+// Use spyOn instead of mock.module to avoid global pollution
+beforeEach(() => {
+  spyOn(outreachDb, "createContact").mockImplementation(mock(() => {}));
+  spyOn(outreachDb, "getContactsByCompany").mockImplementation(mock(() => []));
+});
+
+afterEach(() => {
+  mock.restore();
+});
 
 describe("extractDomain", () => {
   test("extracts domain from URL", () => {
