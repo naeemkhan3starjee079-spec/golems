@@ -89,8 +89,10 @@ Switch back to local with: `LLM_BACKEND=ollama STATE_BACKEND=file TELEGRAM_MODE=
 - **`draft-reply.ts`** — template-based reply drafting (category + intent)
 - **New MCP tool:** `email_draftReply` — generate reply drafts with intent (accept/decline/interested/followup/acknowledge)
 
-### Track E: Agent Runner
-- **`lib/agent-runner.ts`** — unified multi-model agent runner replacing cursor-helper, gemini-helper, kiro-helper
+### Track E: Agent Runner + Helpers Layer
+- **`lib/helpers.ts`** — CLI helper layer with rate limiting, fallback chain (gemini → kiro → codex → cursor → haiku)
+- **`lib/agent-runner.ts`** — research workflows on top of helpers.ts (save-to-file, verification, discovery)
+- **`helpers-status.ts`** — CLI for `golems helpers` command (shows all backend status)
 - **telegram-bot.ts** import updated from cursor-helper to agent-runner
 
 ### Track F: Follow-up Tracking
@@ -412,7 +414,8 @@ golems-zikaron/                    # Code repo: ~/Gits/golems-zikaron/
 │   ├── lib/
 │   │   ├── load-env.ts            # Env loader for launchd (import first!)
 │   │   ├── shared-types.ts        # Canonical TopicStyle/SemanticStyleData
-│   │   └── agent-runner.ts        # Unified multi-model agent runner
+│   │   ├── helpers.ts             # CLI helper layer (gemini/cursor/codex/kiro/haiku) + rate limits
+│   │   └── agent-runner.ts        # Research workflows using helpers.ts
 │   ├── email-golem/               # Email triage + routing + drafts
 │   │   ├── index.ts               # Main entry (10min cron)
 │   │   ├── gmail-client.ts        # Gmail API wrapper

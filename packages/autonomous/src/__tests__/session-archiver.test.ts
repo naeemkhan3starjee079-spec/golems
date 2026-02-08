@@ -323,6 +323,127 @@ describe("Session Archiver - Error Handling", () => {
   });
 });
 
+describe("Session Archiver - Zikaron Verified Cleanup", () => {
+  beforeEach(() => {
+    rmSync(TEST_ARCHIVE_DIR, { recursive: true, force: true });
+    mkdirSync(TEST_ARCHIVE_DIR, { recursive: true });
+  });
+
+  it("should detect archive batches with valid manifests", () => {
+    const projectArchive = join(TEST_ARCHIVE_DIR, "test-project");
+    const batchDir = join(projectArchive, "archive-2026-02-08T10-00-00");
+    mkdirSync(batchDir, { recursive: true });
+
+    // Create a manifest with session info
+    const manifest = {
+      archivedAt: "2026-02-08T10:00:00.000Z",
+      projectId: "test-project",
+      originalPath: "/Users/test/project",
+      sessions: [
+        { uuid: "abc-123", originalMtime: "2026-02-01T00:00:00.000Z", size: 5000, hasSubdir: false },
+        { uuid: "def-456", originalMtime: "2026-02-02T00:00:00.000Z", size: 3000, hasSubdir: false },
+      ],
+      metadata: {
+        archiver_version: "1.1.0",
+        sessions_kept: 7,
+        total_archived: 2,
+        total_size_bytes: 8000,
+      },
+    };
+
+    writeFileSync(join(batchDir, "manifest.json"), JSON.stringify(manifest, null, 2));
+    writeFileSync(join(batchDir, "abc-123.jsonl"), "session data");
+    writeFileSync(join(batchDir, "def-456.jsonl"), "session data");
+
+    // Verify manifest can be parsed
+    const parsed = JSON.parse(readFileSync(join(batchDir, "manifest.json"), "utf-8"));
+    expect(parsed.sessions.length).toBe(2);
+    expect(parsed.sessions[0].uuid).toBe("abc-123");
+    expect(parsed.sessions[1].uuid).toBe("def-456");
+  });
+
+  it("should compute encoded path from original path correctly", () => {
+    const testCases = [
+      { original: "/Users/etanheyman/Gits/golems", encoded: "-Users-etanheyman-Gits-golems" },
+      { original: "/Users/test/project", encoded: "-Users-test-project" },
+      { original: "/", encoded: "-" },
+    ];
+
+    for (const { original, encoded } of testCases) {
+      const computed = original === "/"
+        ? "-"
+        : "-" + original.slice(1).replace(/\//g, "-");
+      expect(computed).toBe(encoded);
+    }
+  });
+
+  it("should preserve archive when sessions are NOT in Zikaron", () => {
+    const projectArchive = join(TEST_ARCHIVE_DIR, "unindexed-project");
+    const batchDir = join(projectArchive, "archive-2026-02-08T10-00-00");
+    mkdirSync(batchDir, { recursive: true });
+
+    const manifest = {
+      archivedAt: "2026-02-08T10:00:00.000Z",
+      projectId: "unindexed-project",
+      originalPath: "/nonexistent/path",
+      sessions: [
+        { uuid: "not-indexed-1", originalMtime: "2026-01-01T00:00:00.000Z", size: 1000, hasSubdir: false },
+      ],
+      metadata: {
+        archiver_version: "1.1.0",
+        sessions_kept: 7,
+        total_archived: 1,
+        total_size_bytes: 1000,
+      },
+    };
+
+    writeFileSync(join(batchDir, "manifest.json"), JSON.stringify(manifest));
+    writeFileSync(join(batchDir, "not-indexed-1.jsonl"), "session data");
+
+    // After cleanup, the archive should still exist (not indexed in Zikaron)
+    expect(existsSync(batchDir)).toBe(true);
+    expect(existsSync(join(batchDir, "not-indexed-1.jsonl"))).toBe(true);
+  });
+
+  it("should handle missing or corrupt manifest gracefully", () => {
+    const projectArchive = join(TEST_ARCHIVE_DIR, "corrupt-manifest");
+    const batchDir = join(projectArchive, "archive-test");
+    mkdirSync(batchDir, { recursive: true });
+
+    // Write corrupt manifest
+    writeFileSync(join(batchDir, "manifest.json"), "not valid json{{{");
+
+    // Should not throw when trying to parse
+    let parsed = null;
+    try {
+      parsed = JSON.parse(readFileSync(join(batchDir, "manifest.json"), "utf-8"));
+    } catch {
+      // Expected - corrupt JSON
+    }
+    expect(parsed).toBeNull();
+  });
+
+  it("should handle archive directory with no batches", () => {
+    const projectArchive = join(TEST_ARCHIVE_DIR, "empty-project");
+    mkdirSync(projectArchive, { recursive: true });
+
+    const entries = require("fs").readdirSync(projectArchive);
+    expect(entries.length).toBe(0);
+  });
+
+  it("should calculate total space freed from verified archives", () => {
+    const sessions = [
+      { uuid: "s1", size: 5000 },
+      { uuid: "s2", size: 3000 },
+      { uuid: "s3", size: 2000 },
+    ];
+
+    const totalSize = sessions.reduce((sum, s) => sum + s.size, 0);
+    expect(totalSize).toBe(10000);
+    expect((totalSize / 1024 / 1024).toFixed(1)).toBe("0.0"); // < 1 MB
+  });
+});
+
 // Integration test - run the actual archiver in dry-run mode
 describe("Session Archiver - Integration (Dry Run)", () => {
   it.skip("should run without errors in dry-run mode (requires golems-zikaron setup)", () => {

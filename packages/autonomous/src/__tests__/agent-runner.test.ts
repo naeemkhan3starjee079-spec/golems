@@ -15,8 +15,13 @@ import {
 describe("Agent Runner", () => {
   describe("AgentBackend type", () => {
     it("includes all supported backends", () => {
-      const backends: AgentBackend[] = ["cursor", "ollama", "claude"];
+      // All helper backends + local backends
+      const backends: AgentBackend[] = ["gemini", "cursor", "codex", "kiro", "haiku", "ollama", "claude"];
+      expect(backends).toContain("gemini");
       expect(backends).toContain("cursor");
+      expect(backends).toContain("codex");
+      expect(backends).toContain("kiro");
+      expect(backends).toContain("haiku");
       expect(backends).toContain("ollama");
       expect(backends).toContain("claude");
     });
@@ -27,11 +32,11 @@ describe("Agent Runner", () => {
       const result: AgentRunResult = {
         output: "test output",
         success: true,
-        backend: "cursor",
+        backend: "gemini",
       };
       expect(result.output).toBe("test output");
       expect(result.success).toBe(true);
-      expect(result.backend).toBe("cursor");
+      expect(result.backend).toBe("gemini");
     });
 
     it("can include error field", () => {
@@ -53,6 +58,14 @@ describe("Agent Runner", () => {
         outputPath: "/tmp/research.md",
       };
       expect(result.outputPath).toBe("/tmp/research.md");
+    });
+
+    it("works with all helper backends", () => {
+      const helperBackends: AgentBackend[] = ["gemini", "kiro", "codex", "cursor", "haiku"];
+      for (const backend of helperBackends) {
+        const result: AgentRunResult = { output: "", success: true, backend };
+        expect(result.backend).toBe(backend);
+      }
     });
   });
 
@@ -87,9 +100,16 @@ describe("Agent Runner", () => {
     it("always includes ollama and claude", () => {
       const backends = getAvailableBackends();
       expect(Array.isArray(backends)).toBe(true);
-      // ollama and claude are unconditionally listed; cursor depends on installation
       expect(backends).toContain("ollama");
       expect(backends).toContain("claude");
+    });
+
+    it("returns only AgentBackend values", () => {
+      const validBackends = new Set(["gemini", "cursor", "codex", "kiro", "haiku", "ollama", "claude"]);
+      const backends = getAvailableBackends();
+      for (const b of backends) {
+        expect(validBackends.has(b)).toBe(true);
+      }
     });
   });
 });

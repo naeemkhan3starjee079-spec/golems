@@ -13,6 +13,7 @@
 import { existsSync, readdirSync, statSync, readFileSync, mkdirSync, renameSync, writeFileSync, unlinkSync, lstatSync, realpathSync, rmSync } from "fs";
 import { join, basename, dirname } from "path";
 import { homedir } from "os";
+import { execSync } from "child_process";
 
 // Configuration
 // Keep sessions from the last N DAYS of activity (not N sessions!)
@@ -421,6 +422,125 @@ function cleanupExtraDirectories(dryRun: boolean): number {
   return totalCleaned;
 }
 
+// Zikaron DB path (sqlite-vec with indexed sessions)
+const ZIKARON_DB_PATH = join(homedir(), ".local", "share", "zikaron", "zikaron.db");
+
+/**
+ * Check if a session UUID has been indexed by Zikaron
+ * Uses sqlite3 CLI to avoid pulling apsw into the Bun project
+ */
+function isSessionIndexedInZikaron(sessionUuid: string, projectEncodedPath: string): boolean {
+  if (!existsSync(ZIKARON_DB_PATH)) return false;
+
+  try {
+    // Source file path as Zikaron stores it
+    const sourcePath = join(CLAUDE_PROJECTS_DIR, projectEncodedPath, `${sessionUuid}.jsonl`);
+    const result = execSync(
+      `sqlite3 "${ZIKARON_DB_PATH}" "SELECT COUNT(*) FROM chunks WHERE source_file = '${sourcePath}'"`,
+      { encoding: "utf-8", timeout: 5000 }
+    ).trim();
+    return parseInt(result) > 0;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Clean up archived sessions that Zikaron has already indexed.
+ * Deletes local archive copies to free disk space.
+ */
+function cleanupVerifiedArchives(dryRun: boolean): { deleted: number; sizeFreed: number } {
+  console.log("\n" + "=".repeat(60));
+  console.log("Cleaning Verified Archives (Zikaron-indexed → delete local)");
+  console.log("=".repeat(60));
+
+  if (!existsSync(LOCAL_ARCHIVE_DIR)) {
+    console.log("  No archive directory found");
+    return { deleted: 0, sizeFreed: 0 };
+  }
+
+  if (!existsSync(ZIKARON_DB_PATH)) {
+    console.log("  Zikaron DB not found — skipping cleanup");
+    return { deleted: 0, sizeFreed: 0 };
+  }
+
+  let totalDeleted = 0;
+  let totalSizeFreed = 0;
+
+  const projectDirs = readdirSync(LOCAL_ARCHIVE_DIR);
+
+  for (const projectDir of projectDirs) {
+    const projectArchivePath = join(LOCAL_ARCHIVE_DIR, projectDir);
+    if (!statSync(projectArchivePath).isDirectory()) continue;
+
+    const batches = readdirSync(projectArchivePath);
+
+    for (const batch of batches) {
+      const batchPath = join(projectArchivePath, batch);
+      if (!statSync(batchPath).isDirectory()) continue;
+
+      const manifestPath = join(batchPath, "manifest.json");
+      if (!existsSync(manifestPath)) continue;
+
+      let manifest: ArchiveManifest;
+      try {
+        manifest = JSON.parse(readFileSync(manifestPath, "utf-8"));
+      } catch {
+        continue;
+      }
+
+      // Find the encoded project path from the original path
+      const encodedPath = manifest.originalPath === "/"
+        ? "-"
+        : "-" + manifest.originalPath.slice(1).replace(/\//g, "-");
+
+      let batchAllIndexed = true;
+      let batchSize = 0;
+
+      for (const session of manifest.sessions) {
+        const indexed = isSessionIndexedInZikaron(session.uuid, encodedPath);
+        if (!indexed) {
+          batchAllIndexed = false;
+          break;
+        }
+        batchSize += session.size;
+      }
+
+      if (batchAllIndexed && manifest.sessions.length > 0) {
+        console.log(`  ${dryRun ? "[DRY RUN] Would delete" : "Deleting"}: ${batchPath} (${manifest.sessions.length} sessions, ${(batchSize / 1024 / 1024).toFixed(1)} MB)`);
+
+        if (!dryRun) {
+          try {
+            rmSync(batchPath, { recursive: true });
+            totalDeleted += manifest.sessions.length;
+            totalSizeFreed += batchSize;
+          } catch (err) {
+            console.error(`    ERROR deleting ${batchPath}: ${err}`);
+          }
+        } else {
+          totalDeleted += manifest.sessions.length;
+          totalSizeFreed += batchSize;
+        }
+      } else if (!batchAllIndexed) {
+        console.log(`  Keeping: ${batchPath} (not all sessions indexed by Zikaron)`);
+      }
+    }
+
+    // Clean up empty project directories
+    if (!dryRun && existsSync(projectArchivePath)) {
+      const remaining = readdirSync(projectArchivePath);
+      if (remaining.length === 0) {
+        rmSync(projectArchivePath, { recursive: true });
+        console.log(`  Removed empty project dir: ${projectDir}`);
+      }
+    }
+  }
+
+  console.log(`  ${dryRun ? "Would delete" : "Deleted"}: ${totalDeleted} verified sessions (${(totalSizeFreed / 1024 / 1024).toFixed(1)} MB)`);
+
+  return { deleted: totalDeleted, sizeFreed: totalSizeFreed };
+}
+
 /**
  * Main archival process
  */
@@ -508,10 +628,13 @@ async function main(): Promise<void> {
     }
   }
 
+  // Clean up archived sessions verified in Zikaron
+  const { deleted: verifiedDeleted, sizeFreed: verifiedSizeFreed } = cleanupVerifiedArchives(dryRun);
+
   // Clean up extra directories (debug logs, backups)
   const extraCleaned = cleanupExtraDirectories(dryRun);
 
-  const totalSpaceFreed = totalSizeToArchive + extraCleaned;
+  const totalSpaceFreed = totalSizeToArchive + extraCleaned + verifiedSizeFreed;
 
   console.log("\n" + "=".repeat(60));
   console.log("Summary");
@@ -526,6 +649,7 @@ async function main(): Promise<void> {
     }
   }
   console.log(`Session archive size: ${(totalSizeToArchive / 1024 / 1024 / 1024).toFixed(2)} GB`);
+  console.log(`Verified archives cleaned: ${verifiedDeleted} sessions (${(verifiedSizeFreed / 1024 / 1024).toFixed(0)} MB)`);
   console.log(`Extra cleanup size: ${(extraCleaned / 1024 / 1024).toFixed(0)} MB`);
   console.log(`Total space freed: ${(totalSpaceFreed / 1024 / 1024 / 1024).toFixed(2)} GB`);
   console.log(`Archive location: ${LOCAL_ARCHIVE_DIR}`);
@@ -544,6 +668,8 @@ async function main(): Promise<void> {
       sessionsArchived: totalArchived,
       sessionsFailed: totalFailed,
       sizeArchived: totalSizeToArchive,
+      verifiedArchivesCleaned: verifiedDeleted,
+      verifiedArchivesSizeFreed: verifiedSizeFreed,
       extraCleaned,
       totalSpaceFreed,
     };

@@ -2,23 +2,29 @@
  * Agent Runner - Unified Multi-Model Agent Interface
  *
  * Provides a common interface for running AI agents across different backends:
- * - cursor: Cursor CLI (Gemini-powered codebase research & verification)
+ * - cursor: Cursor CLI (@codebase indexing, verification, code gen)
+ * - gemini: Google Gemini CLI (free, 1K/day, research & analysis)
+ * - codex: OpenAI Codex CLI (ChatGPT Plus, exec mode)
+ * - kiro: AWS Kiro CLI (free tier, chat mode)
+ * - haiku: Claude Haiku via API (cheap, fast)
  * - ollama: Local Ollama (scoring, classification, JSON extraction)
  * - claude: Claude Code CLI (complex reasoning, code generation)
  *
- * Shared infrastructure: subprocess management, timeouts, notifications, file I/O.
+ * For simple prompt→response flows, use runHelper() from lib/helpers.ts directly.
+ * This module adds research workflows (save to file, verification, discovery).
  */
 
 import { existsSync, mkdirSync, writeFileSync, readFileSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
+import { type HelperBackend, runHelper, getHelperStatus, FALLBACK_CHAIN } from "./helpers";
 
 // ═══════════════════════════════════════════════════════
 // TYPES
 // ═══════════════════════════════════════════════════════
 
-/** Supported AI agent backends */
-export type AgentBackend = "cursor" | "ollama" | "claude";
+/** Supported AI agent backends (superset of HelperBackend + local-only backends) */
+export type AgentBackend = HelperBackend | "ollama" | "claude";
 
 /** Result from running an agent task */
 export interface AgentRunResult {
@@ -55,7 +61,7 @@ export interface VerificationResult {
 const HOME = process.env.HOME || homedir();
 const GITS = join(HOME, "Gits");
 const RESEARCH_BASE = join(HOME, ".golems-zikaron/research/gits");
-const NOTIFY_URL = "http://localhost:3847/notify";
+const NOTIFY_URL = "http://127.0.0.1:3847/notify";
 const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
 // ═══════════════════════════════════════════════════════
@@ -157,11 +163,58 @@ export async function runWithTimeout(
 }
 
 // ═══════════════════════════════════════════════════════
-// BACKEND: CURSOR
+// GENERIC RESEARCH (any helper backend)
+// ═══════════════════════════════════════════════════════
+
+/**
+ * Run any helper backend for research, saving output to the research directory.
+ * Uses the helpers.ts fallback chain if no specific backend is requested.
+ */
+export async function runResearch(
+  repo: string,
+  topic: string,
+  prompt: string,
+  options: AgentRunOptions = {}
+): Promise<AgentRunResult> {
+  const repoPath = join(GITS, repo);
+  if (!repoPath.startsWith(GITS + "/")) {
+    return { output: "", success: false, backend: options.backend as AgentBackend || "gemini", error: `Invalid repo path: ${repo}` };
+  }
+  if (!existsSync(repoPath)) {
+    return { output: "", success: false, backend: options.backend as AgentBackend || "gemini", error: `Repository not found: ${repoPath}` };
+  }
+
+  const sanitizedTopic = sanitizeFilename(topic);
+  const outputDir = join(RESEARCH_BASE, repo);
+  const outputPath = join(outputDir, `${sanitizedTopic}.md`);
+  ensureDir(outputDir);
+
+  // Map AgentBackend to HelperBackend (skip non-helper backends)
+  const helperBackend = options.backend && options.backend !== "ollama" && options.backend !== "claude"
+    ? options.backend as HelperBackend
+    : undefined;
+
+  try {
+    const result = await runHelper(prompt, {
+      backend: helperBackend,
+      timeout: options.timeoutMs,
+    });
+
+    writeFileSync(outputPath, result.output);
+    return { output: result.output, success: true, backend: result.backend, outputPath };
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err);
+    return { output: "", success: false, backend: helperBackend || "gemini", error };
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// BACKEND: CURSOR (codebase-aware research)
 // ═══════════════════════════════════════════════════════
 
 /**
  * Run Cursor CLI for codebase research.
+ * Cursor has @codebase indexing — best for whole-project verification and cross-file analysis.
  */
 export async function runCursorResearch(
   repo: string,
@@ -330,24 +383,41 @@ export function readResearch(repo: string, topic: string): string | null {
 // BACKEND DISCOVERY
 // ═══════════════════════════════════════════════════════
 
+/** CLI binary names for each helper backend */
+const HELPER_BINARIES: Record<HelperBackend, string> = {
+  gemini: "gemini",
+  cursor: "cursor",
+  codex: "codex",
+  kiro: "kiro-cli",
+  haiku: "", // API-based, no binary
+};
+
 /**
  * Get list of available agent backends on this system.
+ * Checks CLI installation + rate limit status for helpers.
  */
 export function getAvailableBackends(): AgentBackend[] {
   const backends: AgentBackend[] = [];
 
-  // Ollama is always available (local)
+  // Local backends (always available)
   backends.push("ollama");
-
-  // Claude is always available (we're running in it)
   backends.push("claude");
 
-  // Cursor - check if agent command exists
-  try {
-    const proc = Bun.spawnSync(["which", "cursor"], { stdout: "pipe", stderr: "pipe" });
-    if (proc.exitCode === 0) backends.push("cursor");
-  } catch {
-    // Not available
+  // Check each helper CLI
+  const helperStatus = getHelperStatus();
+  for (const backend of FALLBACK_CHAIN) {
+    const binary = HELPER_BINARIES[backend];
+    if (!binary) {
+      // API-based (haiku) - always available if not rate-limited
+      if (helperStatus[backend].available) backends.push(backend);
+      continue;
+    }
+    try {
+      const proc = Bun.spawnSync(["which", binary], { stdout: "pipe", stderr: "pipe" });
+      if (proc.exitCode === 0) backends.push(backend);
+    } catch {
+      // Not installed
+    }
   }
 
   return backends;

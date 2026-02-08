@@ -161,19 +161,27 @@ export function getHelperStatus(now: Date = new Date()): Record<HelperBackend, {
   return result as Record<HelperBackend, { available: boolean; resets_at: string | null }>;
 }
 
+/** Whether a backend takes the prompt as a CLI argument (vs stdin) */
+const PROMPT_VIA_ARG: Set<HelperBackend> = new Set(["cursor", "codex"]);
+
 /**
  * Build the CLI command for a given backend.
+ * Backends in PROMPT_VIA_ARG get the prompt appended as the last arg.
+ * Others receive the prompt via stdin.
  */
-function buildCommand(backend: HelperBackend, opts: HelperOptions): string[] {
+function buildCommand(backend: HelperBackend, prompt: string, opts: HelperOptions): string[] {
   switch (backend) {
     case "gemini":
+      // Reads prompt from stdin
       return ["gemini"];
     case "cursor":
-      // Cursor will receive prompt via stdin
-      return ["cursor", "agent", "--model", "gpt-5.2-codex-high", "--output-format", "text"];
+      // -p = non-interactive mode, prompt as last arg
+      return ["cursor", "agent", "-p", "--model", "gpt-5.2-codex-high", "--output-format", "text", prompt];
     case "codex":
-      return ["codex"];
+      // npx codex exec --full-auto, prompt as last arg
+      return ["npx", "codex", "exec", "--full-auto", prompt];
     case "kiro":
+      // Reads prompt from stdin
       return ["kiro-cli", "chat", "--no-interactive", "-w", "never"];
     case "haiku":
       // Handled separately via cloud-llm
@@ -181,24 +189,26 @@ function buildCommand(backend: HelperBackend, opts: HelperOptions): string[] {
   }
 }
 
-
 /**
- * Run a CLI helper command via subprocess with stdin piping.
+ * Run a CLI helper command via subprocess.
+ * Gemini and Kiro receive prompt via stdin; Cursor and Codex via CLI arg.
  */
 async function runCliHelper(backend: HelperBackend, prompt: string, opts: HelperOptions): Promise<string> {
-  const args = buildCommand(backend, opts);
+  const args = buildCommand(backend, prompt, opts);
   const timeout = opts.timeout || 120_000;
+  const usesStdin = !PROMPT_VIA_ARG.has(backend);
 
   const proc = Bun.spawn(args, {
-    stdin: "pipe",
+    stdin: usesStdin ? "pipe" : undefined,
     stdout: "pipe",
     stderr: "pipe",
     env: { ...process.env },
   });
 
-  // Write prompt to stdin
-  proc.stdin.write(prompt);
-  proc.stdin.end();
+  if (usesStdin) {
+    proc.stdin.write(prompt);
+    proc.stdin.end();
+  }
 
   const timer = setTimeout(() => proc.kill(), timeout);
 
