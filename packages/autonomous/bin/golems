@@ -66,6 +66,7 @@ COMMANDS:
   version       Show current version info
   queue         Chat queue controls (list, add, edit, remove, clean)
   explore       Codebase exploration with CLI agents (templates, agents, latest)
+  sweep         Run quality sweep (package.json, tests, TS, docs, git)
   i18n          Internationalization info (locale, keys, set)
   e2e           Run Playwright E2E tests (admin-ui + docsite)
   index-whatsapp <file> --chat "Name"  Index WhatsApp export in Zikaron
@@ -872,6 +873,14 @@ case "${1:-status}" in
         ${EDITOR:-vim} "$HOME/.golems/config.yaml"
         ;;
     esac
+    ;;
+  sweep|quality)
+    cd "$GOLEMS_HOME" && bun -e "
+      import { runSweep, formatSweepReport } from './src/lib/quality-sweep';
+      const pkgDir = '${2:-$GOLEMS_HOME}';
+      const report = runSweep(pkgDir, '$HOME/Gits/golems');
+      console.log(formatSweepReport(report));
+    "
     ;;
   i18n|locale)
     case "${2:-info}" in
