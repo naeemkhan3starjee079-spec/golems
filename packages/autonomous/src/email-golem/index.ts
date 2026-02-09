@@ -345,6 +345,8 @@ async function processEmails(options: { dryRun?: boolean; maxEmails?: number } =
     console.log(`✓ Found ${emails.length} emails`);
   } catch (err: any) {
     console.error("❌ Gmail fetch failed:", err.message);
+    // Still report that service ran (even on failure) so dashboard shows activity
+    if (!dryRun) await reportServiceRun("lastEmailCheck");
     return;
   }
 
@@ -354,6 +356,8 @@ async function processEmails(options: { dryRun?: boolean; maxEmails?: number } =
 
   if (newEmails.length === 0) {
     console.log("No new emails. Done.");
+    // Report service ran even with no new emails
+    if (!dryRun) await reportServiceRun("lastEmailCheck");
     return;
   }
 

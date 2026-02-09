@@ -287,11 +287,14 @@ export async function reportServiceRun(key: string): Promise<void> {
 
   try {
     const client = STATE_BACKEND === "supabase" ? getSupabase() : createClient(url, serviceKey);
-    await client.from("golem_state").upsert({
+    const { error } = await client.from("golem_state").upsert({
       key,
       value: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     });
+    if (error) {
+      console.error(`[StateStore] Supabase upsert error for "${key}":`, error.message);
+    }
   } catch (err) {
     // Dashboard reporting is non-critical, never fail the service
     console.error(`[StateStore] Failed to report service run "${key}":`, err);

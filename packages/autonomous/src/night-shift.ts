@@ -522,9 +522,14 @@ async function nightShift(): Promise<NightShiftResult[]> {
 
   // Sync key state values to Supabase (so dashboard can see night shift data)
   try {
-    const { reportServiceRun } = await import("./lib/state-store");
+    const { reportServiceRun, setState: setSupabaseState } = await import("./lib/state-store");
     // reportServiceRun always writes to Supabase regardless of STATE_BACKEND
     await reportServiceRun("lastNightShift");
+    // Also sync dashboard-visible values
+    await Promise.allSettled([
+      setSupabaseState("nightShiftTarget", state.nightShiftTarget),
+      setSupabaseState("nightShiftPRs", state.nightShiftPRs || []),
+    ]);
     console.log("[NightShift] Synced state to Supabase");
   } catch (err) {
     console.error("[NightShift] Failed to sync to Supabase:", err);
