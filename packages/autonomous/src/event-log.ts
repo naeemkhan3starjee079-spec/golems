@@ -4,6 +4,10 @@
  * Gives ClaudeGolem memory of actions taken while "asleep".
  * Events are injected into Claude's context at spawn time.
  *
+ * Dual-write: local JSON file + Supabase golem_events table.
+ * Local file is the primary source for context injection.
+ * Supabase is for dashboard persistence (survives Railway deploys).
+ *
  * Storage: ~/.golems-zikaron/event-log.json (max 100 events)
  */
 
@@ -11,12 +15,48 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
 import { dirname, join } from "path";
 import { randomUUID } from "crypto";
 import { homedir } from "os";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 // Default event log path
 const DEFAULT_EVENT_LOG_PATH = join(homedir(), ".golems-zikaron", "event-log.json");
 
 // Maximum events to keep
 const MAX_EVENTS = 100;
+
+// ─── Supabase (persistent storage for dashboard) ─────────────────
+
+let _supabase: SupabaseClient | null = null;
+
+function getSupabase(): SupabaseClient | null {
+  if (_supabase) return _supabase;
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
+  if (!url || !key) return null;
+  _supabase = createClient(url, key);
+  return _supabase;
+}
+
+/**
+ * Fire-and-forget insert to Supabase golem_events table.
+ * Never throws — dashboard persistence must not break the main flow.
+ */
+function persistEventToSupabase(event: GolemEvent): void {
+  const sb = getSupabase();
+  if (!sb) return;
+
+  sb.from("golem_events")
+    .insert({
+      id: event.id,
+      actor: event.actor,
+      type: event.type,
+      data: event.data,
+      created_at: event.timestamp,
+    })
+    .then(({ error }) => {
+      if (error) console.error("[EventLog] Supabase insert failed:", error.message);
+    })
+    .catch(() => {});
+}
 
 /** Golem actors that can produce events */
 export type GolemActor =
@@ -89,8 +129,11 @@ export async function logEvent(
     events = events.slice(-MAX_EVENTS);
   }
 
-  // Write back
+  // Write back (local file)
   writeFileSync(logPath, JSON.stringify(events, null, 2));
+
+  // Persist to Supabase (fire-and-forget, for dashboard)
+  persistEventToSupabase(event);
 }
 
 /**

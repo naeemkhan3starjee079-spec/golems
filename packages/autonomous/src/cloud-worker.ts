@@ -72,18 +72,36 @@ async function getBriefing() {
 // Safe execution wrapper
 // ═══════════════════════════════════════════════════════
 
+async function getServiceRunReporter() {
+  const { createClient } = await import("@supabase/supabase-js");
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key);
+}
+
 async function safeRun(name: string, fn: () => Promise<unknown>): Promise<void> {
   const start = Date.now();
+  const startedAt = new Date().toISOString();
   console.log(`[CloudWorker] Starting ${name}...`);
 
+  let status = "success";
+  let error: string | null = null;
+  let result: Record<string, any> = {};
+
   try {
-    await fn();
+    const fnResult = await fn();
+    if (fnResult && typeof fnResult === "object") {
+      result = fnResult as Record<string, any>;
+    }
     const elapsed = ((Date.now() - start) / 1000).toFixed(1);
     console.log(`[CloudWorker] ${name} completed (${elapsed}s)`);
   } catch (err) {
     const elapsed = ((Date.now() - start) / 1000).toFixed(1);
     const message = err instanceof Error ? err.message : String(err);
     console.error(`[CloudWorker] ${name} FAILED (${elapsed}s):`, message);
+    status = "error";
+    error = message;
 
     // Notify on failure
     const notify = await getSendNotification();
@@ -93,6 +111,30 @@ async function safeRun(name: string, fn: () => Promise<unknown>): Promise<void> 
       source: "healthcheck",
       priority: "high",
     }).catch(() => {}); // Don't let notification failure cascade
+  }
+
+  // Report service run to Supabase (fire-and-forget)
+  try {
+    const sb = await getServiceRunReporter();
+    if (sb) {
+      const durationMs = Date.now() - start;
+      sb.from("service_runs")
+        .insert({
+          service: name.toLowerCase().replace(/[^a-z0-9]/g, "-"),
+          started_at: startedAt,
+          ended_at: new Date().toISOString(),
+          duration_ms: durationMs,
+          status,
+          result,
+          error,
+        })
+        .then(({ error: dbErr }) => {
+          if (dbErr) console.error("[CloudWorker] service_runs insert failed:", dbErr.message);
+        })
+        .catch(() => {});
+    }
+  } catch {
+    // Non-critical
   }
 }
 
