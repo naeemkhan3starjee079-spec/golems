@@ -30,11 +30,6 @@ export type GolemActor =
 
 /** Types of events that golems can log */
 export type EventType =
-  | "soltome_post"
-  | "draft_approved"
-  | "draft_rejected"
-  | "draft_scored"
-  | "pattern_extracted"
   | "email_alert"
   | "email_routed"
   | "nightshift_pr"
@@ -197,34 +192,6 @@ function formatAction(event: GolemEvent): string {
   const { type, data } = event;
 
   switch (type) {
-    case "soltome_post": {
-      const title = data.title || "(untitled)";
-      const credits = data.creditsRemaining ? ` (${data.creditsRemaining} credits left)` : "";
-      return `posted to Soltome: "${title}"${credits}`;
-    }
-
-    case "draft_approved": {
-      const title = data.title || "(untitled)";
-      return `approved draft: "${title}"`;
-    }
-
-    case "draft_rejected": {
-      const title = data.title || "(untitled)";
-      const reason = data.reason ? ` - ${data.reason}` : "";
-      return `rejected draft: "${title}"${reason}`;
-    }
-
-    case "draft_scored": {
-      const count = data.count || 1;
-      const avg = data.avgScore ? ` (avg: ${data.avgScore})` : "";
-      return `scored ${count} draft${count !== 1 ? "s" : ""}${avg}`;
-    }
-
-    case "pattern_extracted": {
-      const count = data.patternCount || "several";
-      return `extracted ${count} patterns from posts`;
-    }
-
     case "email_alert": {
       const subject = data.subject || "(no subject)";
       return `sent alert: "${subject}"`;

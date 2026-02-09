@@ -40,7 +40,7 @@ describe("Event Log - logEvent()", () => {
 
   it("should create event log file if not exists", async () => {
     await logEvent(
-      "soltome_post",
+      "job_match",
       { title: "Test post" },
       "claudegolem",
       TEST_EVENT_LOG_PATH
@@ -51,7 +51,7 @@ describe("Event Log - logEvent()", () => {
 
   it("should append event with correct structure", async () => {
     await logEvent(
-      "draft_approved",
+      "email_alert",
       { draftId: "draft-123" },
       "claudegolem",
       TEST_EVENT_LOG_PATH
@@ -64,13 +64,13 @@ describe("Event Log - logEvent()", () => {
     expect(event.id).toBeDefined();
     expect(event.timestamp).toBeDefined();
     expect(event.actor).toBe("claudegolem");
-    expect(event.type).toBe("draft_approved");
+    expect(event.type).toBe("email_alert");
     expect(event.data.draftId).toBe("draft-123");
   });
 
   it("should append multiple events", async () => {
-    await logEvent("soltome_post", { title: "Post 1" }, "claudegolem", TEST_EVENT_LOG_PATH);
-    await logEvent("draft_approved", { draftId: "d1" }, "claudegolem", TEST_EVENT_LOG_PATH);
+    await logEvent("job_match", { title: "Post 1" }, "claudegolem", TEST_EVENT_LOG_PATH);
+    await logEvent("email_alert", { draftId: "d1" }, "claudegolem", TEST_EVENT_LOG_PATH);
     await logEvent("email_alert", { subject: "Interview" }, "emailgolem", TEST_EVENT_LOG_PATH);
 
     const content = JSON.parse(readFileSync(TEST_EVENT_LOG_PATH, "utf-8"));
@@ -86,14 +86,14 @@ describe("Event Log - logEvent()", () => {
       id: `old-${i}`,
       timestamp: new Date(Date.now() - (100 - i) * 60000).toISOString(),
       actor: "claudegolem",
-      type: "draft_approved",
+      type: "email_alert",
       data: { index: i },
     }));
 
     writeFileSync(TEST_EVENT_LOG_PATH, JSON.stringify(existingEvents, null, 2));
 
     // Add new event
-    await logEvent("soltome_post", { title: "New post" }, "claudegolem", TEST_EVENT_LOG_PATH);
+    await logEvent("job_match", { title: "New post" }, "claudegolem", TEST_EVENT_LOG_PATH);
 
     const content = JSON.parse(readFileSync(TEST_EVENT_LOG_PATH, "utf-8"));
 
@@ -104,7 +104,7 @@ describe("Event Log - logEvent()", () => {
     expect(content[0].id).not.toBe("old-0");
 
     // Last event should be the new one
-    expect(content[99].type).toBe("soltome_post");
+    expect(content[99].type).toBe("job_match");
     expect(content[99].data.title).toBe("New post");
   });
 });
@@ -140,7 +140,7 @@ describe("Event Log - getRecentEvents()", () => {
         id: "old-1",
         timestamp: new Date(now - 30 * 60 * 60 * 1000).toISOString(),
         actor: "claudegolem",
-        type: "draft_approved",
+        type: "email_alert",
         data: { old: true },
       },
       // 12 hours ago - should be included
@@ -148,7 +148,7 @@ describe("Event Log - getRecentEvents()", () => {
         id: "recent-1",
         timestamp: new Date(now - 12 * 60 * 60 * 1000).toISOString(),
         actor: "claudegolem",
-        type: "soltome_post",
+        type: "job_match",
         data: { title: "Recent post" },
       },
       // 2 hours ago - should be included
@@ -180,7 +180,7 @@ describe("Event Log - getRecentEvents()", () => {
         id: "within-24h",
         timestamp: new Date(now - 20 * 60 * 60 * 1000).toISOString(),
         actor: "claudegolem",
-        type: "soltome_post",
+        type: "job_match",
         data: {},
       },
     ];
@@ -199,41 +199,41 @@ describe("Event Log - formatEventsForClaude()", () => {
     expect(formatted).toBe("No recent events.");
   });
 
-  it("should format soltome_post with YOU prefix", () => {
+  it("should format job_match with JobGolem attribution", () => {
     const events: GolemEvent[] = [
       {
         id: "1",
         timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2h ago
-        actor: "claudegolem",
-        type: "soltome_post",
-        data: { title: "My first post", creditsRemaining: 1800 },
+        actor: "jobgolem",
+        type: "job_match",
+        data: { company: "Google", role: "SWE", score: 9 },
       },
     ];
 
     const formatted = formatEventsForClaude(events);
 
-    expect(formatted).toContain("YOU");
-    expect(formatted).toContain("posted to Soltome");
-    expect(formatted).toContain("My first post");
+    expect(formatted).toContain("JobGolem");
+    expect(formatted).toContain("found job match");
+    expect(formatted).toContain("Google");
     expect(formatted).toContain("2h ago");
   });
 
-  it("should format draft_approved", () => {
+  it("should format email_alert with YOU prefix for claudegolem", () => {
     const events: GolemEvent[] = [
       {
         id: "2",
         timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(), // 4h ago
         actor: "claudegolem",
-        type: "draft_approved",
-        data: { title: "Draft title" },
+        type: "email_alert",
+        data: { subject: "Interview invitation" },
       },
     ];
 
     const formatted = formatEventsForClaude(events);
 
     expect(formatted).toContain("YOU");
-    expect(formatted).toContain("approved draft");
-    expect(formatted).toContain("Draft title");
+    expect(formatted).toContain("sent alert");
+    expect(formatted).toContain("Interview invitation");
   });
 
   it("should format email_alert with EmailGolem attribution", () => {
@@ -254,22 +254,21 @@ describe("Event Log - formatEventsForClaude()", () => {
     expect(formatted).toContain("Interview at Microsoft");
   });
 
-  it("should format draft_rejected", () => {
+  it("should format email_routed", () => {
     const events: GolemEvent[] = [
       {
         id: "4",
         timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(), // 1h ago
-        actor: "claudegolem",
-        type: "draft_rejected",
-        data: { title: "Bad draft", reason: "Too promotional" },
+        actor: "emailgolem",
+        type: "email_routed",
+        data: { subject: "Job offer", targetGolem: "recruitergolem" },
       },
     ];
 
     const formatted = formatEventsForClaude(events);
 
-    expect(formatted).toContain("YOU");
-    expect(formatted).toContain("rejected draft");
-    expect(formatted).toContain("Bad draft");
+    expect(formatted).toContain("EmailGolem");
+    expect(formatted).toContain("routed");
   });
 
   it("should format nightshift_pr", () => {
@@ -304,14 +303,14 @@ describe("Event Log - formatEventsForClaude()", () => {
         id: "2",
         timestamp: new Date(now - 4 * 60 * 60 * 1000).toISOString(),
         actor: "claudegolem",
-        type: "draft_approved",
+        type: "email_alert",
         data: { title: "Draft 1" },
       },
       {
         id: "3",
         timestamp: new Date(now - 2 * 60 * 60 * 1000).toISOString(), // most recent
         actor: "claudegolem",
-        type: "soltome_post",
+        type: "job_match",
         data: { title: "Post 1" },
       },
     ];
@@ -357,16 +356,16 @@ describe("Event Log - Edge Cases", () => {
       {
         id: "1",
         timestamp: new Date().toISOString(),
-        actor: "claudegolem",
-        type: "soltome_post",
-        data: {}, // missing title
+        actor: "jobgolem",
+        type: "job_match",
+        data: {}, // missing company/role
       },
     ];
 
     // Should not throw
     const formatted = formatEventsForClaude(events);
     expect(formatted).toBeDefined();
-    expect(formatted).toContain("posted to Soltome");
+    expect(formatted).toContain("found job match");
   });
 
   it("should format time as minutes when less than 1 hour", () => {
@@ -375,7 +374,7 @@ describe("Event Log - Edge Cases", () => {
         id: "1",
         timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(), // 30 min ago
         actor: "claudegolem",
-        type: "soltome_post",
+        type: "job_match",
         data: { title: "Recent" },
       },
     ];

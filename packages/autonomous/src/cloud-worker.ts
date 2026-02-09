@@ -3,7 +3,7 @@
  * Cloud Worker - Railway Entry Point
  *
  * Runs all cloud golems on timezone-aware schedules in a single process.
- * Replaces launchd plists for email-golem, job-golem, briefing, and soltome-learner.
+ * Replaces launchd plists for email-golem, job-golem, and briefing.
  *
  * ══════════════════════════════════════════════════════════════
  * SCHEDULE (All times Israel/Asia/Jerusalem)
@@ -17,7 +17,6 @@
  *                    ~15 runs/week vs old 336 runs/week → 95% cost savings
  *
  *   Briefing:        8am daily
- *   Soltome Learner: 2am daily
  * ══════════════════════════════════════════════════════════════
  *
  * ENV defaults (set by Railway, or override locally):
@@ -62,11 +61,6 @@ async function getJobGolem() {
 async function getBriefing() {
   const mod = await import("./briefing");
   return mod.sendBriefing;
-}
-
-async function getSoltomeLearner() {
-  const mod = await import("./soltome-learner");
-  return mod.learnFromSoltome;
 }
 
 // ═══════════════════════════════════════════════════════
@@ -320,14 +314,10 @@ try {
     const sendBriefing = await getBriefing();
     scheduleDaily("Briefing", 8, sendBriefing);
 
-    const learnFromSoltome = await getSoltomeLearner();
-    scheduleDaily("SoltomeLearner", 2, learnFromSoltome);
-
     console.log("[CloudWorker] All services scheduled:");
     console.log("  - EmailGolem: hourly 6am-7pm (skip lunch), 10pm final, OFF overnight");
     console.log("  - JobGolem: 6am + 9am + 1pm Sun-Thu (Israeli work week)");
     console.log("  - Briefing: 8am Israel");
-    console.log("  - SoltomeLearner: 2am Israel");
   } else if (emailOnly) {
     const processEmails = await getEmailGolem();
     scheduleEmail(processEmails);

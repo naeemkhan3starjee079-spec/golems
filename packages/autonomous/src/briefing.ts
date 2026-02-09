@@ -12,7 +12,6 @@
 
 import { readFileSync } from "fs";
 import { join } from "path";
-import { getPendingDrafts } from "./post-generator";
 import { sendTelegram } from "./night-shift";
 import {
   createDbClient,
@@ -20,13 +19,13 @@ import {
   getSubscriptionSummary,
 } from "./email-golem/db-client";
 import type { Email, SubscriptionSummary } from "./email-golem/types";
-import { getRecentEvents, type GolemEvent } from "./event-log";
+
 import { generateMonthlyReport } from "./teller-golem/report";
 import { reportServiceRun } from "./lib/state-store";
 
 const HOME = process.env.HOME || "/Users/etanheyman";
 const STATE_FILE = join(HOME, ".golems-zikaron/state.json");
-const DATA_DIR = join(HOME, "Gits/golems-zikaron/data");
+
 
 interface State {
   nightShiftTarget: string;
@@ -35,7 +34,6 @@ interface State {
   lastNightShift?: string;
   lastPrUrl?: string; // deprecated
   nightShiftPRs?: { url: string; repo: string; createdAt: string }[];
-  pendingDraftIds?: string[];
 }
 
 function loadState(): State {
@@ -47,19 +45,6 @@ function loadState(): State {
       rotation: ["songscript", "zikaron", "claude-golem"],
       telegramChatId: null,
     };
-  }
-}
-
-interface Learnings {
-  posts: string[];
-  extractedAt: string;
-}
-
-function loadLearnings(): Learnings | null {
-  try {
-    return JSON.parse(readFileSync(join(DATA_DIR, "learnings.json"), "utf-8"));
-  } catch {
-    return null;
   }
 }
 
@@ -221,60 +206,11 @@ function isFirstOfMonth(): boolean {
   return new Date().getDate() === 1;
 }
 
-/**
- * Get Soltome activity from event log (last 24h)
- */
-async function getSoltomeActivity(): Promise<{
-  posts: GolemEvent[];
-  creditsRemaining: number | null;
-}> {
-  const events = await getRecentEvents(24);
-  const soltomePosts = events.filter((e) => e.type === "soltome_post");
-
-  // Get most recent credits balance
-  let creditsRemaining: number | null = null;
-  for (const post of soltomePosts) {
-    if (post.data.creditsRemaining !== undefined) {
-      creditsRemaining = post.data.creditsRemaining;
-      break; // Most recent first
-    }
-  }
-
-  return { posts: soltomePosts, creditsRemaining };
-}
-
-/**
- * Format Soltome activity section for Telegram
- */
-function formatSoltomeActivity(activity: {
-  posts: GolemEvent[];
-  creditsRemaining: number | null;
-}): string {
-  if (activity.posts.length === 0) {
-    return "";
-  }
-
-  let msg = "📢 *Soltome Activity*\n";
-
-  for (const post of activity.posts.slice(0, 3)) {
-    const title = post.data.title || "(untitled)";
-    msg += `   → "${title.slice(0, 35)}..."\n`;
-  }
-
-  if (activity.creditsRemaining !== null) {
-    msg += `💰 Credits: ${activity.creditsRemaining} remaining\n`;
-  }
-
-  return msg + "\n";
-}
-
 async function sendBriefing() {
   const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 19);
   console.log(`[${timestamp}] ☀️ Generating morning briefing...\n`);
 
   const state = loadState();
-  const drafts = getPendingDrafts();
-  const learnings = loadLearnings();
 
   // Build briefing - concise and useful
   let msg = `☀️ *Morning Briefing*\n\n`;
@@ -330,47 +266,6 @@ async function sendBriefing() {
     } catch (err) {
       console.log("[Briefing] Could not fetch subscription summary:", err);
     }
-  }
-
-  // Soltome Activity Section (posts from last 24h)
-  const soltomeActivity = await getSoltomeActivity();
-  if (soltomeActivity.posts.length > 0) {
-    msg += formatSoltomeActivity(soltomeActivity);
-    msg += separator;
-  }
-
-  // Learnings Section (from pattern learning)
-  if (learnings && learnings.posts.length > 0) {
-    msg += `*${learnings.posts.length} pattern examples* saved\n\n`;
-  }
-
-  // Drafts Section - count + categorize by topic
-  if (drafts.length > 0) {
-    const updatedState = loadState();
-    updatedState.pendingDraftIds = drafts.map((d) => d.id);
-    require("fs").writeFileSync(STATE_FILE, JSON.stringify(updatedState, null, 2));
-
-    // Categorize by keywords in title
-    const categories: Record<string, number> = {};
-    drafts.forEach((d) => {
-      const title = d.title.toLowerCase();
-      if (title.includes("ralph") || title.includes("autonomous") || title.includes("agent")) {
-        categories["agents/ralph"] = (categories["agents/ralph"] || 0) + 1;
-      } else if (title.includes("claude") || title.includes("ai") || title.includes("memory")) {
-        categories["AI/claude"] = (categories["AI/claude"] || 0) + 1;
-      } else if (title.includes("zikaron") || title.includes("conversation")) {
-        categories["zikaron"] = (categories["zikaron"] || 0) + 1;
-      } else {
-        categories["other"] = (categories["other"] || 0) + 1;
-      }
-    });
-
-    msg += `📝 *Drafts:* ${drafts.length} ready\n`;
-    const cats = Object.entries(categories).map(([k, v]) => `${v} ${k}`).join(", ");
-    msg += `→ ${cats}\n`;
-    msg += `_/drafts to review_`;
-  } else {
-    msg += `📝 No drafts 📭`;
   }
 
   // Send
