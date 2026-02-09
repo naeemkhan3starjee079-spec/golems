@@ -23,6 +23,8 @@ export interface CostEntry {
   input_tokens: number;
   output_tokens: number;
   cost_usd: number;
+  tier?: "paid" | "free";
+  duration_ms?: number;
 }
 
 export interface CostSummary {
@@ -45,6 +47,12 @@ export interface DailyCost {
   date: string;
   cost: number;
   calls: number;
+}
+
+export interface FullUsageStats {
+  paid: CostSummary & { bySource: CostBySource };
+  free: { totalCalls: number; byHelper: Record<string, number>; bySource: Record<string, number> };
+  combined: { totalCalls: number };
 }
 
 // ─── Reader ────────────────────────────────────────────────────────
@@ -269,4 +277,38 @@ export function formatDaily(daily: DailyCost[]): string {
   const totalRow = `${"TOTAL".padEnd(10)}  ${String(totalCalls).padStart(5)}  ${formatUSD(total).padStart(9)}`;
 
   return [header, separator, ...rows, separator, totalRow].join("\n");
+}
+
+// ─── Full Stats (paid + free combined) ────────────────────────────
+
+/**
+ * Get full usage stats splitting paid API calls from free CLI helper invocations.
+ */
+export function getFullUsageStats(
+  costLogPath: string,
+  period: "today" | "week" | "month" | "all" = "all"
+): FullUsageStats {
+  const allEntries = readCostLog(costLogPath);
+  const entries = filterByPeriod(allEntries, period);
+
+  const paidEntries = entries.filter((e) => e.tier !== "free");
+  const freeEntries = entries.filter((e) => e.tier === "free");
+
+  // Paid stats
+  const paidSummary = summarize(paidEntries, period);
+  const paidBySource = groupBySource(paidEntries);
+
+  // Free stats: by helper (model field) and by source (calling golem)
+  const byHelper: Record<string, number> = {};
+  const freeBySource: Record<string, number> = {};
+  for (const e of freeEntries) {
+    byHelper[e.model] = (byHelper[e.model] || 0) + 1;
+    freeBySource[e.source] = (freeBySource[e.source] || 0) + 1;
+  }
+
+  return {
+    paid: { ...paidSummary, bySource: paidBySource },
+    free: { totalCalls: freeEntries.length, byHelper, bySource: freeBySource },
+    combined: { totalCalls: entries.length },
+  };
 }

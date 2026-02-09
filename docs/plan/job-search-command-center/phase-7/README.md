@@ -77,10 +77,10 @@ New endpoint `getUsageByGolem()`:
 
 ## Status
 
-- [ ] Extend agent-runner.ts logging
-- [ ] Split usage stats endpoint
-- [ ] Per-golem cost breakdown
-- [ ] Dashboard cost cards (delegated)
+- [x] Extend helpers.ts logging (free CLI helper calls → api_costs.jsonl)
+- [x] Split usage stats (getFullUsageStats: paid vs free)
+- [x] Per-golem cost breakdown (usage_stats MCP tool)
+- [ ] Dashboard cost cards (delegated to etanheyman.com)
 - [ ] Service health improvements
-- [ ] Tests pass
-- [ ] Committed
+- [x] Tests pass (21 cost-tracker tests)
+- [x] Committed

@@ -16,11 +16,13 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { existsSync, readFileSync, readdirSync } from "fs";
+import { join } from "path";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { loadScrapedJobs, type JobListing } from "./scraper";
 import { getActiveCompanies, getOutreachCandidates } from "./watchlist";
 import { matchJobsToConnections } from "./connection-matcher";
 import { createAndSaveDraft, getOutreachDrafts, updateDraftStatus } from "../recruiter-golem/draft-outreach";
+import { getFullUsageStats, readCostLog, groupByDay, formatDaily } from "../lib/cost-tracker";
 
 // Lazy Supabase client for dashboard-integrated tools
 let _supabase: SupabaseClient | null = null;
@@ -253,6 +255,37 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: ["draftId", "status"],
       },
     },
+    {
+      name: "usage_stats",
+      description:
+        "Get AI usage stats: paid API costs, free CLI helper calls, per-golem breakdown. Shows what each golem is costing.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          period: {
+            type: "string",
+            enum: ["today", "week", "month", "all"],
+            description: "Time period (default: today)",
+            default: "today",
+          },
+        },
+      },
+    },
+    {
+      name: "usage_daily",
+      description:
+        "Get daily cost breakdown as a formatted table.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          days: {
+            type: "number",
+            description: "Number of days to show (default: 7)",
+            default: 7,
+          },
+        },
+      },
+    },
   ],
 }));
 
@@ -287,6 +320,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return handleGetDrafts(args);
       case "outreach_updateDraft":
         return handleUpdateDraft(args);
+      case "usage_stats":
+        return handleUsageStats(args);
+      case "usage_daily":
+        return handleUsageDaily(args);
       default:
         return {
           content: [{ type: "text" as const, text: `Unknown tool: ${name}` }],
@@ -777,7 +814,7 @@ async function handleGetDrafts(args: any) {
     lines.push(`### ${conn?.full_name || "Unknown"} → ${job?.title || "Unknown"} at ${job?.company || "Unknown"}`);
     lines.push(`Status: **${statusBadge}** | Score: ${job?.match_score || "N/A"}/10`);
     lines.push(`Angle: ${d.approach_angle}`);
-    lines.push(`Message: ${d.message_draft.slice(0, 100)}...`);
+    lines.push(`Message: ${d.message_draft.length > 100 ? d.message_draft.slice(0, 100) + "..." : d.message_draft}`);
     lines.push(`ID: ${d.id}`);
     lines.push("");
   }
@@ -805,6 +842,69 @@ async function handleUpdateDraft(args: any) {
     }],
     isError: !ok,
   };
+}
+
+// --- Usage Stats ---
+
+const COST_LOG_PATH = join(process.env.GOLEMS_STATE_DIR || `${process.env.HOME}/.golems-zikaron`, "api_costs.jsonl");
+
+function handleUsageStats(args: any) {
+  const validPeriods = ["today", "week", "month", "all"] as const;
+  const period = validPeriods.includes(args?.period) ? args.period : "today";
+  const stats = getFullUsageStats(COST_LOG_PATH, period);
+
+  const lines = [
+    `## AI Usage (${period})`,
+    "",
+    `### Paid API Calls`,
+    `- Total: ${stats.paid.totalCalls} calls`,
+    `- Cost: $${stats.paid.totalCost.toFixed(4)}`,
+    `- Tokens: ${stats.paid.totalInputTokens} in / ${stats.paid.totalOutputTokens} out`,
+    "",
+  ];
+
+  const sources = Object.entries(stats.paid.bySource);
+  if (sources.length > 0) {
+    lines.push("**By Source:**");
+    for (const [src, s] of sources.sort((a, b) => b[1].totalCost - a[1].totalCost)) {
+      lines.push(`- ${src}: ${s.totalCalls} calls, $${s.totalCost.toFixed(4)}`);
+    }
+    lines.push("");
+  }
+
+  lines.push(`### Free CLI Helpers`);
+  lines.push(`- Total: ${stats.free.totalCalls} calls`);
+
+  const helpers = Object.entries(stats.free.byHelper);
+  if (helpers.length > 0) {
+    lines.push("**By Helper:**");
+    for (const [h, count] of helpers.sort((a, b) => b[1] - a[1])) {
+      lines.push(`- ${h}: ${count} calls`);
+    }
+  }
+
+  const freeSources = Object.entries(stats.free.bySource);
+  if (freeSources.length > 0) {
+    lines.push("**By Source:**");
+    for (const [src, count] of freeSources.sort((a, b) => b[1] - a[1])) {
+      lines.push(`- ${src}: ${count} calls`);
+    }
+  }
+
+  lines.push("", `**Combined: ${stats.combined.totalCalls} total calls**`);
+
+  return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+}
+
+function handleUsageDaily(args: any) {
+  const days = args?.days || 7;
+  const allEntries = readCostLog(COST_LOG_PATH);
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+  const recent = allEntries.filter(e => new Date(e.timestamp) >= cutoff);
+  const daily = groupByDay(recent);
+
+  return { content: [{ type: "text" as const, text: formatDaily(daily) }] };
 }
 
 // --- Start ---

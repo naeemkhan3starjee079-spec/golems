@@ -6,6 +6,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
 import { join } from "path";
 import { runHaiku as runCloudLLM } from "./cloud-llm";
+import { logCost } from "./cost-tracker";
 
 /** Available external CLI helper backends */
 export type HelperBackend = "gemini" | "cursor" | "codex" | "kiro" | "haiku";
@@ -22,6 +23,8 @@ export interface HelperOptions {
   backend?: HelperBackend;
   file?: string;
   timeout?: number;
+  /** Source identifier for cost tracking (e.g. "job-golem", "email-golem") */
+  source?: string;
 }
 
 interface RateLimitEntry {
@@ -250,15 +253,36 @@ export async function runHelper(prompt: string, opts: HelperOptions = {}): Promi
     try {
       let output: string;
       if (backend === "haiku") {
-        output = await runCloudLLM(prompt, "helpers");
+        output = await runCloudLLM(prompt, opts.source || "helpers");
       } else {
         output = await runCliHelper(backend, prompt, opts);
+      }
+
+      const durationMs = Date.now() - start;
+
+      // Log free CLI helper calls only — haiku is already logged by cloud-llm.ts
+      if (backend !== "haiku") {
+        try {
+          const costLogPath = join(getStateDir(), "api_costs.jsonl");
+          logCost(costLogPath, {
+            timestamp: new Date().toISOString(),
+            model: backend,
+            source: opts.source || "helpers",
+            input_tokens: 0,
+            output_tokens: 0,
+            cost_usd: 0,
+            tier: "free",
+            duration_ms: durationMs,
+          });
+        } catch {
+          // Don't let logging failures break the main flow
+        }
       }
 
       return {
         output,
         backend,
-        durationMs: Date.now() - start,
+        durationMs,
       };
     } catch (err: any) {
       if (err.message === "RATE_LIMITED") {

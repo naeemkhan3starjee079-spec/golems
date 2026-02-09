@@ -13,6 +13,7 @@ import {
   formatSummary,
   formatBySource,
   formatDaily,
+  getFullUsageStats,
   type CostEntry,
 } from "../lib/cost-tracker";
 
@@ -207,5 +208,107 @@ describe("cost-tracker", () => {
     const formatted = formatDaily(daily);
     expect(formatted).toContain("2026-02-07");
     expect(formatted).toContain("TOTAL");
+  });
+
+  test("getFullUsageStats splits paid vs free", () => {
+    const mixedEntries: CostEntry[] = [
+      {
+        timestamp: "2026-02-07T10:00:00.000Z",
+        model: "claude-haiku-4-5-20251001",
+        source: "email-scorer",
+        input_tokens: 500,
+        output_tokens: 100,
+        cost_usd: 0.0008,
+        tier: "paid",
+      },
+      {
+        timestamp: "2026-02-07T11:00:00.000Z",
+        model: "gemini",
+        source: "job-scorer",
+        input_tokens: 0,
+        output_tokens: 0,
+        cost_usd: 0,
+        tier: "free",
+      },
+      {
+        timestamp: "2026-02-07T12:00:00.000Z",
+        model: "cursor",
+        source: "helpers",
+        input_tokens: 0,
+        output_tokens: 0,
+        cost_usd: 0,
+        tier: "free",
+      },
+      {
+        timestamp: "2026-02-07T13:00:00.000Z",
+        model: "claude-haiku-4-5-20251001",
+        source: "job-scorer",
+        input_tokens: 800,
+        output_tokens: 200,
+        cost_usd: 0.00144,
+        tier: "paid",
+      },
+    ];
+
+    const content = mixedEntries.map((e) => JSON.stringify(e)).join("\n");
+    writeFileSync(COST_LOG, content);
+
+    const stats = getFullUsageStats(COST_LOG, "all");
+
+    expect(stats.paid.totalCalls).toBe(2);
+    expect(stats.paid.totalCost).toBeGreaterThan(0);
+    expect(stats.paid.bySource["email-scorer"].totalCalls).toBe(1);
+    expect(stats.paid.bySource["job-scorer"].totalCalls).toBe(1);
+
+    expect(stats.free.totalCalls).toBe(2);
+    expect(stats.free.byHelper["gemini"]).toBe(1);
+    expect(stats.free.byHelper["cursor"]).toBe(1);
+    expect(stats.free.bySource["job-scorer"]).toBe(1);
+    expect(stats.free.bySource["helpers"]).toBe(1);
+
+    expect(stats.combined.totalCalls).toBe(4);
+  });
+
+  test("getFullUsageStats handles entries without tier field as paid", () => {
+    // Old entries without tier field should be treated as paid
+    const content = sampleEntries.map((e) => JSON.stringify(e)).join("\n");
+    writeFileSync(COST_LOG, content);
+
+    const stats = getFullUsageStats(COST_LOG, "all");
+    expect(stats.paid.totalCalls).toBe(5);
+    expect(stats.free.totalCalls).toBe(0);
+  });
+
+  test("getFullUsageStats respects period filter", () => {
+    const entries: CostEntry[] = [
+      {
+        timestamp: new Date().toISOString(),
+        model: "claude-haiku-4-5-20251001",
+        source: "test",
+        input_tokens: 100,
+        output_tokens: 50,
+        cost_usd: 0.0003,
+        tier: "paid",
+      },
+      {
+        timestamp: "2025-01-01T10:00:00.000Z", // old entry
+        model: "gemini",
+        source: "test",
+        input_tokens: 0,
+        output_tokens: 0,
+        cost_usd: 0,
+        tier: "free",
+      },
+    ];
+
+    const content = entries.map((e) => JSON.stringify(e)).join("\n");
+    writeFileSync(COST_LOG, content);
+
+    const statsToday = getFullUsageStats(COST_LOG, "today");
+    expect(statsToday.combined.totalCalls).toBe(1);
+    expect(statsToday.paid.totalCalls).toBe(1);
+
+    const statsAll = getFullUsageStats(COST_LOG, "all");
+    expect(statsAll.combined.totalCalls).toBe(2);
   });
 });

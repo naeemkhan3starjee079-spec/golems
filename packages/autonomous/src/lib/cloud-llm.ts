@@ -77,6 +77,7 @@ function trackUsage(source: string, inputTokens: number, outputTokens: number) {
       input_tokens: inputTokens,
       output_tokens: outputTokens,
       cost_usd: Math.round(costUsd * 1_000_000) / 1_000_000,
+      tier: "paid",
     });
   } catch {
     // Don't let logging failures break the main flow
