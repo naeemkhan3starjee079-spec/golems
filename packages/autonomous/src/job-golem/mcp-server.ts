@@ -16,8 +16,21 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { existsSync, readFileSync, readdirSync } from "fs";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { loadScrapedJobs, type JobListing } from "./scraper";
 import { getActiveCompanies, getOutreachCandidates } from "./watchlist";
+import { matchJobsToConnections } from "./connection-matcher";
+
+// Lazy Supabase client for dashboard-integrated tools
+let _supabase: SupabaseClient | null = null;
+function getSupabase(): SupabaseClient | null {
+  if (_supabase) return _supabase;
+  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) return null;
+  _supabase = createClient(url, key);
+  return _supabase;
+}
 
 const RESULTS_DIR =
   process.env.HOME + "/.golems-zikaron/job-golem/results";
@@ -94,6 +107,97 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         properties: {},
       },
     },
+    {
+      name: "jobs_dailyDigest",
+      description:
+        "Daily job search digest: new matches, high-score jobs, follow-ups due, top matches. Perfect for morning check-in.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          hours: {
+            type: "number",
+            description: "Look back period in hours (default: 24)",
+            default: 24,
+          },
+        },
+      },
+    },
+    {
+      name: "jobs_updateStatus",
+      description:
+        "Update a job's status in the pipeline. Tracks status history with timestamps.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          jobId: {
+            type: "string",
+            description: "Job ID (UUID from golem_jobs table)",
+          },
+          status: {
+            type: "string",
+            description: "New status",
+            enum: ["new", "viewed", "saved", "applied", "interviewing", "offer", "rejected", "archived"],
+          },
+        },
+        required: ["jobId", "status"],
+      },
+    },
+    {
+      name: "jobs_draftCoverLetter",
+      description:
+        "Draft a cover letter for a job listing using AI. Returns draft text for review.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          jobId: {
+            type: "string",
+            description: "Job ID (UUID from golem_jobs table)",
+          },
+          style: {
+            type: "string",
+            description: "Writing style (default: professional)",
+            enum: ["professional", "casual", "technical"],
+            default: "professional",
+          },
+        },
+        required: ["jobId"],
+      },
+    },
+    {
+      name: "jobs_connectionMatches",
+      description:
+        "Find jobs where you have LinkedIn connections at the company. Shows warm leads for better applications.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          days: {
+            type: "number",
+            description: "Look back period in days (default: 7)",
+            default: 7,
+          },
+        },
+      },
+    },
+    {
+      name: "linkedin_searchConnections",
+      description:
+        "Search your LinkedIn connections by name, company, or position.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          query: {
+            type: "string",
+            description: "Search term to match in name, company, or position",
+          },
+          limit: {
+            type: "number",
+            description: "Max results (default: 20)",
+            default: 20,
+          },
+        },
+        required: ["query"],
+      },
+    },
   ],
 }));
 
@@ -112,6 +216,16 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return handleWatchlist();
       case "jobs_stats":
         return handleStats();
+      case "jobs_dailyDigest":
+        return handleDailyDigest(args);
+      case "jobs_updateStatus":
+        return handleUpdateStatus(args);
+      case "jobs_draftCoverLetter":
+        return handleDraftCoverLetter(args);
+      case "jobs_connectionMatches":
+        return handleConnectionMatches(args);
+      case "linkedin_searchConnections":
+        return handleSearchConnections(args);
       default:
         return {
           content: [{ type: "text" as const, text: `Unknown tool: ${name}` }],
@@ -300,6 +414,244 @@ function handleStats() {
     `  - Hot (8+): ${hot}`,
     `  - Warm (6-7): ${warm}`,
     `  - Cold (<6): ${results.length - hot - warm}`,
+  ];
+
+  return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+}
+
+// --- Supabase-powered handlers ---
+
+async function handleDailyDigest(args: any) {
+  const sb = getSupabase();
+  if (!sb) {
+    return { content: [{ type: "text" as const, text: "Supabase not configured. Set SUPABASE_URL and SUPABASE_ANON_KEY." }], isError: true };
+  }
+
+  const hours = args?.hours ?? 24;
+  const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+
+  // Parallel queries
+  const [recentRes, highScoreRes, statusRes, totalRes] = await Promise.all([
+    sb.from("golem_jobs").select("*").gte("scraped_at", since).order("match_score", { ascending: false }).limit(50),
+    sb.from("golem_jobs").select("*").gte("match_score", 8).gte("scraped_at", since).order("match_score", { ascending: false }),
+    sb.from("golem_jobs").select("status").not("status", "in", "(archived,rejected)"),
+    sb.from("golem_jobs").select("id", { count: "exact", head: true }),
+  ]);
+
+  const recent = recentRes.data || [];
+  const highScore = highScoreRes.data || [];
+  const statuses = statusRes.data || [];
+  const total = totalRes.count || 0;
+
+  // Count by status
+  const statusCounts: Record<string, number> = {};
+  for (const s of statuses) {
+    statusCounts[s.status] = (statusCounts[s.status] || 0) + 1;
+  }
+
+  const topMatches = recent.slice(0, 5);
+
+  const lines = [
+    `## Daily Job Digest (last ${hours}h)`,
+    "",
+    `**${recent.length} new matches** | **${highScore.length} high-score (8+)** | **${total} total in DB**`,
+    "",
+    "### Pipeline",
+    `- New: ${statusCounts["new"] || 0}`,
+    `- Viewed: ${statusCounts["viewed"] || 0}`,
+    `- Saved: ${statusCounts["saved"] || 0}`,
+    `- Applied: ${statusCounts["applied"] || 0}`,
+    `- Interviewing: ${statusCounts["interviewing"] || 0}`,
+    `- Offers: ${statusCounts["offer"] || 0}`,
+    "",
+  ];
+
+  if (topMatches.length > 0) {
+    lines.push("### Top Matches");
+    for (const j of topMatches) {
+      const reasons = j.match_reasons?.length > 0 ? ` (${j.match_reasons.join(", ")})` : "";
+      lines.push(`- **[${j.match_score || "?"}]** ${j.title} @ ${j.company}${reasons}`);
+      if (j.url) lines.push(`  ${j.url}`);
+    }
+  }
+
+  return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+}
+
+async function handleUpdateStatus(args: any) {
+  const sb = getSupabase();
+  if (!sb) {
+    return { content: [{ type: "text" as const, text: "Supabase not configured." }], isError: true };
+  }
+
+  const { jobId, status } = args || {};
+  if (!jobId || !status) {
+    return { content: [{ type: "text" as const, text: "Missing required: jobId, status" }], isError: true };
+  }
+
+  // Get current job to record status transition
+  const { data: job } = await sb.from("golem_jobs").select("status, status_history").eq("id", jobId).single();
+  if (!job) {
+    return { content: [{ type: "text" as const, text: `Job not found: ${jobId}` }], isError: true };
+  }
+
+  const history = Array.isArray(job.status_history) ? job.status_history : [];
+  history.push({ from: job.status, to: status, at: new Date().toISOString() });
+
+  const update: Record<string, any> = { status, status_history: history };
+  if (status === "applied") {
+    update.applied_at = new Date().toISOString();
+  }
+
+  const { error } = await sb.from("golem_jobs").update(update).eq("id", jobId);
+
+  if (error) {
+    return { content: [{ type: "text" as const, text: `Failed: ${error.message}` }], isError: true };
+  }
+
+  return { content: [{ type: "text" as const, text: `Job ${jobId} status: ${job.status} → ${status}` }] };
+}
+
+async function handleDraftCoverLetter(args: any) {
+  const sb = getSupabase();
+  if (!sb) {
+    return { content: [{ type: "text" as const, text: "Supabase not configured." }], isError: true };
+  }
+
+  const { jobId, style = "professional" } = args || {};
+  if (!jobId) {
+    return { content: [{ type: "text" as const, text: "Missing required: jobId" }], isError: true };
+  }
+
+  // Get job details
+  const { data: job } = await sb.from("golem_jobs").select("*").eq("id", jobId).single();
+  if (!job) {
+    return { content: [{ type: "text" as const, text: `Job not found: ${jobId}` }], isError: true };
+  }
+
+  // Load profile for cover letter context
+  const profilePath = process.env.HOME + "/Gits/golems/packages/autonomous/src/job-golem/profile.json";
+  let profile: any = {};
+  try {
+    if (existsSync(profilePath)) {
+      profile = JSON.parse(readFileSync(profilePath, "utf-8"));
+    }
+  } catch {}
+
+  // Use Haiku to generate the cover letter
+  const { runHaiku } = await import("../lib/cloud-llm");
+
+  const prompt = `Write a ${style} cover letter for this job application.
+
+JOB:
+- Title: ${job.title}
+- Company: ${job.company}
+- Location: ${job.location || "N/A"}
+- Description: ${(job.description || "").slice(0, 2000)}
+
+CANDIDATE:
+- Name: Etan Heyman
+- Experience: ${profile.yearsExperience || 3}+ years
+- Skills: ${(profile.primarySkills || []).join(", ")}
+- Roles: ${(profile.roles || []).join(", ")}
+
+Match reasons: ${(job.match_reasons || job.tags || []).join(", ")}
+
+Keep it concise (200-300 words). Focus on why this is a great mutual fit.
+Use a ${style} tone. No generic filler. Be specific about matching skills.`;
+
+  const draft = await runHaiku(prompt, "cover-letter");
+
+  if (!draft) {
+    return { content: [{ type: "text" as const, text: "Failed to generate cover letter. Check Anthropic API key." }], isError: true };
+  }
+
+  // Save to database
+  const { error } = await sb.from("job_cover_letters").insert({
+    job_id: jobId,
+    content: draft,
+    style,
+    generated_by: "haiku",
+  });
+
+  if (error) {
+    console.error("[CoverLetter] Save error:", error.message);
+  }
+
+  const lines = [
+    `## Cover Letter Draft — ${job.title} @ ${job.company}`,
+    `*Style: ${style} | Generated by Haiku*`,
+    "",
+    draft,
+    "",
+    error ? `(Note: failed to save to DB: ${error.message})` : "(Saved to job_cover_letters table)",
+  ];
+
+  return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+}
+
+async function handleConnectionMatches(args: any) {
+  const sb = getSupabase();
+  if (!sb) {
+    return { content: [{ type: "text" as const, text: "Supabase not configured." }], isError: true };
+  }
+
+  const matches = await matchJobsToConnections(sb);
+
+  if (matches.length === 0) {
+    return { content: [{ type: "text" as const, text: "No warm leads found. Import connections first with `bun scripts/import-linkedin-connections.ts`." }] };
+  }
+
+  // Group by job
+  const byJob = new Map<string, typeof matches>();
+  for (const m of matches) {
+    const key = `${m.jobTitle} @ ${m.jobCompany}`;
+    const existing = byJob.get(key) || [];
+    existing.push(m);
+    byJob.set(key, existing);
+  }
+
+  const lines = [`## Warm Leads (${matches.length} connections at hiring companies)\n`];
+
+  for (const [job, conns] of byJob) {
+    lines.push(`### ${job}`);
+    for (const c of conns) {
+      const badge = c.matchType === "exact" ? "EXACT" : c.matchType === "substring" ? "PARTIAL" : "FUZZY";
+      lines.push(`- **${c.connectionName}** — ${c.connectionPosition} at ${c.connectionCompany} [${badge}]`);
+    }
+    lines.push("");
+  }
+
+  return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+}
+
+async function handleSearchConnections(args: any) {
+  const sb = getSupabase();
+  if (!sb) {
+    return { content: [{ type: "text" as const, text: "Supabase not configured." }], isError: true };
+  }
+
+  const query = args?.query?.toLowerCase();
+  const limit = args?.limit ?? 20;
+  if (!query) {
+    return { content: [{ type: "text" as const, text: "Missing required: query" }], isError: true };
+  }
+
+  const { data, error } = await sb
+    .from("linkedin_connections")
+    .select("*")
+    .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,company.ilike.%${query}%,position.ilike.%${query}%`)
+    .limit(limit);
+
+  if (error || !data || data.length === 0) {
+    return { content: [{ type: "text" as const, text: `No connections matching "${query}".` }] };
+  }
+
+  const lines = [
+    `## LinkedIn Connections: "${query}" (${data.length})\n`,
+    ...data.map((c: any) =>
+      `- **${c.first_name} ${c.last_name}** — ${c.position || "N/A"} at ${c.company || "N/A"}${c.has_messages ? " (has messages)" : ""}${c.linkedin_url ? `\n  ${c.linkedin_url}` : ""}`
+    ),
   ];
 
   return { content: [{ type: "text" as const, text: lines.join("\n") }] };

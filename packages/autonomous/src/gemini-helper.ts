@@ -314,7 +314,3 @@ export const forPatternExtraction = {
   runGeminiJSON: <T>(prompt: string) => runGeminiJSON<T>(prompt, { source: "pattern-extraction" }),
 };
 
-export const forSoltome = {
-  runGemini: (prompt: string) => runGemini(prompt, { source: "soltome" }),
-  runGeminiJSON: <T>(prompt: string) => runGeminiJSON<T>(prompt, { source: "soltome" }),
-};

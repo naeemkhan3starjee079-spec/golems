@@ -103,7 +103,7 @@ describe("state-store (file mode)", () => {
     });
 
     it("includes event ID and timestamp", async () => {
-      await logEvent("soltome_post", { title: "Test" }, "claudegolem");
+      await logEvent("job_match", { company: "Test" }, "jobgolem");
       const events = await getRecentEvents(1);
       expect(events[0].id).toBeTruthy();
       expect(events[0].timestamp).toBeTruthy();

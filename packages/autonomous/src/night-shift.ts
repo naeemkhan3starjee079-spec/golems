@@ -12,8 +12,6 @@
 import { $ } from "bun";
 import { readFileSync, writeFileSync, existsSync, rmSync } from "fs";
 import { join } from "path";
-import { fetchPosts as fetchSoltomePosts } from "./soltome-client";
-
 // Absolute paths for tools (launchd runs from /, not package root)
 const HOME = process.env.HOME || "/Users/etanheyman";
 const REPOS_PATH = process.env.REPOS_PATH || `${HOME}/Gits`;
@@ -188,8 +186,6 @@ interface NightShiftResult {
   repo: string;
   prUrl?: string;
   improvement?: string;
-  soltomeLearnings: string[];
-  draftsGenerated: number;
   success: boolean;
   error?: string;
 }
@@ -406,8 +402,6 @@ async function processRepo(
   const repoPath = `${REPOS_PATH}/${repo}`;
   const result: NightShiftResult = {
     repo,
-    soltomeLearnings: [],
-    draftsGenerated: 0,
     success: false,
   };
 
@@ -518,27 +512,6 @@ async function nightShift(): Promise<NightShiftResult[]> {
     }
   }
 
-  // ═══ Soltome Browsing (once, after all repos) ═══
-  console.log("\n═══ Soltome Browsing ═══\n");
-  try {
-    const posts = await fetchSoltomePosts(20);
-    if (posts.length > 0) {
-      const learnings = posts
-        .slice(0, 5)
-        .map(
-          (p) =>
-            `[Soltome] "${p.title}" by ${p.author?.username || "unknown"}`
-        );
-      console.log(
-        `[Soltome] Found ${posts.length} posts, extracted ${learnings.length} learnings`
-      );
-      // Attach to first result
-      if (results[0]) results[0].soltomeLearnings = learnings;
-    }
-  } catch (err) {
-    console.error("[Soltome] Browsing failed:", err);
-  }
-
   // ═══ Summary ═══
   state.lastNightShift = new Date().toISOString();
 
@@ -549,11 +522,14 @@ async function nightShift(): Promise<NightShiftResult[]> {
 
   // Sync key state values to Supabase (so dashboard can see night shift data)
   try {
-    const { setState: setSupabaseState } = await import("./lib/state-store");
-    await setSupabaseState("lastNightShift", state.lastNightShift);
-    await setSupabaseState("nightShiftTarget", state.nightShiftTarget);
-    await setSupabaseState("nightShiftPRs", state.nightShiftPRs || []);
-    await setSupabaseState("rotation", state.rotation);
+    const { reportServiceRun, setState: setSupabaseState } = await import("./lib/state-store");
+    // reportServiceRun always writes to Supabase regardless of STATE_BACKEND
+    await reportServiceRun("lastNightShift");
+    // Also sync dashboard-visible values
+    await Promise.allSettled([
+      setSupabaseState("nightShiftTarget", state.nightShiftTarget),
+      setSupabaseState("nightShiftPRs", state.nightShiftPRs || []),
+    ]);
     console.log("[NightShift] Synced state to Supabase");
   } catch (err) {
     console.error("[NightShift] Failed to sync to Supabase:", err);

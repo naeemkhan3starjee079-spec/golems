@@ -438,6 +438,27 @@ export async function getEmailsByGolem(
   }
 }
 
+/**
+ * Get a single email by its ID (gmail_id or DB id)
+ */
+export async function getEmailById(
+  client: SupabaseClient,
+  emailId: string
+): Promise<Email | null> {
+  try {
+    const { data, error } = await client
+      .from("emails")
+      .select("*")
+      .or(`gmail_id.eq.${emailId},id.eq.${emailId}`)
+      .single();
+
+    if (error || !data) return null;
+    return data as Email;
+  } catch {
+    return null;
+  }
+}
+
 // Default export for convenience
 export default {
   createDbClient,
@@ -452,6 +473,7 @@ export default {
   markNotified,
   getUnnotifiedUrgentEmails,
   getEmailsByGolem,
+  getEmailById,
   loadLocalQueue,
   clearLocalQueue
 };

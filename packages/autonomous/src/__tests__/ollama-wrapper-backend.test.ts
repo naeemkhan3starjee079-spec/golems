@@ -22,7 +22,6 @@ describe("ollama-wrapper backend selection", () => {
     expect(typeof mod.forJobGolem.runOllama).toBe("function");
     expect(typeof mod.forEmailGolem.runOllama).toBe("function");
     expect(typeof mod.forNightShift.runOllama).toBe("function");
-    expect(typeof mod.forSoltome.runOllama).toBe("function");
   });
 
   it("exports embedding functions", async () => {
