@@ -138,3 +138,56 @@ See each phase's findings.md for the specific prompt text.
 | Dashboard UI (email) | Phase 2, after backend done | Delegated Claude on etanheyman.com | `phase-2/delegated-output.md` |
 | Dashboard UI (jobs) | Phase 3, after backend done | Delegated Claude on etanheyman.com | `phase-3/delegated-output.md` |
 | Aviv Levi extraction | Phase 6, first thing | Gemini/Codex | `phase-6/findings.md` |
+
+---
+
+## Part 2: Unified Execution Sequence
+
+Everything below follows **linear branch flow**: `master → branch → work → PR → merge → pull master → next branch`.
+
+### Round 1: Zikaron v2 Phase 1 — Dead Code Cleanup (small, unblocks Phases 2-3)
+**Branch:** `feature/zikaron-v2-cleanup`
+**Effort:** ~30 min
+**What:** Delete `pipeline/embed.py` + `pipeline/index.py`, fix `__init__.py` import, fix 3 failing tests, update CLAUDE.md
+**Why first:** Small win, clears dead code that confuses contributors, unblocks hybrid search
+
+### Round 2: JSCC Phase 8 — Job Board Expansion (highest job-search impact)
+**Branch:** `feature/jscc-phase8`
+**Effort:** Research (Gemini) + 2-3 new scrapers + dedup
+**What:** Research Israeli job boards → pick top 2-3 → implement scrapers → cross-source dedup → location flexibility
+**Why second:** Directly finds more jobs — the #1 goal
+
+### Round 3: Zikaron v2 Phase 2 — FTS5 Hybrid Search
+**Branch:** `feature/zikaron-v2-hybrid-search`
+**Effort:** ~1-2 hours
+**What:** FTS5 virtual table + triggers + `hybrid_search()` + update daemon/MCP/CLI
+**Why third:** Makes keyword search ("OTP", "SIGINT") work alongside semantic — improves all agent searches
+
+### Round 4: Zikaron v2 Phase 3 — Context View
+**Branch:** `feature/zikaron-v2-context`
+**Effort:** ~1 hour + backfill script
+**What:** Backfill conversation_id/position, `get_context()`, daemon/MCP/CLI endpoints
+**Why fourth:** Makes search results actually useful (see surrounding conversation)
+
+### Round 5: JSCC Phase 6 — LinkedIn Exposure Skill
+**Branch:** `feature/jscc-phase6`
+**Effort:** Research (Gemini) + skill creation
+**What:** Extract Aviv Levi guidelines → `/linkedin-post` skill (topic/draft/review workflows)
+**Why fifth:** Networking visibility, but lower urgency than finding actual jobs
+
+### Round 6: JSCC Frontends — Dashboard UI (Phases 2, 3, 5)
+**Branch:** `feature/jscc-dashboards`
+**Effort:** Delegated Claude sessions on etanheyman.com
+**What:** Email dashboard, Job dashboard redesign, Outreach page
+**Why sixth:** All backend is done — this makes it visible and usable
+**Requires:** Working with Etan (etanheyman.com repo)
+
+### Round 7: Housekeeping — Docs Move + Cleanup
+**Branch:** `feature/docs-cleanup`
+**What:** Move private docs to `docs.local/`, clean old branches, Dependabot fix
+**Requires:** Working with Etan (decision on what's public)
+
+### Deferred (requires interactive session with Etan)
+- **Zikaron v2 Phase 4:** SetFit auto-tagger — needs 45-90 min labeling session
+- **Zikaron v2 Phase 5:** Email/job scoring feedback loop — needs dashboard work
+- **Cloud deploy (Railway):** Needs env vars set in Railway dashboard
