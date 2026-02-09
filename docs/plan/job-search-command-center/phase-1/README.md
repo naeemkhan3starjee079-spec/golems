@@ -64,10 +64,10 @@ Delegated to etanheyman.com Claude session (or Phase 2/3 dashboard work):
 
 ## Status
 
-- [ ] Run Cursor audit (background)
-- [ ] Review audit findings
-- [ ] Delete Soltome files
-- [ ] Remove Content page reference
-- [ ] Clean up dead imports
-- [ ] Tests pass
-- [ ] Committed
+- [x] Run Cursor audit (background) — skipped, manual audit was faster
+- [x] Review audit findings
+- [x] Delete Soltome files (7 files deleted, 3028 lines removed)
+- [ ] Remove Content page reference (deferred to dashboard work in etanheyman.com)
+- [x] Clean up dead imports (telegram-bot.ts, briefing.ts, event-log.ts, etc.)
+- [x] Tests pass (830 pass, 0 fail)
+- [x] Committed (08de281)
