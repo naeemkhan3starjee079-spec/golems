@@ -160,7 +160,7 @@ Everything below follows **linear branch flow**: `master → branch → work →
 **What:** `conversation_id`/`position` backfilled (226K chunks), `get_context()`, MCP `zikaron_context` tool, CLI `zikaron context` command.
 
 ### Round 5: JSCC Phase 6 — LinkedIn Exposure Skill ✅
-**Branch:** `feature/jscc-phase6` → PR #80
+**Branch:** `feature/jscc-phase6` → PR #80 merged
 **What:** `/linkedin-post` skill with 5 workflows (topic, draft, review, learn, schedule) + Aviv Levi 2026 algorithm guidelines + Huberman learning protocols
 
 ### Round 6: JSCC Frontends — Dashboard UI (Phases 2, 3, 5)
@@ -168,11 +168,12 @@ Everything below follows **linear branch flow**: `master → branch → work →
 **Effort:** Delegated Claude sessions on etanheyman.com
 **What:** Email dashboard, Job dashboard redesign, Outreach page
 **Requires:** Working with Etan (etanheyman.com repo)
+**Status:** Deferred — admin pages exist at `/admin/golem/{emails,jobs,outreach}`, need UI improvements
 
-### Round 7: Housekeeping — Docs Move + Cleanup + Registry
-**Branch:** `feature/docs-cleanup`
-**What:** Move private docs to `docs.local/`, clean old branches, Dependabot fix, typed `golems.registry.json`
-**Requires:** Working with Etan (decision on what's public)
+### Round 7: Housekeeping — Docs Move + Cleanup + Registry ✅ (partial)
+**Branch:** `feature/docs-cleanup` → PR #81 merged
+**What done:** Typed `golems.registry.json` + JSON Schema, lodash-es CVE fix, 6 stale remote branches deleted, 10 tracking refs pruned
+**Remaining:** Move private docs to `docs.local/` (needs Etan decision on what's public)
 
 ### Deferred (requires interactive session with Etan)
 - **Zikaron v2 Phase 4:** SetFit auto-tagger — needs 45-90 min labeling session
