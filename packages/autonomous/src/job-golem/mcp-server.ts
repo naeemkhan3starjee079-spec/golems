@@ -20,6 +20,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { loadScrapedJobs, type JobListing } from "./scraper";
 import { getActiveCompanies, getOutreachCandidates } from "./watchlist";
 import { matchJobsToConnections } from "./connection-matcher";
+import { createAndSaveDraft, getOutreachDrafts, updateDraftStatus } from "../recruiter-golem/draft-outreach";
 
 // Lazy Supabase client for dashboard-integrated tools
 let _supabase: SupabaseClient | null = null;
@@ -198,6 +199,60 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: ["query"],
       },
     },
+    {
+      name: "outreach_draftForMatch",
+      description:
+        "Generate a personalized outreach draft for a LinkedIn connection-job match. Creates approach angle, message draft, follow-up plan, and saves to dashboard.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          jobId: {
+            type: "string",
+            description: "Job ID (UUID from golem_jobs table)",
+          },
+          connectionId: {
+            type: "string",
+            description: "Connection ID (UUID from linkedin_connections table)",
+          },
+        },
+        required: ["jobId", "connectionId"],
+      },
+    },
+    {
+      name: "outreach_getDrafts",
+      description:
+        "Get outreach drafts with their associated job and connection data. Filter by status (pending/approved/sent/replied/skipped).",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          status: {
+            type: "string",
+            description: "Filter by draft status (default: all)",
+            enum: ["pending", "approved", "sent", "replied", "skipped"],
+          },
+        },
+      },
+    },
+    {
+      name: "outreach_updateDraft",
+      description:
+        "Update the status of an outreach draft (approve, mark as sent, skip, etc).",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          draftId: {
+            type: "string",
+            description: "Draft ID (UUID from outreach_drafts table)",
+          },
+          status: {
+            type: "string",
+            description: "New status",
+            enum: ["approved", "sent", "replied", "skipped"],
+          },
+        },
+        required: ["draftId", "status"],
+      },
+    },
   ],
 }));
 
@@ -226,6 +281,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return handleConnectionMatches(args);
       case "linkedin_searchConnections":
         return handleSearchConnections(args);
+      case "outreach_draftForMatch":
+        return handleDraftForMatch(args);
+      case "outreach_getDrafts":
+        return handleGetDrafts(args);
+      case "outreach_updateDraft":
+        return handleUpdateDraft(args);
       default:
         return {
           content: [{ type: "text" as const, text: `Unknown tool: ${name}` }],
@@ -655,6 +716,95 @@ async function handleSearchConnections(args: any) {
   ];
 
   return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+}
+
+// --- Outreach Drafts ---
+
+async function handleDraftForMatch(args: any) {
+  const sb = getSupabase();
+  if (!sb) {
+    return { content: [{ type: "text" as const, text: "Supabase not configured." }], isError: true };
+  }
+
+  const jobId = args?.jobId;
+  const connectionId = args?.connectionId;
+  if (!jobId || !connectionId) {
+    return { content: [{ type: "text" as const, text: "Missing required: jobId and connectionId" }], isError: true };
+  }
+
+  const result = await createAndSaveDraft(sb, jobId, connectionId);
+
+  if ("error" in result) {
+    return { content: [{ type: "text" as const, text: `Draft failed: ${result.error}` }], isError: true };
+  }
+
+  const lines = [
+    "## Outreach Draft Created\n",
+    `**Approach:** ${result.draft.approachAngle}\n`,
+    "**Message:**",
+    "```",
+    result.draft.messageDraft,
+    "```\n",
+    `**Follow-up:** ${result.draft.followupPlan}\n`,
+    `**Notes:**\n${result.draft.notes}\n`,
+    `Draft ID: ${result.id}`,
+    "Use outreach_updateDraft to approve/skip.",
+  ];
+
+  return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+}
+
+async function handleGetDrafts(args: any) {
+  const sb = getSupabase();
+  if (!sb) {
+    return { content: [{ type: "text" as const, text: "Supabase not configured." }], isError: true };
+  }
+
+  const drafts = await getOutreachDrafts(sb, args?.status);
+
+  if (drafts.length === 0) {
+    return { content: [{ type: "text" as const, text: `No outreach drafts${args?.status ? ` with status "${args.status}"` : ""}.` }] };
+  }
+
+  const lines = [`## Outreach Drafts (${drafts.length})\n`];
+  for (const d of drafts) {
+    const job = d.golem_jobs;
+    const conn = d.linkedin_connections;
+    const statusBadge = d.status === "pending" ? "Pending" :
+      d.status === "approved" ? "Approved" :
+      d.status === "sent" ? "Sent" : d.status;
+
+    lines.push(`### ${conn?.full_name || "Unknown"} → ${job?.title || "Unknown"} at ${job?.company || "Unknown"}`);
+    lines.push(`Status: **${statusBadge}** | Score: ${job?.match_score || "N/A"}/10`);
+    lines.push(`Angle: ${d.approach_angle}`);
+    lines.push(`Message: ${d.message_draft.slice(0, 100)}...`);
+    lines.push(`ID: ${d.id}`);
+    lines.push("");
+  }
+
+  return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+}
+
+async function handleUpdateDraft(args: any) {
+  const sb = getSupabase();
+  if (!sb) {
+    return { content: [{ type: "text" as const, text: "Supabase not configured." }], isError: true };
+  }
+
+  const draftId = args?.draftId;
+  const status = args?.status;
+  if (!draftId || !status) {
+    return { content: [{ type: "text" as const, text: "Missing required: draftId and status" }], isError: true };
+  }
+
+  const ok = await updateDraftStatus(sb, draftId, status);
+  return {
+    content: [{
+      type: "text" as const,
+      text: ok ? `Draft ${draftId} updated to "${status}".` : `Failed to update draft ${draftId}.`,
+    }],
+    isError: !ok,
+  };
 }
 
 // --- Start ---
