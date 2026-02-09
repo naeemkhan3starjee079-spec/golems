@@ -22,7 +22,7 @@ import { loadScrapedJobs, type JobListing } from "./scraper";
 import { getActiveCompanies, getOutreachCandidates } from "./watchlist";
 import { matchJobsToConnections } from "./connection-matcher";
 import { createAndSaveDraft, getOutreachDrafts, updateDraftStatus } from "../recruiter-golem/draft-outreach";
-import { getFullUsageStats, readCostLog, groupByDay, formatDaily } from "../lib/cost-tracker";
+import { getFullUsageStats, getSupabaseUsageStats, readCostLog, readFromSupabase, groupByDay, formatDaily, CC_SUBSCRIPTION_MONTHLY } from "../lib/cost-tracker";
 
 // Lazy Supabase client for dashboard-integrated tools
 let _supabase: SupabaseClient | null = null;
@@ -286,6 +286,22 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         },
       },
     },
+    {
+      name: "usage_savings",
+      description:
+        "Get value metrics: CC subscription ($200/mo) vs actual value, Haiku API costs, free CLI helper savings. Shows ROI of the AI tooling stack.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          period: {
+            type: "string",
+            enum: ["today", "week", "month", "all"],
+            description: "Time period (default: month)",
+            default: "month",
+          },
+        },
+      },
+    },
   ],
 }));
 
@@ -324,6 +340,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return handleUsageStats(args);
       case "usage_daily":
         return handleUsageDaily(args);
+      case "usage_savings":
+        return handleUsageSavings(args);
       default:
         return {
           content: [{ type: "text" as const, text: `Unknown tool: ${name}` }],
@@ -848,15 +866,24 @@ async function handleUpdateDraft(args: any) {
 
 const COST_LOG_PATH = join(process.env.GOLEMS_STATE_DIR || `${process.env.HOME}/.golems-zikaron`, "api_costs.jsonl");
 
-function handleUsageStats(args: any) {
+async function handleUsageStats(args: any) {
   const validPeriods = ["today", "week", "month", "all"] as const;
   const period = validPeriods.includes(args?.period) ? args.period : "today";
-  const stats = getFullUsageStats(COST_LOG_PATH, period);
+
+  // Try Supabase first (persistent), fall back to local JSONL
+  let stats;
+  let source = "supabase";
+  try {
+    stats = await getSupabaseUsageStats(period);
+  } catch {
+    stats = { ...getFullUsageStats(COST_LOG_PATH, period), subscription: { monthlyCost: CC_SUBSCRIPTION_MONTHLY, actualValue: 0, sessions: 0, totalTokens: 0 } };
+    source = "local";
+  }
 
   const lines = [
-    `## AI Usage (${period})`,
+    `## AI Usage (${period}) [${source}]`,
     "",
-    `### Paid API Calls`,
+    `### Paid API Calls (Haiku)`,
     `- Total: ${stats.paid.totalCalls} calls`,
     `- Cost: $${stats.paid.totalCost.toFixed(4)}`,
     `- Tokens: ${stats.paid.totalInputTokens} in / ${stats.paid.totalOutputTokens} out`,
@@ -869,6 +896,15 @@ function handleUsageStats(args: any) {
     for (const [src, s] of sources.sort((a, b) => b[1].totalCost - a[1].totalCost)) {
       lines.push(`- ${src}: ${s.totalCalls} calls, $${s.totalCost.toFixed(4)}`);
     }
+    lines.push("");
+  }
+
+  if (stats.subscription.sessions > 0) {
+    lines.push(`### Claude Code (Subscription)`);
+    lines.push(`- Sessions tracked: ${stats.subscription.sessions}`);
+    lines.push(`- Actual value: $${stats.subscription.actualValue.toFixed(2)}`);
+    lines.push(`- Subscription: $${stats.subscription.monthlyCost}/mo`);
+    lines.push(`- Tokens: ${stats.subscription.totalTokens.toLocaleString()}`);
     lines.push("");
   }
 
@@ -896,15 +932,91 @@ function handleUsageStats(args: any) {
   return { content: [{ type: "text" as const, text: lines.join("\n") }] };
 }
 
-function handleUsageDaily(args: any) {
+async function handleUsageDaily(args: any) {
   const days = args?.days || 7;
-  const allEntries = readCostLog(COST_LOG_PATH);
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - days);
-  const recent = allEntries.filter(e => new Date(e.timestamp) >= cutoff);
-  const daily = groupByDay(recent);
 
-  return { content: [{ type: "text" as const, text: formatDaily(daily) }] };
+  // Try Supabase first
+  try {
+    const entries = await readFromSupabase("all");
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+    const recent = entries.filter(e => new Date(e.timestamp) >= cutoff);
+    const daily = groupByDay(recent);
+    return { content: [{ type: "text" as const, text: formatDaily(daily) }] };
+  } catch {
+    // Fall back to local
+    const allEntries = readCostLog(COST_LOG_PATH);
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+    const recent = allEntries.filter(e => new Date(e.timestamp) >= cutoff);
+    const daily = groupByDay(recent);
+    return { content: [{ type: "text" as const, text: formatDaily(daily) }] };
+  }
+}
+
+async function handleUsageSavings(args: any) {
+  const validPeriods = ["today", "week", "month", "all"] as const;
+  const period = validPeriods.includes(args?.period) ? args.period : "month";
+
+  let stats;
+  try {
+    stats = await getSupabaseUsageStats(period);
+  } catch {
+    stats = { ...getFullUsageStats(COST_LOG_PATH, period), subscription: { monthlyCost: CC_SUBSCRIPTION_MONTHLY, actualValue: 0, sessions: 0, totalTokens: 0 } };
+  }
+
+  // Value calculations
+  const ccSubscription = CC_SUBSCRIPTION_MONTHLY;
+  const ccActualValue = stats.subscription.actualValue || 0;
+  const ccSavings = ccActualValue - ccSubscription;
+
+  // Haiku costs
+  const haikuCost = stats.paid.totalCost;
+
+  // Estimate free tier value (if we had to pay for CLI helpers)
+  // Gemini: ~$0.50/1M tokens, Cursor: ~$20/mo, Codex: free with ChatGPT Plus
+  const estimatedFreeValue = stats.free.totalCalls * 0.002; // ~$0.002 per free call equivalent
+
+  const totalValue = ccActualValue + estimatedFreeValue;
+
+  const lines = [
+    `## AI Cost Savings (${period})`,
+    "",
+    `### What You Pay`,
+    `- Claude Code Max: $${ccSubscription}/mo (subscription)`,
+    `- Haiku API (cloud worker, ${period}): $${haikuCost.toFixed(4)}`,
+    "",
+    `### What You Get`,
+    `- CC actual API value: $${ccActualValue.toFixed(2)}`,
+    `- Free CLI helpers value: ~$${estimatedFreeValue.toFixed(2)}`,
+    `- **Total value: ~$${totalValue.toFixed(2)}**`,
+    "",
+    `### ROI`,
+    ccActualValue > 0
+      ? `- CC savings: **$${ccSavings.toFixed(2)}** (${((ccActualValue / ccSubscription) * 100).toFixed(0)}% of cost if pay-per-use)`
+      : `- CC savings: Submit usage via \`ccusage\` to track`,
+    `- Free tier calls: ${stats.free.totalCalls} (saved ~$${estimatedFreeValue.toFixed(2)})`,
+    `- Haiku efficiency: ${stats.paid.totalCalls} calls for $${haikuCost.toFixed(4)}`,
+    "",
+    `### Breakdown by Source`,
+  ];
+
+  const allSources = new Set([
+    ...Object.keys(stats.paid.bySource),
+    ...Object.keys(stats.free.bySource),
+  ]);
+
+  for (const src of [...allSources].sort()) {
+    const paid = stats.paid.bySource[src];
+    const free = stats.free.bySource[src] || 0;
+    if (paid) {
+      lines.push(`- ${src}: ${paid.totalCalls} paid ($${paid.totalCost.toFixed(4)}) + ${free} free`);
+    } else {
+      lines.push(`- ${src}: ${free} free calls`);
+    }
+  }
+
+  return { content: [{ type: "text" as const, text: lines.join("\n") }] };
 }
 
 // --- Start ---

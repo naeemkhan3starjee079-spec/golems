@@ -1,18 +1,22 @@
 /**
  * Unified Cost Tracker
  *
- * Reads api_costs.jsonl and provides aggregation for:
- * - Total cost (today, this week, this month, all-time)
- * - Cost by source (email-scorer, job-scorer, etc.)
- * - Cost by model (haiku, sonnet, opus, etc.)
- * - Daily breakdown
+ * Dual-write: local JSONL + Supabase llm_usage table.
+ * Reads from Supabase for persistent stats (survives Railway deploys).
+ * Falls back to JSONL when Supabase is unavailable.
+ *
+ * Tracks three tiers:
+ * - "paid": Haiku API calls (cloud worker, telegram bot)
+ * - "free": CLI helpers (gemini, cursor, codex, kiro)
+ * - "subscription": Claude Code ($200/mo subscription, actual value tracked)
  *
  * JSONL format (one per line):
- * { timestamp, model, source, input_tokens, output_tokens, cost_usd }
+ * { timestamp, model, source, input_tokens, output_tokens, cost_usd, tier }
  */
 
 import { readFileSync, existsSync, appendFileSync, mkdirSync } from "fs";
 import { join, dirname } from "path";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 // ─── Types ─────────────────────────────────────────────────────────
 
@@ -23,7 +27,7 @@ export interface CostEntry {
   input_tokens: number;
   output_tokens: number;
   cost_usd: number;
-  tier?: "paid" | "free";
+  tier?: "paid" | "free" | "subscription";
   duration_ms?: number;
 }
 
@@ -55,6 +59,143 @@ export interface FullUsageStats {
   combined: { totalCalls: number };
 }
 
+// ─── Supabase (persistent storage) ────────────────────────────────
+
+let _supabase: SupabaseClient | null = null;
+
+function getSupabase(): SupabaseClient | null {
+  if (_supabase) return _supabase;
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
+  if (!url || !key) return null;
+  _supabase = createClient(url, key);
+  return _supabase;
+}
+
+/**
+ * Fire-and-forget insert to Supabase llm_usage table.
+ * Never throws — logging failures must not break the main flow.
+ */
+function persistToSupabase(entry: CostEntry): void {
+  const sb = getSupabase();
+  if (!sb) return;
+
+  sb.from("llm_usage")
+    .insert({
+      model: entry.model,
+      source: entry.source,
+      input_tokens: entry.input_tokens,
+      output_tokens: entry.output_tokens,
+      cost_usd: entry.cost_usd,
+      tier: entry.tier || "paid",
+      duration_ms: entry.duration_ms || null,
+      metadata: {},
+      created_at: entry.timestamp,
+    })
+    .then(({ error }) => {
+      if (error) console.error("[CostTracker] Supabase insert failed:", error.message);
+    })
+    .catch(() => {});
+}
+
+/**
+ * Read cost entries from Supabase for a given period.
+ * Returns empty array if Supabase is unavailable.
+ */
+export async function readFromSupabase(
+  period: "today" | "week" | "month" | "all" = "all"
+): Promise<CostEntry[]> {
+  const sb = getSupabase();
+  if (!sb) return [];
+
+  let query = sb
+    .from("llm_usage")
+    .select("model, source, input_tokens, output_tokens, cost_usd, tier, duration_ms, created_at")
+    .order("created_at", { ascending: false });
+
+  if (period !== "all") {
+    const now = new Date();
+    let cutoff: Date;
+    switch (period) {
+      case "today":
+        cutoff = startOfDay(now);
+        break;
+      case "week":
+        cutoff = startOfWeek(now);
+        break;
+      case "month":
+        cutoff = startOfMonth(now);
+        break;
+    }
+    query = query.gte("created_at", cutoff.toISOString());
+  }
+
+  // Limit to 10K entries max
+  query = query.limit(10000);
+
+  const { data, error } = await query;
+  if (error || !data) return [];
+
+  return data.map((row: any) => ({
+    timestamp: row.created_at,
+    model: row.model,
+    source: row.source,
+    input_tokens: row.input_tokens,
+    output_tokens: row.output_tokens,
+    cost_usd: Number(row.cost_usd),
+    tier: row.tier as CostEntry["tier"],
+    duration_ms: row.duration_ms,
+  }));
+}
+
+/**
+ * Get full usage stats from Supabase (persistent, survives deploys).
+ */
+export async function getSupabaseUsageStats(
+  period: "today" | "week" | "month" | "all" = "all"
+): Promise<FullUsageStats & { subscription: SubscriptionStats }> {
+  const entries = await readFromSupabase(period);
+
+  const paidEntries = entries.filter((e) => e.tier === "paid");
+  const freeEntries = entries.filter((e) => e.tier === "free");
+  const subEntries = entries.filter((e) => e.tier === "subscription");
+
+  const paidSummary = summarize(paidEntries, period);
+  const paidBySource = groupBySource(paidEntries);
+
+  const byHelper: Record<string, number> = {};
+  const freeBySource: Record<string, number> = {};
+  for (const e of freeEntries) {
+    byHelper[e.model] = (byHelper[e.model] || 0) + 1;
+    freeBySource[e.source] = (freeBySource[e.source] || 0) + 1;
+  }
+
+  // CC subscription stats
+  const subSummary = summarize(subEntries, period);
+
+  return {
+    paid: { ...paidSummary, bySource: paidBySource },
+    free: { totalCalls: freeEntries.length, byHelper, bySource: freeBySource },
+    combined: { totalCalls: entries.length },
+    subscription: {
+      monthlyCost: CC_SUBSCRIPTION_MONTHLY,
+      actualValue: subSummary.totalCost,
+      sessions: subSummary.totalCalls,
+      totalTokens: subSummary.totalInputTokens + subSummary.totalOutputTokens,
+    },
+  };
+}
+
+/** Claude Code Max subscription cost (USD/month) */
+export const CC_SUBSCRIPTION_MONTHLY = 200;
+
+export interface SubscriptionStats {
+  monthlyCost: number;
+  actualValue: number;
+  sessions: number;
+  totalTokens: number;
+}
+
 // ─── Reader ────────────────────────────────────────────────────────
 
 /**
@@ -80,14 +221,19 @@ export function readCostLog(costLogPath: string): CostEntry[] {
 }
 
 /**
- * Append a cost entry to the JSONL log.
+ * Append a cost entry to the JSONL log AND persist to Supabase.
+ * Dual-write ensures local backup + cloud persistence.
  */
 export function logCost(costLogPath: string, entry: CostEntry): void {
+  // Local JSONL (always works, even offline)
   const dir = dirname(costLogPath);
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
   }
   appendFileSync(costLogPath, JSON.stringify(entry) + "\n");
+
+  // Supabase (fire-and-forget, for dashboard + cross-deploy persistence)
+  persistToSupabase(entry);
 }
 
 // ─── Filters ───────────────────────────────────────────────────────

@@ -22,7 +22,7 @@
 | 4 | LinkedIn Connections Pipeline | [phase-4](phase-4/) | done | `feature/jscc-phase0` | 823 imported, matcher + MCP tools |
 | 5 | RecruiterGolem Upgrade | [phase-5](phase-5/) | backend done | `feature/jscc-phase5` | Outreach drafts: generation + MCP tools + Supabase |
 | 6 | LinkedIn Exposure Skill | [phase-6](phase-6/) | done | `feature/jscc-phase6` | /linkedin-post skill: topic, draft, review workflows |
-| 7 | Cost Tracking + Observability | [phase-7](phase-7/) | done | `feature/jscc-phase7` | Unified paid + free usage tracking |
+| 7 | Cost Tracking + Observability | [phase-7](phase-7/) | done | `feature/jscc-phase7-observability` | Supabase persistence, CC usage via ccusage, MCP tools, value metrics |
 | 8 | Job Board Expansion | [phase-8](phase-8/) | done | `feature/jscc-phase8` | Greenhouse (213 jobs) + Lever (25 jobs) — PR #79 merged |
 
 ---
