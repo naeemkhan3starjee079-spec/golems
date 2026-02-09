@@ -13,7 +13,7 @@ const TEST_DIR = "/tmp/golems-zikaron-test/job-golem";
 const TEST_EVENT_LOG = "/tmp/golems-zikaron-test/job-golem/event-log.json";
 
 // Import will fail initially if code not implemented
-import { loadScrapedJobs, type JobListing } from "../job-golem/scraper";
+import { loadScrapedJobs, type JobListing, scrapeGreenhouse, scrapeLever } from "../job-golem/scraper";
 import { logEvent, type GolemEvent } from "../event-log";
 
 describe("Job Golem - loadScrapedJobs()", () => {
@@ -65,6 +65,8 @@ describe("Job Golem - JobListing Interface", () => {
       "drushim",
       "indeed",
       "goozali",
+      "greenhouse",
+      "lever",
     ];
 
     for (const source of sources) {
@@ -333,4 +335,53 @@ describe("Job Golem - Event Logging", () => {
     expect(events[0].data.company).toBe("Wix");
     expect(events[1].data.company).toBe("Monday");
   });
+});
+
+describe("Job Golem - Greenhouse ATS Scraper", () => {
+  it("should return jobs with correct source and ID format", async () => {
+    // This is an integration test that hits the real Greenhouse API
+    // Skip if no network (CI) — but in dev, it's a quick sanity check
+    const jobs = await scrapeGreenhouse();
+
+    // Should find at least some jobs (companies like Taboola, JFrog have 100+ worldwide)
+    expect(Array.isArray(jobs)).toBe(true);
+
+    if (jobs.length > 0) {
+      const job = jobs[0];
+      expect(job.source).toBe("greenhouse");
+      expect(job.id).toMatch(/^greenhouse-/);
+      expect(job.url).toMatch(/^https?:\/\//); // URL can be greenhouse.io or company's own careers page
+      expect(job.language).toBe("en");
+      expect(job.title.length).toBeGreaterThan(0);
+      expect(job.company.length).toBeGreaterThan(0);
+    }
+  }, 30000); // 30s timeout for network
+
+  it("should filter to Israel-relevant locations only", async () => {
+    const jobs = await scrapeGreenhouse();
+
+    for (const job of jobs) {
+      const loc = job.location.toLowerCase();
+      const isRelevant = /israel|tel[\s-]?aviv|jerusalem|haifa|herzliya|ramat|remote|hybrid|netanya|petah|bnei|rehovot|kfar|ra.anana|rishon|modiin|be.er[\s-]?sheva/i.test(loc);
+      expect(isRelevant).toBe(true);
+    }
+  }, 30000);
+});
+
+describe("Job Golem - Lever ATS Scraper", () => {
+  it("should return jobs with correct source and ID format", async () => {
+    const jobs = await scrapeLever();
+
+    expect(Array.isArray(jobs)).toBe(true);
+
+    if (jobs.length > 0) {
+      const job = jobs[0];
+      expect(job.source).toBe("lever");
+      expect(job.id).toMatch(/^lever-/);
+      expect(job.url).toContain("lever.co");
+      expect(job.language).toBe("en");
+      expect(job.title.length).toBeGreaterThan(0);
+      expect(job.company.length).toBeGreaterThan(0);
+    }
+  }, 30000);
 });

@@ -7,6 +7,8 @@
  * - SecretTLV (English, tech-focused)
  * - Drushim (Hebrew, general tech)
  * - Goozali Telegram channels
+ * - Greenhouse ATS boards (free JSON API, Israeli companies)
+ * - Lever ATS boards (free JSON API, Israeli companies)
  *
  * Fetches each job page to verify active and get real details.
  */
@@ -31,7 +33,7 @@ export interface JobListing {
   experience: string;
   description: string;
   url: string;
-  source: "secretTLV" | "drushim" | "indeed" | "goozali";
+  source: "secretTLV" | "drushim" | "indeed" | "goozali" | "greenhouse" | "lever";
   language: "en" | "he";
   scrapedAt: string;
 }
@@ -796,6 +798,186 @@ export async function scrapeIndeedIsrael(): Promise<JobListing[]> {
   return allJobs;
 }
 
+// ==========================================
+// Greenhouse + Lever ATS Board Scrapers
+// ==========================================
+
+/**
+ * Israeli tech companies on Greenhouse ATS
+ * Slug is the company identifier in the Greenhouse API URL.
+ * To find more: curl -s https://boards-api.greenhouse.io/v1/boards/{slug}/jobs
+ */
+const GREENHOUSE_COMPANIES = [
+  { slug: "appsflyer", name: "AppsFlyer" },
+  { slug: "taboola", name: "Taboola" },
+  { slug: "jfrog", name: "JFrog" },
+  { slug: "armissecurity", name: "Armis" },
+  { slug: "similarweb", name: "SimilarWeb" },
+  { slug: "riskified", name: "Riskified" },
+  { slug: "forter", name: "Forter" },
+  { slug: "pendo", name: "Pendo" },
+  { slug: "lightricks", name: "Lightricks" },
+  { slug: "optimove", name: "Optimove" },
+  { slug: "orcasecurity", name: "Orca Security" },
+  { slug: "bringg", name: "Bringg" },
+];
+
+/**
+ * Israeli tech companies on Lever ATS
+ * Slug is the company identifier in the Lever API URL.
+ */
+const LEVER_COMPANIES = [
+  { slug: "walkme", name: "WalkMe" },
+];
+
+/** Greenhouse API response types */
+interface GreenhouseJob {
+  id: number;
+  title: string;
+  absolute_url: string;
+  location: { name: string };
+  updated_at: string;
+  company_name?: string;
+}
+
+/** Lever API response types */
+interface LeverPosting {
+  id: string;
+  text: string;
+  hostedUrl: string;
+  createdAt: number;
+  categories: {
+    commitment?: string;
+    department?: string;
+    location?: string;
+    team?: string;
+  };
+  descriptionPlain?: string;
+}
+
+/**
+ * Filter jobs to Israel-relevant locations.
+ * Greenhouse/Lever boards include worldwide jobs, so we filter to:
+ * - Israel / Tel Aviv / Jerusalem / Haifa / etc.
+ * - Remote (could be Israel-based remote)
+ * - Hybrid (many Israeli companies use this)
+ */
+const ISRAEL_LOCATION_PATTERNS = /\bisrael\b|\btel[\s-]?aviv\b|\bjerusalem\b|\bhaifa\b|\bbe['']?er[\s-]?sheva\b|\bherzliya\b|\bramat[\s-]?gan\b|\bnetanya\b|\bpetah[\s-]?tikva\b|\bremote\b|\bhybrid\b|\bbnei[\s-]?brak\b|\brehovot\b|\bashdod\b|\bkfar[\s-]?saba\b|\bra['']?anana\b|\brishon\b|\bmodiin\b/i;
+
+function isIsraelLocation(location: string): boolean {
+  return ISRAEL_LOCATION_PATTERNS.test(location);
+}
+
+/**
+ * Scrape Greenhouse ATS boards for Israeli tech jobs
+ * Uses free JSON API: https://boards-api.greenhouse.io/v1/boards/{slug}/jobs
+ * No auth needed, no rate limits.
+ */
+export async function scrapeGreenhouse(): Promise<JobListing[]> {
+  console.log(`[Greenhouse] Scraping ${GREENHOUSE_COMPANIES.length} company boards...`);
+  const jobs: JobListing[] = [];
+
+  for (const company of GREENHOUSE_COMPANIES) {
+    try {
+      const resp = await fetch(
+        `https://boards-api.greenhouse.io/v1/boards/${company.slug}/jobs`,
+        { headers: { "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)" } }
+      );
+
+      if (!resp.ok) {
+        console.log(`  ⚠️ ${company.name}: HTTP ${resp.status}`);
+        continue;
+      }
+
+      const data = (await resp.json()) as { jobs: GreenhouseJob[] };
+      const allBoardJobs = data.jobs || [];
+
+      // Filter to Israel-relevant locations
+      const israelJobs = allBoardJobs.filter(j => isIsraelLocation(j.location?.name || ""));
+
+      for (const j of israelJobs) {
+        jobs.push({
+          id: `greenhouse-${company.slug}-${j.id}`,
+          title: j.title,
+          company: j.company_name || company.name,
+          location: j.location?.name || "Israel",
+          experience: "",
+          description: "", // Greenhouse list endpoint doesn't include description
+          url: j.absolute_url,
+          source: "greenhouse",
+          language: "en",
+          scrapedAt: new Date().toISOString(),
+        });
+      }
+
+      console.log(`  ✓ ${company.name}: ${israelJobs.length}/${allBoardJobs.length} Israel jobs`);
+
+      // Small delay between companies to be polite
+      await new Promise(r => setTimeout(r, 300));
+    } catch (err) {
+      console.log(`  ⚠️ ${company.name}: ${err}`);
+    }
+  }
+
+  console.log(`[Greenhouse] Total: ${jobs.length} Israel-relevant jobs`);
+  return jobs;
+}
+
+/**
+ * Scrape Lever ATS boards for Israeli tech jobs
+ * Uses free JSON API: https://api.lever.co/v0/postings/{slug}
+ * No auth needed.
+ */
+export async function scrapeLever(): Promise<JobListing[]> {
+  console.log(`[Lever] Scraping ${LEVER_COMPANIES.length} company boards...`);
+  const jobs: JobListing[] = [];
+
+  for (const company of LEVER_COMPANIES) {
+    try {
+      const resp = await fetch(
+        `https://api.lever.co/v0/postings/${company.slug}`,
+        { headers: { "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)" } }
+      );
+
+      if (!resp.ok) {
+        console.log(`  ⚠️ ${company.name}: HTTP ${resp.status}`);
+        continue;
+      }
+
+      const postings = (await resp.json()) as LeverPosting[];
+
+      // Filter to Israel-relevant locations
+      const israelPostings = postings.filter(p =>
+        isIsraelLocation(p.categories?.location || "")
+      );
+
+      for (const p of israelPostings) {
+        jobs.push({
+          id: `lever-${company.slug}-${p.id}`,
+          title: p.text,
+          company: company.name,
+          location: p.categories?.location || "Israel",
+          experience: "",
+          description: (p.descriptionPlain || "").slice(0, 2000),
+          url: p.hostedUrl,
+          source: "lever",
+          language: "en",
+          scrapedAt: new Date().toISOString(),
+        });
+      }
+
+      console.log(`  ✓ ${company.name}: ${israelPostings.length}/${postings.length} Israel postings`);
+
+      await new Promise(r => setTimeout(r, 300));
+    } catch (err) {
+      console.log(`  ⚠️ ${company.name}: ${err}`);
+    }
+  }
+
+  console.log(`[Lever] Total: ${jobs.length} Israel-relevant jobs`);
+  return jobs;
+}
+
 /**
  * Wrapper to safely scrape a source with error handling
  * Returns empty array on failure, logs the error
@@ -869,6 +1051,20 @@ export async function scrapeAllJobs(): Promise<JobListing[]> {
     sources.push({ name: "Drushim", fn: scrapeDrushim });
   } else {
     console.log("[Drushim] Skipped (SKIP_DRUSHIM=1)");
+  }
+
+  // Greenhouse ATS boards (free JSON API, Israeli companies)
+  if (process.env.SKIP_GREENHOUSE !== "1") {
+    sources.push({ name: "Greenhouse", fn: scrapeGreenhouse });
+  } else {
+    console.log("[Greenhouse] Skipped (SKIP_GREENHOUSE=1)");
+  }
+
+  // Lever ATS boards (free JSON API, Israeli companies)
+  if (process.env.SKIP_LEVER !== "1") {
+    sources.push({ name: "Lever", fn: scrapeLever });
+  } else {
+    console.log("[Lever] Skipped (SKIP_LEVER=1)");
   }
 
   console.log(`[Scraper] Fetching ${sources.length} sources in parallel...`);
