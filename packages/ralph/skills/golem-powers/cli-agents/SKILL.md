@@ -1,60 +1,102 @@
 ---
 name: cli-agents
-description: Run external CLI agents (Gemini, Cursor, Codex) as one-shot commands. Use when you need research, code review, doc generation, or verification from external AI models. Each agent runs as a background Bash task and writes output to a file you can Read when done.
+description: Run external CLI agents (Gemini, Cursor, Codex, Kiro) for research AND implementation. Research mode captures text output. Work mode lets cursor/codex modify files directly — use for parallel implementation instead of Claude subagents.
 ---
 
 # CLI Agents Skill
 
-One-shot wrappers for external AI CLI tools. Each command runs in background and writes to a file.
+External AI agents for research, analysis, and parallel implementation. Use these INSTEAD of Claude subagents (Task tool) whenever possible — they're cheaper or free.
 
-## Usage
+## Two Modes
 
-All agents use the same script. Pass the agent name and prompt:
+### Research Mode (default) — text output to file
+For: git comment summaries, codebase analysis, doc generation, opinion gathering, code review
 
 ```bash
 ~/.claude/commands/golem-powers/cli-agents/scripts/run.sh <agent> "<prompt>" [output-file]
 ```
 
-**Agents:** `gemini`, `cursor`, `codex`, `kiro`
+### Work Mode — agent modifies files directly
+For: parallel implementation, code generation, file modifications, refactoring (cursor/codex only)
 
-**Output file** defaults to `/tmp/cli-agent-<agent>-<timestamp>.md`
+```bash
+cd /path/to/repo
+~/.claude/commands/golem-powers/cli-agents/scripts/run.sh --work <agent> "<prompt>" [log-file]
+```
+
+### Long Prompts — read from file
+For prompts too long for shell args, use `@filepath`:
+
+```bash
+run.sh cursor @/tmp/my-long-prompt.txt
+run.sh --work cursor @/tmp/redesign-prompt.txt /tmp/redesign-log.md
+```
+
+## When to Use Each Mode
+
+| Task | Mode | Agent |
+|------|------|-------|
+| "Summarize this PR's changes" | research | gemini |
+| "What's the best auth pattern for Next.js?" | research | gemini/kiro |
+| "Review this code for bugs" | research | cursor |
+| "Redesign these 3 component files" | **work** | cursor |
+| "Refactor auth module to use JWT" | **work** | cursor/codex |
+| "Add tests for all untested functions" | **work** | codex |
+| "Implement this feature in parallel" | **work** | cursor |
 
 ## Examples
 
-### Research with Gemini (free, fast)
+### Research: Summarize git PR comments
 ```bash
-# Run in background, read output when done
-Bash(~/.claude/commands/golem-powers/cli-agents/scripts/run.sh gemini "What is the best approach for FTS5 hybrid search in SQLite?", run_in_background: true)
-# Later: Read the output file path printed at start
+Bash(~/.claude/commands/golem-powers/cli-agents/scripts/run.sh gemini "Summarize the review comments on PR #19 at github.com/EtanHey/etanheyman.com", run_in_background: true)
 ```
 
-### Code review with Cursor (GPT-5.2)
+### Research: Compare approaches
 ```bash
-Bash(~/.claude/commands/golem-powers/cli-agents/scripts/run.sh cursor "Review this codebase for unused exports and dead code", run_in_background: true)
+Bash(~/.claude/commands/golem-powers/cli-agents/scripts/run.sh gemini "Compare FTS5 vs BM25 for hybrid search in SQLite. Which is better for 226K chunks?", run_in_background: true)
 ```
 
-### Analysis with Codex (OpenAI)
+### Work: Redesign a component (cursor modifies files in-place)
 ```bash
-Bash(~/.claude/commands/golem-powers/cli-agents/scripts/run.sh codex "Analyze the test coverage gaps in this project", run_in_background: true)
+Bash(cd /path/to/repo && ~/.claude/commands/golem-powers/cli-agents/scripts/run.sh --work cursor "Redesign app/components/Dashboard.tsx with a glassmorphism style. Keep all data fetching, only change visuals." /tmp/dashboard-redesign-log.md, run_in_background: true)
 ```
 
-### Custom output path
+### Work: Parallel implementation (4 agents, 4 different tasks)
 ```bash
-Bash(~/.claude/commands/golem-powers/cli-agents/scripts/run.sh gemini "Summarize this file" /tmp/my-summary.md, run_in_background: true)
+# Launch 4 cursor agents in parallel, each working on different files
+Bash(cd /repo && run.sh --work cursor @/tmp/task1-prompt.txt /tmp/task1-log.md, run_in_background: true)
+Bash(cd /repo && run.sh --work cursor @/tmp/task2-prompt.txt /tmp/task2-log.md, run_in_background: true)
+Bash(cd /repo && run.sh --work cursor @/tmp/task3-prompt.txt /tmp/task3-log.md, run_in_background: true)
+Bash(cd /repo && run.sh --work cursor @/tmp/task4-prompt.txt /tmp/task4-log.md, run_in_background: true)
 ```
 
-## Rules
-
-1. **Always run in background** (`run_in_background: true`) - don't block the main session
-2. **Read the output file** when the task completes - don't use `TaskOutput(block: true)`
-3. **Gemini first** - it's free. Only use Cursor/Codex when you need their specific capabilities
-4. **One prompt, one file** - each invocation is self-contained
+### Work: Add tests with Codex
+```bash
+Bash(cd /repo && ~/.claude/commands/golem-powers/cli-agents/scripts/run.sh --work codex "Write unit tests for src/auth/*.ts. Use vitest. Cover all exported functions." /tmp/test-log.md, run_in_background: true)
+```
 
 ## Agent Capabilities
 
-| Agent | Model | Best For | Cost |
-|-------|-------|----------|------|
-| `gemini` | Gemini 2.5 Pro | Research, opinions, doc review | Free (1K/day) |
-| `cursor` | GPT-5.2 Codex XHigh | Codebase-wide analysis, architecture | Cursor Pro ($20/mo) |
-| `codex` | Default (cheap) | Code review, test writing | ChatGPT Plus |
-| `kiro` | Kiro 1.24 | Research, knowledge base queries | Free tier |
+| Agent | Model | Research | Work | Cost |
+|-------|-------|----------|------|------|
+| `gemini` | Gemini 2.5 Pro | Yes | No (text-only) | Free (1K/day) |
+| `cursor` | GPT-5.2 Codex XHigh | Yes | **Yes** | Cursor Pro ($20/mo) |
+| `codex` | OpenAI Codex | Yes | **Yes** | ChatGPT Plus |
+| `kiro` | Kiro 1.24 | Yes | No (text-only) | Free tier |
+
+## Rules
+
+1. **Always run in background** (`run_in_background: true`) — don't block the main session
+2. **Read the output/log file** when done — don't use `TaskOutput(block: true)`
+3. **Gemini first** for research — it's free
+4. **Cursor for work** — it has file access and uses GPT-5.2
+5. **Work mode requires `cd` to repo first** — agent works in CWD
+6. **One prompt, one agent** — each invocation is self-contained
+7. **Use `@filepath` for long prompts** — avoids shell escaping issues
+
+## Environment Variables
+
+| Var | Default | Purpose |
+|-----|---------|---------|
+| `CURSOR_MODEL` | `gpt-5.2-codex-xhigh` | Override cursor model |
+| `CODEX_BIN` | `codex` | Path to codex binary |
