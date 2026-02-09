@@ -6,13 +6,19 @@
  * Handles both English and Hebrew job listings.
  */
 
-import { readFileSync } from "fs";
+import { readFileSync, existsSync } from "fs";
 import { join } from "path";
 import type { JobListing } from "./scraper";
 import { forJobGolem } from "../ollama-wrapper";
 
-// Resolve relative to this file — works on both local Mac and Railway
-const PROFILE_PATH = join(import.meta.dir, "profile.json");
+// Try multiple paths — import.meta.dir can differ between local/Railway/compiled
+const PROFILE_CANDIDATES = [
+  join(import.meta.dir, "profile.json"),
+  join(import.meta.dir, "../job-golem/profile.json"),
+  "/root/Gits/golems/packages/autonomous/src/job-golem/profile.json",
+  join(process.env.HOME || "", "Gits/golems/packages/autonomous/src/job-golem/profile.json"),
+];
+const PROFILE_PATH = PROFILE_CANDIDATES.find(p => existsSync(p)) || PROFILE_CANDIDATES[0];
 
 export interface MatchResult {
   job: JobListing;
@@ -27,6 +33,21 @@ let cachedProfile: any = null;
 // Load candidate profile (cached)
 function loadProfile() {
   if (!cachedProfile) {
+    if (!existsSync(PROFILE_PATH)) {
+      console.error(`[Matcher] profile.json not found! Tried: ${PROFILE_CANDIDATES.join(", ")}`);
+      // Return minimal fallback so JobGolem doesn't crash
+      return {
+        yearsExperience: 3,
+        roles: ["Full Stack Developer", "Frontend Engineer"],
+        primarySkills: ["TypeScript", "React", "Next.js", "Node.js"],
+        secondarySkills: [],
+        integrations: [],
+        languages: { Hebrew: "native", English: "near-native" },
+        keywords: ["react", "typescript", "frontend", "fullstack"],
+        excludeKeywords: [],
+        excludeCompanies: [],
+      };
+    }
     cachedProfile = JSON.parse(readFileSync(PROFILE_PATH, "utf-8"));
   }
   return cachedProfile;
