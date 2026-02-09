@@ -271,6 +271,33 @@ export async function markJobsSeen(jobIds: string[]): Promise<void> {
   writeFileSync(SEEN_JOBS_FILE, JSON.stringify(seen, null, 2));
 }
 
+// ═══════════════════════════════════════════════════════
+// Service Run Reporting (always writes to Supabase for dashboard)
+// ═══════════════════════════════════════════════════════
+
+/**
+ * Report a service run to Supabase for dashboard visibility.
+ * Always writes to Supabase regardless of STATE_BACKEND setting.
+ * This ensures local launchd services are visible on the dashboard.
+ */
+export async function reportServiceRun(key: string): Promise<void> {
+  const url = process.env.SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+  if (!url || !serviceKey) return;
+
+  try {
+    const client = STATE_BACKEND === "supabase" ? getSupabase() : createClient(url, serviceKey);
+    await client.from("golem_state").upsert({
+      key,
+      value: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+  } catch (err) {
+    // Dashboard reporting is non-critical, never fail the service
+    console.error(`[StateStore] Failed to report service run "${key}":`, err);
+  }
+}
+
 /** Get all seen job IDs (for compatibility with Set-based scraper) */
 export async function getSeenJobIds(): Promise<Set<string>> {
   if (STATE_BACKEND === "supabase") {

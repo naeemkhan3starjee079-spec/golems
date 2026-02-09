@@ -31,7 +31,7 @@ import { determineTargetGolem } from "./router";
 import { trackSender, parseListUnsubscribe } from "./sender-tracker";
 import { logEvent } from "../event-log";
 import { sendNotification as sendTelegramNotification } from "../lib/telegram-direct";
-import { getState, setState } from "../lib/state-store";
+import { getState, setState, reportServiceRun } from "../lib/state-store";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 // Configuration
@@ -388,6 +388,8 @@ async function processEmails(options: { dryRun?: boolean; maxEmails?: number } =
       lastEmailCheck: new Date().toISOString(),
       processedEmailIds: Array.from(processedIds).slice(-500), // Keep last 500 IDs
     });
+    // Report run to dashboard (always writes to Supabase)
+    await reportServiceRun("lastEmailCheck");
     console.log("\n✓ State saved");
   }
 

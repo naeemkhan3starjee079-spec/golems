@@ -23,6 +23,7 @@ import {
 } from "../recruiter-golem/auto-outreach";
 import { logEvent } from "../event-log";
 import { sendNotification } from "../lib/telegram-direct";
+import { reportServiceRun } from "../lib/state-store";
 
 const HOME = process.env.HOME;
 if (!HOME) throw new Error("HOME environment variable is required");
@@ -178,6 +179,7 @@ export async function runJobSearch(): Promise<{ scraped: number; filtered: numbe
   if (allJobs.length === 0) {
     console.log("No new jobs found.");
     await sendTelegram("Job Golem", "No new jobs found today.");
+    await reportServiceRun("lastJobRun");
     return { scraped: 0, filtered: 0, matched: 0 };
   }
 
@@ -188,6 +190,7 @@ export async function runJobSearch(): Promise<{ scraped: number; filtered: numbe
 
   if (filtered.length === 0) {
     await sendTelegram("Job Golem", `Scraped ${allJobs.length} jobs but none matched your keywords.`);
+    await reportServiceRun("lastJobRun");
     return { scraped: allJobs.length, filtered: 0, matched: 0 };
   }
 
@@ -274,6 +277,9 @@ export async function runJobSearch(): Promise<{ scraped: number; filtered: numbe
 
   // Clean up old result files
   cleanupOldResults();
+
+  // Report run to dashboard
+  await reportServiceRun("lastJobRun");
 
   return { scraped: allJobs.length, filtered: filtered.length, matched: matches.length };
   } finally {

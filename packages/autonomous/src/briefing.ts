@@ -22,6 +22,7 @@ import {
 import type { Email, SubscriptionSummary } from "./email-golem/types";
 import { getRecentEvents, type GolemEvent } from "./event-log";
 import { generateMonthlyReport } from "./teller-golem/report";
+import { reportServiceRun } from "./lib/state-store";
 
 const HOME = process.env.HOME || "/Users/etanheyman";
 const STATE_FILE = join(HOME, ".golems-zikaron/state.json");
@@ -377,6 +378,9 @@ async function sendBriefing() {
   const endTime = new Date().toISOString().replace('T', ' ').slice(0, 19);
   console.log(`[${endTime}] ✅ Briefing sent!\n`);
   console.log(msg);
+
+  // Report run to dashboard
+  await reportServiceRun("lastBriefing");
 
   // Clear overnight PRs after briefing (they've been reported)
   const updatedState2 = loadState();
