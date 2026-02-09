@@ -207,6 +207,7 @@ async function syncScores(matches: MatchResult[]) {
         match_score: match.score,
         notes: match.reason,
         tags: match.highlights,
+        match_reasons: match.highlights.length > 0 ? match.highlights : null,
       })
       .eq("external_id", match.job.id);
 
