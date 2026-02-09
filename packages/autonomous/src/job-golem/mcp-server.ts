@@ -19,6 +19,7 @@ import { existsSync, readFileSync, readdirSync } from "fs";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { loadScrapedJobs, type JobListing } from "./scraper";
 import { getActiveCompanies, getOutreachCandidates } from "./watchlist";
+import { matchJobsToConnections } from "./connection-matcher";
 
 // Lazy Supabase client for dashboard-integrated tools
 let _supabase: SupabaseClient | null = null;
@@ -162,6 +163,41 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: ["jobId"],
       },
     },
+    {
+      name: "jobs_connectionMatches",
+      description:
+        "Find jobs where you have LinkedIn connections at the company. Shows warm leads for better applications.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          days: {
+            type: "number",
+            description: "Look back period in days (default: 7)",
+            default: 7,
+          },
+        },
+      },
+    },
+    {
+      name: "linkedin_searchConnections",
+      description:
+        "Search your LinkedIn connections by name, company, or position.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          query: {
+            type: "string",
+            description: "Search term to match in name, company, or position",
+          },
+          limit: {
+            type: "number",
+            description: "Max results (default: 20)",
+            default: 20,
+          },
+        },
+        required: ["query"],
+      },
+    },
   ],
 }));
 
@@ -186,6 +222,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return handleUpdateStatus(args);
       case "jobs_draftCoverLetter":
         return handleDraftCoverLetter(args);
+      case "jobs_connectionMatches":
+        return handleConnectionMatches(args);
+      case "linkedin_searchConnections":
+        return handleSearchConnections(args);
       default:
         return {
           content: [{ type: "text" as const, text: `Unknown tool: ${name}` }],
@@ -545,6 +585,73 @@ Use a ${style} tone. No generic filler. Be specific about matching skills.`;
     draft,
     "",
     error ? `(Note: failed to save to DB: ${error.message})` : "(Saved to job_cover_letters table)",
+  ];
+
+  return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+}
+
+async function handleConnectionMatches(args: any) {
+  const sb = getSupabase();
+  if (!sb) {
+    return { content: [{ type: "text" as const, text: "Supabase not configured." }], isError: true };
+  }
+
+  const matches = await matchJobsToConnections(sb);
+
+  if (matches.length === 0) {
+    return { content: [{ type: "text" as const, text: "No warm leads found. Import connections first with `bun scripts/import-linkedin-connections.ts`." }] };
+  }
+
+  // Group by job
+  const byJob = new Map<string, typeof matches>();
+  for (const m of matches) {
+    const key = `${m.jobTitle} @ ${m.jobCompany}`;
+    const existing = byJob.get(key) || [];
+    existing.push(m);
+    byJob.set(key, existing);
+  }
+
+  const lines = [`## Warm Leads (${matches.length} connections at hiring companies)\n`];
+
+  for (const [job, conns] of byJob) {
+    lines.push(`### ${job}`);
+    for (const c of conns) {
+      const badge = c.matchType === "exact" ? "EXACT" : c.matchType === "substring" ? "PARTIAL" : "FUZZY";
+      lines.push(`- **${c.connectionName}** — ${c.connectionPosition} at ${c.connectionCompany} [${badge}]`);
+    }
+    lines.push("");
+  }
+
+  return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+}
+
+async function handleSearchConnections(args: any) {
+  const sb = getSupabase();
+  if (!sb) {
+    return { content: [{ type: "text" as const, text: "Supabase not configured." }], isError: true };
+  }
+
+  const query = args?.query?.toLowerCase();
+  const limit = args?.limit ?? 20;
+  if (!query) {
+    return { content: [{ type: "text" as const, text: "Missing required: query" }], isError: true };
+  }
+
+  const { data, error } = await sb
+    .from("linkedin_connections")
+    .select("*")
+    .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,company.ilike.%${query}%,position.ilike.%${query}%`)
+    .limit(limit);
+
+  if (error || !data || data.length === 0) {
+    return { content: [{ type: "text" as const, text: `No connections matching "${query}".` }] };
+  }
+
+  const lines = [
+    `## LinkedIn Connections: "${query}" (${data.length})\n`,
+    ...data.map((c: any) =>
+      `- **${c.first_name} ${c.last_name}** — ${c.position || "N/A"} at ${c.company || "N/A"}${c.has_messages ? " (has messages)" : ""}${c.linkedin_url ? `\n  ${c.linkedin_url}` : ""}`
+    ),
   ];
 
   return { content: [{ type: "text" as const, text: lines.join("\n") }] };
