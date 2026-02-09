@@ -6,51 +6,39 @@
 
 Make dashboard service statuses show real data instead of "never." Services run fine — they just don't write timestamps to Supabase.
 
-## Tools
+## Root Cause
 
-- **Research:** None needed — already diagnosed
-- **Code:** Opus direct (4 one-liners)
+Dashboard reads `golem_state` table from Supabase. Local services use `STATE_BACKEND=file` (default), so `setState()` writes to `~/.golems-zikaron/state.json` — invisible to the dashboard.
 
-## Context
+| Key | Service | Before | After |
+|-----|---------|--------|-------|
+| `lastEmailCheck` | Email Golem | Wrote to file only | + Supabase |
+| `lastJobRun` | Job Golem | **Never wrote** | + Supabase |
+| `lastNightShift` | Night Shift | Wrote to file only | + Supabase |
+| `lastBriefing` | Briefing | **Never wrote** | + Supabase |
 
-Launchd services are running:
-- `email-golem` — last ran at 13:49 today, processing emails
-- `job-golem` — PID 8139, actively scraping 60+ jobs
-- `briefing` — ran today, sent morning digest
-- `nightshift` — ran last night
+## Solution
 
-But none of them write a `last_run` timestamp to the `golem_state` Supabase table. The dashboard reads `golem_state` for service status → shows "never."
+Added `reportServiceRun(key)` to `state-store.ts` — always writes to Supabase regardless of `STATE_BACKEND`. Uses the `SUPABASE_SERVICE_KEY` from `.env` (available locally).
 
-## Steps
+Wired into all 4 services at end of their main function.
 
-1. Add `golem_state` upsert helper to `src/lib/state-store.ts` (or wherever state writes happen):
-   ```typescript
-   async function updateServiceStatus(service: string): Promise<void> {
-     await supabase.from('golem_state')
-       .upsert({ key: `${service}_last_run`, value: new Date().toISOString(), updated_at: new Date().toISOString() })
-   }
-   ```
+## Research Findings (from prereq Gemini reports)
 
-2. Add call at END of each service's main function:
-   - `src/email-golem/index.ts` → `updateServiceStatus('email_golem')`
-   - `src/job-golem/index.ts` → `updateServiceStatus('job_golem')`
-   - `src/briefing.ts` → `updateServiceStatus('briefing')`
-   - `src/night-shift.ts` → `updateServiceStatus('nightshift')`
-
-3. Verify dashboard reads these keys (check `etanheyman.com/app/admin/golem/actions/data.ts` → `getOverviewStats()`)
-
-4. If dashboard uses different key names, align them
-
-5. Railway redeploy: `cd ~/Gits/golems/packages/autonomous && railway up --detach`
-
-## Depends On
-
-- None
+Future improvements beyond this phase:
+- **pm2 + 1Password**: Better process management (Phase 7)
+- **`service_runs` table**: Dedicated run tracking with duration/status/errors (Phase 7)
+- **Pre-flight health checks**: Wrapper scripts checking dependencies before run (Phase 7)
+- **pino structured logging**: JSON logs for debugging (Phase 7)
+- **Supabase Realtime**: Push-based dashboard updates (Phase 3)
 
 ## Status
 
-- [ ] Add updateServiceStatus helper
-- [ ] Wire into all 4 service entry points
-- [ ] Verify dashboard reads correct keys
-- [ ] Test locally (run email-golem, check Supabase)
-- [ ] Railway redeploy
+- [x] Add `reportServiceRun()` helper to `state-store.ts`
+- [x] Wire into Email Golem (`lastEmailCheck`)
+- [x] Wire into Job Golem (`lastJobRun`) — was completely missing
+- [x] Wire into Briefing (`lastBriefing`) — was completely missing
+- [x] Wire into Night Shift (`lastNightShift`) — was using file-only setState
+- [x] Verify dashboard reads correct keys (aligned with `data.ts`)
+- [x] Tests pass (852 pass, 0 new failures)
+- [ ] Push + Railway redeploy
