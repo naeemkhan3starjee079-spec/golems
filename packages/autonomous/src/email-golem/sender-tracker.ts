@@ -7,6 +7,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getOrCreateLabel, createSenderFilter } from "./gmail-client";
+import { logEvent } from "../lib/state-store";
 
 export interface SenderUpdate {
   email_address: string;
@@ -246,6 +247,7 @@ export async function attemptUnsubscribe(
           .eq("email_address", emailAddress);
 
         await applyGmailFilter(emailAddress);
+        await logEvent("email_unsubscribe_attempt", { sender: emailAddress, method: "http_post", success: true, gmail_filter: true }, "emailgolem");
         return { success: true, method: "http-post" };
       }
 
@@ -266,15 +268,18 @@ export async function attemptUnsubscribe(
           .eq("email_address", emailAddress);
 
         await applyGmailFilter(emailAddress);
+        await logEvent("email_unsubscribe_attempt", { sender: emailAddress, method: "http_get", success: true, gmail_filter: true }, "emailgolem");
         return { success: true, method: "http-get" };
       }
 
+      await logEvent("email_unsubscribe_attempt", { sender: emailAddress, method: "http", success: false, error: `HTTP ${response.status}` }, "emailgolem");
       return {
         success: false,
         method: "http",
         error: `HTTP ${response.status}: ${response.statusText}`,
       };
     } catch (err: any) {
+      await logEvent("email_unsubscribe_attempt", { sender: emailAddress, method: "http", success: false, error: err.message }, "emailgolem");
       return {
         success: false,
         method: "http",
@@ -295,6 +300,7 @@ export async function attemptUnsubscribe(
       .eq("email_address", emailAddress);
 
     await applyGmailFilter(emailAddress);
+    await logEvent("email_unsubscribe_attempt", { sender: emailAddress, method: "mailto", success: false, gmail_filter: true, unsubscribe_email: sender.unsubscribe_email }, "emailgolem");
 
     return {
       success: false,
@@ -303,6 +309,7 @@ export async function attemptUnsubscribe(
     };
   }
 
+  await logEvent("email_unsubscribe_attempt", { sender: emailAddress, method: "none", success: false }, "emailgolem");
   return {
     success: false,
     method: "none",

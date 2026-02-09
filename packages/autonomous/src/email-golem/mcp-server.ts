@@ -28,6 +28,7 @@ import {
   getSubscriptionSummary,
   getUnnotifiedUrgentEmails,
   getEmailsByGolem,
+  getEmailById,
 } from "./db-client";
 import { buildReplyDraft, type ReplyDraftInput } from "./draft-reply";
 import { getSenders, setSenderAction, attemptUnsubscribe } from "./sender-tracker";
@@ -209,13 +210,17 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     {
       name: "email_setSenderAction",
       description:
-        "Set action for an email sender: keep (want these emails), unsubscribe (stop receiving), block (unwanted spam).",
+        "Set action for an email sender: keep (want these emails), unsubscribe (stop receiving), block (unwanted spam). Can pass emailId instead of emailAddress to look up the sender.",
       inputSchema: {
         type: "object" as const,
         properties: {
           emailAddress: {
             type: "string",
-            description: "Sender's email address",
+            description: "Sender's email address (provide this OR emailId)",
+          },
+          emailId: {
+            type: "string",
+            description: "Email ID to look up sender from (alternative to emailAddress)",
           },
           action: {
             type: "string",
@@ -223,7 +228,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
             enum: ["keep", "unsubscribe", "block"],
           },
         },
-        required: ["emailAddress", "action"],
+        required: ["action"],
       },
     },
     {
@@ -239,6 +244,36 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           },
         },
         required: ["emailAddress"],
+      },
+    },
+    {
+      name: "email_sendersByCategory",
+      description:
+        "Get all senders grouped by category (promo, newsletter, normal, job, tech) with counts and avg scores. Great for overview of email sources.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          limit: {
+            type: "number",
+            description: "Max senders per category (default: 10)",
+            default: 10,
+          },
+        },
+      },
+    },
+    {
+      name: "email_unsubscribeHistory",
+      description:
+        "Get history of unsubscribe attempts with success/fail status, method used, and timestamps.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          limit: {
+            type: "number",
+            description: "Max results (default: 50)",
+            default: 50,
+          },
+        },
       },
     },
     {
@@ -301,6 +336,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return handleSetSenderAction(args);
       case "email_unsubscribe":
         return handleUnsubscribe(args);
+      case "email_sendersByCategory":
+        return handleSendersByCategory(args);
+      case "email_unsubscribeHistory":
+        return handleUnsubscribeHistory(args);
       case "teller_monthlyReport":
         return handleMonthlyReport(args);
       case "teller_taxSummary":
@@ -580,13 +619,13 @@ async function handleGetSenders(args: any) {
 }
 
 async function handleSetSenderAction(args: any) {
-  const { emailAddress, action } = args || {};
+  let { emailAddress, emailId, action } = args || {};
 
   const validActions = ["keep", "unsubscribe", "block"];
 
-  if (!emailAddress || !action) {
+  if (!action) {
     return {
-      content: [{ type: "text" as const, text: "Missing required: emailAddress, action" }],
+      content: [{ type: "text" as const, text: "Missing required: action" }],
       isError: true,
     };
   }
@@ -594,6 +633,25 @@ async function handleSetSenderAction(args: any) {
   if (!validActions.includes(action)) {
     return {
       content: [{ type: "text" as const, text: `Invalid action "${action}". Must be one of: ${validActions.join(", ")}` }],
+      isError: true,
+    };
+  }
+
+  // If emailId provided, look up sender from that email
+  if (!emailAddress && emailId) {
+    const email = await getEmailById(getDb(), emailId);
+    if (!email) {
+      return {
+        content: [{ type: "text" as const, text: `Email not found: ${emailId}` }],
+        isError: true,
+      };
+    }
+    emailAddress = email.from_address;
+  }
+
+  if (!emailAddress) {
+    return {
+      content: [{ type: "text" as const, text: "Missing required: emailAddress or emailId" }],
       isError: true,
     };
   }
@@ -630,6 +688,58 @@ async function handleUnsubscribe(args: any) {
   if (result.error) {
     lines.push(`- **Note:** ${result.error}`);
   }
+
+  return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+}
+
+async function handleSendersByCategory(args: any) {
+  const limit = args?.limit ?? 10;
+  const categories = ["promo", "newsletter", "normal", "job", "tech"];
+  const sections: string[] = ["## Senders by Category\n"];
+
+  for (const cat of categories) {
+    const senders = await getSenders(getDb(), { category: cat, limit });
+    if (senders.length === 0) continue;
+
+    sections.push(`### ${cat.charAt(0).toUpperCase() + cat.slice(1)} (${senders.length})`);
+    for (const s of senders) {
+      const action = s.user_action ? ` [${s.user_action}]` : "";
+      sections.push(`- **${s.display_name || s.email_address}** — ${s.total_emails} emails, avg ${s.avg_score}/10${action}`);
+    }
+    sections.push("");
+  }
+
+  return { content: [{ type: "text" as const, text: sections.join("\n") }] };
+}
+
+async function handleUnsubscribeHistory(args: any) {
+  const limit = args?.limit ?? 50;
+
+  // Query golem_events table for unsubscribe attempts
+  const db = getDb();
+  const { data, error } = await db
+    .from("golem_events")
+    .select("*")
+    .eq("type", "email_unsubscribe_attempt")
+    .order("timestamp", { ascending: false })
+    .limit(limit);
+
+  if (error || !data || data.length === 0) {
+    return {
+      content: [{ type: "text" as const, text: "No unsubscribe history found." }],
+    };
+  }
+
+  const lines = [
+    `## Unsubscribe History (${data.length} attempts)\n`,
+    ...data.map((e: any) => {
+      const d = e.data || {};
+      const status = d.success ? "OK" : "FAIL";
+      const filter = d.gmail_filter ? " +filter" : "";
+      const ts = e.timestamp ? new Date(e.timestamp).toLocaleString() : "unknown";
+      return `- [${status}] ${d.sender || "unknown"} via ${d.method || "?"}${filter} — ${ts}${d.error ? ` (${d.error})` : ""}`;
+    }),
+  ];
 
   return { content: [{ type: "text" as const, text: lines.join("\n") }] };
 }
