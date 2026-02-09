@@ -20,7 +20,7 @@
 | 2 | Email Dashboard Improvements | [phase-2](phase-2/) | backend done | `feature/jscc-phase0` | MCP tools done, frontend pending |
 | 3 | Job Search Dashboard Redesign | [phase-3](phase-3/) | backend done | `feature/jscc-phase0` | Digest, status tracking, cover letters |
 | 4 | LinkedIn Connections Pipeline | [phase-4](phase-4/) | done | `feature/jscc-phase0` | 823 imported, matcher + MCP tools |
-| 5 | RecruiterGolem Upgrade | [phase-5](phase-5/) | pending | `feature/jscc-phase5` | Depends on Phase 4 |
+| 5 | RecruiterGolem Upgrade | [phase-5](phase-5/) | backend done | `feature/jscc-phase5` | Outreach drafts: generation + MCP tools + Supabase |
 | 6 | LinkedIn Exposure Skill | [phase-6](phase-6/) | pending | `feature/jscc-phase6` | Independent, writing coach |
 | 7 | Cost Tracking + Observability | [phase-7](phase-7/) | pending | `feature/jscc-phase7` | Independent |
 | 8 | Job Board Expansion | [phase-8](phase-8/) | pending | `feature/jscc-phase8` | Research first |

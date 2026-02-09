@@ -110,12 +110,13 @@ In job detail view:
 
 ## Status
 
-- [ ] Run outreach research (Gemini background)
-- [ ] Review research findings
-- [ ] Style card integration
-- [ ] Draft outreach function + CLI helper wiring
-- [ ] Supabase migration for outreach_drafts
+- [x] Run outreach research (Gemini 429'd, wrote findings manually)
+- [x] Review research findings
+- [x] Style card integration (uses existing style-adapter.ts)
+- [x] Draft outreach function (`draft-outreach.ts` — approach angle, message, follow-up, notes)
+- [x] Supabase migration for outreach_drafts (009_outreach_drafts.sql, applied)
+- [x] MCP tools (outreach_draftForMatch, outreach_getDrafts, outreach_updateDraft)
+- [x] Tests pass (20 new tests, 849 total pass)
 - [ ] Telegram "draft" command handler
 - [ ] Dashboard outreach drafts section (delegated)
-- [ ] Tests pass
 - [ ] Committed
