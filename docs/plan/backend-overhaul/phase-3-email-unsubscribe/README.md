@@ -55,6 +55,6 @@ Aggregate emails by sender. Identify promo/newsletter senders. Provide unsubscri
 - [x] Sender aggregation in email processing
 - [x] List-Unsubscribe header extraction
 - [x] Unsubscribe action handler
-- [ ] Gmail label management — deferred (not needed for MVP)
+- [x] Gmail label management (auto-filter: "Golems/Unsubscribed" label + skip inbox)
 - [x] API/RPC for admin UI (3 MCP tools)
 - [x] Tests (14 new)

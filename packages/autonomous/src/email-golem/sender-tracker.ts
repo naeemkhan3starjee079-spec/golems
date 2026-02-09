@@ -6,6 +6,7 @@
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { getOrCreateLabel, createSenderFilter } from "./gmail-client";
 
 export interface SenderUpdate {
   email_address: string;
@@ -159,6 +160,19 @@ export async function getSenders(
 }
 
 /**
+ * Apply Gmail filter to auto-label + skip inbox for unsubscribed/blocked senders.
+ */
+async function applyGmailFilter(emailAddress: string): Promise<void> {
+  try {
+    const labelId = await getOrCreateLabel("Golems/Unsubscribed");
+    await createSenderFilter(emailAddress, labelId);
+    console.log(`[SenderTracker] Gmail filter created for ${emailAddress}`);
+  } catch (err: any) {
+    console.error(`[SenderTracker] Gmail filter failed for ${emailAddress}:`, err.message);
+  }
+}
+
+/**
  * Set user action on a sender (keep/unsubscribe/block)
  */
 export async function setSenderAction(
@@ -180,6 +194,11 @@ export async function setSenderAction(
       error.message
     );
     return false;
+  }
+
+  // Apply Gmail filter for unsubscribe/block actions
+  if (action === "unsubscribe" || action === "block") {
+    await applyGmailFilter(emailAddress);
   }
 
   return true;
@@ -226,6 +245,7 @@ export async function attemptUnsubscribe(
           })
           .eq("email_address", emailAddress);
 
+        await applyGmailFilter(emailAddress);
         return { success: true, method: "http-post" };
       }
 
@@ -245,6 +265,7 @@ export async function attemptUnsubscribe(
           })
           .eq("email_address", emailAddress);
 
+        await applyGmailFilter(emailAddress);
         return { success: true, method: "http-get" };
       }
 
@@ -262,7 +283,7 @@ export async function attemptUnsubscribe(
     }
   }
 
-  // If only mailto: available, mark for manual action
+  // If only mailto: available, mark for manual action but still filter in Gmail
   if (sender.unsubscribe_email) {
     await client
       .from("email_senders")
@@ -272,6 +293,8 @@ export async function attemptUnsubscribe(
         updated_at: new Date().toISOString(),
       })
       .eq("email_address", emailAddress);
+
+    await applyGmailFilter(emailAddress);
 
     return {
       success: false,

@@ -256,6 +256,54 @@ export async function searchEmails(
 }
 
 /**
+ * Get or create a Gmail label by name.
+ * Returns the label ID.
+ */
+export async function getOrCreateLabel(labelName: string): Promise<string> {
+  const gmail = getGmailClient();
+
+  // Check if label already exists
+  const { data } = await gmail.users.labels.list({ userId: "me" });
+  const existing = data.labels?.find((l) => l.name === labelName);
+  if (existing?.id) return existing.id;
+
+  // Create it
+  const { data: created } = await gmail.users.labels.create({
+    userId: "me",
+    requestBody: {
+      name: labelName,
+      labelListVisibility: "labelShow",
+      messageListVisibility: "show",
+    },
+  });
+
+  if (!created.id) throw new Error(`Failed to create label "${labelName}"`);
+  return created.id;
+}
+
+/**
+ * Create a Gmail filter to auto-label + skip inbox for a sender.
+ * Used when unsubscribing — future emails get labeled and archived.
+ */
+export async function createSenderFilter(
+  senderEmail: string,
+  labelId: string
+): Promise<void> {
+  const gmail = getGmailClient();
+
+  await gmail.users.settings.filters.create({
+    userId: "me",
+    requestBody: {
+      criteria: { from: senderEmail },
+      action: {
+        addLabelIds: [labelId],
+        removeLabelIds: ["INBOX"],
+      },
+    },
+  });
+}
+
+/**
  * Reset the Gmail client (for testing).
  */
 export function resetGmailClient(): void {
