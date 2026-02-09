@@ -16,6 +16,7 @@ export interface GmailEmail {
   snippet: string;
   receivedAt: Date;
   labelIds?: string[];
+  listUnsubscribe?: string;
 }
 
 interface RawEmailPayload {
@@ -97,6 +98,9 @@ export function parseEmail(raw: RawEmail): GmailEmail {
     ? new Date(parseInt(raw.internalDate, 10))
     : new Date();
 
+  // Extract List-Unsubscribe header (RFC 2369)
+  const listUnsubscribe = getHeader("List-Unsubscribe") || undefined;
+
   return {
     id: raw.id || "",
     subject: getHeader("Subject"),
@@ -105,6 +109,7 @@ export function parseEmail(raw: RawEmail): GmailEmail {
     snippet: raw.snippet || "",
     receivedAt,
     labelIds: raw.labelIds || undefined,
+    listUnsubscribe,
   };
 }
 
@@ -143,7 +148,7 @@ export async function fetchRecentEmails(
       userId: "me",
       id: msg.id,
       format: "metadata",
-      metadataHeaders: ["From", "Subject", "Date"],
+      metadataHeaders: ["From", "Subject", "Date", "List-Unsubscribe"],
     });
 
     emails.push(parseEmail(fullMessage.data));
@@ -186,7 +191,7 @@ export async function fetchEmailsSince(
       userId: "me",
       id: msg.id,
       format: "metadata",
-      metadataHeaders: ["From", "Subject", "Date"],
+      metadataHeaders: ["From", "Subject", "Date", "List-Unsubscribe"],
     });
 
     const parsed = parseEmail(fullMessage.data);
@@ -241,7 +246,7 @@ export async function searchEmails(
       userId: "me",
       id: msg.id,
       format: "metadata",
-      metadataHeaders: ["From", "Subject", "Date"],
+      metadataHeaders: ["From", "Subject", "Date", "List-Unsubscribe"],
     });
 
     emails.push(parseEmail(fullMessage.data));

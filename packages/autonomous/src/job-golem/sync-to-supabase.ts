@@ -232,4 +232,39 @@ if (import.meta.main) {
   });
 }
 
+export interface ScrapeActivityEntry {
+  source: string;
+  total_found: number;
+  new_saved: number;
+  duplicates_skipped: number;
+  errors: number;
+  avg_description_length: number;
+  no_description_count: number;
+  id_like_title_count: number;
+  no_company_count: number;
+  duration_ms: number;
+  notes?: string;
+}
+
+export async function logScrapeActivity(entries: ScrapeActivityEntry[]) {
+  if (!SUPABASE_URL || !SUPABASE_KEY) {
+    console.log("[ScrapeActivity] Skipping - no Supabase credentials");
+    return;
+  }
+
+  const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  for (const entry of entries) {
+    const { error } = await supabase.from("scrape_activity").insert({
+      ...entry,
+      run_at: new Date().toISOString(),
+    });
+    if (error) {
+      console.error(`[ScrapeActivity] Failed to log ${entry.source}:`, error.message);
+    }
+  }
+
+  console.log(`[ScrapeActivity] Logged ${entries.length} source activities`);
+}
+
 export { syncJobs, syncScores };

@@ -215,12 +215,45 @@ async function fetchSecretTLVJobDetails(url: string, slug: string): Promise<JobL
       return null;
     }
 
-    // Extract title - look for job title in various places
+    // Strategy 1: Parse JSON-LD structured data (most reliable)
+    const jsonLdMatch = html.match(/<script\s+type="application\/ld\+json">\s*([\s\S]*?)\s*<\/script>/i);
+    if (jsonLdMatch && jsonLdMatch[1]) {
+      try {
+        const ld = JSON.parse(jsonLdMatch[1]);
+        if (ld.title || ld["@type"] === "JobPosting") {
+          const title = (ld.title || "").trim();
+          const company = ld.hiringOrganization?.name || "Unknown";
+          const location = ld.jobLocation?.address?.addressLocality || "Israel";
+          const description = (ld.description || "")
+            .replace(/\\n/g, " ")
+            .replace(/\s+/g, " ")
+            .trim()
+            .slice(0, 2000);
+
+          if (title) {
+            return {
+              id: `stlv-${slug}`,
+              title,
+              company,
+              location: location.replace(/,?\s*Israel$/i, "").trim() || "Israel",
+              description,
+              url,
+              source: "secretTLV",
+              language: "en",
+              scrapedAt: new Date().toISOString(),
+            };
+          }
+        }
+      } catch {
+        // JSON parse failed, fall through to regex
+      }
+    }
+
+    // Strategy 2: Regex fallback for pages without JSON-LD
     let title = "";
     const titlePatterns = [
-      /<h1[^>]*>([^<]+)<\/h1>/i,
+      /<h1[^>]*>\s*([^<]+)\s*<\/h1>/i,
       /<title>([^<|]+)/i,
-      /class="[^"]*job-title[^"]*"[^>]*>([^<]+)/i,
     ];
     for (const pattern of titlePatterns) {
       const match = html.match(pattern);
@@ -233,56 +266,27 @@ async function fetchSecretTLVJobDetails(url: string, slug: string): Promise<JobL
       title = slug.replace(/-\d+$/, "").split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
     }
 
-    // Extract company
     let company = "Unknown";
-    const companyPatterns = [
-      /class="[^"]*company[^"]*"[^>]*>([^<]+)/i,
-      /<strong>Company:?\s*<\/strong>\s*([^<]+)/i,
-      /Company:?\s*<\/?\w+[^>]*>\s*([^<]+)/i,
-    ];
-    for (const pattern of companyPatterns) {
-      const match = html.match(pattern);
-      if (match && match[1]) {
-        company = match[1].trim();
-        break;
-      }
+    const companyMatch = html.match(/company\/([^/]+)\//i);
+    if (companyMatch && companyMatch[1]) {
+      company = companyMatch[1].replace(/-external-job-board$/, "").replace(/-/g, " ")
+        .split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
     }
 
-    // Extract location - SecretTLV jobs are all in Israel
     let location = "Israel";
-    const locationPatterns = [
-      /class="[^"]*location[^"]*"[^>]*>([^<]+)/i,
-      /<strong>Location:?\s*<\/strong>\s*([^<]+)/i,
-      /Location:?\s*<\/?\w+[^>]*>\s*([^<]+)/i,
-      /(Tel Aviv|Ramat Gan|Herzliya|Jerusalem|Haifa|Remote|Hybrid|Israel)[^<]*/i,
-    ];
-    for (const pattern of locationPatterns) {
-      const match = html.match(pattern);
-      if (match && match[1]) {
-        location = match[1].trim().replace(/,?\s*Israel$/i, "").trim() || "Israel";
-        break;
-      }
-    }
+    const locationMatch = html.match(/(Tel Aviv|Ramat Gan|Herzliya|Jerusalem|Haifa|Remote|Hybrid)/i);
+    if (locationMatch) location = locationMatch[1];
 
-    // Extract description
     let description = "";
-    const descPatterns = [
-      /<div[^>]*class="[^"]*job[-_]?description[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
-      /<div[^>]*class="[^"]*content[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
-      /<div[^>]*class="[^"]*description[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
-    ];
-    for (const pattern of descPatterns) {
-      const match = html.match(pattern);
-      if (match && match[1]) {
-        description = match[1]
-          .replace(/<[^>]+>/g, " ")
-          .replace(/&nbsp;/g, " ")
-          .replace(/&amp;/g, "&")
-          .replace(/\s+/g, " ")
-          .trim()
-          .slice(0, 800);
-        if (description.length > 50) break;
-      }
+    const descMatch = html.match(/<h3>Description<\/h3>\s*([\s\S]*?)(?:<div|<h3|<form)/i);
+    if (descMatch && descMatch[1]) {
+      description = descMatch[1]
+        .replace(/<[^>]+>/g, " ")
+        .replace(/&nbsp;/g, " ")
+        .replace(/&amp;/g, "&")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 2000);
     }
 
     return {
@@ -419,14 +423,14 @@ export async function scrapeSecretTLV(): Promise<JobListing[]> {
  */
 async function fetchDrushimJobDetails(url: string, jobId: string): Promise<JobListing | null> {
   try {
-    const resp = await fetch(url, {
+    const resp = await fetchWithRetry(url, {
       headers: {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
         "Accept-Language": "he-IL,he;q=0.9,en;q=0.8",
       },
     });
 
-    if (!resp.ok) return null;
+    if (!resp || !resp.ok) return null;
 
     const html = await resp.text();
 
@@ -435,22 +439,58 @@ async function fetchDrushimJobDetails(url: string, jobId: string): Promise<JobLi
       return null;
     }
 
-    // Extract title from og:title (format: "דרושים IL - ACTUAL TITLE")
-    let title = `Job #${jobId}`;
-    const ogTitleMatch = html.match(/property="og:title"\s+content="([^"]+)"/i) ||
-                         html.match(/name="og:title"\s+content="([^"]+)"/i);
-    if (ogTitleMatch && ogTitleMatch[1]) {
-      // Remove "דרושים IL - " prefix
-      title = ogTitleMatch[1].replace(/^דרושים IL\s*-\s*/, "").trim();
+    // Strategy 1: Parse JSON-LD structured data (most reliable)
+    const jsonLdMatch = html.match(/<script[^>]*type="application\/ld\+json"[^>]*>\s*(\{"@context[\s\S]*?\})\s*<\/script>/i);
+    if (jsonLdMatch && jsonLdMatch[1]) {
+      try {
+        const ld = JSON.parse(jsonLdMatch[1]);
+        if (ld["@type"] === "JobPosting" && ld.title) {
+          const title = ld.title.trim();
+          const company = ld.hiringOrganization?.name || "דרושים";
+          const location = ld.jobLocation?.address?.addressLocality || "ישראל";
+          const description = (ld.description || "")
+            .replace(/<br\s*\/?>/g, "\n")
+            .replace(/<[^>]+>/g, " ")
+            .replace(/\s+/g, " ")
+            .trim()
+            .slice(0, 2000);
+
+          return {
+            id: `drushim-${jobId}`,
+            title,
+            company,
+            location,
+            description,
+            url,
+            source: "drushim",
+            language: "he",
+            scrapedAt: new Date().toISOString(),
+          };
+        }
+      } catch {
+        // JSON parse failed, fall through to og:tags
+      }
     }
 
-    // Try to extract company from description or use "Drushim" as source indicator
-    let company = "";
-    // Look for company names in the description (usually after "חברת" or at start)
-    const companyPatterns = [
-      /חברת\s+([^\s,]+)/,
-      /בחברת\s+([^\s,]+)/,
-    ];
+    // Strategy 2: og:tags + <title> fallback
+    let title = `Job #${jobId}`;
+
+    // Try content= anywhere in meta tag containing og:title
+    const ogTitleMatch = html.match(/<meta[^>]*og:title[^>]*content="([^"]+)"[^>]*>/i) ||
+                         html.match(/content="([^"]+)"[^>]*og:title/i);
+    if (ogTitleMatch && ogTitleMatch[1]) {
+      title = ogTitleMatch[1].replace(/^דרושים IL\s*-\s*/, "").trim();
+    }
+    // Fallback to <title> tag
+    if (title === `Job #${jobId}`) {
+      const titleMatch = html.match(/<title>([^<]+)<\/title>/i);
+      if (titleMatch && titleMatch[1]) {
+        title = titleMatch[1].replace(/^דרושים IL\s*-\s*/, "").trim();
+      }
+    }
+
+    let company = "דרושים";
+    const companyPatterns = [/חברת\s+([^\s,]+)/, /בחברת\s+([^\s,]+)/];
     for (const pattern of companyPatterns) {
       const match = html.match(pattern);
       if (match && match[1]) {
@@ -458,15 +498,11 @@ async function fetchDrushimJobDetails(url: string, jobId: string): Promise<JobLi
         break;
       }
     }
-    if (!company) company = "דרושים";
 
-    // Extract location from Hebrew content
     let location = "ישראל";
     const locationPatterns = [
       /מקום העבודה:\s*([^<\n]+)/i,
-      /אזור\s+([^<\n,]+)/i,
       /(תל אביב|רמת גן|הרצליה|ירושלים|חיפה|באר שבע|נתניה|ראשון לציון|פתח תקווה|אשדוד|חולון|בני ברק)/i,
-      /(רחוק|היברידי|מהבית|עבודה מרחוק)/i,
     ];
     for (const pattern of locationPatterns) {
       const match = html.match(pattern);
@@ -476,17 +512,16 @@ async function fetchDrushimJobDetails(url: string, jobId: string): Promise<JobLi
       }
     }
 
-    // Extract description from og:description
     let description = "";
-    const ogDescMatch = html.match(/property="og:description"\s+content="([^"]+)"/i) ||
-                        html.match(/name="og:description"\s+content="([^"]+)"/i);
+    const ogDescMatch = html.match(/<meta[^>]*og:description[^>]*content="([^"]+)"[^>]*>/i) ||
+                        html.match(/content="([^"]+)"[^>]*og:description/i);
     if (ogDescMatch && ogDescMatch[1]) {
       description = ogDescMatch[1]
         .replace(/^דרושים IL\s*-\s*תאור משרה\s*/, "")
         .replace(/&quot;/g, '"')
         .replace(/&amp;/g, "&")
         .trim()
-        .slice(0, 800);
+        .slice(0, 2000);
     }
 
     return {
@@ -765,18 +800,37 @@ export async function scrapeIndeedIsrael(): Promise<JobListing[]> {
  * Wrapper to safely scrape a source with error handling
  * Returns empty array on failure, logs the error
  */
+export interface SourceScrapeResult {
+  source: string;
+  jobs: JobListing[];
+  error?: string;
+  durationMs: number;
+}
+
 async function safeSourceScrape(
   name: string,
   scrapeFn: () => Promise<JobListing[]>
-): Promise<{ source: string; jobs: JobListing[]; error?: string }> {
+): Promise<SourceScrapeResult> {
+  const start = Date.now();
   try {
     const jobs = await scrapeFn();
-    return { source: name, jobs };
+    return { source: name, jobs, durationMs: Date.now() - start };
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     console.error(`[${name}] ❌ Failed: ${errorMsg}`);
-    return { source: name, jobs: [], error: errorMsg };
+    return { source: name, jobs: [], error: errorMsg, durationMs: Date.now() - start };
   }
+}
+
+/** Compute quality metrics for a batch of jobs */
+export function computeQualityMetrics(jobs: JobListing[]) {
+  const noDesc = jobs.filter(j => !j.description || j.description.length === 0).length;
+  const idLikeTitles = jobs.filter(j => /^(Job #\d+|\d+)$/.test(j.title)).length;
+  const noCompany = jobs.filter(j => !j.company || j.company === "Unknown" || j.company === "דרושים").length;
+  const avgDescLen = jobs.length > 0
+    ? Math.round(jobs.reduce((sum, j) => sum + (j.description?.length || 0), 0) / jobs.length)
+    : 0;
+  return { noDesc, idLikeTitles, noCompany, avgDescLen };
 }
 
 /**
@@ -825,19 +879,20 @@ export async function scrapeAllJobs(): Promise<JobListing[]> {
     sources.map(s => safeSourceScrape(s.name, s.fn))
   );
 
-  // Combine successful results
+  // Combine successful results + build activity entries
   const allJobs: JobListing[] = [];
   const errors: string[] = [];
+  const sourceResults: SourceScrapeResult[] = [];
 
   for (const result of results) {
     if (result.status === "fulfilled") {
-      const { source, jobs, error } = result.value;
+      const { source, jobs, error, durationMs } = result.value;
       if (error) {
         errors.push(`${source}: ${error}`);
       }
       allJobs.push(...jobs);
+      sourceResults.push(result.value);
     } else {
-      // Promise itself rejected (shouldn't happen with safeSourceScrape)
       errors.push(`Unknown source: ${result.reason}`);
     }
   }
@@ -848,6 +903,33 @@ export async function scrapeAllJobs(): Promise<JobListing[]> {
   if (errors.length > 0) {
     console.log(`[Scraper] ⚠️ ${errors.length} source(s) failed but continuing:`);
     errors.forEach(e => console.log(`  • ${e}`));
+  }
+
+  // Log scrape activity to Supabase (non-blocking)
+  try {
+    const { logScrapeActivity } = await import("./sync-to-supabase");
+    const activityEntries = sourceResults.map(r => {
+      const metrics = computeQualityMetrics(r.jobs);
+      return {
+        source: r.source.toLowerCase(),
+        total_found: r.jobs.length,
+        new_saved: 0, // Will be updated after dedup below
+        duplicates_skipped: 0,
+        errors: r.error ? 1 : 0,
+        avg_description_length: metrics.avgDescLen,
+        no_description_count: metrics.noDesc,
+        id_like_title_count: metrics.idLikeTitles,
+        no_company_count: metrics.noCompany,
+        duration_ms: r.durationMs,
+        notes: r.error || undefined,
+      };
+    });
+    // Fire and forget — don't block the scraper
+    logScrapeActivity(activityEntries).catch(err =>
+      console.error("[ScrapeActivity] Background log failed:", err)
+    );
+  } catch {
+    // sync-to-supabase import may fail if no Supabase env
   }
 
   // Filter out seen jobs

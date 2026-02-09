@@ -30,6 +30,7 @@ import {
   getEmailsByGolem,
 } from "./db-client";
 import { buildReplyDraft, type ReplyDraftInput } from "./draft-reply";
+import { getSenders, setSenderAction, attemptUnsubscribe } from "./sender-tracker";
 import {
   generateMonthlyReport,
   generateTaxReport,
@@ -182,6 +183,65 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       },
     },
     {
+      name: "email_getSenders",
+      description:
+        "Get email senders aggregated with counts, avg score, and unsubscribe status. Filter by category (promo/newsletter/normal/job/tech) or user action (keep/unsubscribe/block).",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          category: {
+            type: "string",
+            description: "Filter by sender category: promo, newsletter, normal, job, tech",
+            enum: ["promo", "newsletter", "normal", "job", "tech"],
+          },
+          userAction: {
+            type: "string",
+            description: "Filter by user action: keep, unsubscribe, block. Use 'pending' for senders with no action set.",
+          },
+          limit: {
+            type: "number",
+            description: "Max results (default: 50)",
+            default: 50,
+          },
+        },
+      },
+    },
+    {
+      name: "email_setSenderAction",
+      description:
+        "Set action for an email sender: keep (want these emails), unsubscribe (stop receiving), block (unwanted spam).",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          emailAddress: {
+            type: "string",
+            description: "Sender's email address",
+          },
+          action: {
+            type: "string",
+            description: "Action to take: keep, unsubscribe, block",
+            enum: ["keep", "unsubscribe", "block"],
+          },
+        },
+        required: ["emailAddress", "action"],
+      },
+    },
+    {
+      name: "email_unsubscribe",
+      description:
+        "Attempt to unsubscribe from a sender using their List-Unsubscribe header. Tries HTTP POST first (RFC 8058), then GET. Returns method used and success status.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          emailAddress: {
+            type: "string",
+            description: "Sender's email address to unsubscribe from",
+          },
+        },
+        required: ["emailAddress"],
+      },
+    },
+    {
       name: "teller_monthlyReport",
       description:
         "Generate monthly spending report. Returns total spend, breakdown by category and vendor, and subscription count.",
@@ -235,6 +295,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return handleGetByGolem(args);
       case "email_draftReply":
         return handleDraftReply(args);
+      case "email_getSenders":
+        return handleGetSenders(args);
+      case "email_setSenderAction":
+        return handleSetSenderAction(args);
+      case "email_unsubscribe":
+        return handleUnsubscribe(args);
       case "teller_monthlyReport":
         return handleMonthlyReport(args);
       case "teller_taxSummary":
@@ -483,6 +549,87 @@ async function handleGetByGolem(args: any) {
     `**${emails.length} emails**\n`,
     ...emails.map(formatEmail),
   ];
+
+  return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+}
+
+async function handleGetSenders(args: any) {
+  const category = args?.category;
+  const userAction = args?.userAction === "pending" ? null : args?.userAction;
+  const limit = args?.limit ?? 50;
+
+  const senders = await getSenders(getDb(), { category, userAction, limit });
+
+  if (senders.length === 0) {
+    return {
+      content: [{ type: "text" as const, text: "No senders found matching filters." }],
+    };
+  }
+
+  const lines = [
+    `## Email Senders${category ? ` (${category})` : ""}`,
+    `**${senders.length} senders**\n`,
+    ...senders.map((s: any) => {
+      const action = s.user_action ? ` [${s.user_action}]` : "";
+      const unsub = s.unsubscribe_url ? " (has unsub link)" : "";
+      return `- **${s.email_address}** — ${s.total_emails} emails, avg ${s.avg_score}/10 (${s.category})${action}${unsub}`;
+    }),
+  ];
+
+  return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+}
+
+async function handleSetSenderAction(args: any) {
+  const { emailAddress, action } = args || {};
+
+  const validActions = ["keep", "unsubscribe", "block"];
+
+  if (!emailAddress || !action) {
+    return {
+      content: [{ type: "text" as const, text: "Missing required: emailAddress, action" }],
+      isError: true,
+    };
+  }
+
+  if (!validActions.includes(action)) {
+    return {
+      content: [{ type: "text" as const, text: `Invalid action "${action}". Must be one of: ${validActions.join(", ")}` }],
+      isError: true,
+    };
+  }
+
+  const success = await setSenderAction(getDb(), emailAddress, action);
+
+  return {
+    content: [{
+      type: "text" as const,
+      text: success
+        ? `Set ${emailAddress} to "${action}"`
+        : `Failed to update ${emailAddress}`,
+    }],
+  };
+}
+
+async function handleUnsubscribe(args: any) {
+  const { emailAddress } = args || {};
+
+  if (!emailAddress) {
+    return {
+      content: [{ type: "text" as const, text: "Missing required: emailAddress" }],
+      isError: true,
+    };
+  }
+
+  const result = await attemptUnsubscribe(getDb(), emailAddress);
+
+  const lines = [
+    `## Unsubscribe: ${emailAddress}`,
+    `- **Success:** ${result.success}`,
+    `- **Method:** ${result.method}`,
+  ];
+  if (result.error) {
+    lines.push(`- **Note:** ${result.error}`);
+  }
 
   return { content: [{ type: "text" as const, text: lines.join("\n") }] };
 }

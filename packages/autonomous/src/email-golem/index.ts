@@ -28,6 +28,7 @@ import {
   type Subscription,
 } from "./db-client";
 import { determineTargetGolem } from "./router";
+import { trackSender, parseListUnsubscribe } from "./sender-tracker";
 import { logEvent } from "../event-log";
 import { sendNotification as sendTelegramNotification } from "../lib/telegram-direct";
 import { getState, setState } from "../lib/state-store";
@@ -209,6 +210,22 @@ async function processEmail(
 
     if (!saveResult.success) {
       console.log(`     Queued for later sync`);
+    }
+
+    // Track sender stats + unsubscribe info (fault-tolerant, won't fail pipeline)
+    try {
+      const unsubInfo = parseListUnsubscribe(gmail.listUnsubscribe);
+      await trackSender(db, {
+        email_address: scored.from,
+        display_name: gmail.fromName,
+        category: scored.category,
+        score: scored.score,
+        received_at: scored.receivedAt,
+        unsubscribe_url: unsubInfo.url,
+        unsubscribe_email: unsubInfo.email,
+      });
+    } catch (err) {
+      console.error("[SenderTracker] Failed:", err);
     }
 
     // Log routing event (non-blocking, don't fail the pipeline)
