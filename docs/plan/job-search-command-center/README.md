@@ -21,7 +21,7 @@
 | 3 | Job Search Dashboard Redesign | [phase-3](phase-3/) | backend done | `feature/jscc-phase0` | Digest, status tracking, cover letters |
 | 4 | LinkedIn Connections Pipeline | [phase-4](phase-4/) | done | `feature/jscc-phase0` | 823 imported, matcher + MCP tools |
 | 5 | RecruiterGolem Upgrade | [phase-5](phase-5/) | backend done | `feature/jscc-phase5` | Outreach drafts: generation + MCP tools + Supabase |
-| 6 | LinkedIn Exposure Skill | [phase-6](phase-6/) | pending | `feature/jscc-phase6` | Independent, writing coach |
+| 6 | LinkedIn Exposure Skill | [phase-6](phase-6/) | done | `feature/jscc-phase6` | /linkedin-post skill: topic, draft, review workflows |
 | 7 | Cost Tracking + Observability | [phase-7](phase-7/) | done | `feature/jscc-phase7` | Unified paid + free usage tracking |
 | 8 | Job Board Expansion | [phase-8](phase-8/) | done | `feature/jscc-phase8` | Greenhouse (213 jobs) + Lever (25 jobs) — PR #79 merged |
 
@@ -159,10 +159,9 @@ Everything below follows **linear branch flow**: `master → branch → work →
 ### Round 4: Zikaron v2 Phase 3 — Context View ✅ (already done)
 **What:** `conversation_id`/`position` backfilled (226K chunks), `get_context()`, MCP `zikaron_context` tool, CLI `zikaron context` command.
 
-### Round 5: JSCC Phase 6 — LinkedIn Exposure Skill ← NEXT
-**Branch:** `feature/jscc-phase6`
-**Effort:** Research (Gemini) + skill creation
-**What:** Extract Aviv Levi guidelines → `/linkedin-post` skill (topic/draft/review workflows)
+### Round 5: JSCC Phase 6 — LinkedIn Exposure Skill ✅
+**Branch:** `feature/jscc-phase6` → PR #80
+**What:** `/linkedin-post` skill with 5 workflows (topic, draft, review, learn, schedule) + Aviv Levi 2026 algorithm guidelines + Huberman learning protocols
 
 ### Round 6: JSCC Frontends — Dashboard UI (Phases 2, 3, 5)
 **Branch:** `feature/jscc-dashboards`
@@ -179,3 +178,5 @@ Everything below follows **linear branch flow**: `master → branch → work →
 - **Zikaron v2 Phase 4:** SetFit auto-tagger — needs 45-90 min labeling session
 - **Zikaron v2 Phase 5:** Email/job scoring feedback loop — needs dashboard work
 - **Cloud deploy (Railway):** ✅ Already deployed and running (all env vars set)
+- **Smart Scheduling:** Calendar integration (Google Calendar API), Obsidian daily-schedule awareness, bedtime planning routine (Claude sends tomorrow's plan before STOP CODING alarm), dynamic rescheduling — needs own planning phase
+- **Per-Golem Learnings:** Each golem (RecruiterGolem, EmailGolem, etc.) should have its own learnings folder so context/memory stays separate. When you tell a golem "I started a job, adjust schedules", it updates its own context without affecting others.

@@ -112,11 +112,12 @@ Given a draft:
 
 ## Status
 
-- [ ] Extract guidelines (CLI helper)
-- [ ] Review + polish guidelines
-- [ ] Create SKILL.md
-- [ ] Write topic workflow
-- [ ] Write draft workflow
-- [ ] Write review workflow
-- [ ] Test all workflows
-- [ ] Committed
+- [x] Extract guidelines (from source material directly)
+- [x] Review + polish guidelines
+- [x] Create SKILL.md
+- [x] Write topic workflow
+- [x] Write draft workflow
+- [x] Write review workflow
+- [x] Write learn workflow (5 modules + Huberman protocols)
+- [x] Write schedule workflow (RecruiterGolem weekly planning)
+- [x] Committed
