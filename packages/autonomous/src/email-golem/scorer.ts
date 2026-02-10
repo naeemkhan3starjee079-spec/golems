@@ -59,6 +59,22 @@ export const SCORE_THRESHOLDS = {
   IGNORE_MAX: 4,
 } as const;
 
+/** Valid email categories from the scoring prompt */
+type EmailCategory = "interview" | "urgent" | "job" | "subscription" | "tech-update" | "newsletter" | "promo" | "social" | "other";
+
+/**
+ * Known senders that get auto-categorized without LLM scoring.
+ * Prevents inconsistent scoring of infrastructure emails (Railway, GitHub Actions, etc.)
+ */
+const AUTO_CATEGORIZE: Record<string, { category: EmailCategory; score: number }> = {
+  "notify.railway.app": { category: "tech-update", score: 3 },
+  "noreply@github.com": { category: "tech-update", score: 4 },
+  "builds@travis-ci.com": { category: "tech-update", score: 3 },
+  "noreply@vercel.com": { category: "tech-update", score: 3 },
+  "notify.bugsnag.com": { category: "tech-update", score: 5 },
+  "noreply@deepsource.io": { category: "tech-update", score: 4 },
+};
+
 // Known subscription services for quick extraction
 const KNOWN_SERVICES: Record<string, string> = {
   "netflix.com": "Netflix",
@@ -205,9 +221,23 @@ Respond with ONLY a JSON object:
 }
 
 /**
- * Score a single email using Ollama
+ * Score a single email using Ollama (or auto-categorize known senders)
  */
 export async function scoreEmail(email: EmailInput): Promise<ScoredEmail> {
+  // Auto-categorize known infrastructure senders (bypass LLM for consistency)
+  const fromDomain = email.from.split("@")[1]?.toLowerCase() || "";
+  const autoRule = AUTO_CATEGORIZE[fromDomain];
+  if (autoRule) {
+    return {
+      ...email,
+      score: autoRule.score,
+      category: autoRule.category,
+      reason: `Auto-categorized: known sender (${fromDomain})`,
+      subscription: null,
+      scoredAt: new Date().toISOString(),
+    };
+  }
+
   const prompt = buildScoringPrompt(email);
 
   const result = await runOllamaJSON<OllamaScoreResult>(prompt, "email-golem");

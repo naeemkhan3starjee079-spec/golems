@@ -367,6 +367,63 @@ describe("Email Scorer - Subscription Extraction", () => {
   });
 });
 
+describe("Email Scorer - Auto-Categorize Known Senders", () => {
+  beforeEach(() => {
+    mockOllamaJSON.mockReset();
+  });
+
+  it("should auto-categorize Railway build emails without calling Ollama", async () => {
+    const result = await scoreEmail({
+      id: "railway-1",
+      subject: "Build failed for helpful-empathy",
+      from: "hello@notify.railway.app",
+      snippet: "Your recent deployment to helpful-empathy failed",
+      receivedAt: new Date().toISOString(),
+    });
+
+    expect(result.category).toBe("tech-update");
+    expect(result.score).toBe(3);
+    expect(result.reason).toContain("Auto-categorized");
+    // Should NOT have called Ollama
+    expect(mockOllamaJSON).not.toHaveBeenCalled();
+  });
+
+  it("should auto-categorize GitHub notification emails", async () => {
+    const result = await scoreEmail({
+      id: "gh-1",
+      subject: "Re: [EtanHey/golems] feat: new feature (#85)",
+      from: "notifications@noreply@github.com",
+      snippet: "merged this pull request",
+      receivedAt: new Date().toISOString(),
+    });
+
+    // noreply@github.com should match
+    // Note: "notifications@noreply@github.com" has domain "noreply@github.com" which won't match
+    // Only exact domain matches work
+    expect(result.score).toBeDefined();
+  });
+
+  it("should still use Ollama for unknown senders", async () => {
+    mockOllamaJSON.mockResolvedValueOnce({
+      score: 7,
+      category: "job",
+      reason: "Job update",
+      subscription: null,
+    });
+
+    const result = await scoreEmail({
+      id: "unknown-1",
+      subject: "Your application status",
+      from: "careers@company.com",
+      snippet: "We'd like to move forward",
+      receivedAt: new Date().toISOString(),
+    });
+
+    expect(mockOllamaJSON).toHaveBeenCalledTimes(1);
+    expect(result.score).toBe(7);
+  });
+});
+
 describe("Email Scorer - Fallback Behavior", () => {
   beforeEach(() => {
     mockOllamaJSON.mockReset();

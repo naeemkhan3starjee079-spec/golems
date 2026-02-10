@@ -50,7 +50,7 @@ async function sendTelegram(title: string, body: string, priority: "default" | "
 // Format job matches for Telegram - consolidated in one message
 async function sendJobMatches(matches: MatchResult[]) {
   if (matches.length === 0) {
-    await sendTelegram("No Matches", "No new matching jobs found today.");
+    console.log("[JobGolem] No new matches — skipping Telegram (no noise)");
     return;
   }
 
@@ -60,23 +60,22 @@ async function sendJobMatches(matches: MatchResult[]) {
   // Build one consolidated message with context
   const lines: string[] = [`*${matches.length} Job Matches Found*\n`];
 
-  // Show top matches with WHY they match
+  // Show top matches — no links, drive to dashboard for actions (apply/dismiss)
   for (const match of matches.slice(0, 6)) {
     const emoji = match.score >= 8 ? "🔥" : match.score >= 7 ? "✨" : "👍";
 
     lines.push(`${emoji} *${match.score}/10* - ${match.job.title}`);
     lines.push(`📍 ${match.job.company} | ${match.job.location}`);
-    // Include the reason WHY this job matches
     if (match.reason) {
       lines.push(`💡 _${match.reason.slice(0, 80)}_`);
     }
-    lines.push(`🔗 ${match.job.url}`);
     lines.push(""); // blank line between jobs
   }
 
   if (matches.length > 6) {
-    lines.push(`+${matches.length - 6} more. Use /jobs to see all.`);
+    lines.push(`+${matches.length - 6} more.`);
   }
+  lines.push(`\n📊 [View all on dashboard](https://etanheyman.com/admin/golem/jobs)`);
 
   // High priority if we have hot matches
   const priority = hotMatches.length > 0 ? "high" : "default";
