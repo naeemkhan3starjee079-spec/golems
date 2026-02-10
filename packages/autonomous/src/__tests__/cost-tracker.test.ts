@@ -13,7 +13,9 @@ import {
   formatSummary,
   formatBySource,
   formatDaily,
+  formatFullStats,
   getFullUsageStats,
+  estimateValueSaved,
   type CostEntry,
 } from "../lib/cost-tracker";
 
@@ -277,6 +279,61 @@ describe("cost-tracker", () => {
     const stats = getFullUsageStats(COST_LOG, "all");
     expect(stats.paid.totalCalls).toBe(5);
     expect(stats.free.totalCalls).toBe(0);
+  });
+
+  test("estimateValueSaved returns 0 for 0 free calls", () => {
+    expect(estimateValueSaved(sampleEntries, 0)).toBe(0);
+  });
+
+  test("estimateValueSaved uses paid averages when available", () => {
+    const paidEntries: CostEntry[] = [
+      { timestamp: "", model: "haiku", source: "a", input_tokens: 1000, output_tokens: 200, cost_usd: 0.001, tier: "paid" },
+      { timestamp: "", model: "haiku", source: "b", input_tokens: 2000, output_tokens: 400, cost_usd: 0.002, tier: "paid" },
+    ];
+    // Avg: 1500 in, 300 out
+    // Cost per call: (1500/1M * 0.80) + (300/1M * 4.00) = 0.0012 + 0.0012 = 0.0024
+    const value = estimateValueSaved(paidEntries, 10);
+    expect(value).toBeCloseTo(0.024, 4);
+  });
+
+  test("estimateValueSaved uses defaults when no paid entries", () => {
+    // Default: 600 in, 150 out
+    // Cost per call: (600/1M * 0.80) + (150/1M * 4.00) = 0.00048 + 0.0006 = 0.00108
+    const value = estimateValueSaved([], 100);
+    expect(value).toBeCloseTo(0.108, 4);
+  });
+
+  test("getFullUsageStats includes estimatedValueSaved", () => {
+    const mixedEntries: CostEntry[] = [
+      { timestamp: "2026-02-07T10:00:00.000Z", model: "haiku", source: "scorer", input_tokens: 500, output_tokens: 100, cost_usd: 0.0008, tier: "paid" },
+      { timestamp: "2026-02-07T11:00:00.000Z", model: "gemini", source: "helpers", input_tokens: 0, output_tokens: 0, cost_usd: 0, tier: "free" },
+      { timestamp: "2026-02-07T12:00:00.000Z", model: "cursor", source: "helpers", input_tokens: 0, output_tokens: 0, cost_usd: 0, tier: "free" },
+    ];
+    const content = mixedEntries.map(e => JSON.stringify(e)).join("\n");
+    writeFileSync(COST_LOG, content);
+
+    const stats = getFullUsageStats(COST_LOG, "all");
+    expect(stats.free.estimatedValueSaved).toBeGreaterThan(0);
+    // 1 paid call: 500 in, 100 out → avg per call same
+    // 2 free calls × ((500/1M * 0.80) + (100/1M * 4.00)) = 2 × 0.0008 = 0.0016
+    expect(stats.free.estimatedValueSaved).toBeCloseTo(0.0016, 5);
+  });
+
+  test("formatFullStats produces readable output", () => {
+    const mixedEntries: CostEntry[] = [
+      { timestamp: "2026-02-07T10:00:00.000Z", model: "haiku", source: "scorer", input_tokens: 500, output_tokens: 100, cost_usd: 0.0008, tier: "paid" },
+      { timestamp: "2026-02-07T11:00:00.000Z", model: "gemini", source: "helpers", input_tokens: 0, output_tokens: 0, cost_usd: 0, tier: "free" },
+    ];
+    const content = mixedEntries.map(e => JSON.stringify(e)).join("\n");
+    writeFileSync(COST_LOG, content);
+
+    const stats = getFullUsageStats(COST_LOG, "all");
+    const output = formatFullStats(stats);
+    expect(output).toContain("LLM Usage");
+    expect(output).toContain("Paid API: 1 calls");
+    expect(output).toContain("Free CLI: 1 calls");
+    expect(output).toContain("Value saved:");
+    expect(output).toContain("Total value:");
   });
 
   test("getFullUsageStats respects period filter", () => {

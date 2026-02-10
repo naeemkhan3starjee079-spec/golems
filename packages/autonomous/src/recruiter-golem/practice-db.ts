@@ -337,7 +337,7 @@ export function getStats(mode?: InterviewMode): PracticeStats {
     SELECT passed
     FROM sessions
     ${whereClause}
-    ORDER BY started_at DESC
+    ORDER BY started_at DESC, id DESC
   `;
   const sessions = db.query(streakQuery).all(...params) as any[];
 

@@ -927,6 +927,10 @@ async function handleUsageStats(args: any) {
     }
   }
 
+  if (stats.free.estimatedValueSaved > 0) {
+    lines.push(`- **Value saved: ~$${stats.free.estimatedValueSaved.toFixed(4)}** (at Haiku rates)`);
+  }
+
   lines.push("", `**Combined: ${stats.combined.totalCalls} total calls**`);
 
   return { content: [{ type: "text" as const, text: lines.join("\n") }] };
@@ -973,9 +977,8 @@ async function handleUsageSavings(args: any) {
   // Haiku costs
   const haikuCost = stats.paid.totalCost;
 
-  // Estimate free tier value (if we had to pay for CLI helpers)
-  // Gemini: ~$0.50/1M tokens, Cursor: ~$20/mo, Codex: free with ChatGPT Plus
-  const estimatedFreeValue = stats.free.totalCalls * 0.002; // ~$0.002 per free call equivalent
+  // Value saved by using free CLI helpers instead of Haiku API
+  const estimatedFreeValue = stats.free.estimatedValueSaved;
 
   const totalValue = ccActualValue + estimatedFreeValue;
 

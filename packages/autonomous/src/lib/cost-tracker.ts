@@ -53,9 +53,16 @@ export interface DailyCost {
   calls: number;
 }
 
+export interface FreeStats {
+  totalCalls: number;
+  byHelper: Record<string, number>;
+  bySource: Record<string, number>;
+  estimatedValueSaved: number;  // What free calls would have cost at Haiku rates
+}
+
 export interface FullUsageStats {
   paid: CostSummary & { bySource: CostBySource };
-  free: { totalCalls: number; byHelper: Record<string, number>; bySource: Record<string, number> };
+  free: FreeStats;
   combined: { totalCalls: number };
 }
 
@@ -175,7 +182,12 @@ export async function getSupabaseUsageStats(
 
   return {
     paid: { ...paidSummary, bySource: paidBySource },
-    free: { totalCalls: freeEntries.length, byHelper, bySource: freeBySource },
+    free: {
+      totalCalls: freeEntries.length,
+      byHelper,
+      bySource: freeBySource,
+      estimatedValueSaved: estimateValueSaved(paidEntries, freeEntries.length),
+    },
     combined: { totalCalls: entries.length },
     subscription: {
       monthlyCost: CC_SUBSCRIPTION_MONTHLY,
@@ -188,6 +200,38 @@ export async function getSupabaseUsageStats(
 
 /** Claude Code Max subscription cost (USD/month) */
 export const CC_SUBSCRIPTION_MONTHLY = 200;
+
+/** Haiku 4.5 pricing for value estimation */
+const HAIKU_INPUT_PER_MTOK = 0.80;
+const HAIKU_OUTPUT_PER_MTOK = 4.00;
+
+/**
+ * Estimate what free CLI helper calls would have cost at Haiku rates.
+ * Uses average token usage from paid calls as baseline.
+ * If no paid calls exist, uses a default estimate of ~600 input + ~150 output tokens per call.
+ */
+export function estimateValueSaved(
+  paidEntries: CostEntry[],
+  freeCallCount: number
+): number {
+  if (freeCallCount === 0) return 0;
+
+  let avgInput = 600;
+  let avgOutput = 150;
+
+  if (paidEntries.length > 0) {
+    const totalInput = paidEntries.reduce((s, e) => s + e.input_tokens, 0);
+    const totalOutput = paidEntries.reduce((s, e) => s + e.output_tokens, 0);
+    avgInput = totalInput / paidEntries.length;
+    avgOutput = totalOutput / paidEntries.length;
+  }
+
+  const costPerCall =
+    (avgInput / 1_000_000) * HAIKU_INPUT_PER_MTOK +
+    (avgOutput / 1_000_000) * HAIKU_OUTPUT_PER_MTOK;
+
+  return Math.round(costPerCall * freeCallCount * 1_000_000) / 1_000_000;
+}
 
 export interface SubscriptionStats {
   monthlyCost: number;
@@ -425,6 +469,40 @@ export function formatDaily(daily: DailyCost[]): string {
   return [header, separator, ...rows, separator, totalRow].join("\n");
 }
 
+/**
+ * Format full usage stats with value saved metric.
+ */
+export function formatFullStats(stats: FullUsageStats): string {
+  const lines: string[] = [];
+
+  lines.push("═══ LLM Usage ═══");
+  lines.push(`Total calls: ${stats.combined.totalCalls}`);
+  lines.push("");
+
+  // Paid
+  lines.push(`Paid API: ${stats.paid.totalCalls} calls, ${formatUSD(stats.paid.totalCost)}`);
+  if (stats.paid.totalCalls > 0) {
+    lines.push(`  Tokens: ${formatTokens(stats.paid.totalInputTokens)} in / ${formatTokens(stats.paid.totalOutputTokens)} out`);
+  }
+
+  // Free
+  lines.push(`Free CLI: ${stats.free.totalCalls} calls`);
+  if (stats.free.totalCalls > 0) {
+    const helpers = Object.entries(stats.free.byHelper)
+      .map(([name, count]) => `${name}(${count})`)
+      .join(", ");
+    lines.push(`  Helpers: ${helpers}`);
+    lines.push(`  Value saved: ~${formatUSD(stats.free.estimatedValueSaved)} (at Haiku rates)`);
+  }
+
+  // Bottom line
+  lines.push("");
+  const totalValue = stats.paid.totalCost + stats.free.estimatedValueSaved;
+  lines.push(`Total value: ${formatUSD(totalValue)} (paid ${formatUSD(stats.paid.totalCost)} + saved ~${formatUSD(stats.free.estimatedValueSaved)})`);
+
+  return lines.join("\n");
+}
+
 // ─── Full Stats (paid + free combined) ────────────────────────────
 
 /**
@@ -454,7 +532,12 @@ export function getFullUsageStats(
 
   return {
     paid: { ...paidSummary, bySource: paidBySource },
-    free: { totalCalls: freeEntries.length, byHelper, bySource: freeBySource },
+    free: {
+      totalCalls: freeEntries.length,
+      byHelper,
+      bySource: freeBySource,
+      estimatedValueSaved: estimateValueSaved(paidEntries, freeEntries.length),
+    },
     combined: { totalCalls: entries.length },
   };
 }
