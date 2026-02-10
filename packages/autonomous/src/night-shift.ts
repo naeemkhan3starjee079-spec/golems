@@ -9,6 +9,8 @@
  * - Absolute paths: all tools use full paths for launchd compatibility
  */
 
+import "./lib/load-env"; // MUST be first — loads .env for Supabase credentials under launchd
+
 import { $ } from "bun";
 import { readFileSync, writeFileSync, existsSync, rmSync } from "fs";
 import { join } from "path";
@@ -19,6 +21,8 @@ const STATE_FILE = join(HOME, ".golems-zikaron/state.json");
 const FIX_LIST_FILE = join(HOME, ".golems-zikaron/nightshift-fixes.json");
 const CLAUDE_BIN = `${HOME}/.local/bin/claude`;
 const GEMINI_BIN = `${HOME}/.nvm/versions/node/v22.0.0/bin/gemini`;
+const KIRO_BIN = `${HOME}/.local/bin/kiro-cli`;
+const CURSOR_BIN = `${HOME}/.local/bin/cursor`;
 const GH_BIN = "/usr/local/bin/gh";
 
 // ─── State Management ──────────────────────────────────────────────
@@ -148,35 +152,99 @@ async function sendTelegram(message: string) {
 
 // ─── CLI Helpers ───────────────────────────────────────────────────
 
-async function geminiPreScan(repoPath: string): Promise<string | null> {
-  if (!existsSync(GEMINI_BIN)) {
-    console.log("[Gemini] Not installed, skipping pre-scan");
-    return null;
-  }
-
-  const prompt = `Look at the codebase structure and recent git log. Suggest ONE specific, small improvement (a bug fix, missing error handling, or type cleanup). Be very specific: name the file and what to change. Keep it under 3 sentences.`;
+/**
+ * Run a CLI agent with a proper timeout that actually kills the process.
+ * Returns trimmed stdout or null on failure/timeout.
+ */
+async function runCliAgent(
+  name: string,
+  bin: string,
+  args: string[],
+  cwd: string,
+  timeoutMs: number = 30000
+): Promise<string | null> {
+  if (!existsSync(bin)) return null;
 
   try {
-    const proc = Bun.spawn(["bash", "-c", `cd "${repoPath}" && echo "${prompt}" | "${GEMINI_BIN}" 2>/dev/null`], {
+    const proc = Bun.spawn([bin, ...args], {
+      cwd,
       stdout: "pipe",
       stderr: "pipe",
-      timeout: 30000,
     });
 
-    const timer = setTimeout(() => proc.kill(), 30000);
-    await proc.exited;
-    clearTimeout(timer);
+    // Race: process exit vs timeout — fixes the hanging gemini issue
+    const result = await Promise.race([
+      proc.exited.then(() => "done" as const),
+      Bun.sleep(timeoutMs).then(() => "timeout" as const),
+    ]);
+
+    if (result === "timeout") {
+      proc.kill(9); // SIGKILL — ensures the process actually dies
+      // Wait for process to fully exit so stdout pipe is cleaned up
+      await Promise.race([proc.exited, Bun.sleep(2000)]);
+      console.log(`[${name}] Timed out after ${timeoutMs / 1000}s, skipping`);
+      return null;
+    }
 
     const output = (await new Response(proc.stdout).text()).trim();
     if (output && output.length > 10) {
-      console.log(`[Gemini] Suggestion: ${output.slice(0, 150)}...`);
       return output;
     }
   } catch (err) {
-    console.log("[Gemini] Pre-scan failed (non-critical):", String(err).slice(0, 100));
-    addFixItem("*", "gemini", String(err).slice(0, 200));
+    console.log(`[${name}] Failed (non-critical):`, String(err).slice(0, 100));
   }
 
+  return null;
+}
+
+/**
+ * Pre-scan repo with CLI agents for improvement suggestions.
+ * Tries gemini → kiro → cursor in order (first success wins).
+ * All agents are optional — if all fail, Night Shift continues without hints.
+ */
+async function cliPreScan(repoPath: string): Promise<string | null> {
+  const prompt = `Look at the codebase structure and recent git log. Suggest ONE specific, small improvement (a bug fix, missing error handling, or type cleanup). Be very specific: name the file and what to change. Keep it under 3 sentences.`;
+
+  // 1. Try gemini (free, non-interactive mode)
+  const geminiResult = await runCliAgent(
+    "Gemini",
+    GEMINI_BIN,
+    ["-p", prompt],
+    repoPath,
+    30000
+  );
+  if (geminiResult) {
+    console.log(`[Gemini] Suggestion: ${geminiResult.slice(0, 150)}...`);
+    return geminiResult;
+  }
+
+  // 2. Try kiro-cli (free)
+  const kiroResult = await runCliAgent(
+    "Kiro",
+    KIRO_BIN,
+    ["-p", prompt],
+    repoPath,
+    30000
+  );
+  if (kiroResult) {
+    console.log(`[Kiro] Suggestion: ${kiroResult.slice(0, 150)}...`);
+    return kiroResult;
+  }
+
+  // 3. Try cursor (Cursor Pro)
+  const cursorResult = await runCliAgent(
+    "Cursor",
+    CURSOR_BIN,
+    ["agent", prompt, "--output-format", "text"],
+    repoPath,
+    45000 // cursor is slower
+  );
+  if (cursorResult) {
+    console.log(`[Cursor] Suggestion: ${cursorResult.slice(0, 150)}...`);
+    return cursorResult;
+  }
+
+  console.log("[PreScan] All CLI agents failed or unavailable, proceeding without hints");
   return null;
 }
 
@@ -311,15 +379,19 @@ Remember: Small wins compound. One improvement tonight, another tomorrow.`;
       }
     );
 
-    // 5 minute timeout
-    const timeout = setTimeout(() => {
-      proc.kill();
+    // 5 minute timeout — same Promise.race pattern as runCliAgent
+    const raceResult = await Promise.race([
+      proc.exited.then(() => "done" as const),
+      Bun.sleep(300000).then(() => "timeout" as const),
+    ]);
+
+    if (raceResult === "timeout") {
+      proc.kill(9); // SIGKILL
+      await Promise.race([proc.exited, Bun.sleep(2000)]); // cleanup
       console.error("[Claude] Timeout after 5 minutes");
       addFixItem(repo, "claude", "Timeout after 5 minutes");
-    }, 300000);
-
-    await proc.exited;
-    clearTimeout(timeout);
+      return { success: false, improvement: "Claude timed out" };
+    }
 
     const output = await new Response(proc.stdout).text();
     console.log(`[Claude] Output: ${output.slice(0, 200)}...`);
@@ -413,8 +485,8 @@ async function processRepo(
 
   console.log(`\n── Processing: ${repo} ──\n`);
 
-  // 1. Gemini pre-scan (non-blocking, optional)
-  const geminiHint = await geminiPreScan(repoPath);
+  // 1. CLI agent pre-scan (gemini → kiro → cursor, all optional)
+  const geminiHint = await cliPreScan(repoPath);
 
   // 2. Check fix list for this repo
   const fixes = getPendingFixes(repo);

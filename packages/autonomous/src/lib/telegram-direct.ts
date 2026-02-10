@@ -32,6 +32,7 @@ const SOURCE_TO_TOPIC: Record<string, string> = {
   email: "email",
   jobs: "jobs",
   recruiter: "recruiter",
+  briefing: "alerts",
   healthcheck: "alerts",
   uptime: "uptime",
   monitoring: "uptime",
@@ -46,6 +47,7 @@ const SOURCE_FORMAT: Record<string, { icon: string; format: (t: string, b: strin
   email: { icon: "📧", format: (t, b) => `📧 *${t}*\n\n${b}` },
   jobs: { icon: "🎯", format: (t, b) => `🎯 *${t}*\n\n${b}` },
   recruiter: { icon: "👔", format: (t, b) => `👔 *${t}*\n\n${b}` },
+  briefing: { icon: "☀️", format: (_t, b) => b }, // Briefing builds its own formatted message
   healthcheck: { icon: "🏥", format: (t, b) => `🏥 *${t}*\n\n${b}` },
   uptime: { icon: "📡", format: (t, b) => `📡 *${t}*\n\n${b}` },
   monitoring: { icon: "📡", format: (t, b) => `📡 *${t}*\n\n${b}` },

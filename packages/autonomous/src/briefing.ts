@@ -10,9 +10,11 @@
  * - Draft posts ready for approval
  */
 
-import { readFileSync } from "fs";
+import "./lib/load-env"; // MUST be first — loads .env for credentials
+
+import { readFileSync, writeFileSync } from "fs";
 import { join } from "path";
-import { sendTelegram } from "./night-shift";
+import { sendNotification } from "./lib/telegram-direct";
 import {
   createDbClient,
   getRecentEmails,
@@ -268,19 +270,25 @@ async function sendBriefing() {
     }
   }
 
-  // Send
-  await sendTelegram(msg);
+  // Send via telegram-direct (works on both Railway and local)
+  const sent = await sendNotification({
+    title: "Morning Briefing",
+    body: msg,
+    source: "briefing",
+  });
   const endTime = new Date().toISOString().replace('T', ' ').slice(0, 19);
-  console.log(`[${endTime}] ✅ Briefing sent!\n`);
+  console.log(`[${endTime}] ${sent ? "✅" : "❌"} Briefing ${sent ? "sent" : "FAILED to send"}!\n`);
   console.log(msg);
 
   // Report run to dashboard
   await reportServiceRun("lastBriefing");
 
-  // Clear overnight PRs after briefing (they've been reported)
-  const updatedState2 = loadState();
-  updatedState2.nightShiftPRs = [];
-  require("fs").writeFileSync(STATE_FILE, JSON.stringify(updatedState2, null, 2));
+  // Only clear overnight PRs if briefing was sent (don't lose data on send failure)
+  if (sent) {
+    const updatedState2 = loadState();
+    updatedState2.nightShiftPRs = [];
+    writeFileSync(STATE_FILE, JSON.stringify(updatedState2, null, 2));
+  }
 }
 
 // CLI
