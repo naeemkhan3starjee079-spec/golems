@@ -12,7 +12,7 @@
  * - 1-4: IGNORE (newsletters, promos, spam)
  */
 
-import { runOllamaJSON } from "../ollama-wrapper";
+import { runLLMJSON } from "../llm";
 
 /** Raw email input for scoring */
 export interface EmailInput {
@@ -240,7 +240,7 @@ export async function scoreEmail(email: EmailInput): Promise<ScoredEmail> {
 
   const prompt = buildScoringPrompt(email);
 
-  const result = await runOllamaJSON<OllamaScoreResult>(prompt, "email-golem");
+  const result = await runLLMJSON<OllamaScoreResult>(prompt, "email-golem");
 
   if (result) {
     // Try to extract subscription info locally if Ollama didn't

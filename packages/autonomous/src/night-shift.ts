@@ -1,12 +1,13 @@
 #!/usr/bin/env bun
 /**
- * Night Shift v4 - Self-Healing Batch Loop + CLI Helpers
+ * Night Shift v5 - Deep Pre-Scan + Structured Handoff
  *
- * Improvements over v3:
- * - Batch loop: works through ALL repos in rotation, not just one
- * - Self-healing: failures logged to fix list, picked up next run
- * - CLI helpers: Gemini pre-scan finds improvements before Claude implements
- * - Absolute paths: all tools use full paths for launchd compatibility
+ * Improvements over v4:
+ * - Two-phase pre-scan: fast bash analysis → CLI agent prioritization
+ * - Structured findings: Claude gets specific files, TODOs, and test failures
+ * - Fresh sessions: no --resume, prevents old context pollution
+ * - Longer timeouts: 60s pre-scan, 10min Claude
+ * - Better Claude prompt: specific tasks, not "find something"
  */
 
 import "./lib/load-env"; // MUST be first — loads .env for Supabase credentials under launchd
@@ -150,7 +151,16 @@ async function sendTelegram(message: string) {
   }
 }
 
-// ─── CLI Helpers ───────────────────────────────────────────────────
+// ─── Pre-Scan: Structured Analysis ──────────────────────────────────
+
+/** Structured findings from the two-phase pre-scan */
+interface PreScanFindings {
+  todos: { file: string; line: number; text: string }[];
+  testFailures: string[];
+  recentChanges: string[];
+  cliSuggestion: string | null;
+  summary: string;
+}
 
 /**
  * Run a CLI agent with a proper timeout that actually kills the process.
@@ -161,7 +171,7 @@ async function runCliAgent(
   bin: string,
   args: string[],
   cwd: string,
-  timeoutMs: number = 30000
+  timeoutMs: number = 60000
 ): Promise<string | null> {
   if (!existsSync(bin)) return null;
 
@@ -172,15 +182,13 @@ async function runCliAgent(
       stderr: "pipe",
     });
 
-    // Race: process exit vs timeout — fixes the hanging gemini issue
     const result = await Promise.race([
       proc.exited.then(() => "done" as const),
       Bun.sleep(timeoutMs).then(() => "timeout" as const),
     ]);
 
     if (result === "timeout") {
-      proc.kill(9); // SIGKILL — ensures the process actually dies
-      // Wait for process to fully exit so stdout pipe is cleaned up
+      proc.kill(9);
       await Promise.race([proc.exited, Bun.sleep(2000)]);
       console.log(`[${name}] Timed out after ${timeoutMs / 1000}s, skipping`);
       return null;
@@ -198,54 +206,153 @@ async function runCliAgent(
 }
 
 /**
- * Pre-scan repo with CLI agents for improvement suggestions.
- * Tries gemini → kiro → cursor in order (first success wins).
- * All agents are optional — if all fail, Night Shift continues without hints.
+ * Phase 1: Fast bash-based analysis.
+ * Greps TODOs, runs tests, checks git log — no CLI agents needed.
  */
-async function cliPreScan(repoPath: string): Promise<string | null> {
-  const prompt = `Look at the codebase structure and recent git log. Suggest ONE specific, small improvement (a bug fix, missing error handling, or type cleanup). Be very specific: name the file and what to change. Keep it under 3 sentences.`;
+async function bashPreScan(repoPath: string): Promise<{
+  todos: PreScanFindings["todos"];
+  testFailures: string[];
+  recentChanges: string[];
+}> {
+  const todos: PreScanFindings["todos"] = [];
+  const testFailures: string[] = [];
+  const recentChanges: string[] = [];
 
-  // 1. Try gemini (free, non-interactive mode)
-  const geminiResult = await runCliAgent(
-    "Gemini",
-    GEMINI_BIN,
-    ["-p", prompt],
-    repoPath,
-    30000
-  );
-  if (geminiResult) {
-    console.log(`[Gemini] Suggestion: ${geminiResult.slice(0, 150)}...`);
-    return geminiResult;
+  // 1. Grep for TODOs/FIXMEs (fast, reliable)
+  try {
+    const todoOutput = await $`cd ${repoPath} && grep -rn "TODO\|FIXME\|HACK\|XXX" --include="*.ts" --include="*.tsx" --include="*.py" -l 2>/dev/null | head -20`.text();
+    const files = todoOutput.trim().split("\n").filter(Boolean);
+
+    for (const file of files.slice(0, 10)) {
+      try {
+        const matches = await $`cd ${repoPath} && grep -n "TODO\|FIXME\|HACK\|XXX" "${file}" 2>/dev/null | head -3`.text();
+        for (const match of matches.trim().split("\n").filter(Boolean)) {
+          const lineMatch = match.match(/^(\d+):(.*)/);
+          if (lineMatch) {
+            todos.push({
+              file: file.replace(repoPath + "/", ""),
+              line: parseInt(lineMatch[1]),
+              text: lineMatch[2].trim().slice(0, 120),
+            });
+          }
+        }
+      } catch {}
+    }
+  } catch {}
+
+  // 2. Run tests to find failures (if test command exists)
+  try {
+    const hasBunTest = existsSync(join(repoPath, "package.json"));
+    if (hasBunTest) {
+      const testProc = Bun.spawn(["bun", "test", "--bail", "--timeout", "30000"], {
+        cwd: repoPath,
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+
+      const testResult = await Promise.race([
+        testProc.exited.then(() => "done" as const),
+        Bun.sleep(45000).then(() => "timeout" as const),
+      ]);
+
+      if (testResult === "timeout") {
+        testProc.kill(9);
+        await Promise.race([testProc.exited, Bun.sleep(2000)]);
+      } else {
+        const stderr = await new Response(testProc.stderr).text();
+        const exitCode = testProc.exitCode;
+        if (exitCode !== 0 && stderr) {
+          // Extract failing test names
+          const failLines = stderr.split("\n")
+            .filter(l => l.includes("FAIL") || l.includes("✗") || l.includes("error"))
+            .slice(0, 5);
+          testFailures.push(...failLines.map(l => l.trim()).filter(Boolean));
+        }
+      }
+    }
+  } catch {}
+
+  // 3. Recent git log — what changed recently?
+  try {
+    const log = await $`cd ${repoPath} && git log --oneline -10 --no-merges`.text();
+    recentChanges.push(...log.trim().split("\n").filter(Boolean).slice(0, 5));
+  } catch {}
+
+  console.log(`[BashScan] Found: ${todos.length} TODOs, ${testFailures.length} test failures, ${recentChanges.length} recent changes`);
+  return { todos, testFailures, recentChanges };
+}
+
+/**
+ * Phase 2: CLI agent analyzes bash findings and picks the best improvement.
+ * Falls back gracefully — if all agents fail, bash findings alone are enough.
+ */
+async function cliPrioritize(
+  repoPath: string,
+  bashFindings: Awaited<ReturnType<typeof bashPreScan>>
+): Promise<string | null> {
+  const findingsText = [
+    bashFindings.todos.length > 0
+      ? `TODOs found:\n${bashFindings.todos.slice(0, 8).map(t => `  ${t.file}:${t.line} — ${t.text}`).join("\n")}`
+      : "No TODOs found.",
+    bashFindings.testFailures.length > 0
+      ? `Test failures:\n${bashFindings.testFailures.join("\n")}`
+      : "All tests pass.",
+    bashFindings.recentChanges.length > 0
+      ? `Recent commits:\n${bashFindings.recentChanges.join("\n")}`
+      : "",
+  ].filter(Boolean).join("\n\n");
+
+  const prompt = `Here are findings from a codebase scan:\n\n${findingsText}\n\nPick the SINGLE most impactful item to fix. Prioritize: test failures > real bugs in TODOs > missing error handling > type improvements. Output ONLY:\n1. The file path and line number\n2. What exactly to change (1-2 sentences)\n3. Why it matters (1 sentence)`;
+
+  // Try gemini → kiro → cursor (first success wins)
+  // Gemini: use flash model (free tier has quota, pro is often exhausted)
+  for (const [name, bin, args, timeout] of [
+    ["Gemini", GEMINI_BIN, ["-m", "gemini-2.5-flash", "-p", prompt], 60000],
+    ["Kiro", KIRO_BIN, ["-p", prompt], 60000],
+    ["Cursor", CURSOR_BIN, ["agent", prompt, "--output-format", "text"], 75000],
+  ] as const) {
+    const result = await runCliAgent(name, bin, args as string[], repoPath, timeout as number);
+    if (result) {
+      console.log(`[${name}] Priority: ${result.slice(0, 200)}...`);
+      return result;
+    }
   }
 
-  // 2. Try kiro-cli (free)
-  const kiroResult = await runCliAgent(
-    "Kiro",
-    KIRO_BIN,
-    ["-p", prompt],
-    repoPath,
-    30000
-  );
-  if (kiroResult) {
-    console.log(`[Kiro] Suggestion: ${kiroResult.slice(0, 150)}...`);
-    return kiroResult;
-  }
-
-  // 3. Try cursor (Cursor Pro)
-  const cursorResult = await runCliAgent(
-    "Cursor",
-    CURSOR_BIN,
-    ["agent", prompt, "--output-format", "text"],
-    repoPath,
-    45000 // cursor is slower
-  );
-  if (cursorResult) {
-    console.log(`[Cursor] Suggestion: ${cursorResult.slice(0, 150)}...`);
-    return cursorResult;
-  }
-
-  console.log("[PreScan] All CLI agents failed or unavailable, proceeding without hints");
+  console.log("[PreScan] CLI agents unavailable, using bash findings directly");
   return null;
+}
+
+/**
+ * Full two-phase pre-scan: bash analysis → CLI prioritization.
+ * Always returns findings (bash phase never fails), CLI is optional enrichment.
+ */
+async function deepPreScan(repoPath: string): Promise<PreScanFindings> {
+  // Phase 1: Fast bash analysis (always works)
+  const bashFindings = await bashPreScan(repoPath);
+
+  // Phase 2: CLI agent picks the best item (optional)
+  const cliSuggestion = await cliPrioritize(repoPath, bashFindings);
+
+  // Build summary for Claude
+  const parts: string[] = [];
+  if (bashFindings.testFailures.length > 0) {
+    parts.push(`${bashFindings.testFailures.length} failing test(s)`);
+  }
+  if (bashFindings.todos.length > 0) {
+    parts.push(`${bashFindings.todos.length} TODO(s)`);
+  }
+  if (cliSuggestion) {
+    parts.push("CLI agent has a specific suggestion");
+  }
+  const summary = parts.length > 0 ? parts.join(", ") : "Clean scan — look deeper";
+
+  return {
+    todos: bashFindings.todos,
+    testFailures: bashFindings.testFailures,
+    recentChanges: bashFindings.recentChanges,
+    cliSuggestion,
+    summary,
+  };
 }
 
 // ─── Git Operations ────────────────────────────────────────────────
@@ -307,68 +414,66 @@ async function runClaudeOnRepo(
   worktreePath: string,
   branchName: string,
   repo: string,
-  geminiHint?: string | null,
+  findings: PreScanFindings,
   fixItems?: FixItem[]
 ): Promise<{ success: boolean; prUrl?: string; improvement?: string }> {
   console.log(`[Claude] Working in ${worktreePath}`);
 
   const soul = repoSouls[repo] || `Read CLAUDE.md to understand this project.`;
 
-  // Build context from Gemini hint + fix list
-  let extraContext = "";
-  if (geminiHint) {
-    extraContext += `\nGemini suggested this improvement:\n${geminiHint}\nConsider this, but use your own judgment.\n`;
+  // Build structured context from pre-scan findings
+  let findingsBlock = "";
+
+  // Test failures are highest priority
+  if (findings.testFailures.length > 0) {
+    findingsBlock += `\n## FAILING TESTS (fix these first!)\n${findings.testFailures.map(f => `- ${f}`).join("\n")}\n`;
   }
+
+  // CLI agent's specific suggestion
+  if (findings.cliSuggestion) {
+    findingsBlock += `\n## RECOMMENDED FIX (from pre-scan analysis)\n${findings.cliSuggestion}\n`;
+  }
+
+  // TODOs with file paths
+  if (findings.todos.length > 0) {
+    findingsBlock += `\n## TODOs FOUND IN CODEBASE\n${findings.todos.slice(0, 8).map(t => `- ${t.file}:${t.line} — ${t.text}`).join("\n")}\n`;
+  }
+
+  // Previous failures
   if (fixItems && fixItems.length > 0) {
-    extraContext += `\nPrevious failures to fix:\n${fixItems.map((f) => `- ${f.tool}: ${f.error}`).join("\n")}\n`;
+    findingsBlock += `\n## PREVIOUS FAILURES (from last run)\n${fixItems.map((f) => `- ${f.tool}: ${f.error}`).join("\n")}\n`;
   }
 
-  const claudePrompt = `You are GolemsZikaron running Night Shift - autonomous 3am improvements.
+  const claudePrompt = `You are Night Shift — autonomous improvement system for ${repo}.
 
-Tonight's focus: ${soul}
-${extraContext}
-Your creator sleeps while you work. Make them proud.
+Project: ${soul}
 
-TASK: Find ONE small improvement, implement it, pass review.
+# PRE-SCAN FINDINGS
+${findingsBlock || "No specific issues found — explore the codebase for improvements."}
 
-CRITICAL: NEVER commit to master/main! You are in a worktree branch.
-- Verify with: git branch (should NOT be master/main)
-- If on master/main, STOP and output: "ERROR: Wrong branch"
+# YOUR TASK
+Pick the SINGLE highest-impact item from the findings above and fix it.
+Priority order: failing tests > bugs > TODOs > type safety > error handling.
 
-STEP 0 - Check existing PRs:
-- Run: gh pr list --state open --limit 10
-- Do NOT duplicate work from existing PRs
+# RULES
+1. VERIFY you are NOT on master/main: run \`git branch\`
+2. Check open PRs: \`gh pr list --state open --limit 10\` — don't duplicate
+3. Read CLAUDE.md for project conventions
+4. Make ONE focused change (don't refactor everything)
+5. Run tests after your change: \`bun test\` (or project-specific test command)
+6. Stage and commit: \`git add -A && git commit -m "nightshift: [what you fixed]"\`
+7. Do NOT push — the orchestrator handles that
 
-STEP 1 - Explore & Find:
-- Scan for TODOs, FIXMEs, type errors, missing error handling
-- Check CLAUDE.md or AGENTS.md for context
-- Make minimal, focused changes (one thing only)
-
-STEP 2 - Review with CodeRabbit:
-- Stage: git add -A
-- Run: cr review --plain
-- CRITICAL/HIGH issues -> fix and re-run
-- Repeat until clean
-
-STEP 3 - Commit:
-- Message format: "nightshift: [what you fixed]"
-- Do NOT push (I handle that)
-- Output exactly: "DONE: [brief noun phrase, no 'Implemented', max 40 chars]"
-  Example: "DONE: Language detection for leaderboard"
-
-If nothing to fix, output: "NOTHING_TO_FIX"
-
-Remember: Small wins compound. One improvement tonight, another tomorrow.`;
+# OUTPUT
+On success, output exactly: DONE: [brief description, max 40 chars]
+If nothing actionable, output: NOTHING_TO_FIX`;
 
   try {
-    const sessionId = `nightshift-${repo}`;
-
+    // Fresh session each run — prevents old context from drowning out findings
     const proc = Bun.spawn(
       [
         CLAUDE_BIN,
         "--dangerously-skip-permissions",
-        "--resume",
-        sessionId,
         "-p",
         claudePrompt,
       ],
@@ -379,17 +484,17 @@ Remember: Small wins compound. One improvement tonight, another tomorrow.`;
       }
     );
 
-    // 5 minute timeout — same Promise.race pattern as runCliAgent
+    // 10 minute timeout — Claude needs time to explore, implement, and test
     const raceResult = await Promise.race([
       proc.exited.then(() => "done" as const),
-      Bun.sleep(300000).then(() => "timeout" as const),
+      Bun.sleep(600000).then(() => "timeout" as const),
     ]);
 
     if (raceResult === "timeout") {
       proc.kill(9); // SIGKILL
       await Promise.race([proc.exited, Bun.sleep(2000)]); // cleanup
-      console.error("[Claude] Timeout after 5 minutes");
-      addFixItem(repo, "claude", "Timeout after 5 minutes");
+      console.error("[Claude] Timeout after 10 minutes");
+      addFixItem(repo, "claude", "Timeout after 10 minutes");
       return { success: false, improvement: "Claude timed out" };
     }
 
@@ -485,8 +590,9 @@ async function processRepo(
 
   console.log(`\n── Processing: ${repo} ──\n`);
 
-  // 1. CLI agent pre-scan (gemini → kiro → cursor, all optional)
-  const geminiHint = await cliPreScan(repoPath);
+  // 1. Deep two-phase pre-scan (bash analysis → CLI prioritization)
+  const findings = await deepPreScan(repoPath);
+  console.log(`[PreScan] Summary: ${findings.summary}`);
 
   // 2. Check fix list for this repo
   const fixes = getPendingFixes(repo);
@@ -506,7 +612,7 @@ async function processRepo(
       worktreePath,
       branchName,
       repo,
-      geminiHint,
+      findings,
       fixes
     );
 
@@ -551,7 +657,7 @@ async function nightShift(): Promise<NightShiftResult[]> {
     ...rotation.slice(0, targetIdx >= 0 ? targetIdx : 0),
   ];
 
-  console.log(`\n🌙 Night Shift v4 starting...`);
+  console.log(`\n🌙 Night Shift v5 starting...`);
   console.log(`📁 Repos: ${orderedRepos.join(" → ")}`);
   console.log(`⏰ Time: ${new Date().toLocaleString()}`);
 
@@ -562,7 +668,7 @@ async function nightShift(): Promise<NightShiftResult[]> {
   console.log("");
 
   await sendTelegram(
-    `🌙 *Night Shift v4 Starting*\n\nRepos: ${orderedRepos.join(" → ")}\nPending fixes: ${pendingFixes.length}`
+    `🌙 *Night Shift v5 Starting*\n\nRepos: ${orderedRepos.join(" → ")}\nPending fixes: ${pendingFixes.length}`
   );
 
   const results: NightShiftResult[] = [];
@@ -614,13 +720,18 @@ async function nightShift(): Promise<NightShiftResult[]> {
     .map((r) => r.prUrl)
     .join("\n");
 
+  // Build detailed summary
+  const resultDetails = results.map(r => {
+    const status = r.success ? "✅" : r.improvement?.includes("timed out") ? "⏰" : "—";
+    return `${status} ${r.repo}: ${r.improvement || r.error || "skipped"}`;
+  }).join("\n");
+
   await sendTelegram(
-    `🌙 *Night Shift v4 Complete*\n\n` +
-      `Repos: ${results.length}/${orderedRepos.length}\n` +
-      `PRs created: ${successCount}\n` +
-      `${prUrls ? `\n${prUrls}` : ""}\n\n` +
-      `Next target: ${rotation[nextIdx]}\n` +
-      `Full briefing at 8 AM.`
+    `🌙 *Night Shift v5 Complete*\n\n` +
+      `${resultDetails}\n\n` +
+      `PRs: ${successCount}/${results.length}\n` +
+      `${prUrls ? prUrls + "\n" : ""}` +
+      `Next: ${rotation[nextIdx]}`
   );
 
   return results;

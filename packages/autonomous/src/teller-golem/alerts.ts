@@ -1,6 +1,6 @@
 import { sendNotification } from "../lib/telegram-direct";
 import { logEvent } from "../event-log";
-import { runOllamaJSON } from "../ollama-wrapper";
+import { runLLMJSON } from "../llm";
 import { extractVendor } from "./categorizer";
 import type { PaymentFailure, ScoredEmail } from "./types";
 
@@ -31,7 +31,7 @@ export async function detectPaymentFailure(
   if (!regexMatch) return null;
 
   // LLM confirmation + detail extraction
-  const result = await runOllamaJSON<{
+  const result = await runLLMJSON<{
     isFailure: boolean;
     vendor: string;
     amount: number | null;

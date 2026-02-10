@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, mock, beforeEach, afterEach, spyOn } from "bun:test";
-import * as ollamaWrapper from "../../ollama-wrapper";
+import * as llm from "../../llm";
 import { scoreEmail, scoreEmails, extractSubscriptionInfo, SCORE_THRESHOLDS } from "../../email-golem/scorer";
 import type { EmailInput, ScoredEmail } from "../../email-golem/scorer";
 
@@ -93,7 +93,7 @@ const FIXTURES: Record<string, EmailInput & { expectedScore: number; expectedCat
 };
 
 beforeEach(() => {
-  spyOn(ollamaWrapper, "runOllamaJSON").mockImplementation(mockOllamaJSON);
+  spyOn(llm, "runLLMJSON").mockImplementation(mockOllamaJSON);
 });
 
 afterEach(() => {

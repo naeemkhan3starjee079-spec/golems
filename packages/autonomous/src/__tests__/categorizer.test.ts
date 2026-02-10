@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, mock, beforeEach, afterEach, spyOn } from "bun:test";
-import * as ollamaWrapper from "../ollama-wrapper";
+import * as llm from "../llm";
 import { categorizeExpense, extractVendor } from "../teller-golem/categorizer";
 import type { CategorizedExpense, ScoredEmail } from "../teller-golem/types";
 
@@ -26,8 +26,8 @@ const makeEmail = (overrides: Partial<ScoredEmail> = {}): ScoredEmail => ({
 describe("TellerGolem Categorizer", () => {
   beforeEach(() => {
     mockRunOllamaJSON = mock<() => Promise<CategorizedExpense | null>>();
-    spyOn(ollamaWrapper, "runOllamaJSON").mockImplementation((...args: unknown[]) => mockRunOllamaJSON());
-    spyOn(ollamaWrapper, "runOllama").mockImplementation(async () => "");
+    spyOn(llm, "runLLMJSON").mockImplementation((...args: unknown[]) => mockRunOllamaJSON());
+    spyOn(llm, "runLLM").mockImplementation(async () => "");
   });
 
   afterEach(() => {

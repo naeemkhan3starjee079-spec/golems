@@ -9,7 +9,7 @@
 import { readFileSync, existsSync } from "fs";
 import { join } from "path";
 import type { JobListing } from "./scraper";
-import { forJobGolem } from "../ollama-wrapper";
+import { forJobGolem } from "../llm";
 
 // Try multiple paths — import.meta.dir can differ between local/Railway/compiled
 const PROFILE_CANDIDATES = [
@@ -56,8 +56,8 @@ function loadProfile() {
 /**
  * Call Ollama for job matching (via wrapper for sandboxed mode support)
  */
-async function callOllama(prompt: string): Promise<{ score: number; reason: string; highlights: string[] } | null> {
-  const result = await forJobGolem.runOllamaJSON<{
+async function callLLM(prompt: string): Promise<{ score: number; reason: string; highlights: string[] } | null> {
+  const result = await forJobGolem.runLLMJSON<{
     score: number;
     reason: string;
     highlights: string[];
@@ -123,7 +123,7 @@ SCORES:
 Respond with ONLY a JSON object:
 {"score": 1-10, "reason": "brief explanation including what's REQUIRED vs nice-to-have", "highlights": ["matching", "skills"]}`;
 
-  const result = await callOllama(prompt);
+  const result = await callLLM(prompt);
 
   if (result) {
     return {

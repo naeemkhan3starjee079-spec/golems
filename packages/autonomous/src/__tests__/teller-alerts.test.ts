@@ -1,5 +1,5 @@
 import { describe, test, expect, mock, beforeEach, afterEach, spyOn } from "bun:test";
-import * as ollamaWrapper from "../ollama-wrapper";
+import * as llm from "../llm";
 import * as telegramDirect from "../lib/telegram-direct";
 import * as eventLog from "../event-log";
 import { detectPaymentFailure, sendPaymentAlert } from "../teller-golem/alerts";
@@ -11,8 +11,8 @@ const mockLogEvent = mock(async () => {});
 
 // Use spyOn instead of mock.module to avoid global pollution
 beforeEach(() => {
-  spyOn(ollamaWrapper, "runOllamaJSON").mockImplementation(mockRunOllamaJSON);
-  spyOn(ollamaWrapper, "runOllama").mockImplementation(async () => "");
+  spyOn(llm, "runLLMJSON").mockImplementation(mockRunOllamaJSON);
+  spyOn(llm, "runLLM").mockImplementation(async () => "");
   spyOn(telegramDirect, "sendNotification").mockImplementation(mockSendNotification);
   spyOn(eventLog, "logEvent").mockImplementation(mockLogEvent);
 });

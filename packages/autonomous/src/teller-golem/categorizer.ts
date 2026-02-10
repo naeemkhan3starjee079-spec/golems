@@ -5,7 +5,7 @@
  * IRS Schedule C tax categories.
  */
 
-import { runOllamaJSON } from "../ollama-wrapper";
+import { runLLMJSON } from "../llm";
 import type { CategorizedExpense, ScoredEmail, TaxCategory } from "./types";
 
 /** Valid IRS Schedule C expense categories */
@@ -42,7 +42,7 @@ Valid categories: ${VALID_CATEGORIES.join(", ")}
 Respond in JSON:
 {"category": "...", "confidence": 0.0-1.0, "reasoning": "...", "amount": null_or_number, "vendor": "..."}`;
 
-  const result = await runOllamaJSON<CategorizedExpense>(
+  const result = await runLLMJSON<CategorizedExpense>(
     prompt,
     "teller-categorizer"
   );
