@@ -121,7 +121,7 @@ export default function TelegramMock({activeIndex, onTopicClick, accentColor}: T
 
       {/* Footer */}
       <div className={styles.footer}>
-        <span className={styles.seeAll}>See all topics \u2192</span>
+        <span className={styles.seeAll}>{'See all topics \u2192'}</span>
       </div>
     </div>
   );

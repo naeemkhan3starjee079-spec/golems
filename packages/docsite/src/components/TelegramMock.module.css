@@ -269,7 +269,9 @@
 
 @media screen and (max-width: 480px) {
   .msgText {
-    font-size: 0.8rem;
+    font-size: 0.75rem;
+    word-break: break-word;
+    overflow-wrap: break-word;
   }
 
   .message {
@@ -277,13 +279,40 @@
   }
 
   .messages {
-    padding: 12px 14px;
-    gap: 10px;
+    padding: 10px 12px;
+    gap: 8px;
   }
 
   .topicTab {
     font-size: 0.65rem;
-    padding: 8px 8px;
+    padding: 6px 6px;
+    min-height: auto;
+  }
+
+  .msgSender {
+    font-size: 0.68rem;
+  }
+
+  .header {
+    padding: 8px 12px;
+  }
+
+  .avatar {
+    width: 30px;
+    height: 30px;
+    font-size: 0.75rem;
+  }
+
+  .groupName {
+    font-size: 0.8rem;
+  }
+
+  .memberCount {
+    font-size: 0.65rem;
+  }
+
+  .footer {
+    font-size: 0.7rem;
   }
 }
 

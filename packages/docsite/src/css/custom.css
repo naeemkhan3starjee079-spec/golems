@@ -323,6 +323,11 @@ body::after {
   body::after {
     display: none;
   }
+
+  /* Hide etanheyman.com link on mobile — too crowded */
+  .navbar__item.navbar__link[href="https://etanheyman.com"] {
+    display: none;
+  }
 }
 
 /* Mermaid diagrams — spacing and dark/light */
