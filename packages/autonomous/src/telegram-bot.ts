@@ -1,6 +1,6 @@
 import { Bot, InlineKeyboard, Keyboard } from "grammy";
 import { $ } from "bun";
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync } from "fs";
 import { join } from "path";
 import { logEvent, getRecentEvents, formatEventsForClaude } from "./event-log";
 import { runJobSearch } from "./job-golem/index";
@@ -87,6 +87,25 @@ const GITS = join(HOME, "Gits");  // gitsClaude - access all repos
 const STATE_FILE = join(HOME, ".golems-zikaron/state.json");
 const SOUL_FILE = join(GITS, "golems/packages/autonomous/SOUL.md");
 
+// Find the most recent Claude session UUID for a given project directory
+function findLatestSessionId(cwd: string): string | null {
+  const projectDir = cwd.replace(/\//g, "-");
+  const sessionsDir = join(HOME, ".claude", "projects", projectDir, "sessions");
+  try {
+    if (!existsSync(sessionsDir)) return null;
+    const files = readdirSync(sessionsDir)
+      .filter(f => f.endsWith(".jsonl"))
+      .map(f => ({
+        name: f.replace(".jsonl", ""),
+        mtime: statSync(join(sessionsDir, f)).mtimeMs,
+      }))
+      .sort((a, b) => b.mtime - a.mtime);
+    return files.length > 0 ? files[0].name : null;
+  } catch {
+    return null;
+  }
+}
+
 // ClaudeGolem Telegram Bot - uses Claude Code CLI with conversation memory
 
 // State
@@ -102,12 +121,12 @@ interface State {
     // Note: "claude" source goes to General (no thread ID needed)
     alerts?: number;           // 🔔 Alerts topic thread ID
     nightshift?: number;       // 🌙 Night Shift topic thread ID
-    email?: number;            // 📧 Email topic thread ID
-    jobs?: number;             // 🎯 Jobs topic thread ID
-    recruiter?: number;        // 👔 RecruiterGolem chat topic
-    teller?: number;           // 💰 TellerGolem chat topic
-    monitor?: number;          // 🔧 MonitorGolem chat topic
+    recruiter?: number;        // 👔 RecruiterGolem chat + job notifications
+    teller?: number;           // 💰 TellerGolem chat + subscription alerts
+    monitor?: number;          // 🔧 MonitorGolem chat + email/system alerts
   };
+  // Per-golem Telegram session UUIDs (for --resume with --print)
+  golemSessions?: Record<string, string>;
 }
 
 // ═══════════════════════════════════════════════════════
@@ -140,8 +159,7 @@ function saveState(state: State) {
 // ═══════════════════════════════════════════════════════
 
 interface GolemConfig {
-  sessionName: string;   // --resume session name
-  cwd: string;           // Working directory (golem's own dir)
+  cwd: string;           // Working directory (golem's own dir) — --continue resumes here
   topicKey: string;      // Key in state.topics
   name: string;          // Display name
   icon: string;          // Emoji icon
@@ -149,21 +167,18 @@ interface GolemConfig {
 
 const GOLEM_REGISTRY: Record<string, GolemConfig> = {
   recruitergolem: {
-    sessionName: "recruitergolem-telegram",
     cwd: join(HOME, "Gits", "recruiterGolem"),
     topicKey: "recruiter",
     name: "RecruiterGolem",
     icon: "👔",
   },
   tellergolem: {
-    sessionName: "tellergolem-telegram",
     cwd: join(HOME, "Gits", "tellerGolem"),
     topicKey: "teller",
     name: "TellerGolem",
     icon: "💰",
   },
   monitorgolem: {
-    sessionName: "monitorgolem-telegram",
     cwd: join(HOME, "Gits", "monitorGolem"),
     topicKey: "monitor",
     name: "MonitorGolem",
@@ -188,7 +203,8 @@ function getGolemFromThreadId(threadId: number | undefined, state: State): Golem
 
 /**
  * Spawn Claude in a golem-specific session with its own cwd and persona.
- * Uses --resume for persistent session memory per golem.
+ * Uses --resume <uuid> for persistent session memory per golem.
+ * First message creates a new session; UUID is stored in state for subsequent --resume calls.
  */
 async function askGolem(
   config: GolemConfig,
@@ -207,20 +223,28 @@ async function askGolem(
       mkdirSync(config.cwd, { recursive: true });
     }
 
+    // Look up stored session UUID for this golem's Telegram chat
+    const currentState = loadState();
+    const sessionId = currentState.golemSessions?.[config.name];
+
     const args = [
       "/Users/etanheyman/.local/bin/claude",
       "--dangerously-skip-permissions",
       "--print",
-      "--resume", config.sessionName,
+      ...(sessionId ? ["--resume", sessionId] : []),
       "--append-system-prompt", telegramPrompt,
       prompt,
     ];
 
+    console.log(`[${config.name}] Spawning claude ${sessionId ? `--resume ${sessionId.slice(0, 8)}...` : "(new session)"}`);
+
+    // Strip ANTHROPIC_API_KEY so Claude CLI uses OAuth (subscription auth), not the API key
+    const { ANTHROPIC_API_KEY: _, ...cleanEnv } = process.env;
     const proc = Bun.spawn(args, {
       cwd: config.cwd,
       stdout: "pipe",
       stderr: "pipe",
-      env: { ...process.env, HOME },
+      env: { ...cleanEnv, HOME },
     });
 
     // 5 min timeout
@@ -250,6 +274,19 @@ async function askGolem(
     if (!output.trim()) {
       console.warn(`[${config.name}] Empty stdout, exit code:`, proc.exitCode);
     }
+
+    // After the call, find and store the session UUID if we don't have one yet
+    if (!sessionId) {
+      const newSessionId = findLatestSessionId(config.cwd);
+      if (newSessionId) {
+        const freshState = loadState();
+        if (!freshState.golemSessions) freshState.golemSessions = {};
+        freshState.golemSessions[config.name] = newSessionId;
+        saveState(freshState);
+        console.log(`[${config.name}] Stored session UUID: ${newSessionId.slice(0, 8)}...`);
+      }
+    }
+
     return output.trim() || "No response.";
   } catch (error) {
     console.error(`[${config.name}] Error:`, error);
@@ -790,7 +827,7 @@ Current config:
 
   // Save the topic thread ID
   // Note: "chat" removed - ClaudeGolem goes to General (no thread ID)
-  const validTopics = ["alerts", "nightshift", "email", "jobs", "recruiter", "teller", "monitor", "uptime"];
+  const validTopics = ["alerts", "nightshift", "recruiter", "teller", "monitor", "uptime"];
   if (!validTopics.includes(topicArg)) {
     await ctx.reply(`❌ Unknown topic: ${topicArg}\nValid: ${validTopics.join(", ")}\n\n_ClaudeGolem chat goes to General automatically_`, { parse_mode: "Markdown" });
     return;
@@ -1652,14 +1689,27 @@ ${draftContent.content.slice(0, 2000)}${draftContent.content.length > 2000 ? "..
       responseLength: response.length,
     }, golemConfig.name.toLowerCase() as any).catch(() => {});
 
-    // Split long messages
-    if (response.length > 4000) {
-      const chunks = response.match(/.{1,4000}/gs) || [response];
+    // Prefix with golem identity so user knows who's talking
+    const prefix = `${golemConfig.icon} ${golemConfig.name}\n\n`;
+    const fullResponse = prefix + response;
+
+    // Send reply — try Markdown first, fall back to plain text if parsing fails
+    const sendGolemReply = async (text: string) => {
+      try {
+        await ctx.reply(text, { message_thread_id: threadId, parse_mode: "Markdown" });
+      } catch {
+        // Markdown parse error — send as plain text
+        await ctx.reply(text, { message_thread_id: threadId });
+      }
+    };
+
+    if (fullResponse.length > 4000) {
+      const chunks = fullResponse.match(/.{1,4000}/gs) || [fullResponse];
       for (const chunk of chunks) {
-        await ctx.reply(chunk, { message_thread_id: threadId });
+        await sendGolemReply(chunk);
       }
     } else {
-      await ctx.reply(response, { message_thread_id: threadId });
+      await sendGolemReply(fullResponse);
     }
     return;
   }
@@ -1735,12 +1785,12 @@ const SOURCE_CONFIG: Record<string, {
   },
   email: {
     icon: "📧",
-    topic: "email",
+    topic: "monitor",  // Email alerts → MonitorGolem (can investigate)
     format: (t, b) => `📧 *${t}*\n\n${b}`,
   },
   jobs: {
     icon: "🎯",
-    topic: "jobs",
+    topic: "recruiter",  // Job matches → RecruiterGolem
     format: (t, b) => `🎯 *${t}*\n\n${b}`,
   },
   recruiter: {

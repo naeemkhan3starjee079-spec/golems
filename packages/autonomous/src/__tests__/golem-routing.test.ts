@@ -9,8 +9,7 @@ import { join } from "path";
 
 // Mirror the GolemConfig interface from telegram-bot.ts
 interface GolemConfig {
-  sessionName: string;
-  cwd: string;
+  cwd: string;           // Working directory — --continue resumes here
   topicKey: string;
   name: string;
   icon: string;
@@ -21,21 +20,18 @@ const HOME = process.env.HOME || "/Users/etanheyman";
 // Mirror GOLEM_REGISTRY from telegram-bot.ts
 const GOLEM_REGISTRY: Record<string, GolemConfig> = {
   recruitergolem: {
-    sessionName: "recruitergolem-telegram",
     cwd: join(HOME, "Gits", "recruiterGolem"),
     topicKey: "recruiter",
     name: "RecruiterGolem",
     icon: "👔",
   },
   tellergolem: {
-    sessionName: "tellergolem-telegram",
     cwd: join(HOME, "Gits", "tellerGolem"),
     topicKey: "teller",
     name: "TellerGolem",
     icon: "💰",
   },
   monitorgolem: {
-    sessionName: "monitorgolem-telegram",
     cwd: join(HOME, "Gits", "monitorGolem"),
     topicKey: "monitor",
     name: "MonitorGolem",
@@ -60,7 +56,6 @@ describe("Per-Golem Routing - GOLEM_REGISTRY", () => {
   it("should have recruitergolem in registry", () => {
     const config = GOLEM_REGISTRY.recruitergolem;
     expect(config).toBeDefined();
-    expect(config.sessionName).toBe("recruitergolem-telegram");
     expect(config.cwd).toContain("recruiterGolem");
     expect(config.topicKey).toBe("recruiter");
     expect(config.name).toBe("RecruiterGolem");
@@ -69,7 +64,6 @@ describe("Per-Golem Routing - GOLEM_REGISTRY", () => {
   it("should have tellergolem in registry", () => {
     const config = GOLEM_REGISTRY.tellergolem;
     expect(config).toBeDefined();
-    expect(config.sessionName).toBe("tellergolem-telegram");
     expect(config.cwd).toContain("tellerGolem");
     expect(config.topicKey).toBe("teller");
     expect(config.name).toBe("TellerGolem");
@@ -78,15 +72,14 @@ describe("Per-Golem Routing - GOLEM_REGISTRY", () => {
   it("should have monitorgolem in registry", () => {
     const config = GOLEM_REGISTRY.monitorgolem;
     expect(config).toBeDefined();
-    expect(config.sessionName).toBe("monitorgolem-telegram");
     expect(config.cwd).toContain("monitorGolem");
     expect(config.topicKey).toBe("monitor");
     expect(config.name).toBe("MonitorGolem");
   });
 
-  it("should have unique session names", () => {
-    const sessionNames = Object.values(GOLEM_REGISTRY).map(c => c.sessionName);
-    expect(new Set(sessionNames).size).toBe(sessionNames.length);
+  it("should have unique cwds (each golem gets its own directory)", () => {
+    const cwds = Object.values(GOLEM_REGISTRY).map(c => c.cwd);
+    expect(new Set(cwds).size).toBe(cwds.length);
   });
 
   it("should have unique topic keys", () => {
@@ -99,8 +92,6 @@ describe("Per-Golem Routing - getGolemFromThreadId", () => {
   const mockTopics = {
     alerts: 100,
     nightshift: 101,
-    email: 102,
-    jobs: 103,
     recruiter: 200,
     teller: 201,
     monitor: 202,
@@ -110,28 +101,26 @@ describe("Per-Golem Routing - getGolemFromThreadId", () => {
     const golem = getGolemFromThreadId(200, mockTopics);
     expect(golem).not.toBeNull();
     expect(golem!.name).toBe("RecruiterGolem");
-    expect(golem!.sessionName).toBe("recruitergolem-telegram");
+    expect(golem!.cwd).toContain("recruiterGolem");
   });
 
   it("should return TellerGolem for teller thread ID", () => {
     const golem = getGolemFromThreadId(201, mockTopics);
     expect(golem).not.toBeNull();
     expect(golem!.name).toBe("TellerGolem");
-    expect(golem!.sessionName).toBe("tellergolem-telegram");
+    expect(golem!.cwd).toContain("tellerGolem");
   });
 
   it("should return MonitorGolem for monitor thread ID", () => {
     const golem = getGolemFromThreadId(202, mockTopics);
     expect(golem).not.toBeNull();
     expect(golem!.name).toBe("MonitorGolem");
-    expect(golem!.sessionName).toBe("monitorgolem-telegram");
+    expect(golem!.cwd).toContain("monitorGolem");
   });
 
-  it("should return null for non-golem topic thread IDs (alerts, jobs, etc.)", () => {
+  it("should return null for non-golem topic thread IDs (alerts, nightshift)", () => {
     expect(getGolemFromThreadId(100, mockTopics)).toBeNull(); // alerts
     expect(getGolemFromThreadId(101, mockTopics)).toBeNull(); // nightshift
-    expect(getGolemFromThreadId(102, mockTopics)).toBeNull(); // email
-    expect(getGolemFromThreadId(103, mockTopics)).toBeNull(); // jobs
   });
 
   it("should return null for unknown thread IDs", () => {
@@ -153,23 +142,38 @@ describe("Per-Golem Routing - getGolemFromThreadId", () => {
 });
 
 describe("Per-Golem Routing - askGolem args", () => {
-  it("should build correct claude args for recruitergolem", () => {
-    const config = GOLEM_REGISTRY.recruitergolem;
+  it("should build correct claude args with --resume UUID when session exists", () => {
+    const fakeUuid = "550e8400-e29b-41d4-a716-446655440000";
     const telegramPrompt = `You are chatting on Telegram. Keep responses SHORT (mobile). Always reply in your topic thread only. Casual tone. Hebrew/English ok.`;
 
-    const expectedArgs = [
+    // When session UUID is stored, args include --resume <uuid>
+    const argsWithResume = [
       "/Users/etanheyman/.local/bin/claude",
       "--dangerously-skip-permissions",
       "--print",
-      "--resume", "recruitergolem-telegram",
+      "--resume", fakeUuid,
       "--append-system-prompt", telegramPrompt,
     ];
 
-    // Verify the args pattern matches what askGolem would produce
-    expect(expectedArgs[3]).toBe("--resume");
-    expect(expectedArgs[4]).toBe(config.sessionName);
-    expect(expectedArgs[5]).toBe("--append-system-prompt");
-    expect(expectedArgs[6]).toContain("Telegram");
+    expect(argsWithResume[3]).toBe("--resume");
+    expect(argsWithResume[4]).toMatch(/^[0-9a-f]{8}-/); // UUID format
+    expect(argsWithResume[5]).toBe("--append-system-prompt");
+    expect(argsWithResume[6]).toContain("Telegram");
+  });
+
+  it("should build args without --resume for first message (no stored session)", () => {
+    const telegramPrompt = `You are chatting on Telegram. Keep responses SHORT (mobile). Always reply in your topic thread only. Casual tone. Hebrew/English ok.`;
+
+    // First message: no --resume, just --print
+    const argsFirstMsg = [
+      "/Users/etanheyman/.local/bin/claude",
+      "--dangerously-skip-permissions",
+      "--print",
+      "--append-system-prompt", telegramPrompt,
+    ];
+
+    expect(argsFirstMsg[3]).toBe("--append-system-prompt");
+    expect(argsFirstMsg).not.toContain("--resume");
   });
 
   it("should use golem-specific cwd, not ~/Gits", () => {
@@ -199,12 +203,12 @@ describe("Per-Golem Routing - Message flow", () => {
     expect(golem?.name).toBe("RecruiterGolem");
   });
 
-  it("messages in non-golem topic (alerts/jobs) → NOT routed to any golem", () => {
-    const mockTopics = { alerts: 100, jobs: 103, recruiter: 200 };
-    // Messages in alerts/jobs topics should NOT be routed to a golem
+  it("messages in non-golem topic (alerts/nightshift) → NOT routed to any golem", () => {
+    const mockTopics = { alerts: 100, nightshift: 101, recruiter: 200 };
+    // Messages in alerts/nightshift topics should NOT be routed to a golem
     // They go to the normal ClaudeGolem queue
     expect(getGolemFromThreadId(100, mockTopics)).toBeNull();
-    expect(getGolemFromThreadId(103, mockTopics)).toBeNull();
+    expect(getGolemFromThreadId(101, mockTopics)).toBeNull();
   });
 });
 
@@ -214,8 +218,8 @@ describe("Per-Golem Routing - SOURCE_CONFIG extension", () => {
     claude: "general",
     ralph: "alerts",
     nightshift: "nightshift",
-    email: "email",
-    jobs: "jobs",
+    email: "monitor",
+    jobs: "recruiter",
     recruiter: "recruiter",
     teller: "teller",
     monitor: "monitor",
@@ -238,5 +242,13 @@ describe("Per-Golem Routing - SOURCE_CONFIG extension", () => {
 
   it("should still route claude to general", () => {
     expect(SOURCE_TO_TOPIC.claude).toBe("general");
+  });
+
+  it("should route email notifications to monitor topic (not separate email topic)", () => {
+    expect(SOURCE_TO_TOPIC.email).toBe("monitor");
+  });
+
+  it("should route jobs notifications to recruiter topic (not separate jobs topic)", () => {
+    expect(SOURCE_TO_TOPIC.jobs).toBe("recruiter");
   });
 });

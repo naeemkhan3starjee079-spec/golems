@@ -249,27 +249,29 @@
 
   .tab {
     padding: 8px 10px;
-    font-size: 0.65rem;
+    font-size: 0.68rem;
     min-height: 44px;
   }
 
   .tabEmoji {
-    font-size: 0.75rem;
+    font-size: 0.8rem;
   }
 
   .content {
-    padding: 12px 14px;
-    height: 280px;
-    overflow-x: auto;
+    padding: 14px 16px;
+    height: 300px;
+    overflow-x: hidden;
+    overflow-y: auto;
   }
 
   .line {
-    font-size: 0.72rem;
-    white-space: nowrap;
+    font-size: 0.75rem;
+    white-space: pre-wrap;
+    word-break: break-word;
   }
 
   .prompt {
-    font-size: 0.75rem;
+    font-size: 0.78rem;
   }
 
   /* Neofetch stacks vertically on mobile */
@@ -280,12 +282,16 @@
   }
 
   .neofetchInfo {
-    font-size: 0.65rem;
+    font-size: 0.7rem;
     width: 100%;
   }
 
   .neofetchLabel {
     min-width: 80px;
+  }
+
+  .neofetchLine {
+    flex-wrap: wrap;
   }
 }
 
@@ -300,8 +306,12 @@
   }
 
   .content {
-    height: 240px;
-    padding: 10px 12px;
+    height: 260px;
+    padding: 12px 14px;
+  }
+
+  .line {
+    font-size: 0.72rem;
   }
 
   .neofetchArt {
