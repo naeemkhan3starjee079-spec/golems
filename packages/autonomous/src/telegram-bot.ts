@@ -1641,7 +1641,7 @@ ${draftContent.content.slice(0, 2000)}${draftContent.content.length > 2000 ? "..
       golem: golemConfig.name,
       prompt: text.slice(0, 120),
       responseLength: response.length,
-    }, golemConfig.name.toLowerCase().replace("golem", "golem") as any).catch(() => {});
+    }, golemConfig.name.toLowerCase() as any).catch(() => {});
 
     // Split long messages
     if (response.length > 4000) {
