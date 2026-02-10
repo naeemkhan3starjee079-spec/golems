@@ -118,11 +118,12 @@ async function safeRun(name: string, fn: () => Promise<unknown>): Promise<void> 
     const sb = await getServiceRunReporter();
     if (sb) {
       const durationMs = Date.now() - start;
+      const endedAt = new Date().toISOString();
       sb.from("service_runs")
         .insert({
           service: name.toLowerCase().replace(/[^a-z0-9]/g, "-"),
           started_at: startedAt,
-          ended_at: new Date().toISOString(),
+          ended_at: endedAt,
           duration_ms: durationMs,
           status,
           result,
@@ -132,6 +133,22 @@ async function safeRun(name: string, fn: () => Promise<unknown>): Promise<void> 
           if (dbErr) console.error("[CloudWorker] service_runs insert failed:", dbErr.message);
         })
         .catch(() => {});
+
+      // Update golem_state timestamps for dashboard service status
+      const stateKeyPrefixes: [string, string][] = [
+        ["EmailGolem", "lastEmailCheck"],
+        ["JobGolem", "lastJobRun"],
+        ["Briefing", "lastBriefing"],
+      ];
+      const stateKey = stateKeyPrefixes.find(([prefix]) => name.startsWith(prefix))?.[1];
+      if (stateKey) {
+        sb.from("golem_state")
+          .upsert({ key: stateKey, value: endedAt, updated_at: endedAt }, { onConflict: "key" })
+          .then(({ error: stateErr }) => {
+            if (stateErr) console.error(`[CloudWorker] golem_state ${stateKey} upsert failed:`, stateErr.message);
+          })
+          .catch(() => {});
+      }
     }
   } catch {
     // Non-critical

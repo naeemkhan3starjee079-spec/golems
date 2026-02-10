@@ -70,11 +70,29 @@ export type GolemActor =
 
 /** Types of events that golems can log */
 export type EventType =
+  // Email pipeline
   | "email_alert"
   | "email_routed"
   | "email_unsubscribe_attempt"
+  // Job pipeline
+  | "job_match"
+  // Night Shift
   | "nightshift_pr"
-  | "job_match";
+  // Telegram chat
+  | "telegram_message_in"
+  | "telegram_message_out"
+  // Content pipeline
+  | "pipeline_draft_ready"
+  | "pipeline_draft_rejected"
+  | "draft_approved"
+  | "draft_rejected"
+  | "draft_scored"
+  // Outreach
+  | "outreach_draft"
+  | "contact_found"
+  // Service lifecycle
+  | "service_started"
+  | "service_error";
 
 /** A logged event from any golem actor */
 export interface GolemEvent {

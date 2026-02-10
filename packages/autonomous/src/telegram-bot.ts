@@ -362,6 +362,13 @@ async function processQueue() {
     console.log(`✅ Claude responded (${response.length} chars)`);
     await notify("✅ Claude Done", response.slice(0, 80));
 
+    // Log outgoing response event
+    logEvent("telegram_message_out", {
+      preview: response.slice(0, 120),
+      length: response.length,
+      prompt: text.slice(0, 80),
+    }, "claudegolem").catch(() => {});
+
     // Split long messages
     if (response.length > 4000) {
       const chunks = response.match(/.{1,4000}/gs) || [response];
@@ -1523,6 +1530,12 @@ This looks like a task that might benefit from its own session:
   // Add to queue for Claude
   queue.push({ ctx, text });
   console.log(`📥 Queued: "${text.slice(0, 50)}..."`);
+
+  // Log incoming message event
+  logEvent("telegram_message_in", {
+    preview: text.slice(0, 120),
+    length: text.length,
+  }, "claudegolem").catch(() => {});
 
   // Process
   if (!isProcessing) {

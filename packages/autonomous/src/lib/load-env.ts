@@ -40,7 +40,10 @@ export function loadEnv(): boolean {
   const envFile = join(packageRoot, ".env");
 
   if (!existsSync(envFile)) {
-    console.warn(`[load-env] No .env file found at ${envFile}`);
+    // On Railway/cloud, env vars are injected by the platform — no .env needed
+    if (!process.env.RAILWAY_ENVIRONMENT) {
+      console.warn(`[load-env] No .env file found at ${envFile}`);
+    }
     return false;
   }
 
