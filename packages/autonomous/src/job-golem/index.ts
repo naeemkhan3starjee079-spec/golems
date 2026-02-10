@@ -155,17 +155,24 @@ function cleanupOldResults() {
 }
 
 // Track if scrape is in progress (prevent concurrent runs)
-let isScrapingInProgress = false;
+// Use timestamp instead of boolean so stale locks auto-expire after 10 minutes
+let scrapeStartedAt: number | null = null;
+const SCRAPE_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 
 // Main job search routine
 export async function runJobSearch(): Promise<{ scraped: number; filtered: number; matched: number } | null> {
-  // Prevent concurrent runs
-  if (isScrapingInProgress) {
-    console.log("[Job Golem] Scrape already in progress, skipping...");
-    return null;
+  // Prevent concurrent runs, but auto-expire stale locks after 10 minutes
+  if (scrapeStartedAt !== null) {
+    const elapsed = Date.now() - scrapeStartedAt;
+    if (elapsed < SCRAPE_TIMEOUT_MS) {
+      console.log("[Job Golem] Scrape already in progress, skipping...");
+      return null;
+    }
+    console.log(`[Job Golem] Previous scrape timed out after ${Math.round(elapsed / 1000)}s, resetting...`);
   }
 
-  isScrapingInProgress = true;
+  const myStartTime = Date.now();
+  scrapeStartedAt = myStartTime;
   try {
   const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 19);
   console.log(`[${timestamp}] 🤖 Job Golem starting...\n`);
@@ -282,7 +289,10 @@ export async function runJobSearch(): Promise<{ scraped: number; filtered: numbe
 
   return { scraped: allJobs.length, filtered: filtered.length, matched: matches.length };
   } finally {
-    isScrapingInProgress = false;
+    // Only clear lock if we still own it (prevents stale scrape from clearing new scrape's lock)
+    if (scrapeStartedAt === myStartTime) {
+      scrapeStartedAt = null;
+    }
   }
 }
 

@@ -90,14 +90,14 @@ const SOUL_FILE = join(GITS, "golems/packages/autonomous/SOUL.md");
 // Find the most recent Claude session UUID for a given project directory
 function findLatestSessionId(cwd: string): string | null {
   const projectDir = cwd.replace(/\//g, "-");
-  const sessionsDir = join(HOME, ".claude", "projects", projectDir, "sessions");
+  const projectPath = join(HOME, ".claude", "projects", projectDir);
   try {
-    if (!existsSync(sessionsDir)) return null;
-    const files = readdirSync(sessionsDir)
+    if (!existsSync(projectPath)) return null;
+    const files = readdirSync(projectPath)
       .filter(f => f.endsWith(".jsonl"))
       .map(f => ({
         name: f.replace(".jsonl", ""),
-        mtime: statSync(join(sessionsDir, f)).mtimeMs,
+        mtime: statSync(join(projectPath, f)).mtimeMs,
       }))
       .sort((a, b) => b.mtime - a.mtime);
     return files.length > 0 ? files[0].name : null;
@@ -386,10 +386,13 @@ ${eventSummary}`;
       prompt,
     ];
 
+    // Strip ANTHROPIC_API_KEY so Claude CLI uses OAuth (subscription auth), not the API key
+    const { ANTHROPIC_API_KEY: _, ...cleanEnv } = process.env;
     const proc = Bun.spawn(args, {
       cwd: BOT_WORKING_DIR,  // Use dedicated dir for conversation continuity
       stdout: "pipe",
       stderr: "pipe",
+      env: { ...cleanEnv, HOME },
     });
 
     // Timeout 5 minutes (complex tasks like research + subagents need time)
