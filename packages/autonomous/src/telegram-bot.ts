@@ -802,23 +802,19 @@ Run this command in each topic to register it:
 
 \`/setup alerts\` - in 🔔 Alerts topic
 \`/setup nightshift\` - in 🌙 Night Shift topic
-\`/setup email\` - in 📧 Email topic
-\`/setup jobs\` - in 🎯 Jobs topic
 \`/setup recruiter\` - in 👔 RecruiterGolem topic
 \`/setup teller\` - in 💰 TellerGolem topic
 \`/setup monitor\` - in 🔧 MonitorGolem topic
 \`/setup uptime\` - in 📡 Uptime topic
 
 _Note: ClaudeGolem chat goes to General (no setup needed)_
-_Golem topics (recruiter/teller/monitor) enable per-golem chat_
+_Golem topics enable per-golem chat with persistent sessions_
 
 Current config:
 • Group: ${state.groupChatId || "not set"}
 • General: ClaudeGolem chat (no thread ID needed)
 • Alerts: ${state.topics?.alerts || "not set"}
 • Night Shift: ${state.topics?.nightshift || "not set"}
-• Email: ${state.topics?.email || "not set"}
-• Jobs: ${state.topics?.jobs || "not set"}
 • RecruiterGolem: ${state.topics?.recruiter || "not set"}
 • TellerGolem: ${state.topics?.teller || "not set"}
 • MonitorGolem: ${state.topics?.monitor || "not set"}`, { parse_mode: "Markdown" });
