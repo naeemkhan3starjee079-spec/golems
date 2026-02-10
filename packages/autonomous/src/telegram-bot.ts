@@ -104,7 +104,9 @@ interface State {
     nightshift?: number;       // 🌙 Night Shift topic thread ID
     email?: number;            // 📧 Email topic thread ID
     jobs?: number;             // 🎯 Jobs topic thread ID
-    recruiter?: number;        // 👔 Recruiter topic thread ID
+    recruiter?: number;        // 👔 RecruiterGolem chat topic
+    teller?: number;           // 💰 TellerGolem chat topic
+    monitor?: number;          // 🔧 MonitorGolem chat topic
   };
 }
 
@@ -131,6 +133,128 @@ function loadState(): State {
 
 function saveState(state: State) {
   writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
+}
+
+// ═══════════════════════════════════════════════════════
+// PER-GOLEM TELEGRAM ROUTING
+// ═══════════════════════════════════════════════════════
+
+interface GolemConfig {
+  sessionName: string;   // --resume session name
+  cwd: string;           // Working directory (golem's own dir)
+  topicKey: string;      // Key in state.topics
+  name: string;          // Display name
+  icon: string;          // Emoji icon
+}
+
+const GOLEM_REGISTRY: Record<string, GolemConfig> = {
+  recruitergolem: {
+    sessionName: "recruitergolem-telegram",
+    cwd: join(HOME, "Gits", "recruiterGolem"),
+    topicKey: "recruiter",
+    name: "RecruiterGolem",
+    icon: "👔",
+  },
+  tellergolem: {
+    sessionName: "tellergolem-telegram",
+    cwd: join(HOME, "Gits", "tellerGolem"),
+    topicKey: "teller",
+    name: "TellerGolem",
+    icon: "💰",
+  },
+  monitorgolem: {
+    sessionName: "monitorgolem-telegram",
+    cwd: join(HOME, "Gits", "monitorGolem"),
+    topicKey: "monitor",
+    name: "MonitorGolem",
+    icon: "🔧",
+  },
+};
+
+/**
+ * Look up which golem (if any) should handle a message based on thread ID.
+ * Returns null if thread doesn't map to any golem (default to ClaudeGolem).
+ * Accepts pre-loaded state to avoid redundant disk reads.
+ */
+function getGolemFromThreadId(threadId: number | undefined, state: State): GolemConfig | null {
+  if (!threadId) return null;
+  if (!state.topics) return null;
+  for (const config of Object.values(GOLEM_REGISTRY)) {
+    const topicThreadId = state.topics[config.topicKey as keyof NonNullable<State["topics"]>];
+    if (topicThreadId === threadId) return config;
+  }
+  return null;
+}
+
+/**
+ * Spawn Claude in a golem-specific session with its own cwd and persona.
+ * Uses --resume for persistent session memory per golem.
+ */
+async function askGolem(
+  config: GolemConfig,
+  message: string,
+  onHeartbeat?: () => void
+): Promise<string> {
+  const now = new Date();
+  const timeStr = now.toLocaleString("en-IL", { timeZone: "Asia/Jerusalem", hour: "2-digit", minute: "2-digit", hour12: false });
+  const dateStr = now.toLocaleDateString("en-IL", { timeZone: "Asia/Jerusalem", weekday: "short", month: "short", day: "numeric" });
+  const prompt = `[${dateStr} ${timeStr} IL] ${message}`;
+
+  const telegramPrompt = `You are chatting on Telegram. Keep responses SHORT (mobile). Always reply in your topic thread only. Casual tone. Hebrew/English ok.`;
+
+  try {
+    if (!existsSync(config.cwd)) {
+      mkdirSync(config.cwd, { recursive: true });
+    }
+
+    const args = [
+      "/Users/etanheyman/.local/bin/claude",
+      "--dangerously-skip-permissions",
+      "--print",
+      "--resume", config.sessionName,
+      "--append-system-prompt", telegramPrompt,
+      prompt,
+    ];
+
+    const proc = Bun.spawn(args, {
+      cwd: config.cwd,
+      stdout: "pipe",
+      stderr: "pipe",
+      env: { ...process.env, HOME },
+    });
+
+    // 5 min timeout
+    const timeout = setTimeout(() => {
+      proc.kill();
+      console.error(`[${config.name}] Timeout (5 min)`);
+    }, 300000);
+
+    // Heartbeat every 60s
+    const heartbeat = onHeartbeat ? setInterval(() => {
+      console.log(`[${config.name}] Still working...`);
+      onHeartbeat();
+    }, 60000) : null;
+
+    // Read stdout/stderr concurrently with proc.exited to avoid pipe buffer deadlock
+    const [, output, stderr] = await Promise.all([
+      proc.exited,
+      new Response(proc.stdout).text(),
+      new Response(proc.stderr).text(),
+    ]);
+    clearTimeout(timeout);
+    if (heartbeat) clearInterval(heartbeat);
+
+    if (stderr) {
+      console.error(`[${config.name}] stderr:`, stderr.slice(0, 200));
+    }
+    if (!output.trim()) {
+      console.warn(`[${config.name}] Empty stdout, exit code:`, proc.exitCode);
+    }
+    return output.trim() || "No response.";
+  } catch (error) {
+    console.error(`[${config.name}] Error:`, error);
+    return "⚠️ Error.";
+  }
 }
 
 // Load SOUL.md for persona
@@ -643,10 +767,13 @@ Run this command in each topic to register it:
 \`/setup nightshift\` - in 🌙 Night Shift topic
 \`/setup email\` - in 📧 Email topic
 \`/setup jobs\` - in 🎯 Jobs topic
-\`/setup recruiter\` - in 👔 Recruiter topic
+\`/setup recruiter\` - in 👔 RecruiterGolem topic
+\`/setup teller\` - in 💰 TellerGolem topic
+\`/setup monitor\` - in 🔧 MonitorGolem topic
 \`/setup uptime\` - in 📡 Uptime topic
 
 _Note: ClaudeGolem chat goes to General (no setup needed)_
+_Golem topics (recruiter/teller/monitor) enable per-golem chat_
 
 Current config:
 • Group: ${state.groupChatId || "not set"}
@@ -655,13 +782,15 @@ Current config:
 • Night Shift: ${state.topics?.nightshift || "not set"}
 • Email: ${state.topics?.email || "not set"}
 • Jobs: ${state.topics?.jobs || "not set"}
-• Recruiter: ${state.topics?.recruiter || "not set"}`, { parse_mode: "Markdown" });
+• RecruiterGolem: ${state.topics?.recruiter || "not set"}
+• TellerGolem: ${state.topics?.teller || "not set"}
+• MonitorGolem: ${state.topics?.monitor || "not set"}`, { parse_mode: "Markdown" });
     return;
   }
 
   // Save the topic thread ID
   // Note: "chat" removed - ClaudeGolem goes to General (no thread ID)
-  const validTopics = ["alerts", "nightshift", "email", "jobs", "recruiter", "uptime"];
+  const validTopics = ["alerts", "nightshift", "email", "jobs", "recruiter", "teller", "monitor", "uptime"];
   if (!validTopics.includes(topicArg)) {
     await ctx.reply(`❌ Unknown topic: ${topicArg}\nValid: ${validTopics.join(", ")}\n\n_ClaudeGolem chat goes to General automatically_`, { parse_mode: "Markdown" });
     return;
@@ -1492,14 +1621,46 @@ ${draftContent.content.slice(0, 2000)}${draftContent.content.length > 2000 ? "..
   if (text === "🖥️ Admin") {
     const keyboard = new InlineKeyboard()
       .url("📊 Overview", "https://etanheyman.com/admin/golem")
-      .url("💼 Jobs", "https://etanheyman.com/admin/golem/jobs")
+      .row()
+      .url("👔 Recruiter", "https://etanheyman.com/admin/golem/recruiter")
+      .url("💰 Teller", "https://etanheyman.com/admin/golem/teller")
+      .url("🔧 Monitor", "https://etanheyman.com/admin/golem/monitor")
       .row()
       .url("📧 Emails", "https://etanheyman.com/admin/golem/emails")
       .url("📋 Activity", "https://etanheyman.com/admin/golem/alerts")
-      .row()
-      .url("🌙 Night Shift", "https://etanheyman.com/admin/golem/nightshift")
-      .url("👥 Outreach", "https://etanheyman.com/admin/golem/outreach");
+      .url("🌙 Night Shift", "https://etanheyman.com/admin/golem/nightshift");
     await ctx.reply("🖥️ *Admin Dashboard*\n\nTap to open:", { parse_mode: "Markdown", reply_markup: keyboard });
+    return;
+  }
+
+  // Per-golem topic routing: if message is in a golem's topic, route to that golem
+  const threadId = ctx.message?.message_thread_id;
+  const golemConfig = getGolemFromThreadId(threadId, state);
+
+  if (golemConfig) {
+    console.log(`${golemConfig.icon} Routing to ${golemConfig.name} (thread ${threadId})`);
+    await ctx.replyWithChatAction("typing");
+
+    const response = await askGolem(golemConfig, text, async () => {
+      await ctx.replyWithChatAction("typing");
+    });
+
+    // Log golem interaction
+    logEvent("golem_telegram_chat", {
+      golem: golemConfig.name,
+      prompt: text.slice(0, 120),
+      responseLength: response.length,
+    }, golemConfig.name.toLowerCase() as any).catch(() => {});
+
+    // Split long messages
+    if (response.length > 4000) {
+      const chunks = response.match(/.{1,4000}/gs) || [response];
+      for (const chunk of chunks) {
+        await ctx.reply(chunk, { message_thread_id: threadId });
+      }
+    } else {
+      await ctx.reply(response, { message_thread_id: threadId });
+    }
     return;
   }
 
@@ -1586,6 +1747,21 @@ const SOURCE_CONFIG: Record<string, {
     icon: "👔",
     topic: "recruiter",
     format: (t, b) => `👔 *${t}*\n\n${b}`,
+  },
+  teller: {
+    icon: "💰",
+    topic: "teller",
+    format: (t, b) => `💰 *${t}*\n\n${b}`,
+  },
+  monitor: {
+    icon: "🔧",
+    topic: "monitor",
+    format: (t, b) => `🔧 *${t}*\n\n${b}`,
+  },
+  bedtime: {
+    icon: "🌙",
+    topic: "alerts",
+    format: (t, b) => `🌙 *${t}*\n\n${b}`,
   },
   healthcheck: {
     icon: "🏥",
