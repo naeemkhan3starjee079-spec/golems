@@ -34,6 +34,13 @@ const GOLEM_REGISTRY: Record<string, GolemConfig> = {
     name: "TellerGolem",
     icon: "💰",
   },
+  monitorgolem: {
+    sessionName: "monitorgolem-telegram",
+    cwd: join(HOME, "Gits", "monitorGolem"),
+    topicKey: "monitor",
+    name: "MonitorGolem",
+    icon: "🔧",
+  },
 };
 
 // Mirror getGolemFromThreadId logic
@@ -68,6 +75,15 @@ describe("Per-Golem Routing - GOLEM_REGISTRY", () => {
     expect(config.name).toBe("TellerGolem");
   });
 
+  it("should have monitorgolem in registry", () => {
+    const config = GOLEM_REGISTRY.monitorgolem;
+    expect(config).toBeDefined();
+    expect(config.sessionName).toBe("monitorgolem-telegram");
+    expect(config.cwd).toContain("monitorGolem");
+    expect(config.topicKey).toBe("monitor");
+    expect(config.name).toBe("MonitorGolem");
+  });
+
   it("should have unique session names", () => {
     const sessionNames = Object.values(GOLEM_REGISTRY).map(c => c.sessionName);
     expect(new Set(sessionNames).size).toBe(sessionNames.length);
@@ -87,6 +103,7 @@ describe("Per-Golem Routing - getGolemFromThreadId", () => {
     jobs: 103,
     recruiter: 200,
     teller: 201,
+    monitor: 202,
   };
 
   it("should return RecruiterGolem for recruiter thread ID", () => {
@@ -101,6 +118,13 @@ describe("Per-Golem Routing - getGolemFromThreadId", () => {
     expect(golem).not.toBeNull();
     expect(golem!.name).toBe("TellerGolem");
     expect(golem!.sessionName).toBe("tellergolem-telegram");
+  });
+
+  it("should return MonitorGolem for monitor thread ID", () => {
+    const golem = getGolemFromThreadId(202, mockTopics);
+    expect(golem).not.toBeNull();
+    expect(golem!.name).toBe("MonitorGolem");
+    expect(golem!.sessionName).toBe("monitorgolem-telegram");
   });
 
   it("should return null for non-golem topic thread IDs (alerts, jobs, etc.)", () => {

@@ -162,18 +162,25 @@ const GOLEM_REGISTRY: Record<string, GolemConfig> = {
     name: "TellerGolem",
     icon: "💰",
   },
+  monitorgolem: {
+    sessionName: "monitorgolem-telegram",
+    cwd: join(HOME, "Gits", "monitorGolem"),
+    topicKey: "monitor",
+    name: "MonitorGolem",
+    icon: "🔧",
+  },
 };
 
 /**
  * Look up which golem (if any) should handle a message based on thread ID.
  * Returns null if thread doesn't map to any golem (default to ClaudeGolem).
+ * Accepts pre-loaded state to avoid redundant disk reads.
  */
-function getGolemFromThreadId(threadId: number | undefined): GolemConfig | null {
+function getGolemFromThreadId(threadId: number | undefined, state: State): GolemConfig | null {
   if (!threadId) return null;
-  const state = loadState();
   if (!state.topics) return null;
   for (const config of Object.values(GOLEM_REGISTRY)) {
-    const topicThreadId = (state.topics as any)[config.topicKey];
+    const topicThreadId = state.topics[config.topicKey as keyof NonNullable<State["topics"]>];
     if (topicThreadId === threadId) return config;
   }
   return null;
@@ -196,7 +203,6 @@ async function askGolem(
   const telegramPrompt = `You are chatting on Telegram. Keep responses SHORT (mobile). Always reply in your topic thread only. Casual tone. Hebrew/English ok.`;
 
   try {
-    const { mkdirSync, existsSync } = await import("fs");
     if (!existsSync(config.cwd)) {
       mkdirSync(config.cwd, { recursive: true });
     }
@@ -229,12 +235,15 @@ async function askGolem(
       onHeartbeat();
     }, 60000) : null;
 
-    await proc.exited;
+    // Read stdout/stderr concurrently with proc.exited to avoid pipe buffer deadlock
+    const [, output, stderr] = await Promise.all([
+      proc.exited,
+      new Response(proc.stdout).text(),
+      new Response(proc.stderr).text(),
+    ]);
     clearTimeout(timeout);
     if (heartbeat) clearInterval(heartbeat);
 
-    const output = await new Response(proc.stdout).text();
-    const stderr = await new Response(proc.stderr).text();
     if (stderr) {
       console.error(`[${config.name}] stderr:`, stderr.slice(0, 200));
     }
@@ -1626,7 +1635,7 @@ ${draftContent.content.slice(0, 2000)}${draftContent.content.length > 2000 ? "..
 
   // Per-golem topic routing: if message is in a golem's topic, route to that golem
   const threadId = ctx.message?.message_thread_id;
-  const golemConfig = getGolemFromThreadId(threadId);
+  const golemConfig = getGolemFromThreadId(threadId, state);
 
   if (golemConfig) {
     console.log(`${golemConfig.icon} Routing to ${golemConfig.name} (thread ${threadId})`);
