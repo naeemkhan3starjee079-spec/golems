@@ -66,7 +66,8 @@ export type GolemActor =
   | "jobgolem"
   | "emailgolem"
   | "recruitergolem"
-  | "tellergolem";
+  | "tellergolem"
+  | "bedtimeguardian";
 
 /** Types of events that golems can log */
 export type EventType =
@@ -90,6 +91,8 @@ export type EventType =
   // Outreach
   | "outreach_draft"
   | "contact_found"
+  // Scheduling
+  | "bedtime_reminder"
   // Service lifecycle
   | "service_started"
   | "service_error";

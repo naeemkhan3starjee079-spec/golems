@@ -244,6 +244,7 @@ _svc_name() {
     briefing)              echo "briefing" ;;
     session-archiver|archiver) echo "session-archiver" ;;
     storage-cleanup|cleanup)   echo "storage-cleanup" ;;
+    bedtime-guardian|bedtime)   echo "bedtime-guardian" ;;
     *) echo "" ;;
   esac
 }
@@ -252,6 +253,7 @@ _svc_name() {
 _svc_label() {
   case "$1" in
     session-archiver)  echo "com.golems.session-archiver" ;;
+    bedtime-guardian)   echo "com.golems.bedtime-guardian" ;;
     storage-cleanup)   echo "com.golems.storage-cleanup" ;;
     *)                 echo "com.golemszikaron.$1" ;;
   esac
@@ -351,7 +353,7 @@ cmd_clear_errors() {
 
 # All core services (for on/off/latest)
 CORE_SERVICES="telegram job-golem email-golem ollama"
-SCHEDULED_SERVICES="nightshift briefing session-archiver storage-cleanup"
+SCHEDULED_SERVICES="nightshift briefing session-archiver storage-cleanup bedtime-guardian"
 
 cmd_latest() {
   echo -e "${BLUE}=== DEPLOYING LATEST CODE ===${NC}"
