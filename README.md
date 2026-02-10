@@ -10,8 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://etanhey.github.io/golems/"><img src="https://img.shields.io/badge/docs-live-1a1a2e?style=flat-square&logo=docusaurus" alt="Docs" /></a>
-  <a href="https://etanhey.github.io/golems/themes"><img src="https://img.shields.io/badge/themes-5_palettes-e07a3f?style=flat-square" alt="Themes" /></a>
+  <a href="https://etanheyman.com/golems/"><img src="https://img.shields.io/badge/docs-live-1a1a2e?style=flat-square&logo=vercel" alt="Docs" /></a>
   <a href="packages/ralph/"><img src="https://img.shields.io/badge/ralph-autonomous_coding-7b2ff7?style=flat-square" alt="Ralph" /></a>
   <a href="packages/zikaron/"><img src="https://img.shields.io/badge/zikaron-memory_layer-0f3460?style=flat-square" alt="Zikaron" /></a>
 </p>
@@ -39,7 +38,7 @@ golems status      # See what's running
 
 That's it. The wizard handles Telegram tokens, 1Password secrets, launchd services, and Railway deployment.
 
-**[Full setup guide →](https://etanhey.github.io/golems/docs/getting-started)**
+**[Full setup guide →](https://etanheyman.com/golems/docs/getting-started)**
 
 ---
 
@@ -58,6 +57,22 @@ Each golem owns a **domain**, not an I/O channel. They share memory, coordinate 
 
 ---
 
+## Tech Stack
+
+| Layer | Tech |
+|-------|------|
+| **Runtime** | Bun + TypeScript |
+| **LLM** | Claude Code (Opus/Sonnet/Haiku), Gemini CLI, Cursor CLI |
+| **Database** | Supabase (Postgres + RLS) |
+| **Memory** | sqlite-vec + bge-large-en-v1.5 embeddings (200k+ chunks) |
+| **Cloud** | Railway (Docker) |
+| **Local** | macOS launchd services |
+| **Bot** | grammY (Telegram) |
+| **Testing** | Bun test (621+ tests) |
+| **CI/CD** | GitHub Actions + CodeRabbit + DeepSource |
+
+---
+
 ## Packages
 
 ```
@@ -66,7 +81,6 @@ golems/
 │   ├── autonomous/    # All 6 golems + Telegram bot
 │   ├── ralph/         # Autonomous coding loop (PRD → stories → code → review → commit)
 │   ├── zikaron/       # Memory layer (200k+ chunks, semantic search, <2s)
-│   ├── docsite/       # Documentation site (live at etanhey.github.io/golems)
 │   └── admin-ui/      # Dashboard (golem status, email triage, job matches, finances)
 ├── skills/            # 34 golem-powers skills in 6 categories
 └── contexts/          # Shared Claude context files
@@ -167,8 +181,7 @@ golems skills search   # Search by keyword
 
 ## Links
 
-- **[Documentation](https://etanhey.github.io/golems/)** — interactive docs with terminal demos
-- **[Color Themes](https://etanhey.github.io/golems/themes)** — 5 palette variations
+- **[Documentation](https://etanheyman.com/golems/)** — interactive docs with terminal demos
 - **[@GolemZikaronBot](https://t.me/GolemZikaronBot)** — Telegram bot (live)
 - **[etanheyman.com](https://etanheyman.com)** — portfolio
 
