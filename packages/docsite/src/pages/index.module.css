@@ -750,13 +750,30 @@
   }
 
   .telegramArea {
-    max-width: 400px;
+    max-width: 100%;
     margin: 0 auto;
-    max-height: 500px;
   }
 
+  /* Drop phone frame on tablet/mobile — show as a styled card instead */
   .phoneFrame {
-    border-radius: 36px;
+    border-radius: 16px;
+    border: 1px solid rgba(229, 149, 0, 0.15);
+    background: #0e1621;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+    padding: 0;
+  }
+
+  .phoneDynamicIsland {
+    display: none;
+  }
+
+  .phoneHomeBar {
+    display: none;
+  }
+
+  /* Side button hidden on mobile */
+  .phoneFrame::before {
+    display: none;
   }
 
   .installGrid {
@@ -787,8 +804,15 @@
   }
 
   .content {
-    height: 320px;
-    font-size: 0.7rem;
+    height: 340px;
+    font-size: 0.75rem;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .line {
+    white-space: pre-wrap;
+    word-break: break-word;
   }
 
   .wizardLayout {
@@ -837,7 +861,7 @@
   .heroLogoSmall { width: 36px; height: 36px; }
   .heroTagline { font-size: 0.7rem; }
   .sectionTitle { font-size: 1.6rem; }
-  .content { font-size: 0.65rem; height: 280px; }
+  .content { font-size: 0.72rem; height: 300px; }
 }
 
 /* Reduced motion */

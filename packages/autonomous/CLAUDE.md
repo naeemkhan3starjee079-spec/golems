@@ -131,9 +131,19 @@ Switch back to local with: `LLM_BACKEND=ollama STATE_BACKEND=file TELEGRAM_MODE=
 - This prevents "No response." on research/subagent tasks
 
 ### Session Architecture
-- **Master Golem** uses `--resume telegram-chat` - single persistent session for all chat
+- **ClaudeGolem** (main chat) uses `--continue` from `~/Gits` — continues most recent session
+- **Per-Golem Topics** use `--resume <uuid>` from each golem's own cwd — dedicated Telegram session per golem, stored in `state.golemSessions`
 - **Night Shift** uses `--resume nightshift-{repo}` - per-repo sessions (focused memory)
-- This means chat context persists across bot restarts
+- Chat context persists across bot restarts
+
+### ⚠️ ANTHROPIC_API_KEY vs Claude CLI Auth
+- `claude --print` uses `ANTHROPIC_API_KEY` env var if set, ignoring OAuth/subscription auth
+- If the key is invalid → "Invalid API key · Fix external API key" error
+- **ALWAYS strip `ANTHROPIC_API_KEY`** from env when spawning `claude --print` for subscription auth:
+  ```typescript
+  const { ANTHROPIC_API_KEY: _, ...cleanEnv } = process.env;
+  ```
+- This is already done in `askGolem()`. If adding new Claude CLI spawns, follow the same pattern.
 
 ### Interactive Telegram Features
 - **Reply Keyboard** - persistent menu buttons at bottom (📝 Drafts, 🌙 Tonight, 📊 Status)
