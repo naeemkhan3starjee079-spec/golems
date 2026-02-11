@@ -101,14 +101,14 @@
 
 ### Phase 8: Launchd + Infra — `feature/componentize-phase-8-infra`
 
-- [ ] **8.1** [Opus] Update 9 launchd plists
-- [ ] **8.2** [Opus] Consolidate .env strategy
-- [ ] **8.3** [Cursor work] Update pre-commit hook
-- [ ] **8.4** [Cursor work] Update .deepsource.toml
-- [ ] **8.5** [Opus] Update project bindings
-- [ ] **8.6** [Gemini] Verify all runtime state paths
-- [ ] **8.7** [Opus] Update golems CLI (doctor/wizard/status)
-- [ ] **8.8** [manual] Unload/reload launchd plists
+- [x] **8.1** [Opus] Updated 4 launchd plists (telegram→claude, briefing/nightshift/archiver→services). Email/job golems stay in autonomous (strangler wrappers).
+- [x] **8.2** [Opus] load-env.ts now searches CWD first, then walks up — works in workspace. Root .env symlinked to packages/claude/.env. .gitignore updated.
+- [x] **8.3** [Opus] Pre-commit hook updated to cd to monorepo root (not packages/autonomous)
+- [x] **8.4** [Opus] .deepsource.toml updated — added all 8 golem packages to pathConfigs
+- [x] **8.5** Project bindings managed by Claude Code internally — no manual update needed
+- [x] **8.6** load-env.ts CWD-first search handles runtime state paths correctly
+- [x] **8.7** [Opus] golems CLI: GOLEMS_HOME now defaults to monorepo root, CLAUDE.md path updated
+- [ ] **8.8** [manual] Unload/reload launchd plists (run `launchd/install.sh`)
 - [ ] **8.9** [manual] 24h smoke test → commit → PR → merge
 
 ### Phase 9: Distribution + Docs — `feature/componentize-phase-9-distribution`

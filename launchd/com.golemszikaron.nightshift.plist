@@ -8,7 +8,7 @@
     <key>ProgramArguments</key>
     <array>
         <string>/Users/etanheyman/.bun/bin/bun</string>
-        <string>/Users/etanheyman/Gits/golems/packages/autonomous/src/night-shift.ts</string>
+        <string>/Users/etanheyman/Gits/golems/packages/services/src/night-shift.ts</string>
     </array>
 
     <key>StartCalendarInterval</key>

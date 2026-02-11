@@ -8,7 +8,7 @@
     <key>ProgramArguments</key>
     <array>
         <string>/Users/etanheyman/.bun/bin/bun</string>
-        <string>/Users/etanheyman/Gits/golems/packages/autonomous/src/telegram-bot.ts</string>
+        <string>/Users/etanheyman/Gits/golems/packages/claude/src/telegram-bot.ts</string>
     </array>
 
     <key>RunAtLoad</key>
@@ -32,6 +32,6 @@
     </dict>
 
     <key>WorkingDirectory</key>
-    <string>/Users/etanheyman/Gits/golems/packages/autonomous</string>
+    <string>/Users/etanheyman/Gits/golems/packages/claude</string>
 </dict>
 </plist>

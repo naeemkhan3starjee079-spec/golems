@@ -3,37 +3,38 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.golems.session-archiver</string>
+    <string>com.golemszikaron.healthcheck</string>
 
     <key>ProgramArguments</key>
     <array>
         <string>/Users/etanheyman/.bun/bin/bun</string>
         <string>run</string>
-        <string>/Users/etanheyman/Gits/golems/packages/services/src/session-archiver.ts</string>
-        <string>--execute</string>
+        <string>/Users/etanheyman/Gits/golems/packages/services/src/healthcheck.ts</string>
     </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/etanheyman/Gits/golems</string>
 
     <key>StartCalendarInterval</key>
     <dict>
-        <!-- Run daily at 4 AM -->
         <key>Hour</key>
-        <integer>4</integer>
+        <integer>9</integer>
         <key>Minute</key>
         <integer>0</integer>
     </dict>
 
     <key>StandardOutPath</key>
-    <string>/Users/etanheyman/.golems-zikaron/logs/session-archiver.log</string>
+    <string>/tmp/golemszikaron-healthcheck.log</string>
 
     <key>StandardErrorPath</key>
-    <string>/Users/etanheyman/.golems-zikaron/logs/session-archiver.error.log</string>
+    <string>/tmp/golemszikaron-healthcheck.log</string>
 
     <key>EnvironmentVariables</key>
     <dict>
+        <key>HOME</key>
+        <string>/Users/etanheyman</string>
         <key>PATH</key>
         <string>/Users/etanheyman/.bun/bin:/usr/local/bin:/usr/bin:/bin</string>
-        <key>SESSIONS_TO_KEEP</key>
-        <string>7</string>
     </dict>
 </dict>
 </plist>

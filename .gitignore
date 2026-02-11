@@ -1,4 +1,6 @@
 node_modules/
+.env
+.env.local
 .mcp.json
 
 # Project-level Claude config (may have keys)

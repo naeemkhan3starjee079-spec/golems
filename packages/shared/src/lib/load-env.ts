@@ -15,19 +15,20 @@
 import { existsSync, readFileSync } from "fs";
 import { join, dirname } from "path";
 
-// Find package root by looking for package.json
-function findPackageRoot(startPath: string): string {
+// Find .env by walking up from startPath, checking each directory
+// In a Bun workspace, .env lives in individual packages or the workspace root
+function findEnvFile(startPath: string): string | null {
   let dir = startPath;
   for (let i = 0; i < 10; i++) {
-    if (existsSync(join(dir, "package.json"))) {
-      return dir;
+    const envPath = join(dir, ".env");
+    if (existsSync(envPath)) {
+      return envPath;
     }
     const parent = dirname(dir);
     if (parent === dir) break;
     dir = parent;
   }
-  // No package.json found — fall back to the starting directory itself
-  return startPath;
+  return null;
 }
 
 let _loaded = false;
@@ -36,13 +37,13 @@ let _loaded = false;
 export function loadEnv(): boolean {
   if (_loaded) return true;
 
-  const packageRoot = findPackageRoot(dirname(import.meta.path));
-  const envFile = join(packageRoot, ".env");
+  // Try CWD first (launchd sets WorkingDirectory), then walk up from this file
+  const envFile = findEnvFile(process.cwd()) ?? findEnvFile(dirname(import.meta.path));
 
-  if (!existsSync(envFile)) {
+  if (!envFile) {
     // On Railway/cloud, env vars are injected by the platform — no .env needed
     if (!process.env.RAILWAY_ENVIRONMENT) {
-      console.warn(`[load-env] No .env file found at ${envFile}`);
+      console.warn(`[load-env] No .env file found (searched from ${process.cwd()})`);
     }
     return false;
   }

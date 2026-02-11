@@ -6,7 +6,7 @@
 
 set -e
 
-GOLEMS_HOME="${GOLEMS_HOME:-$HOME/Gits/golems/packages/autonomous}"
+GOLEMS_HOME="${GOLEMS_HOME:-$HOME/Gits/golems}"
 LOGS_DIR="$HOME/.golems-zikaron/logs"
 STATE_FILE="$HOME/.golems-zikaron/state.json"
 
@@ -86,7 +86,7 @@ EXAMPLES:
   golems on             # Wake up (start all services)
 
 DOCS:
-  ~/Gits/golems/packages/autonomous/CLAUDE.md
+  ~/Gits/golems/CLAUDE.md
 
 EOF
 }

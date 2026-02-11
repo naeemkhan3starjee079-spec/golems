@@ -70,7 +70,39 @@ paths = [
 
 # Package-specific configuration
 [[pathConfigs]]
-# TypeScript/Bun packages
+# Golem packages (TypeScript/Bun workspace)
+path = "packages/shared"
+analyzers = ["javascript"]
+
+[[pathConfigs]]
+path = "packages/claude"
+analyzers = ["javascript"]
+
+[[pathConfigs]]
+path = "packages/jobs"
+analyzers = ["javascript"]
+
+[[pathConfigs]]
+path = "packages/recruiter"
+analyzers = ["javascript"]
+
+[[pathConfigs]]
+path = "packages/teller"
+analyzers = ["javascript"]
+
+[[pathConfigs]]
+path = "packages/coach"
+analyzers = ["javascript"]
+
+[[pathConfigs]]
+path = "packages/content"
+analyzers = ["javascript"]
+
+[[pathConfigs]]
+path = "packages/services"
+analyzers = ["javascript"]
+
+[[pathConfigs]]
 path = "packages/autonomous"
 analyzers = ["javascript"]
 
