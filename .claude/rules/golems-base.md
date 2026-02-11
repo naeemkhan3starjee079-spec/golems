@@ -47,6 +47,30 @@ if (!key) throw new Error('API_KEY environment variable is required');
 - Copy .env: `cp ../.env .env`
 - Verify branch: `git branch` (must NOT be master/main)
 
+## Documentation Fetching
+
+**Always fetch real documentation — never rely on memory or approximations.**
+
+- Before using any function/method you're not 100% certain about
+- When implementing features with external dependencies
+- When debugging issues involving library behavior
+- Always fetch docs for the specific version in package.json
+- Never synthesize or guess API signatures
+
+## Formatting Rules
+
+- **NEVER format the whole project** unless explicitly asked
+- Do not make changes that are solely formatting changes
+- Only format code you are actively modifying
+
+## Thinking Before Doing
+
+When presented with any task:
+1. **Understand first** — what's the actual problem? Check the codebase for existing patterns
+2. **Explore options** — think about multiple approaches before choosing one
+3. **Be honest** — if unsure, investigate rather than guessing
+4. **Avoid anti-patterns**: jumping to code without understanding, adding deps without checking what exists
+
 ## Architecture Decisions
 
 When making architecture decisions in this repo:

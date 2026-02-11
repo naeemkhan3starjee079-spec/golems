@@ -44,15 +44,27 @@ claudeComposer.command("start", (ctx) => {
   state.telegramChatId = ctx.chat.id;
   saveState(state);
 
-  ctx.reply(`🤖 *ClaudeGolem v5*
+  ctx.reply(`🤖 *ClaudeGolem v6*
 
-*Quick commands:*
-/status — System health + stats
-/trigger email|jobs|briefing — Run now
+*System*
+/status — Health + stats
+/golems — All golem statuses
 /admin — Dashboard links
-/tonight — Night Shift target
-/jobs — Job pipeline
-/morning — Daily briefing
+
+*Daily*
+/plan — Today's schedule + tasks
+/morning — Morning briefing
+/spending — Monthly finances
+
+*Jobs*
+/jobs — Job matches
+/practice — Interview practice
+/outreach — Outreach pipeline
+
+*Night Shift*
+/tonight — Set tonight's target
+/schedule — Weekly rotation
+/trigger — Manual golem runs
 
 Or just chat — I'll spawn Claude.`, {
     parse_mode: "Markdown",
@@ -94,15 +106,16 @@ Pages: Overview • Jobs • Emails • Activity • Outreach • Night Shift �
 // /trigger command - manual golem runs
 claudeComposer.command("trigger", async (ctx) => {
   const arg = ctx.match?.trim().toLowerCase();
-  if (!arg || !["email", "jobs", "briefing"].includes(arg)) {
+  if (!arg || !["email", "jobs", "briefing", "nightshift"].includes(arg)) {
     await ctx.reply(`⚡ *Trigger Golem Run*
 
-Usage: \`/trigger <golem>\`
+Usage: \`/trigger <service>\`
 
 Available:
-• \`/trigger email\` - Run email check now
-• \`/trigger jobs\` - Run job scrape now
-• \`/trigger briefing\` - Send morning briefing`, { parse_mode: "Markdown" });
+• \`/trigger email\` — Run email check now
+• \`/trigger jobs\` — Run job scrape now
+• \`/trigger briefing\` — Send morning briefing
+• \`/trigger nightshift\` — Run Night Shift now`, { parse_mode: "Markdown" });
     return;
   }
 
@@ -123,6 +136,21 @@ Available:
       const { sendBriefing } = await import("@golems/services/briefing");
       await sendBriefing();
       await ctx.reply("✅ Briefing sent");
+    } else if (arg === "nightshift") {
+      await ctx.reply("🌙 Night Shift starting... This takes ~15min. I'll report back.");
+      const { nightShift } = await import("@golems/services/night-shift");
+      const heartbeat = setInterval(() => {
+        ctx.replyWithChatAction("typing").catch(() => {});
+      }, 60_000);
+      let results;
+      try {
+        results = await nightShift();
+      } finally {
+        clearInterval(heartbeat);
+      }
+      const prs = results.filter(r => r.prUrl).map(r => r.prUrl).join("\n");
+      const summary = results.map(r => `${r.success ? "✅" : "—"} ${r.repo}: ${r.improvement || "skipped"}`).join("\n");
+      await ctx.reply(`🌙 *Night Shift Complete*\n\n${summary}${prs ? "\n\n" + prs : ""}`, { parse_mode: "Markdown" });
     }
   } catch (err) {
     await ctx.reply(`❌ Trigger failed: ${err instanceof Error ? err.message : String(err)}`);
@@ -289,6 +317,69 @@ claudeComposer.command("tonight", async (ctx) => {
     `🌙 *Night Shift Target*\nCurrent: \`${state.nightShiftTarget}\`\n\nTap to change:`,
     { parse_mode: "Markdown", reply_markup: keyboard }
   );
+});
+
+// /schedule command - weekly Night Shift rotation
+claudeComposer.command("schedule", async (ctx) => {
+  const state = loadState();
+  const arg = (ctx.match ?? "").trim();
+
+  const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  // Clear schedule
+  if (arg === "clear") {
+    delete state.weeklySchedule;
+    saveState(state);
+    await ctx.reply("✅ Weekly schedule cleared. Using auto-rotation.", { parse_mode: "Markdown" });
+    return;
+  }
+
+  // Set schedule: /schedule sun=golems mon=songscript tue=zikaron ...
+  if (arg && arg.includes("=")) {
+    if (!state.weeklySchedule) {
+      state.weeklySchedule = {};
+    }
+    const assignments = arg.split(/\s+/);
+    for (const a of assignments) {
+      const [day, repo] = a.split("=");
+      const dayLower = day.toLowerCase();
+      const dayIdx = DAYS.findIndex(d => d.toLowerCase() === dayLower);
+      if (dayIdx >= 0 && state.rotation.includes(repo)) {
+        (state.weeklySchedule as Record<string, string>)[DAYS[dayIdx].toLowerCase()] = repo;
+      }
+    }
+    saveState(state);
+
+    // Show updated schedule
+    let msg = `✅ *Schedule Updated*\n\n`;
+    for (const day of DAYS) {
+      const repo = (state.weeklySchedule as Record<string, string>)?.[day.toLowerCase()];
+      msg += `${day}: ${repo ? `\`${repo}\`` : "_auto-rotate_"}\n`;
+    }
+    await ctx.reply(msg, { parse_mode: "Markdown" });
+    return;
+  }
+
+  // Show current schedule
+  let msg = `📅 *Night Shift Weekly Schedule*\n\n`;
+  msg += `Current target: \`${state.nightShiftTarget}\`\n\n`;
+
+  if (state.weeklySchedule && Object.keys(state.weeklySchedule).length > 0) {
+    for (const day of DAYS) {
+      const repo = (state.weeklySchedule as Record<string, string>)?.[day.toLowerCase()];
+      const isToday = new Date().getDay() === DAYS.indexOf(day);
+      const marker = isToday ? " 👈" : "";
+      msg += `${day}: ${repo ? `\`${repo}\`` : "_auto_"}${marker}\n`;
+    }
+  } else {
+    msg += `_No weekly schedule set — using auto-rotation._\n`;
+    msg += `Current rotation: ${state.rotation.map(r => `\`${r}\``).join(" → ")}\n`;
+  }
+
+  msg += `\n*Set schedule:*\n\`/schedule sun=golems mon=songscript\`\n`;
+  msg += `\n*Clear schedule:*\n\`/schedule clear\``;
+
+  await ctx.reply(msg, { parse_mode: "Markdown" });
 });
 
 // /repos command
@@ -520,6 +611,36 @@ claudeComposer.on("message:text", async (ctx) => {
       await ctx.reply(msg, { parse_mode: "Markdown" });
     } catch {
       await ctx.reply("📅 Could not load activity. Check /status for system health.");
+    }
+    return;
+  }
+
+  // Keyboard buttons — delegate to coach functions (mirrors /plan and /golems commands)
+  if (text === "📋 Plan") {
+    try {
+      await ctx.replyWithChatAction("typing");
+      const { planToday } = await import("@golems/coach/index");
+      const { formatPlanForTelegram } = await import("@golems/coach/schedule-engine");
+      const plan = await planToday();
+      await ctx.reply(`📋 *Today's Plan*\n\n${formatPlanForTelegram(plan)}`, { parse_mode: "Markdown" });
+    } catch (err) {
+      await ctx.reply(`❌ Plan failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
+    return;
+  }
+
+  if (text === "🤖 Golems") {
+    try {
+      await ctx.replyWithChatAction("typing");
+      const { getEcosystemStatus } = await import("@golems/coach/status-aggregator");
+      const status = await getEcosystemStatus();
+      let msg = `🤖 *Golem Ecosystem*\n\nHealthy: ${status.healthy}/${status.golems.length}\n\n`;
+      for (const golem of status.golems) {
+        msg += `${golem.healthy ? "✅" : "❌"} *${golem.name}* — ${golem.summary}\n`;
+      }
+      await ctx.reply(msg, { parse_mode: "Markdown" });
+    } catch (err) {
+      await ctx.reply(`❌ Status failed: ${err instanceof Error ? err.message : String(err)}`);
     }
     return;
   }

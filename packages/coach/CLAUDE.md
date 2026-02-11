@@ -12,6 +12,7 @@ CoachGolem is the **life planner**: it reads state from other golems, integrates
 packages/coach/
 ├── src/
 │   ├── index.ts                 # Main entry — init(), planToday(), morningNudge(), getStatus()
+│   ├── composer.ts              # Grammy Composer: /plan, /golems
 │   ├── calendar-client.ts       # Google Calendar API (reuses Gmail OAuth2)
 │   ├── schedule-engine.ts       # Merge calendar + golem states → DailyPlan
 │   ├── status-aggregator.ts     # Read getStatus() from all golems

@@ -649,8 +649,15 @@ async function nightShift(): Promise<NightShiftResult[]> {
   const state = loadState();
   const rotation = state.rotation || ["songscript", "zikaron", "claude-golem"];
 
-  // Start with the target repo, then continue through rotation
-  const target = state.nightShiftTarget || rotation[0];
+  // Check weekly schedule first — if today has an assigned repo, use it
+  const DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+  const todayDay = DAYS[new Date().getDay()];
+  const scheduledRepo = (state as any).weeklySchedule?.[todayDay];
+
+  const target = scheduledRepo || state.nightShiftTarget || rotation[0];
+  if (scheduledRepo) {
+    console.log(`[Schedule] Using weekly schedule: ${todayDay} → ${scheduledRepo}`);
+  }
   const targetIdx = rotation.indexOf(target);
   const orderedRepos = [
     ...rotation.slice(targetIdx >= 0 ? targetIdx : 0),

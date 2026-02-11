@@ -29,6 +29,8 @@ packages/claude/
 - `@golems/shared` — Supabase, event log, state store, LLM, email infra
 - `@golems/jobs` — JobGolem Composer (registered in telegram-bot.ts)
 - `@golems/recruiter` — RecruiterGolem Composer
+- `@golems/coach` — CoachGolem Composer (/plan, /golems)
+- `@golems/teller` — TellerGolem Composer (/spending)
 - `@golems/services` — Cloud worker, night shift, briefing
 - `grammy` — Telegram Bot Framework
 
@@ -54,15 +56,34 @@ packages/claude/
 
 | Command | Handler | Description |
 |---------|---------|-------------|
-| `/start` | claude-composer | Welcome + persistent menu |
-| `/status` | claude-composer | Current state, queue, mode |
-| `/admin` | claude-composer | Admin controls |
-| `/trigger` | claude-composer | Trigger golem actions |
-| `/fork` | claude-composer | Fork Claude session for golem |
+| `/start` | claude-composer | Welcome v6 + persistent menu |
+| `/status` | claude-composer | Health, queue, Railway, stats |
+| `/admin` | claude-composer | Dashboard links |
+| `/trigger` | claude-composer | Manual runs (email/jobs/briefing/nightshift) |
+| `/fork` | claude-composer | Fork Claude session for task |
 | `/setup` | claude-composer | Register topic thread IDs |
 | `/tonight` | claude-composer | Night Shift target selection |
+| `/schedule` | claude-composer | Weekly Night Shift rotation |
 | `/repos` | claude-composer | List available repos |
+| `/plan` | coach-composer | Today's schedule + pending tasks |
+| `/golems` | coach-composer | All golem ecosystem statuses |
+| `/spending` | teller-composer | Monthly/tax financial reports |
+| `/jobs` | job-composer | Job matches with pagination |
+| `/jobq` | job-composer | Ask questions about jobs |
+| `/practice` | recruiter-composer | Interview practice (Elo-rated) |
+| `/stats` | recruiter-composer | Practice statistics |
+| `/outreach` | recruiter-composer | Outreach pipeline |
+| `/followup` | recruiter-composer | Overdue follow-ups |
 | Free text | claude-composer | Spawn Claude CLI |
+
+### Keyboard Buttons
+
+| Button | Action |
+|--------|--------|
+| 📊 Status | System health + stats |
+| 📋 Plan | Today's daily plan |
+| 🌙 Tonight | Night Shift target picker |
+| 🤖 Golems | Ecosystem golem statuses |
 
 ## Communication Style
 

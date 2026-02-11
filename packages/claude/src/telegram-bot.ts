@@ -21,6 +21,8 @@ import { startNotifyServer } from "./lib/notify-server";
 import { claudeComposer } from "./composers/claude-composer";
 import { jobComposer } from "@golems/jobs/composer";
 import { recruiterComposer } from "@golems/recruiter/composer";
+import { coachComposer } from "@golems/coach/composer";
+import { tellerComposer } from "@golems/teller/composer";
 
 // ═══════════════════════════════════════════════════════
 // Bot Setup
@@ -60,6 +62,8 @@ bot.use(async (ctx, next) => {
 
 bot.use(jobComposer);
 bot.use(recruiterComposer);
+bot.use(coachComposer);
+bot.use(tellerComposer);
 bot.use(claudeComposer); // Must be last — has catch-all message:text handler
 
 // ═══════════════════════════════════════════════════════

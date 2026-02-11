@@ -26,6 +26,7 @@
     "@golems/jobs": "workspace:*",
     "@golems/recruiter": "workspace:*",
     "@golems/teller": "workspace:*",
-    "googleapis": "^171.1.0"
+    "googleapis": "^171.1.0",
+    "grammy": "^1.21.1"
   }
 }

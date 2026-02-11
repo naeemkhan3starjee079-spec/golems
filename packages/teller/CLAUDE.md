@@ -12,6 +12,7 @@ TellerGolem manages **all financial intelligence**: tracking subscriptions, cate
 packages/teller/
 ├── src/
 │   ├── index.ts                 # getStatus() + main orchestration
+│   ├── composer.ts              # Grammy Composer: /spending
 │   ├── categorizer.ts           # Payment categorization (LLM-powered)
 │   ├── alerts.ts                # Spending anomaly alerts
 │   ├── report.ts                # Monthly/yearly spending reports

@@ -48,6 +48,7 @@ export interface State {
     alerts?: number;
   };
   golemSessions?: Record<string, string>;
+  weeklySchedule?: Record<string, string>;
 }
 
 export function loadState(): State {
@@ -138,7 +139,9 @@ export function setActivePersona(persona: string) {
 // ═══════════════════════════════════════════════════════
 
 export const menuKeyboard = new Keyboard()
-  .text("📊 Status").text("🌙 Tonight")
+  .text("📊 Status").text("📋 Plan")
+  .row()
+  .text("🌙 Tonight").text("🤖 Golems")
   .resized()
   .persistent();
 
