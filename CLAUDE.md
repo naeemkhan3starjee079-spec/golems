@@ -84,10 +84,32 @@ golems wizard          # Guided setup
 
 ---
 
+## MCP Servers
+
+| Server | Command | Purpose |
+|--------|---------|---------|
+| **zikaron** | `zikaron-mcp` | Memory layer — search 226K+ indexed conversation chunks across all projects |
+| **golems-email** | `bun run packages/shared/src/email/mcp-server.ts` | Email triage — recent, search, subscriptions, urgent, draft replies |
+| **golems-jobs** | `bun run packages/jobs/src/mcp-server.ts` | Job discovery — recent matches, search, stats |
+| **supabase** | `@supabase/mcp-server-supabase` | Database access — tables, SQL, migrations, types |
+| **exa** | `exa-mcp-server` | Web search — code context, company research |
+| **sophtron** | `@sophtron/sophtron-mcp-server` | Bank account access — transactions, identity |
+
+### Zikaron MCP
+
+Zikaron provides persistent memory across Claude Code sessions. Use it to:
+- Search past solutions: `mcp__zikaron__zikaron_search(query="how did I fix X")`
+- Get context around a result: `mcp__zikaron__zikaron_context(chunk_id="...")`
+- Filter by project: `project="-Users-etanheyman-Gits-golems"`
+- Check stats: `mcp__zikaron__zikaron_stats()`
+
+---
+
 ## Shared Resources
 
 | Path | Purpose |
 |------|---------|
+| `.claude/agents/` | Agent profiles for `/agents` command |
 | `.claude/rules/` | Auto-loaded rules (survives compaction) |
 | `rules-library/` | Exportable context/rules library |
 | `docs/architecture/` | Architecture decisions (indexed by Zikaron) |

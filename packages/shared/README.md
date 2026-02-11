@@ -19,4 +19,4 @@ import { sendNotification } from "@golems/shared/lib/telegram-direct";
 import { logEvent } from "@golems/shared/lib/event-log";
 ```
 
-See [CLAUDE.md](./CLAUDE.md) for full API reference.
+See [CLAUDE.md](./CLAUDE.md) for architecture and module documentation.
