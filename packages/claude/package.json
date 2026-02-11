@@ -1,0 +1,19 @@
+{
+  "name": "@golems/claude",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "bot": "bun run src/telegram-bot.ts"
+  },
+  "dependencies": {
+    "@golems/jobs": "workspace:*",
+    "@golems/recruiter": "workspace:*",
+    "@golems/services": "workspace:*",
+    "@golems/shared": "workspace:*",
+    "grammy": "^1.21.1"
+  }
+}

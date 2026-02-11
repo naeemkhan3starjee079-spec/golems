@@ -12,6 +12,12 @@
     "validate": "bun run src/validation-service.ts"
   },
   "dependencies": {
+    "@golems/shared": "workspace:*",
+    "@golems/claude": "workspace:*",
+    "@golems/jobs": "workspace:*",
+    "@golems/recruiter": "workspace:*",
+    "@golems/teller": "workspace:*",
+    "@golems/services": "workspace:*",
     "@anthropic-ai/sdk": "^0.73.0",
     "@modelcontextprotocol/sdk": "^1.26.0",
     "@supabase/supabase-js": "^2.49.1",

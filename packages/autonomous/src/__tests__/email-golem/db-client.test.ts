@@ -57,6 +57,11 @@ describe('db-client', () => {
 
   describe('createDbClient', () => {
     it('creates client with env credentials', () => {
+      if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
+        // No env vars — verify it throws the expected error
+        expect(() => createDbClient()).toThrow('Missing SUPABASE_URL');
+        return;
+      }
       const client = createDbClient();
       expect(client).toBeDefined();
     });

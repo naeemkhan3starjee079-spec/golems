@@ -1,29 +1,25 @@
 import { describe, it, expect, mock, beforeEach, afterEach } from "bun:test";
+import { runHaiku, runHaikuJSON, _resetClient } from "../lib/cloud-llm";
 
-// NOTE: mock.module kept here because @anthropic-ai/sdk requires class constructor
-// mocking which spyOn cannot handle. This is LOW risk — no other test file imports
-// this SDK. If this causes pollution, refactor cloud-llm.ts to accept a client param.
+// Create a mock Anthropic client (replaces mock.module which can't cross workspace boundaries)
 const mockCreate = mock(() =>
   Promise.resolve({
     content: [{ type: "text", text: '{"score": 8, "category": "job"}' }],
   })
 );
 
-mock.module("@anthropic-ai/sdk", () => ({
-  default: class MockAnthropic {
-    messages = { create: mockCreate };
-    constructor() {}
-  },
-}));
-
-// Set API key before importing
-process.env.ANTHROPIC_API_KEY = "test-key";
-
-const { runHaiku, runHaikuJSON } = await import("../lib/cloud-llm");
+const mockClient = {
+  messages: { create: mockCreate },
+} as any;
 
 describe("cloud-llm", () => {
   beforeEach(() => {
     mockCreate.mockClear();
+    _resetClient(mockClient);
+  });
+
+  afterEach(() => {
+    _resetClient(null);
   });
 
   describe("runHaiku", () => {

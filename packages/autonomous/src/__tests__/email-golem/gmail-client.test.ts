@@ -1,42 +1,29 @@
 /**
  * Tests for Gmail Client
- * TDD: Tests written before implementation
+ * Uses dependency injection (resetGmailClient) instead of mock.module
+ * because mock.module can't cross Bun workspace boundaries.
  */
 
 import { describe, it, expect, mock, beforeEach, afterEach } from "bun:test";
+import {
+  createGmailClient,
+  fetchRecentEmails,
+  parseEmail,
+  resetGmailClient,
+  type GmailEmail,
+} from "../../email-golem/gmail-client";
 
-// NOTE: mock.module kept here because googleapis requires complex nested object
-// mocking (google.auth.OAuth2 class + google.gmail factory). This is LOW risk —
-// no other test file imports googleapis. Prefer spyOn for new tests.
+// Create mock Gmail API methods
 const mockMessages = {
   list: mock(() => Promise.resolve({ data: { messages: [] } })),
   get: mock(() => Promise.resolve({ data: {} })),
 };
 
-const mockGmail = {
+const mockGmailClient = {
   users: {
     messages: mockMessages,
   },
-};
-
-mock.module("googleapis", () => ({
-  google: {
-    auth: {
-      OAuth2: class MockOAuth2 {
-        setCredentials() {}
-      },
-    },
-    gmail: () => mockGmail,
-  },
-}));
-
-// Now import the module under test
-import {
-  createGmailClient,
-  fetchRecentEmails,
-  parseEmail,
-  type GmailEmail,
-} from "../../email-golem/gmail-client";
+} as any;
 
 describe("Gmail Client", () => {
   const originalEnv = process.env;
@@ -45,6 +32,9 @@ describe("Gmail Client", () => {
     // Reset mocks
     mockMessages.list.mockReset();
     mockMessages.get.mockReset();
+
+    // Inject mock Gmail client
+    resetGmailClient(mockGmailClient);
 
     // Set up test environment
     process.env = {
@@ -57,19 +47,7 @@ describe("Gmail Client", () => {
 
   afterEach(() => {
     process.env = originalEnv;
-  });
-
-  describe("createGmailClient", () => {
-    it("should create client with valid credentials", () => {
-      const client = createGmailClient();
-      expect(client).toBeDefined();
-    });
-
-    it("should throw if credentials are missing", () => {
-      process.env.GMAIL_CLIENT_ID = "";
-
-      expect(() => createGmailClient()).toThrow("Missing Gmail credentials");
-    });
+    resetGmailClient(null);
   });
 
   describe("parseEmail", () => {

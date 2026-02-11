@@ -45,20 +45,20 @@
 - [x] **3.7** [Opus] Removed auto-scrape loop — Railway handles scheduling via cloud-worker.ts
 - [x] **3.8** [Opus] Updated GOLEM_REGISTRY — cwds now point to actual golem source dirs under monorepo
 - [ ] **3.9** [manual] Test all Telegram commands (deferred — bot must be restarted to test live)
-- [ ] **3.10** [bun test] All tests pass → commit → PR → merge
+- [x] **3.10** [bun test] 890 pass, 0 fail → committed → PR #103 → merged
 
 ### Phase 4: Bun Workspaces — `feature/componentize-phase-4-workspaces`
 
-- [ ] **4.1** [Opus] Create root workspace config (package.json, tsconfig.base.json)
-- [ ] **4.2** [Cursor work] Create package scaffolds (8 packages)
-- [ ] **4.3** [Cursor work] Move files to new packages (per file move manifest)
-- [ ] **4.4** [Cursor work] Update all imports to `@golems/*`
-- [ ] **4.5** [Opus] Create strangler wrappers in packages/autonomous
-- [ ] **4.6** [Cursor work] Move recruiter tests from non-standard location
-- [ ] **4.7** [bun install] Verify workspace resolution
-- [ ] **4.8** [bun test] All tests pass
-- [ ] **4.9** [Gemini] Verify .gitignore covers all packages
-- [ ] **4.10** Commit → PR → merge
+- [x] **4.1** [Opus] Created root workspace config (package.json with workspaces, tsconfig.base.json)
+- [x] **4.2** [Opus] Created 8 package scaffolds (shared, jobs, recruiter, teller, claude, content, coach, services)
+- [x] **4.3** [Opus] Moved ~80 files to new packages via git mv (preserving history)
+- [x] **4.4** [Haiku agents ×6] Updated all imports to `@golems/*` across 6 packages + 5 manual fixes
+- [x] **4.5** [Opus] Created ~90 strangler wrappers in packages/autonomous for backward compat
+- [x] **4.6** Recruiter tests already moved in 4.3 (contact-finder.test.ts, draft-outreach.test.ts)
+- [x] **4.7** [bun install] 16 workspace packages resolved successfully
+- [x] **4.8** [bun test] 862 pass, 0 fail — fixed mock.module issues with DI (_resetClient, resetGmailClient)
+- [x] **4.9** [Opus] .gitignore verified — node_modules/ covers all packages
+- [x] **4.10** Commit → PR → merge
 
 ### Phase 5: CC Plugin Packaging — `feature/componentize-phase-5-plugins`
 
@@ -255,6 +255,18 @@ feature/componentize-phase-1-shared-lib
 feature/componentize-phase-2-decouple
 ...
 ```
+
+## Post-Migration Checklist (do after all phases)
+
+- [ ] Restart Telegram bot (`golems restart telegram`) — verify all commands work
+- [ ] Restart Railway cloud worker (`/railway restart`) — verify email/job golems
+- [ ] Update `golems wizard` to know about new package structure
+- [ ] Update `golems doctor` to check new wiring paths
+- [ ] Backup all `.env` files to 1Password (one item per package)
+- [ ] Verify launchd plists point to correct entry files
+- [ ] Run `golems status` — all golems healthy
+- [ ] Consider: train MCP server on findings.md + session JSONLs for `golems why` command
+- [ ] Archive session transcripts from componentization phases (valuable reasoning chain)
 
 ## Risk Matrix (from Cursor D audit)
 

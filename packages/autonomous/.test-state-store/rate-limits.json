@@ -1,0 +1,27 @@
+{
+  "gemini": {
+    "limited": false,
+    "limited_at": null,
+    "resets_at": null
+  },
+  "kiro": {
+    "limited": false,
+    "limited_at": null,
+    "resets_at": null
+  },
+  "codex": {
+    "limited": false,
+    "limited_at": null,
+    "resets_at": null
+  },
+  "cursor": {
+    "limited": false,
+    "limited_at": null,
+    "resets_at": null
+  },
+  "haiku": {
+    "limited": false,
+    "limited_at": null,
+    "resets_at": null
+  }
+}

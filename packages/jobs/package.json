@@ -1,0 +1,17 @@
+{
+  "name": "@golems/jobs",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "dependencies": {
+    "@golems/claude": "workspace:*",
+    "@golems/recruiter": "workspace:*",
+    "@golems/shared": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.26.0",
+    "grammy": "^1.21.1",
+    "ts-jobspy": "^1.3.1"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "@golems/recruiter",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "dependencies": {
+    "@golems/claude": "workspace:*",
+    "@golems/shared": "workspace:*",
+    "grammy": "^1.21.1"
+  }
+}
