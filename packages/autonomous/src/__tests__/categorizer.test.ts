@@ -6,9 +6,9 @@
  */
 
 import { describe, it, expect, mock, beforeEach, afterEach, spyOn } from "bun:test";
-import * as llm from "../lib/llm";
-import { categorizeExpense, extractVendor } from "../teller-golem/categorizer";
-import type { CategorizedExpense, ScoredEmail } from "../teller-golem/types";
+import * as llm from "@golems/shared/lib/llm";
+import { categorizeExpense, extractVendor } from "@golems/teller/categorizer";
+import type { CategorizedExpense, ScoredEmail } from "@golems/teller/types";
 
 let mockRunOllamaJSON = mock<() => Promise<CategorizedExpense | null>>();
 

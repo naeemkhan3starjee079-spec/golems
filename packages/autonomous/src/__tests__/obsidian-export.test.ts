@@ -8,8 +8,8 @@ import {
   createOutreach,
   saveCompanyResearch,
   updateOutreachStatus,
-} from "../recruiter-golem/outreach-db";
-import { exportToObsidian } from "../recruiter-golem/obsidian-export";
+} from "@golems/recruiter/outreach-db";
+import { exportToObsidian } from "@golems/recruiter/obsidian-export";
 
 // Use temp directories for tests
 const TEST_DB_PATH = join(process.cwd(), ".test-obsidian-export.db");

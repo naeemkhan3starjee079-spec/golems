@@ -11,7 +11,7 @@ import {
   shouldSuggestForking,
   extractTaskName,
   type ForkSessionMetadata,
-} from "../lib/session-fork";
+} from "@golems/claude/lib/session-fork";
 
 describe("Session Fork", () => {
   describe("generateForkSessionId", () => {

@@ -18,8 +18,8 @@ import {
   processHotMatch,
   type HotMatchResult,
   type JobMatch,
-} from "../recruiter-golem/auto-outreach";
-import { initDb, closeDb, getOutreachByJob, getCompanyResearch } from "../recruiter-golem/outreach-db";
+} from "@golems/recruiter/auto-outreach";
+import { initDb, closeDb, getOutreachByJob, getCompanyResearch } from "@golems/recruiter/outreach-db";
 
 describe("Auto-Outreach (E6)", () => {
   let testDbPath: string;
@@ -167,7 +167,7 @@ describe("Auto-Outreach (E6)", () => {
 
   describe("formatHotMatchNotification", () => {
     test("formats notification for Telegram", async () => {
-      const { formatHotMatchNotification } = await import("../recruiter-golem/auto-outreach");
+      const { formatHotMatchNotification } = await import("@golems/recruiter/auto-outreach");
 
       const result: HotMatchResult = {
         jobId: "job-123",
@@ -197,7 +197,7 @@ describe("Auto-Outreach (E6)", () => {
     });
 
     test("handles zero contacts in notification", async () => {
-      const { formatHotMatchNotification } = await import("../recruiter-golem/auto-outreach");
+      const { formatHotMatchNotification } = await import("@golems/recruiter/auto-outreach");
 
       const result: HotMatchResult = {
         jobId: "job-123",
@@ -218,7 +218,7 @@ describe("Auto-Outreach (E6)", () => {
 
 describe("Integration: JobGolem -> RecruiterGolem", () => {
   test("processHotMatches processes multiple jobs", async () => {
-    const { processHotMatches } = await import("../recruiter-golem/auto-outreach");
+    const { processHotMatches } = await import("@golems/recruiter/auto-outreach");
 
     // Create temp DB
     const tempDir = mkdtempSync(join(tmpdir(), "integration-test-"));

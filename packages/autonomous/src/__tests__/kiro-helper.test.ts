@@ -8,7 +8,7 @@
 import { describe, it, expect, mock, beforeEach } from "bun:test";
 
 // Import types and utilities (not the actual functions that spawn processes)
-import type { KiroResult, KiroOptions, KiroPlanResult } from "../kiro-helper";
+import type { KiroResult, KiroOptions, KiroPlanResult } from "@golems/services/kiro-helper";
 
 describe("Kiro Helper - Types", () => {
   it("should have correct KiroResult structure", () => {

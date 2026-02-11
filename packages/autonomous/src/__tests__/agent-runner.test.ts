@@ -10,7 +10,7 @@ import {
   type AgentRunResult,
   getAvailableBackends,
   sanitizeFilename,
-} from "../lib/agent-runner";
+} from "@golems/shared/lib/agent-runner";
 
 describe("Agent Runner", () => {
   describe("AgentBackend type", () => {

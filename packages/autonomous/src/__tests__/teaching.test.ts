@@ -16,7 +16,7 @@ import {
   getPreference,
   getAverageScore,
   type TeachingResponse,
-} from "../lib/teaching";
+} from "@golems/shared/lib/teaching";
 
 const TEST_DIR = join(tmpdir(), `golems-teaching-test-${Date.now()}`);
 

@@ -1,10 +1,10 @@
-# JobGolem
+# @golems/jobs
 
-> Job board scraping, matching, ATS integration, and application tracking.
+> Job discovery service — scraping, matching, and state for the recruitment pipeline.
 
 ## Role
 
-JobGolem handles **passive job discovery**: scraping job boards, matching listings against a profile, syncing to Supabase, and providing an MCP server for querying matches.
+Jobs is a **service layer**, not an autonomous golem. It provides background job discovery that the RecruiterGolem acts on: scraping job boards on a schedule, matching listings against a profile, and syncing results to Supabase. Think of it as the data pipeline that feeds the recruiter.
 
 ## Architecture
 
@@ -29,19 +29,21 @@ packages/jobs/
 
 - `@golems/shared` — Supabase factory, event log, LLM, state store
 
-## Key Patterns
+## Relationship to RecruiterGolem
 
-### Scraping Schedule (Cloud Worker)
+Jobs **discovers**, Recruiter **acts**:
+- Jobs scrapes boards → scores matches → syncs to Supabase
+- Score 8+ triggers RecruiterGolem auto-outreach pipeline
+- Recruiter reads job state via `getStatus()` and MCP tools
+- Jobs has no outreach, no contacts, no practice — that's all Recruiter
+
+## Scraping Schedule (Cloud Worker)
+
 - **6am + 9am + 1pm**, Sun-Thu only (Israeli work week)
 - Managed by `@golems/services/cloud-worker.ts` on Railway
 - Results synced to Supabase via `sync-to-supabase.ts`
 
-### Job Matching
-- Profile in `profile.json` — skills, preferences, location, salary range
-- LLM scores each job 1-10 based on profile fit
-- Score 8+ triggers RecruiterGolem auto-outreach pipeline
-
-### MCP Tools
+## MCP Tools
 
 | Tool | Description |
 |------|-------------|
@@ -62,4 +64,4 @@ packages/jobs/
 | Table | Purpose |
 |-------|---------|
 | `golem_seen_jobs` | Deduplication — already-processed listings |
-| `golem_jobs` | Full job data with scores (synced via `sync-to-supabase.ts`) |
+| `golem_jobs` | Full job data with scores |

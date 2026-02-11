@@ -46,24 +46,12 @@
       "runtime": "node",
       "entrypoints": {}
     },
-    "adminUi": {
-      "path": "packages/admin-ui",
-      "description": "Admin dashboard UI",
-      "runtime": "node",
-      "entrypoints": {}
-    },
-    "taxHelper": {
+"taxHelper": {
       "path": "packages/tax-helper",
       "description": "Tax analysis golem (Schedule C categorization)",
       "runtime": "node",
       "entrypoints": {}
     },
-    "e2e": {
-      "path": "packages/e2e",
-      "description": "End-to-end test suite",
-      "runtime": "bun",
-      "entrypoints": {}
-    }
   },
 
   "golems": {

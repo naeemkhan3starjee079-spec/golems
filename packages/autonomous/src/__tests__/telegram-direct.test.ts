@@ -23,7 +23,7 @@ globalThis.fetch = mock(async (url: string | URL | Request, options?: any) => {
   return new Response("not found", { status: 404 });
 }) as any;
 
-const { sendNotification, _resetCache } = await import("../lib/telegram-direct");
+const { sendNotification, _resetCache } = await import("@golems/shared/lib/telegram-direct");
 
 describe("telegram-direct", () => {
   beforeEach(() => {

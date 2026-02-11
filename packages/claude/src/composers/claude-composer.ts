@@ -237,32 +237,22 @@ claudeComposer.command("setup", async (ctx) => {
   if (!topicArg) {
     await ctx.reply(`🔧 *Group Setup*
 
-Run this command in each topic to register it:
-
+Two topics:
 \`/setup alerts\` - in 🔔 Alerts topic
-\`/setup nightshift\` - in 🌙 Night Shift topic
-\`/setup recruiter\` - in 👔 RecruiterGolem topic
-\`/setup teller\` - in 💰 TellerGolem topic
-\`/setup monitor\` - in 🔧 MonitorGolem topic
-\`/setup uptime\` - in 📡 Uptime topic
 
-_Note: ClaudeGolem chat goes to General (no setup needed)_
-_Golem topics enable per-golem chat with persistent sessions_
+_General = ClaudeGolem interactive chat (no setup needed)_
+_Alerts = all one-way notifications (jobs, email, nightshift, health)_
 
 Current config:
 • Group: ${state.groupChatId || "not set"}
-• General: ClaudeGolem chat (no thread ID needed)
-• Alerts: ${state.topics?.alerts || "not set"}
-• Night Shift: ${state.topics?.nightshift || "not set"}
-• RecruiterGolem: ${state.topics?.recruiter || "not set"}
-• TellerGolem: ${state.topics?.teller || "not set"}
-• MonitorGolem: ${state.topics?.monitor || "not set"}`, { parse_mode: "Markdown" });
+• General: ClaudeGolem chat (auto)
+• Alerts: ${state.topics?.alerts || "not set"}`, { parse_mode: "Markdown" });
     return;
   }
 
-  const validTopics = ["alerts", "nightshift", "recruiter", "teller", "monitor", "uptime"];
+  const validTopics = ["alerts"];
   if (!validTopics.includes(topicArg)) {
-    await ctx.reply(`❌ Unknown topic: ${topicArg}\nValid: ${validTopics.join(", ")}\n\n_ClaudeGolem chat goes to General automatically_`, { parse_mode: "Markdown" });
+    await ctx.reply(`❌ Unknown topic: ${topicArg}\nValid: alerts\n\n_General = interactive chat (auto), Alerts = all notifications_`, { parse_mode: "Markdown" });
     return;
   }
 

@@ -10,7 +10,7 @@ import {
   isOverdue,
   type Followup,
   type FollowupStatus,
-} from "../../email-golem/followup";
+} from "@golems/shared/email/followup";
 
 describe("Email Follow-up Tracking", () => {
   describe("createFollowup", () => {

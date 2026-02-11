@@ -64,11 +64,11 @@ const SERVICES: ServiceOption[] = [
   },
   {
     key: "job",
-    name: "Job Golem",
+    name: "Job Service",
     description:
-      "Scrapes job boards, scores matches, notifies on high-scoring jobs",
+      "Scrapes job boards, scores matches, feeds RecruiterGolem. Runs on Railway (cloud).",
     envVars: ["SUPABASE_URL", "SUPABASE_ANON_KEY"],
-    diskImpact: "~10 MB (job database)",
+    diskImpact: "0 MB local (runs on Railway)",
   },
   {
     key: "telegram",
@@ -444,7 +444,7 @@ export async function phaseDeploy(
     const plistDir = join(process.env.HOME || "~", "Library/LaunchAgents");
 
     for (const svc of launchdServices) {
-      const plistName = `com.golemszikaron.${svc === "job" ? "job-golem" : svc === "email" ? "email-golem" : svc}.plist`;
+      const plistName = `com.golemszikaron.${svc}.plist`;
       const plistPath = join(plistDir, plistName);
 
       if (existsSync(plistPath)) {
@@ -497,9 +497,14 @@ export async function phaseVerify(
         break;
       }
       case "email":
-      case "job":
+      case "job": {
+        // Email and Job run on Railway, not launchd — skip local check
+        info(`${svc} runs on Railway (cloud). Use \`golems railway status\` to check.`);
+        log.push({ phase: "verify", item: svc, status: "ok", detail: "cloud service" });
+        break;
+      }
       case "nightshift": {
-        const label = `com.golemszikaron.${svc === "job" ? "job-golem" : svc === "email" ? "email-golem" : svc}`;
+        const label = `com.golemszikaron.${svc}`;
         const check = shellExec(`launchctl list 2>/dev/null | grep "${label}"`);
         if (check.ok && check.output.length > 0) {
           success(`${svc} launchd service is loaded`);

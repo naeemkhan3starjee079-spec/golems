@@ -1,9 +1,9 @@
 import { describe, test, expect, mock, beforeEach, afterEach, spyOn } from "bun:test";
-import * as llm from "../lib/llm";
-import * as telegramDirect from "../lib/telegram-direct";
-import * as eventLog from "../lib/event-log";
-import { detectPaymentFailure, sendPaymentAlert } from "../teller-golem/alerts";
-import type { ScoredEmail } from "../teller-golem/types";
+import * as llm from "@golems/shared/lib/llm";
+import * as telegramDirect from "@golems/shared/lib/telegram-direct";
+import * as eventLog from "@golems/shared/lib/event-log";
+import { detectPaymentFailure, sendPaymentAlert } from "@golems/teller/alerts";
+import type { ScoredEmail } from "@golems/teller/types";
 
 const mockRunOllamaJSON = mock(async () => null);
 const mockSendNotification = mock(async () => true);

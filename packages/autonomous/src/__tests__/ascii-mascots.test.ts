@@ -11,7 +11,7 @@ import {
   formatSplash,
   formatCatalog,
   formatMascotPreview,
-} from "../lib/ascii-mascots";
+} from "@golems/shared/lib/ascii-mascots";
 
 // ---------------------------------------------------------------------------
 // Catalog

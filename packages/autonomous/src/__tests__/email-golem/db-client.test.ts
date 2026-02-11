@@ -8,8 +8,8 @@ import {
   loadLocalQueue,
   clearLocalQueue,
   OFFLINE_QUEUE_PATH
-} from '../../email-golem/db-client';
-import type { Email, Subscription, Payment } from '../../email-golem/types';
+} from '@golems/shared/email/db-client';
+import type { Email, Subscription, Payment } from '@golems/shared/email/types';
 import { existsSync, unlinkSync, writeFileSync } from 'fs';
 
 // Test fixtures

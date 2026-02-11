@@ -21,7 +21,7 @@ import {
   type GolemEvent,
   type GolemActor,
   type EventType,
-} from "../lib/event-log";
+} from "@golems/shared/lib/event-log";
 
 describe("Event Log - logEvent()", () => {
   beforeEach(() => {

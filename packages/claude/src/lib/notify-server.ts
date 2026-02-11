@@ -15,6 +15,7 @@ import { loadState, type State } from "./bot-shared";
 const NOTIFY_PORT = 3847;
 
 // Per-source notification styles and topic routing
+// Only two topics: General (interactive chat) and Alerts (one-way updates)
 const SOURCE_CONFIG: Record<string, {
   icon: string;
   topic: keyof NonNullable<State["topics"]> | "general";
@@ -32,33 +33,28 @@ const SOURCE_CONFIG: Record<string, {
   },
   nightshift: {
     icon: "🌙",
-    topic: "nightshift",
+    topic: "alerts",
     format: (t, b) => `🌙 *Night Shift*\n${t}\n${b}`,
   },
   email: {
     icon: "📧",
-    topic: "monitor",
+    topic: "alerts",
     format: (t, b) => `📧 *${t}*\n\n${b}`,
   },
   jobs: {
     icon: "🎯",
-    topic: "recruiter",
+    topic: "alerts",
     format: (t, b) => `🎯 *${t}*\n\n${b}`,
   },
   recruiter: {
     icon: "👔",
-    topic: "recruiter",
+    topic: "alerts",
     format: (t, b) => `👔 *${t}*\n\n${b}`,
   },
   teller: {
     icon: "💰",
-    topic: "teller",
+    topic: "alerts",
     format: (t, b) => `💰 *${t}*\n\n${b}`,
-  },
-  monitor: {
-    icon: "🔧",
-    topic: "monitor",
-    format: (t, b) => `🔧 *${t}*\n\n${b}`,
   },
   bedtime: {
     icon: "🌙",

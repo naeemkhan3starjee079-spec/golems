@@ -2,7 +2,7 @@ import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 import { writeFileSync, mkdirSync, rmSync, existsSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
-import { deepMerge } from "../lib/config";
+import { deepMerge } from "@golems/shared/lib/config";
 
 describe("config", () => {
   const testDir = join(tmpdir(), `golems-config-test-${Date.now()}`);

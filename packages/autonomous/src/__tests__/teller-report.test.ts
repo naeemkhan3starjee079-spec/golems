@@ -1,12 +1,12 @@
 import { describe, test, expect, mock, beforeEach, afterEach, spyOn } from "bun:test";
-import * as supabaseFactory from "../lib/supabase-factory";
-import * as tellerDb from "../teller-golem/db";
+import * as supabaseFactory from "@golems/shared/lib/supabase-factory";
+import * as tellerDb from "@golems/teller/db";
 import {
   generateMonthlyReport,
   generateTaxReport,
   formatMonthlyReportText,
   formatTaxReportText,
-} from "../teller-golem/report";
+} from "@golems/teller/report";
 
 let mockPaymentsData: any[] = [];
 

@@ -9,7 +9,7 @@ import {
   type SystemHealth,
   type ServiceStatus,
   type ConfigStatus,
-} from "../lib/tui";
+} from "@golems/shared/lib/tui";
 
 // ---------------------------------------------------------------------------
 // Colors

@@ -13,7 +13,7 @@ import {
   getStats,
   type PracticeSession,
   type SessionQuestion,
-} from "../recruiter-golem/practice-db";
+} from "@golems/recruiter/practice-db";
 
 // Use a temp directory for tests
 const TEST_DB_PATH = join(process.cwd(), ".test-practice.db");

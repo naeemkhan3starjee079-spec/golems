@@ -19,7 +19,7 @@ import {
   formatCompactSweep,
   type CheckResult,
   type SweepReport,
-} from "../lib/quality-sweep";
+} from "@golems/shared/lib/quality-sweep";
 
 let testDir: string;
 

@@ -2,7 +2,7 @@ import { describe, it, expect } from "bun:test";
 import {
   parseListUnsubscribe,
   senderCategoryFromEmail,
-} from "../../email-golem/sender-tracker";
+} from "@golems/shared/email/sender-tracker";
 
 describe("sender-tracker", () => {
   describe("parseListUnsubscribe", () => {

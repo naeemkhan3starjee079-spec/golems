@@ -46,10 +46,6 @@ export interface State {
   groupChatId?: number;
   topics?: {
     alerts?: number;
-    nightshift?: number;
-    recruiter?: number;
-    teller?: number;
-    monitor?: number;
   };
   golemSessions?: Record<string, string>;
 }
@@ -79,7 +75,6 @@ export function saveState(state: State) {
 
 export interface GolemConfig {
   cwd: string;
-  topicKey: string;
   name: string;
   icon: string;
 }
@@ -87,31 +82,19 @@ export interface GolemConfig {
 export const GOLEM_REGISTRY: Record<string, GolemConfig> = {
   recruitergolem: {
     cwd: join(HOME, "Gits", "golems", "packages", "recruiter"),
-    topicKey: "recruiter",
     name: "RecruiterGolem",
     icon: "👔",
   },
   tellergolem: {
     cwd: join(HOME, "Gits", "golems", "packages", "teller"),
-    topicKey: "teller",
     name: "TellerGolem",
     icon: "💰",
   },
-  monitorgolem: {
-    cwd: join(HOME, "Gits", "golems"),
-    topicKey: "monitor",
-    name: "MonitorGolem",
-    icon: "🔧",
-  },
 };
 
-export function getGolemFromThreadId(threadId: number | undefined, state: State): GolemConfig | null {
-  if (!threadId) return null;
-  if (!state.topics) return null;
-  for (const config of Object.values(GOLEM_REGISTRY)) {
-    const topicThreadId = state.topics[config.topicKey as keyof NonNullable<State["topics"]>];
-    if (topicThreadId === threadId) return config;
-  }
+// Per-golem topic routing is disabled (only General + Alerts topics exist).
+// All chat goes to ClaudeGolem in General. Kept for future per-golem topics.
+export function getGolemFromThreadId(_threadId: number | undefined, _state: State): GolemConfig | null {
   return null;
 }
 

@@ -12,7 +12,7 @@ import {
   isHelperAvailable,
   getHelperStatus,
   type HelperBackend,
-} from "../lib/helpers";
+} from "@golems/shared/lib/helpers";
 
 describe("helpers rate limiting", () => {
   beforeEach(() => {

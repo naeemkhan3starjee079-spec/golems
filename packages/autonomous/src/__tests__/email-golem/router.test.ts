@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from "bun:test";
-import { determineTargetGolem, type RoutingResult } from "../../email-golem/router";
+import { determineTargetGolem, type RoutingResult } from "@golems/shared/email/router";
 
 describe("EmailGolem Router", () => {
   describe("determineTargetGolem", () => {

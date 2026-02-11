@@ -15,12 +15,16 @@
 
 set -euo pipefail
 
-# Parse --work flag
+# Parse flags
 MODE="research"
-if [[ "${1:-}" == "--work" ]]; then
-  MODE="work"
-  shift
-fi
+FREE_MODE=false
+while [[ "${1:-}" == --* ]]; do
+  case "$1" in
+    --work) MODE="work"; shift ;;
+    --free) FREE_MODE=true; shift ;;
+    *) echo "Unknown flag: $1" >&2; exit 1 ;;
+  esac
+done
 
 AGENT="${1:?Usage: run.sh [--work] <gemini|cursor|codex|kiro> \"prompt\" [output-file]}"
 PROMPT_ARG="${2:?Missing prompt}"
@@ -54,12 +58,16 @@ case "$AGENT" in
 
   cursor)
     CURSOR_MODEL="${CURSOR_MODEL:-gpt-5.2-codex-xhigh}"
+    MODEL_FLAG="--model ${CURSOR_MODEL}"
+    if [[ "$FREE_MODE" == true ]]; then
+      MODEL_FLAG=""  # Use cursor's default auto-routing (included in subscription)
+    fi
     if [[ "$MODE" == "work" ]]; then
       # Work mode: -p enables tools (write/bash), cursor modifies files directly
-      cursor agent -p --model "${CURSOR_MODEL}" "$PROMPT" > "$OUTPUT" 2>&1
+      cursor agent -p ${MODEL_FLAG} "$PROMPT" > "$OUTPUT" 2>&1
     else
       # Research mode: -p with text output format
-      cursor agent -p --output-format text --model "${CURSOR_MODEL}" "$PROMPT" > "$OUTPUT" 2>&1
+      cursor agent -p --output-format text ${MODEL_FLAG} "$PROMPT" > "$OUTPUT" 2>&1
     fi
     ;;
 

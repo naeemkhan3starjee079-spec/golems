@@ -7,8 +7,8 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { existsSync, rmSync } from "fs";
 import { join } from "path";
-import { append } from "../thread-store";
-import { identifyOldTurns, summarizeTurns, embedSummary, storeInChroma, compactThread } from "../thread-compactor";
+import { append } from "@golems/services/thread-store";
+import { identifyOldTurns, summarizeTurns, embedSummary, storeInChroma, compactThread } from "@golems/services/thread-compactor";
 
 // Test directory (isolated from production)
 const TEST_THREADS_DIR = "/tmp/ollama-threads-compactor-test";

@@ -22,7 +22,7 @@ import {
   formatItem,
   type ChatQueue,
   type QueueItem,
-} from "../lib/chat-queue";
+} from "@golems/claude/lib/chat-queue";
 
 let testDir: string;
 

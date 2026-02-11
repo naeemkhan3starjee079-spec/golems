@@ -13,8 +13,8 @@ const TEST_DIR = "/tmp/golems-zikaron-test/job-golem";
 const TEST_EVENT_LOG = "/tmp/golems-zikaron-test/job-golem/event-log.json";
 
 // Import will fail initially if code not implemented
-import { loadScrapedJobs, type JobListing, scrapeGreenhouse, scrapeLever } from "../job-golem/scraper";
-import { logEvent, type GolemEvent } from "../lib/event-log";
+import { loadScrapedJobs, type JobListing, scrapeGreenhouse, scrapeLever } from "@golems/jobs/scraper";
+import { logEvent, type GolemEvent } from "@golems/shared/lib/event-log";
 
 describe("Job Golem - loadScrapedJobs()", () => {
   const TEST_JOBS_FILE = join(TEST_DIR, "scraped-jobs.json");
@@ -90,7 +90,7 @@ describe("Job Golem - JobListing Interface", () => {
 describe("Job Golem - Watchlist", () => {
   it("should have WatchlistCompany interface with required fields", async () => {
     // Dynamic import to get the type at runtime
-    const watchlist = await import("../job-golem/watchlist");
+    const watchlist = await import("@golems/jobs/watchlist");
 
     // Verify loadWatchlist returns correct structure
     const loaded = watchlist.loadWatchlist();
@@ -100,7 +100,7 @@ describe("Job Golem - Watchlist", () => {
   });
 
   it("should support all status values via loadWatchlist", async () => {
-    const watchlist = await import("../job-golem/watchlist");
+    const watchlist = await import("@golems/jobs/watchlist");
     const result = watchlist.loadWatchlist();
 
     // The watchlist should have the expected structure

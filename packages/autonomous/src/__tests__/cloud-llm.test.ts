@@ -1,5 +1,5 @@
 import { describe, it, expect, mock, beforeEach, afterEach } from "bun:test";
-import { runHaiku, runHaikuJSON, _resetClient } from "../lib/cloud-llm";
+import { runHaiku, runHaikuJSON, _resetClient } from "@golems/shared/lib/cloud-llm";
 
 // Create a mock Anthropic client (replaces mock.module which can't cross workspace boundaries)
 const mockCreate = mock(() =>

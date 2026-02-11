@@ -11,7 +11,7 @@ import {
   getUpdateHistory,
   type UpdateReport,
   type UpdateResult,
-} from "../lib/self-update";
+} from "@golems/shared/lib/self-update";
 
 // ---------------------------------------------------------------------------
 // Test helpers

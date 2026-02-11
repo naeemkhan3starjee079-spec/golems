@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="packages/docsite/static/img/golems-logo.svg" alt="Golems Logo" width="140" />
-</p>
-
 <h1 align="center">Golems</h1>
 
 <p align="center">
@@ -19,11 +15,11 @@
 
 ## What is this?
 
-Golems is a personal AI agent ecosystem. Six specialized agents handle different parts of your life — jobs, email, finances, recruitment, code improvements — and coordinate through a Telegram group with topic-based channels.
+Golems is a personal AI agent ecosystem built as a **Bun workspace monorepo**. Three domain golems handle different parts of your life — recruitment, finances, scheduling — coordinated by ClaudeGolem through a Telegram group.
 
 Your Mac runs the brain (Telegram bot, Night Shift, memory). Railway runs the body (email polling, job scraping, briefings).
 
-Every conversation, every decision, every result gets indexed into searchable memory via [Zikaron](packages/zikaron/).
+Every conversation and decision gets indexed into searchable memory via [Zikaron](packages/zikaron/).
 
 ---
 
@@ -36,24 +32,60 @@ golems wizard      # Interactive setup — picks services, wires keys
 golems status      # See what's running
 ```
 
-That's it. The wizard handles Telegram tokens, 1Password secrets, launchd services, and Railway deployment.
-
-**[Full setup guide →](https://etanheyman.com/golems/docs/getting-started)**
+**[Full docs →](https://etanheyman.com/golems/)**
 
 ---
 
-## The Golems
+## Architecture
 
-Each golem owns a **domain**, not an I/O channel. They share memory, coordinate via events, and report through Telegram.
+Three **domain golems** + an **orchestrator** + **service layers**.
 
-| | Golem | Domain | What it actually does |
+### Golems (Autonomous Agents)
+
+| | Golem | Domain | What it does |
 |---|---|---|---|
-| 🤖 | **ClaudeGolem** | Orchestration | Persistent Claude sessions. Manages Night Shift, runs briefings, handles Telegram chat. |
-| 📧 | **EmailGolem** | Email | Scores incoming email 0-10. Routes to domain golems. Drafts replies. Tracks follow-ups. |
-| 💼 | **RecruiterGolem** | Recruitment | Finds contacts via GitHub + Exa + Hunter. Runs outreach campaigns. 7 interview practice modes with Elo tracking. |
+| 👔 | **RecruiterGolem** | Recruitment | Finds contacts via GitHub + Exa + Hunter. Outreach campaigns. 7 interview practice modes with Elo tracking. |
 | 💰 | **TellerGolem** | Finance | Categorizes transactions for tax. Payment failure alerts. Monthly expense reports. |
-| 🎯 | **JobGolem** | Job search | Scrapes Indeed, SecretTLV, Drushim, Goozali. LLM-scores matches against your profile. Auto-outreach to top matches. |
-| 🌙 | **NightShift** | Maintenance | Runs at 4am. Scans repos for TODOs, creates PRs, runs tests. Sends morning briefing with results. |
+| 🗓️ | **CoachGolem** | Scheduling | Calendar management. Daily plans. Reads status from all other golems. |
+
+### Orchestrator
+
+| | Component | Role |
+|---|---|---|
+| 🤖 | **ClaudeGolem** | Persistent Telegram bot. Routes messages to golems. Manages Night Shift + briefings. |
+
+### Service Layers
+
+| Component | Role |
+|---|---|
+| **Jobs** | Background job scraping (Indeed, SecretTLV, Drushim, Goozali). Feeds RecruiterGolem. |
+| **Email** | Scores incoming email 0-10. Routes to domain golems. Drafts replies. |
+| **Night Shift** | Runs at 4am. Scans repos for TODOs, creates PRs, sends morning briefing. |
+| **Shared** | Supabase, LLM abstraction, state store, notifications, event log. |
+
+---
+
+## Packages
+
+```
+golems/
+├── packages/
+│   ├── claude/         # ClaudeGolem — Telegram bot + orchestrator
+│   ├── recruiter/      # RecruiterGolem — outreach, contacts, interview practice
+│   ├── teller/         # TellerGolem — finance, tax, subscriptions
+│   ├── coach/          # CoachGolem — calendar, daily plans
+│   ├── jobs/           # Job scraping service (feeds RecruiterGolem)
+│   ├── shared/         # Supabase, LLM, email, state, notifications
+│   ├── services/       # Night Shift, Briefing, Cloud Worker, Doctor, Wizard
+│   ├── content/        # Content creation skills (LinkedIn, ghostwriting)
+│   ├── autonomous/     # Legacy test host (test files only)
+│   ├── ralph/          # Autonomous coding loop (PRD → stories → code → review)
+│   └── zikaron/        # Memory layer (226k+ chunks, semantic search)
+├── skills/             # 34 golem-powers skills in 6 categories
+├── contexts/           # Shared Claude context files
+├── launchd/            # macOS service plists
+└── Dockerfile          # Railway deployment
+```
 
 ---
 
@@ -64,125 +96,70 @@ Each golem owns a **domain**, not an I/O channel. They share memory, coordinate 
 | **Runtime** | Bun + TypeScript |
 | **LLM** | Claude Code (Opus/Sonnet/Haiku), Gemini CLI, Cursor CLI |
 | **Database** | Supabase (Postgres + RLS) |
-| **Memory** | sqlite-vec + bge-large-en-v1.5 embeddings (200k+ chunks) |
+| **Memory** | sqlite-vec + bge-large-en-v1.5 embeddings (226k+ chunks) |
 | **Cloud** | Railway (Docker) |
 | **Local** | macOS launchd services |
 | **Bot** | grammY (Telegram) |
-| **Testing** | Bun test (621+ tests) |
+| **Testing** | Bun test (1179 tests, 4054 assertions) |
 | **CI/CD** | GitHub Actions + CodeRabbit + DeepSource |
 
 ---
 
-## Packages
+## Deployment
+
+| Environment | What Runs |
+|-------------|-----------|
+| **Mac (brain)** | Telegram bot, Night Shift, Zikaron, notification server |
+| **Railway (body)** | Email poller, job scraper, briefing, cloud LLM (Haiku) |
+| **Supabase** | Database, auth, storage |
 
 ```
-golems/
-├── packages/
-│   ├── autonomous/    # All 6 golems + Telegram bot
-│   ├── ralph/         # Autonomous coding loop (PRD → stories → code → review → commit)
-│   ├── zikaron/       # Memory layer (200k+ chunks, semantic search, <2s)
-│   └── admin-ui/      # Dashboard (golem status, email triage, job matches, finances)
-├── skills/            # 34 golem-powers skills in 6 categories
-└── contexts/          # Shared Claude context files
-```
-
-### Ralph — Autonomous Coding
-
-Write stories in a PRD, Ralph executes them with Claude Code. CodeRabbit reviews each one. Green? Committed. Red? Loops.
-
-```bash
-./ralph.zsh 5   # Execute 5 stories autonomously
-```
-
-Smart model routing: Opus plans, Sonnet implements, Haiku verifies. Git worktree isolation so nothing bleeds.
-
-### Zikaron — Memory Layer
-
-Every Claude conversation gets indexed into searchable memory. Hybrid search (BM25 + semantic vectors) using sqlite-vec and bge-large-en-v1.5 embeddings.
-
-```bash
-zikaron search-fast "how to handle auth"   # <2s results
-```
-
-### Autonomous — The Golems
-
-All 6 golems plus the Telegram bot. Scheduled via launchd (Mac) and Railway (cloud).
-
-```bash
-bun run bot          # Start Telegram bot
-bun run nightshift   # Trigger Night Shift manually
-golems doctor        # Health check all services
+  You ←── Telegram ──→ ClaudeGolem (Mac)
+                            │
+             ┌──────────────┼──────────────┐
+             ▼              ▼              ▼
+       ┌──────────┐  ┌──────────┐  ┌──────────┐
+       │ Recruiter│  │  Teller  │  │  Coach   │
+       │  Golem   │  │  Golem   │  │  Golem   │
+       └──────────┘  └──────────┘  └──────────┘
+             │              │              │
+             └──────┬───────┴──────┬───────┘
+                    ▼              ▼
+             ┌──────────┐  ┌──────────┐
+             │ Services │  │  Zikaron │
+             │ (Railway)│  │ (memory) │
+             └──────────┘  └──────────┘
 ```
 
 ---
 
-## Architecture
+## Telegram
 
-```
-  You ←──── Telegram ────→ ClaudeGolem
-                              │
-              ┌───────────────┼───────────────┐
-              ▼               ▼               ▼
-        ┌──────────┐   ┌──────────┐   ┌──────────┐
-        │  Night   │   │  Morning │   │  Ralph   │
-        │  Shift   │   │ Briefing │   │  (PRDs)  │
-        └────┬─────┘   └────┬─────┘   └────┬─────┘
-             │               │               │
-             └───────┬───────┴───────┬───────┘
-                     ▼               ▼
-             ┌──────────────┐  ┌──────────┐
-             │    Golems    │  │  Zikaron │
-             │  (6 agents)  │  │ (memory) │
-             └──────────────┘  └──────────┘
+Two topics in the group:
+- **General** — interactive ClaudeGolem chat
+- **Alerts** — all one-way notifications (jobs, email, nightshift, health)
 
-  ── Mac (brain) ──          ── Railway (body) ──
-  Telegram Bot               Email Poller
-  Night Shift                Job Scraper
-  Zikaron Memory             Briefing Generator
-  Notification Server        Cloud LLM (Haiku)
-```
+Commands: `/status` `/trigger` `/tonight` `/morning` `/jobs` `/admin`
 
 ---
 
-## CLI Helpers
-
-Golems orchestrates multiple AI tools. Claude is the brain, helpers handle the grunt work:
-
-| Tool | What it does | Cost |
-|------|-------------|------|
-| **Gemini CLI** | Research, web search, doc audits | Free |
-| **Cursor CLI** | Codebase sweeps, CSS, indexed search | $20/mo |
-| **Codex CLI** | Sandboxed code gen, reviews | ChatGPT Plus |
-| **Kiro CLI** | Knowledge base, custom agents | Free |
-
-Priority: free tools first, paid tools when needed, Claude subagents as last resort.
-
----
-
-## Skills
-
-34 skills in [`skills/`](skills/), organized by category:
-
-| Category | Examples |
-|----------|---------|
-| **Development** | commit, PR creation, test plans, worktrees, TDD |
-| **Operations** | 1Password, Convex, Supabase, Brave automation |
-| **Content** | drafting, publishing, style adaptation |
-| **Review** | CodeRabbit workflows, critique waves, context audits |
-| **AI Tools** | interview practice, LSP intelligence, zikaron search |
-| **Meta** | skill discovery, skill authoring, project context |
+## CLI
 
 ```bash
-golems skills          # List all available skills
-golems skills search   # Search by keyword
+golems status          # Service overview
+golems doctor          # Health checks
+golems wizard          # Guided setup
+golems skills          # List all skills
+golems scrape          # Trigger job search
+golems logs telegram   # View service logs
 ```
 
 ---
 
 ## Links
 
-- **[Documentation](https://etanheyman.com/golems/)** — interactive docs with terminal demos
-- **[@GolemZikaronBot](https://t.me/GolemZikaronBot)** — Telegram bot (live)
+- **[Documentation](https://etanheyman.com/golems/)** — interactive docs
+- **[@GolemZikaronBot](https://t.me/GolemZikaronBot)** — Telegram bot
 - **[etanheyman.com](https://etanheyman.com)** — portfolio
 
 ---

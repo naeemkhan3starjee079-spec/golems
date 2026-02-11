@@ -7,7 +7,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { existsSync, rmSync, readdirSync } from "fs";
 import { join } from "path";
-import { append, getRecent, listThreads } from "../thread-store";
+import { append, getRecent, listThreads } from "@golems/services/thread-store";
 
 // Test directory (isolated from production)
 const TEST_THREADS_DIR = "/tmp/ollama-threads-test";

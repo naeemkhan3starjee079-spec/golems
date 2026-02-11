@@ -8,14 +8,14 @@ import { describe, it, expect } from "bun:test";
 
 describe("outreach-db-cloud exports", () => {
   it("exports all contact functions", async () => {
-    const mod = await import("../recruiter-golem/outreach-db-cloud");
+    const mod = await import("@golems/recruiter/outreach-db-cloud");
     expect(typeof mod.createContact).toBe("function");
     expect(typeof mod.getContact).toBe("function");
     expect(typeof mod.getContactsByCompany).toBe("function");
   });
 
   it("exports all outreach functions", async () => {
-    const mod = await import("../recruiter-golem/outreach-db-cloud");
+    const mod = await import("@golems/recruiter/outreach-db-cloud");
     expect(typeof mod.createOutreach).toBe("function");
     expect(typeof mod.getOutreach).toBe("function");
     expect(typeof mod.getOutreachByJob).toBe("function");
@@ -25,7 +25,7 @@ describe("outreach-db-cloud exports", () => {
   });
 
   it("exports company research functions", async () => {
-    const mod = await import("../recruiter-golem/outreach-db-cloud");
+    const mod = await import("@golems/recruiter/outreach-db-cloud");
     expect(typeof mod.saveCompanyResearch).toBe("function");
     expect(typeof mod.getCompanyResearch).toBe("function");
   });
@@ -33,7 +33,7 @@ describe("outreach-db-cloud exports", () => {
 
 describe("practice-db-cloud exports", () => {
   it("exports all session functions", async () => {
-    const mod = await import("../recruiter-golem/practice-db-cloud");
+    const mod = await import("@golems/recruiter/practice-db-cloud");
     expect(typeof mod.createSession).toBe("function");
     expect(typeof mod.getSession).toBe("function");
     expect(typeof mod.completeSession).toBe("function");
@@ -43,7 +43,7 @@ describe("practice-db-cloud exports", () => {
   });
 
   it("exports question functions", async () => {
-    const mod = await import("../recruiter-golem/practice-db-cloud");
+    const mod = await import("@golems/recruiter/practice-db-cloud");
     expect(typeof mod.addQuestion).toBe("function");
     expect(typeof mod.getSessionQuestions).toBe("function");
   });

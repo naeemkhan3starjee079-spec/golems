@@ -10,7 +10,7 @@ import {
   detectRAM,
   detectPython,
   checkPort,
-} from "../lib/system-detect";
+} from "@golems/shared/lib/system-detect";
 
 // Use spyOn instead of mock.module to avoid global pollution of child_process
 const mockExecSync = mock((cmd: string, options?: any) => {

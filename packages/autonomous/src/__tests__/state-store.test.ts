@@ -9,7 +9,7 @@ process.env.STATE_BACKEND = "file";
 
 // Now import — paths will use TEST_DIR
 const { getState, setState, logEvent, getRecentEvents, isJobSeen, markJobSeen, markJobsSeen, getSeenJobIds } =
-  await import("../lib/state-store");
+  await import("@golems/shared/lib/state-store");
 
 describe("state-store (file mode)", () => {
   beforeEach(() => {

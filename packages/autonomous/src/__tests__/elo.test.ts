@@ -9,7 +9,7 @@ import {
   getRecommendedDifficulty,
   resetEloState,
   type InterviewMode,
-} from "../recruiter-golem/elo";
+} from "@golems/recruiter/elo";
 
 // Use a temp directory for tests
 const TEST_DATA_DIR = join(process.cwd(), ".test-elo-data");

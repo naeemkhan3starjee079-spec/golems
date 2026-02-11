@@ -11,7 +11,7 @@ import {
   formatActiveSessions,
   type RepoSession,
   type ActiveSession,
-} from "../lib/session-registry";
+} from "@golems/shared/lib/session-registry";
 
 describe("session-registry", () => {
   test("getRegistry returns all repos", () => {

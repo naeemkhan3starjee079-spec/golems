@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from "bun:test";
-import { buildReplyDraft, type ReplyDraftInput, type ReplyDraft } from "../../email-golem/draft-reply";
+import { buildReplyDraft, type ReplyDraftInput, type ReplyDraft } from "@golems/shared/email/draft-reply";
 
 describe("Email Draft Reply", () => {
   describe("buildReplyDraft", () => {

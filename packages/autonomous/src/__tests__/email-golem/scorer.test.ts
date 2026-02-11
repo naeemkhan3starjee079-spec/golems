@@ -6,9 +6,9 @@
  */
 
 import { describe, it, expect, mock, beforeEach, afterEach, spyOn } from "bun:test";
-import * as llm from "../../lib/llm";
-import { scoreEmail, scoreEmails, extractSubscriptionInfo, SCORE_THRESHOLDS } from "../../email-golem/scorer";
-import type { EmailInput, ScoredEmail } from "../../email-golem/scorer";
+import * as llm from "@golems/shared/lib/llm";
+import { scoreEmail, scoreEmails, extractSubscriptionInfo, SCORE_THRESHOLDS } from "@golems/shared/email/scorer";
+import type { EmailInput, ScoredEmail } from "@golems/shared/email/scorer";
 
 // Use spyOn instead of mock.module to avoid global pollution
 const mockOllamaJSON = mock(() => Promise.resolve({

@@ -21,7 +21,7 @@ import {
   EXPLORATION_TEMPLATES,
   type ExplorationState,
   type ExplorationSession,
-} from "../lib/exploration";
+} from "@golems/shared/lib/exploration";
 
 let testDir: string;
 

@@ -5,7 +5,7 @@ import {
   getRequiredEnvVars,
   generateSetupLog,
   shellExec,
-} from "../wizard";
+} from "@golems/services/wizard";
 
 describe("wizard", () => {
   describe("checkPrerequisite", () => {

@@ -6,8 +6,8 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
-import { prefilterJobs, prefilterJob } from "../job-golem/matcher";
-import type { JobListing } from "../job-golem/scraper";
+import { prefilterJobs, prefilterJob } from "@golems/jobs/matcher";
+import type { JobListing } from "@golems/jobs/scraper";
 
 // Sample jobs for testing
 const createJob = (overrides: Partial<JobListing>): JobListing => ({

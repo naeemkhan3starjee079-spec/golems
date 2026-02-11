@@ -11,7 +11,7 @@ import {
   parseEmail,
   resetGmailClient,
   type GmailEmail,
-} from "../../email-golem/gmail-client";
+} from "@golems/shared/email/gmail-client";
 
 // Create mock Gmail API methods
 const mockMessages = {

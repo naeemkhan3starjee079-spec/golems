@@ -24,7 +24,7 @@ import {
   getTranslationKeys,
   getTranslationCount,
   TRANSLATIONS,
-} from "../lib/i18n";
+} from "@golems/shared/lib/i18n";
 
 beforeEach(() => {
   setLocale("en");

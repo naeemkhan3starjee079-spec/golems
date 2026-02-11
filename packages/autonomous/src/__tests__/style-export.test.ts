@@ -13,7 +13,7 @@ import {
   parseStyleData,
   type StyleData,
   type TopicStyle,
-} from "../lib/style-export";
+} from "@golems/shared/lib/style-export";
 
 const SAMPLE_STYLE_DATA: StyleData = {
   topics: {

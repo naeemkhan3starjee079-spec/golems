@@ -12,7 +12,7 @@ import {
   formatReport,
   type MaintenanceReport,
   type MaintenanceCheck,
-} from "../lib/maintainer-golem";
+} from "@golems/shared/lib/maintainer-golem";
 
 const TEST_DIR = join(tmpdir(), `golems-maintainer-test-${Date.now()}`);
 

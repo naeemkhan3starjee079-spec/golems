@@ -24,7 +24,7 @@ import {
   type OutreachStatus,
   type MessageType,
   type CompanyResearch,
-} from "../recruiter-golem/outreach-db";
+} from "@golems/recruiter/outreach-db";
 
 // Use a temp directory for tests
 const TEST_DB_PATH = join(process.cwd(), ".test-outreach.db");

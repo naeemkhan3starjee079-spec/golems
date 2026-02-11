@@ -139,13 +139,15 @@ async function checkNotificationServer() {
 // Check 4: Launchd jobs
 async function checkLaunchd() {
   // Map service names to their launchd label prefixes
+  // Note: email and job services run on Railway, not launchd
   const golems: Array<{ name: string; label: string }> = [
+    { name: "telegram", label: "com.golemszikaron.telegram" },
     { name: "nightshift", label: "com.golemszikaron.nightshift" },
     { name: "briefing", label: "com.golemszikaron.briefing" },
-    { name: "job-golem", label: "com.golemszikaron.job-golem" },
-    { name: "email-golem", label: "com.golemszikaron.email-golem" },
+    { name: "healthcheck", label: "com.golemszikaron.healthcheck" },
+    { name: "compactor", label: "com.golemszikaron.compactor" },
+    { name: "bedtime-guardian", label: "com.golems.bedtime-guardian" },
     { name: "session-archiver", label: "com.golems.session-archiver" },
-    { name: "storage-cleanup", label: "com.golems.storage-cleanup" },
   ];
   const launchResult = runCommand("launchctl list 2>/dev/null | grep -E 'golem|zikaron' || true");
   const loadedOutput = launchResult.output;
@@ -260,6 +262,38 @@ async function checkSupabase() {
   }
 }
 
+// Check 8: Railway cloud worker
+async function checkRailway() {
+  const url = process.env.RAILWAY_URL || "https://golems-production.up.railway.app";
+  try {
+    const response = await fetch(`${url}/health`, {
+      signal: AbortSignal.timeout(5000),
+    });
+    if (response.ok) {
+      const data = await response.json() as any;
+      results.push({
+        name: "Railway Cloud",
+        status: "pass",
+        message: `Healthy (uptime: ${data.uptime || "?"}s)`,
+      });
+    } else {
+      results.push({
+        name: "Railway Cloud",
+        status: "fail",
+        message: `HTTP ${response.status}`,
+        fix: "Check Railway dashboard or run: golems railway status",
+      });
+    }
+  } catch {
+    results.push({
+      name: "Railway Cloud",
+      status: "warn",
+      message: "Not responding (may be sleeping)",
+      fix: "Check Railway dashboard or run: golems railway status",
+    });
+  }
+}
+
 // Format and print results
 function printResults() {
   console.log(`\n${colors.blue}=== GOLEMS HEALTH CHECK ===${colors.reset}\n`);
@@ -311,6 +345,7 @@ async function main() {
   await checkStateFile();
   await checkEnvFile();
   await checkSupabase();
+  await checkRailway();
 
   printResults();
 }

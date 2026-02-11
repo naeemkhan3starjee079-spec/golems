@@ -7,7 +7,7 @@ import {
   matchPlugins,
   injectContext,
   type Plugin,
-} from "../lib/plugin-loader";
+} from "@golems/shared/lib/plugin-loader";
 
 describe("plugin-loader", () => {
   let testPluginDir: string;

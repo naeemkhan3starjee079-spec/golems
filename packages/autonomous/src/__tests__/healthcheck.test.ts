@@ -29,7 +29,7 @@ describe("healthcheck", () => {
         )
       ) as any;
 
-      const { checkRailwayCloud } = await import("../healthcheck");
+      const { checkRailwayCloud } = await import("@golems/services/healthcheck");
       const result = await checkRailwayCloud();
 
       expect(result.name).toBe("Railway Cloud");
@@ -43,7 +43,7 @@ describe("healthcheck", () => {
         Promise.resolve(new Response("Internal Server Error", { status: 500 }))
       ) as any;
 
-      const { checkRailwayCloud } = await import("../healthcheck");
+      const { checkRailwayCloud } = await import("@golems/services/healthcheck");
       const result = await checkRailwayCloud();
 
       expect(result.name).toBe("Railway Cloud");
@@ -57,7 +57,7 @@ describe("healthcheck", () => {
         Promise.reject(new Error("Connection refused"))
       ) as any;
 
-      const { checkRailwayCloud } = await import("../healthcheck");
+      const { checkRailwayCloud } = await import("@golems/services/healthcheck");
       const result = await checkRailwayCloud();
 
       expect(result.name).toBe("Railway Cloud");
@@ -77,7 +77,7 @@ describe("healthcheck", () => {
       );
       globalThis.fetch = mockFetch as any;
 
-      const { checkRailwayCloud } = await import("../healthcheck");
+      const { checkRailwayCloud } = await import("@golems/services/healthcheck");
       await checkRailwayCloud();
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -96,7 +96,7 @@ describe("healthcheck", () => {
       );
       globalThis.fetch = mockFetch as any;
 
-      const { checkRailwayCloud } = await import("../healthcheck");
+      const { checkRailwayCloud } = await import("@golems/services/healthcheck");
       await checkRailwayCloud();
 
       const calledUrl = (mockFetch.mock.calls[0] as any)[0];

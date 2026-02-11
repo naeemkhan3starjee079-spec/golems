@@ -1,5 +1,5 @@
 import { describe, expect, test, beforeEach, afterEach } from 'bun:test';
-import { parseWhatsAppExport, groupMessages, type ChatMessage } from '../lib/whatsapp-parser';
+import { parseWhatsAppExport, groupMessages, type ChatMessage } from '@golems/shared/lib/whatsapp-parser';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';

@@ -26,7 +26,7 @@ import {
   type WizardState,
   type WiringCheck,
   type WiringError,
-} from "../lib/wizard-state";
+} from "@golems/shared/lib/wizard-state";
 
 // ---------------------------------------------------------------------------
 // Test helpers

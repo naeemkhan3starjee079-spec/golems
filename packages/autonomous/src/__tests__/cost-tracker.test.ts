@@ -17,7 +17,7 @@ import {
   getFullUsageStats,
   estimateValueSaved,
   type CostEntry,
-} from "../lib/cost-tracker";
+} from "@golems/shared/lib/cost-tracker";
 
 const TEST_DIR = join(tmpdir(), `golems-cost-test-${Date.now()}`);
 const COST_LOG = join(TEST_DIR, "api_costs.jsonl");
