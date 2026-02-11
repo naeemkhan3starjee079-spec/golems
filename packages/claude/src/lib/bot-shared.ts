@@ -26,7 +26,7 @@ import {
 export const HOME = process.env.HOME || homedir();
 export const GITS = join(HOME, "Gits");
 export const STATE_FILE = join(HOME, ".golems-zikaron/state.json");
-export const SOUL_FILE = join(GITS, "golems/packages/autonomous/SOUL.md");
+export const SOUL_FILE = join(GITS, "golems/packages/claude/SOUL.md");
 export const RAILWAY_HEALTH_URL = process.env.RAILWAY_HEALTH_URL || "https://golems-production.up.railway.app/health";
 
 // Re-export for composers that need forking
@@ -86,13 +86,13 @@ export interface GolemConfig {
 
 export const GOLEM_REGISTRY: Record<string, GolemConfig> = {
   recruitergolem: {
-    cwd: join(HOME, "Gits", "golems", "packages", "autonomous", "src", "recruiter-golem"),
+    cwd: join(HOME, "Gits", "golems", "packages", "recruiter"),
     topicKey: "recruiter",
     name: "RecruiterGolem",
     icon: "👔",
   },
   tellergolem: {
-    cwd: join(HOME, "Gits", "golems", "packages", "autonomous", "src", "teller-golem"),
+    cwd: join(HOME, "Gits", "golems", "packages", "teller"),
     topicKey: "teller",
     name: "TellerGolem",
     icon: "💰",

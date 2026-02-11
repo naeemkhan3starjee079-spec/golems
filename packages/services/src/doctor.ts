@@ -93,7 +93,7 @@ async function checkTelegramBot() {
       name: "Telegram Bot",
       status: "fail",
       message: "Not running",
-      fix: "cd ~/Gits/golems/packages/autonomous && bun run bot",
+      fix: "cd ~/Gits/golems/packages/claude && bun src/telegram-bot.ts",
     });
   }
 }

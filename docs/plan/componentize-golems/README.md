@@ -88,16 +88,16 @@
 
 ### Phase 7: Services Migration — `feature/componentize-phase-7-services`
 
-- [ ] **7.1** [Cursor work] Move services to packages/services/
-- [ ] **7.2** [Cursor work] Update service imports
-- [ ] **7.3** [Opus] Wire Bedtime Guardian to CoachGolem
-- [ ] **7.4** [Opus] Update cloud-worker.ts entry points
-- [ ] **7.5** [Gemini] Railway workspace Docker best practices
-- [ ] **7.6** [Cursor work] Update Dockerfile
-- [ ] **7.7** [Cursor work] Update railway.json
-- [ ] **7.8** [Opus] Remove strangler wrappers
-- [ ] **7.9** [bun run] Local cloud worker test
-- [ ] **7.10** [/railway deploy] Railway staging test → commit → PR → merge
+- [x] **7.1** Services already in packages/services/ (Phase 4)
+- [x] **7.2** Service imports already use @golems/* (Phase 4)
+- [x] **7.3** [Opus] Wired Bedtime Guardian to CoachGolem (weekly summary in bedtime messages)
+- [x] **7.4** [Opus] cloud-worker.ts already uses @golems/* imports, updated hardcoded paths in bot-shared.ts, doctor.ts, night-shift.ts, wizard.ts
+- [x] **7.5** [Opus] Root Dockerfile for workspace (copies all packages, installs workspace deps)
+- [x] **7.6** [Opus] Created root Dockerfile (Bun workspace-aware)
+- [x] **7.7** [Opus] Created root railway.json (points to packages/services/src/cloud-worker.ts)
+- [x] **7.8** [Opus] Strangler wrappers kept — tests still use relative imports through them. Zero cost (1-line re-exports). Full removal deferred until test imports migrate to @golems/*
+- [ ] **7.9** [manual] Local cloud worker test (needs Railway env vars)
+- [ ] **7.10** [manual] Railway deploy — update root directory in Railway dashboard → commit → PR → merge
 
 ### Phase 8: Launchd + Infra — `feature/componentize-phase-8-infra`
 

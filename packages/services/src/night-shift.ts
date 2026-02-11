@@ -107,7 +107,7 @@ function getTelegramToken(): string {
   if (process.env.TELEGRAM_BOT_TOKEN) return process.env.TELEGRAM_BOT_TOKEN;
   try {
     const envFile = readFileSync(
-      join(HOME, "Gits/golems/packages/autonomous/.env"),
+      join(HOME, "Gits/golems/packages/claude/.env"),
       "utf-8"
     );
     const match = envFile.match(/TELEGRAM_BOT_TOKEN=(.+)/);

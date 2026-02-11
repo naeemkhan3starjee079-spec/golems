@@ -11,6 +11,7 @@
 import "@golems/shared/lib/load-env";
 import { sendNotification } from "@golems/shared/lib/telegram-direct";
 import { logEvent } from "@golems/shared/lib/event-log";
+import { formatWeeklySummary } from "@golems/coach/tracker";
 
 const WIND_DOWN_MESSAGES = [
   "Time to wind down. Close the laptop, you'll thank yourself tomorrow.",
@@ -31,9 +32,16 @@ async function main() {
 
   console.log(`[BedtimeGuardian] Running at ${timeStr}`);
 
+  // Build message with optional weekly stats
+  let body = pickMessage();
+  try {
+    const weekly = formatWeeklySummary();
+    if (weekly) body += `\n\n${weekly}`;
+  } catch { /* coach data unavailable — fine */ }
+
   await sendNotification({
     title: "Bedtime Guardian",
-    body: pickMessage(),
+    body,
     source: "nightshift",
     priority: "high",
   });

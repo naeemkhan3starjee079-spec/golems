@@ -43,7 +43,7 @@ interface SetupLogEntry {
 
 const GOLEMS_HOME =
   process.env.GOLEMS_HOME ||
-  join(process.env.HOME || "~", "Gits/golems/packages/autonomous");
+  join(process.env.HOME || "~", "Gits/golems");
 const STATE_DIR = join(process.env.HOME || "~", ".golems-zikaron");
 const ENV_PATH = join(GOLEMS_HOME, ".env");
 
