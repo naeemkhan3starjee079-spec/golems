@@ -1,8 +1,8 @@
 <h1 align="center">Golems</h1>
 
 <p align="center">
-  <strong>AI agents that run while you sleep.</strong><br />
-  <sub>Job scraping. Email triage. Tax tracking. Code at 4am. All reported via Telegram.</sub>
+  <strong>AI agents that work everywhere you do.</strong><br />
+  <sub>Skills, plugins, and autonomous agents — use them in Claude Code, Telegram, any CLI, or Cowork (coming soon).</sub>
 </p>
 
 <p align="center">
@@ -15,11 +15,22 @@
 
 ## What is this?
 
-Golems is a personal AI agent ecosystem built as a **Bun workspace monorepo**. Three domain golems handle different parts of your life — recruitment, finances, scheduling — coordinated by ClaudeGolem through a Telegram group.
+Golems is a personal AI agent ecosystem built as a **Bun workspace monorepo**. Each golem is a self-contained **Claude Code plugin** — install one into any Claude session and it brings its skills, rules, and context with it.
 
-Your Mac runs the brain (Telegram bot, Night Shift, memory). Railway runs the body (email polling, job scraping, briefings).
+**Use golems through any surface:**
 
-Every conversation and decision gets indexed into searchable memory via [Zikaron](packages/zikaron/).
+| Surface | How | Status |
+|---------|-----|--------|
+| **Claude Code** | `claude --plugin-dir packages/recruiter` — any golem as a plugin | Live |
+| **`/agents`** | Named agent profiles with specialized personalities | Live |
+| **Telegram** | ClaudeGolem bot routes to domain golems via Composers | Live |
+| **CLI** | `golems status`, `golems doctor`, `golems wizard` | Live |
+| **Any AI agent** | Clone the repo, grab the skills/rules you need | Live |
+| **Claude Cowork** | Same plugins + skills in collaborative workspace | Coming soon |
+
+It's not a Telegram bot — it's a **collection of skills, rules, MCP tools, and agent profiles** bundled into an ecosystem. Telegram is just one surface. A Codex agent, a Cursor session, or a fresh Claude Code instance can all use golems by pointing at the plugin directory.
+
+Your Mac runs the brain (Telegram bot, Night Shift, memory). Railway runs the body (email polling, job scraping, briefings). Every conversation gets indexed into searchable memory via [Zikaron](packages/zikaron/) (226k+ chunks).
 
 ---
 
@@ -81,9 +92,10 @@ golems/
 │   ├── autonomous/     # Legacy test host (test files only)
 │   ├── ralph/          # Autonomous coding loop (PRD → stories → code → review)
 │   └── zikaron/        # Memory layer (226k+ chunks, semantic search)
-├── skills/             # 34 golem-powers skills in 6 categories
+├── .claude/agents/     # 7 named agent profiles (/agents)
 ├── .claude/rules/      # Auto-loaded rules (survives compaction)
-├── rules-library/      # Exportable context/rules library
+├── skills/             # 34 golem-powers skills in 6 categories
+├── rules-library/      # Exportable rules for any Claude Code project
 ├── docs/architecture/  # Architecture decisions (Zikaron-indexed)
 ├── launchd/            # macOS service plists
 └── Dockerfile          # Railway deployment
@@ -152,9 +164,57 @@ golems status          # Service overview
 golems doctor          # Health checks
 golems wizard          # Guided setup
 golems skills          # List all skills
+golems rules check     # Audit rules for a project
 golems scrape          # Trigger job search
 golems logs telegram   # View service logs
 ```
+
+---
+
+## Use as a Plugin
+
+Each golem is a Claude Code plugin. Install one into any session:
+
+```bash
+# Use RecruiterGolem for interview practice
+claude --plugin-dir ~/Gits/golems/packages/recruiter
+
+# Use TellerGolem for tax categorization
+claude --plugin-dir ~/Gits/golems/packages/teller
+
+# Use the whole ecosystem
+claude --plugin-dir ~/Gits/golems
+```
+
+The plugin brings its CLAUDE.md, skills, MCP tools, and rules automatically.
+
+---
+
+## Agent Profiles
+
+7 named agents via `/agents` — each with specialized system prompts and tool access:
+
+| Agent | Domain |
+|-------|--------|
+| `recruiter` | Interview practice, outreach, contacts |
+| `coach` | Calendar, daily plans, priorities |
+| `jobs` | Job scraping, matching, quality |
+| `content` | LinkedIn, Soltome, ghostwriting |
+| `services` | Night Shift, Briefing, Doctor, Wizard |
+| `orchestrator` | Telegram routing, ecosystem coordination |
+| `tax-helper` | Bank transactions, deductions, Schedule C |
+
+---
+
+## MCP Servers
+
+| Server | What it does |
+|--------|-------------|
+| **zikaron** | Search 226k+ indexed conversation chunks — persistent memory across sessions |
+| **golems-email** | Email triage — recent, search, subscriptions, urgent, draft replies |
+| **golems-jobs** | Job discovery — recent matches, search, stats |
+| **supabase** | Database access — tables, SQL, migrations |
+| **exa** | Web search — code context, company research |
 
 ---
 
