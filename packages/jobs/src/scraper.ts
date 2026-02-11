@@ -238,6 +238,7 @@ async function fetchSecretTLVJobDetails(url: string, slug: string): Promise<JobL
               title,
               company,
               location: location.replace(/,?\s*Israel$/i, "").trim() || "Israel",
+              experience: "",
               description,
               url,
               source: "secretTLV",
@@ -280,9 +281,10 @@ async function fetchSecretTLVJobDetails(url: string, slug: string): Promise<JobL
     if (locationMatch) location = locationMatch[1];
 
     let description = "";
-    const descMatch = html.match(/<h3>Description<\/h3>\s*([\s\S]*?)(?:<div|<h3|<form)/i);
-    if (descMatch && descMatch[1]) {
-      description = descMatch[1]
+    // Strategy A: wpjb-text class (most reliable for SecretTLV)
+    const wpjbMatch = html.match(/<div class="wpjb-text">\s*([\s\S]*?)\s*<\/div>/i);
+    if (wpjbMatch && wpjbMatch[1]) {
+      description = wpjbMatch[1]
         .replace(/<[^>]+>/g, " ")
         .replace(/&nbsp;/g, " ")
         .replace(/&amp;/g, "&")
@@ -290,12 +292,26 @@ async function fetchSecretTLVJobDetails(url: string, slug: string): Promise<JobL
         .trim()
         .slice(0, 2000);
     }
+    // Strategy B: h3 Description header with div wrapper
+    if (!description) {
+      const descMatch = html.match(/<h3>Description<\/h3>\s*<div[^>]*>([\s\S]*?)<\/div>/i);
+      if (descMatch && descMatch[1]) {
+        description = descMatch[1]
+          .replace(/<[^>]+>/g, " ")
+          .replace(/&nbsp;/g, " ")
+          .replace(/&amp;/g, "&")
+          .replace(/\s+/g, " ")
+          .trim()
+          .slice(0, 2000);
+      }
+    }
 
     return {
       id: `stlv-${slug}`,
       title,
       company,
       location,
+      experience: "",
       description,
       url,
       source: "secretTLV",
@@ -423,7 +439,7 @@ export async function scrapeSecretTLV(): Promise<JobListing[]> {
 /**
  * Fetch a single Drushim job page
  */
-async function fetchDrushimJobDetails(url: string, jobId: string): Promise<JobListing | null> {
+async function fetchDrushimJobDetails(url: string, jobId: string, listingTitle?: string): Promise<JobListing | null> {
   try {
     const resp = await fetchWithRetry(url, {
       headers: {
@@ -462,6 +478,7 @@ async function fetchDrushimJobDetails(url: string, jobId: string): Promise<JobLi
             title,
             company,
             location,
+            experience: "",
             description,
             url,
             source: "drushim",
@@ -489,6 +506,17 @@ async function fetchDrushimJobDetails(url: string, jobId: string): Promise<JobLi
       if (titleMatch && titleMatch[1]) {
         title = titleMatch[1].replace(/^דרושים IL\s*-\s*/, "").trim();
       }
+    }
+    // Fallback to <h1> tag
+    if (title === `Job #${jobId}`) {
+      const h1Match = html.match(/<h1[^>]*>\s*([^<]+)\s*<\/h1>/i);
+      if (h1Match && h1Match[1] && !h1Match[1].includes("דרושים IL")) {
+        title = h1Match[1].trim();
+      }
+    }
+    // Final fallback: use title from listing page
+    if (title === `Job #${jobId}` && listingTitle) {
+      title = listingTitle;
     }
 
     let company = "דרושים";
@@ -531,6 +559,7 @@ async function fetchDrushimJobDetails(url: string, jobId: string): Promise<JobLi
       title,
       company,
       location,
+      experience: "",
       description,
       url,
       source: "drushim",
@@ -551,6 +580,7 @@ export async function scrapeDrushim(): Promise<JobListing[]> {
 
   const jobUrls: { jobId: string; url: string }[] = [];
   const seenIds = new Set<string>();
+  const titleMap = new Map<string, string>(); // jobId → title from listing page
 
   // Scrape multiple hi-tech categories
   const categories = ["cat6", "cat5", "cat24"]; // Software, General Hi-Tech, QA
@@ -569,8 +599,21 @@ export async function scrapeDrushim(): Promise<JobListing[]> {
     }
 
     const html = await resp.text();
-    const jobLinks = html.matchAll(/href="\/job\/(\d+)\/([a-fA-F0-9]+)\/?"/g);
 
+    // Extract title+URL pairs from listing page (titles are in <p class="display-16"> before the job link)
+    const titlePairs = html.matchAll(
+      /class="[^"]*display-16[^"]*"[^>]*>\s*([^<]+)\s*<\/p>[\s\S]*?href="\/job\/(\d+)\/([a-fA-F0-9]+)\/?"/g
+    );
+    for (const match of titlePairs) {
+      const [, listingTitle, jobId, hash] = match;
+      if (seenIds.has(jobId)) continue;
+      seenIds.add(jobId);
+      titleMap.set(jobId, listingTitle.trim());
+      jobUrls.push({ jobId, url: `https://www.drushim.co.il/job/${jobId}/${hash}/` });
+    }
+
+    // Also catch any job links not preceded by a title <p>
+    const jobLinks = html.matchAll(/href="\/job\/(\d+)\/([a-fA-F0-9]+)\/?"/g);
     for (const match of jobLinks) {
       const [, jobId, hash] = match;
       if (seenIds.has(jobId)) continue;
@@ -589,7 +632,8 @@ export async function scrapeDrushim(): Promise<JobListing[]> {
 
   for (const { jobId, url } of jobUrls.slice(0, 40)) {
     // Limit to 40 to be respectful
-    const job = await fetchDrushimJobDetails(url, jobId);
+    const listingTitle = titleMap.get(jobId);
+    const job = await fetchDrushimJobDetails(url, jobId, listingTitle);
     if (job) {
       jobs.push(job);
     } else {
@@ -1136,6 +1180,12 @@ export async function scrapeAllJobs(): Promise<JobListing[]> {
     seen.add(job.id);
   }
   saveSeenJobs(seen);
+
+  // Quality validation: warn on degraded data
+  const qualityMetrics = computeQualityMetrics(newJobs);
+  if (qualityMetrics.idLikeTitles > 0 || qualityMetrics.noDesc > 0) {
+    console.warn(`[Quality] Degraded data: ${qualityMetrics.idLikeTitles} generic titles, ${qualityMetrics.noDesc} missing descriptions, ${qualityMetrics.noCompany} unknown companies`);
+  }
 
   // Save new jobs to file (for Supabase sync)
   if (newJobs.length > 0) {

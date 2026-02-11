@@ -15,6 +15,7 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 BLUE='\033[0;34m'
+GRAY='\033[0;90m'
 NC='\033[0m' # No Color
 
 status_icon() {
@@ -68,6 +69,7 @@ COMMANDS:
   explore       Codebase exploration with CLI agents (templates, agents, latest)
   mascot        ASCII mascot art (random, list, show <id>)
   sweep         Run quality sweep (package.json, tests, TS, docs, git)
+  rules         Check/export/list Claude Code rules (rules-library)
   i18n          Internationalization info (locale, keys, set)
   e2e           Run Playwright E2E tests (admin-ui + docsite)
   index-whatsapp <file> --chat "Name"  Index WhatsApp export in Zikaron
@@ -169,14 +171,14 @@ cmd_sessions() {
     active|"")
       echo -e "${BLUE}=== ACTIVE CLAUDE SESSIONS ===${NC}"
       cd "$GOLEMS_HOME" && bun -e "
-        import { getActiveSessions, formatActiveSessions } from './src/lib/session-registry';
+        import { getActiveSessions, formatActiveSessions } from '@golems/shared/lib/session-registry';
         console.log(formatActiveSessions(getActiveSessions()));
       "
       ;;
     registry|list)
       echo -e "${BLUE}=== REPO SESSION REGISTRY ===${NC}"
       cd "$GOLEMS_HOME" && bun -e "
-        import { resolveRepoPaths, formatRegistry } from './src/lib/session-registry';
+        import { resolveRepoPaths, formatRegistry } from '@golems/shared/lib/session-registry';
         console.log(formatRegistry(resolveRepoPaths('$HOME/Gits')));
       "
       ;;
@@ -184,7 +186,7 @@ cmd_sessions() {
       local repo="${2:-golems}"
       echo -e "${BLUE}Spawning session for: ${repo}${NC}"
       cd "$GOLEMS_HOME" && bun -e "
-        import { getRepoSession, setRepoTabTitle } from './src/lib/session-registry';
+        import { getRepoSession, setRepoTabTitle } from '@golems/shared/lib/session-registry';
         const session = getRepoSession('${repo}');
         if (!session) { console.error('Unknown repo: ${repo}'); process.exit(1); }
         setRepoTabTitle('${repo}');
@@ -557,7 +559,7 @@ cmd_cloud() {
 
 cmd_regen_style() {
   echo "Regenerating style card from Zikaron data..."
-  cd "$GOLEMS_HOME" && bun src/lib/style-export.ts "$CHAT_DIR/style-card.md"
+  cd "$GOLEMS_HOME" && bun packages/shared/src/lib/style-export.ts "$CHAT_DIR/style-card.md"
   echo -e "${GREEN}✓ Style card updated${NC}"
   echo "  Re-upload to your claude.ai projects."
 }
@@ -573,13 +575,13 @@ case "${1:-status}" in
   tui|dashboard)
     echo -e "${BLUE}=== GOLEMS DASHBOARD ===${NC}"
     cd "$GOLEMS_HOME" && bun -e "
-      import { getSystemHealth, formatDashboard } from './src/lib/tui';
+      import { getSystemHealth, formatDashboard } from '@golems/shared/lib/tui';
       const health = getSystemHealth();
       console.log(formatDashboard(health));
     "
     ;;
   doctor)
-    cd "$GOLEMS_HOME" && bun run src/doctor.ts
+    cd "$GOLEMS_HOME" && bun run packages/services/src/doctor.ts
     ;;
   services|svc)
     cmd_services
@@ -626,10 +628,10 @@ case "${1:-status}" in
     cmd_cloud
     ;;
   helpers)
-    cd "$GOLEMS_HOME" && bun run src/helpers-status.ts "${@:2}"
+    cd "$GOLEMS_HOME" && bun run packages/services/src/helpers-status.ts "${@:2}"
     ;;
   skills)
-    cd "$GOLEMS_HOME" && bun run src/skills-list.ts "${@:2}"
+    cd "$GOLEMS_HOME" && bun run packages/services/src/skills-list.ts "${@:2}"
     ;;
   autopilot)
     ENABLE_FILE="$HOME/.claude/hooks/keep-going.enabled"
@@ -660,7 +662,7 @@ case "${1:-status}" in
       check)
         echo -e "${BLUE}=== WIRING CHECK ===${NC}"
         cd "$GOLEMS_HOME" && bun -e "
-          import { runWiringChecks, formatWiringReport, logWiringErrors } from './src/lib/wizard-state';
+          import { runWiringChecks, formatWiringReport, logWiringErrors } from '@golems/shared/lib/wizard-state';
           const checks = runWiringChecks({ checkHelpers: true, checkServices: ${3:-false} });
           console.log(formatWiringReport(checks));
           const newErrors = logWiringErrors(checks);
@@ -672,7 +674,7 @@ case "${1:-status}" in
       status)
         echo -e "${BLUE}=== WIZARD STATUS ===${NC}"
         cd "$GOLEMS_HOME" && bun -e "
-          import { loadState, formatStateReport, getUnresolvedErrors } from './src/lib/wizard-state';
+          import { loadState, formatStateReport, getUnresolvedErrors } from '@golems/shared/lib/wizard-state';
           const state = loadState();
           console.log(formatStateReport(state));
           const errors = getUnresolvedErrors();
@@ -688,7 +690,7 @@ case "${1:-status}" in
       continue|-c)
         echo -e "${BLUE}=== WIZARD (continue mode) ===${NC}"
         cd "$GOLEMS_HOME" && bun -e "
-          import { loadState, getPendingSteps, formatStateReport } from './src/lib/wizard-state';
+          import { loadState, getPendingSteps, formatStateReport } from '@golems/shared/lib/wizard-state';
           const state = loadState();
           const pending = getPendingSteps(state);
           if (pending.length === 0) {
@@ -711,7 +713,7 @@ case "${1:-status}" in
         REPO_NAME="$(basename "$REPO_PATH")"
         echo -e "${BLUE}=== WIRE REPO: $REPO_NAME ===${NC}"
         cd "$GOLEMS_HOME" && bun -e "
-          import { loadState, saveState, wireRepo, checkRepoClaudeMd, checkRepoMcpConfig, checkRepoSkillsDir } from './src/lib/wizard-state';
+          import { loadState, saveState, wireRepo, checkRepoClaudeMd, checkRepoMcpConfig, checkRepoSkillsDir, checkRepoRules } from '@golems/shared/lib/wizard-state';
           const state = loadState();
           const repo = wireRepo(state, '$REPO_PATH', '$REPO_NAME');
           saveState(state);
@@ -719,10 +721,13 @@ case "${1:-status}" in
           console.log('  CLAUDE.md: ' + (repo.hasClaudeMd ? 'YES' : 'MISSING'));
           console.log('  .mcp.json: ' + (repo.hasMcpConfig ? 'YES' : 'MISSING'));
           console.log('  Skills:    ' + (repo.hasSkills ? 'YES' : 'MISSING'));
+          const rulesCheck = checkRepoRules('$REPO_PATH', '$REPO_NAME');
+          console.log('  Rules:     ' + (rulesCheck.passed ? 'YES' : rulesCheck.message));
           const checks = [
             checkRepoClaudeMd('$REPO_PATH', '$REPO_NAME'),
             checkRepoMcpConfig('$REPO_PATH', '$REPO_NAME'),
             checkRepoSkillsDir('$REPO_PATH', '$REPO_NAME'),
+            rulesCheck,
           ];
           const issues = checks.filter(c => !c.passed);
           if (issues.length > 0) {
@@ -736,7 +741,7 @@ case "${1:-status}" in
         ;;
       interactive|"")
         echo -e "${BLUE}=== GOLEMS SETUP WIZARD ===${NC}"
-        cd "$GOLEMS_HOME" && bun run src/wizard.ts
+        cd "$GOLEMS_HOME" && bun run packages/services/src/wizard.ts
         ;;
       *)
         echo "Usage: golems wizard [check|status|continue|add-project <path>]"
@@ -753,7 +758,7 @@ case "${1:-status}" in
   update)
     echo -e "${BLUE}=== GOLEMS UPDATE ===${NC}"
     cd "$GOLEMS_HOME" && bun -e "
-      import { runUpdate, formatUpdateReport, saveUpdateHistory } from './src/lib/self-update';
+      import { runUpdate, formatUpdateReport, saveUpdateHistory } from '@golems/shared/lib/self-update';
       const repoPath = '$HOME/Gits/golems';
       const report = runUpdate(repoPath);
       console.log(formatUpdateReport(report));
@@ -762,7 +767,7 @@ case "${1:-status}" in
     ;;
   version)
     cd "$GOLEMS_HOME" && bun -e "
-      import { getVersionInfo } from './src/lib/self-update';
+      import { getVersionInfo } from '@golems/shared/lib/self-update';
       const info = getVersionInfo('$HOME/Gits/golems');
       console.log('golems ' + info.version + ' (' + info.commit + ')');
       console.log('branch: ' + info.branch);
@@ -773,7 +778,7 @@ case "${1:-status}" in
     case "${2:-list}" in
       list|"")
         cd "$GOLEMS_HOME" && bun -e "
-          import { loadQueue, formatQueueSummary } from './src/lib/chat-queue';
+          import { loadQueue, formatQueueSummary } from '@golems/claude/lib/chat-queue';
           const q = loadQueue();
           console.log(formatQueueSummary(q));
         "
@@ -784,7 +789,7 @@ case "${1:-status}" in
           exit 1
         fi
         cd "$GOLEMS_HOME" && bun -e "
-          import { loadQueue, saveQueue, enqueue } from './src/lib/chat-queue';
+          import { loadQueue, saveQueue, enqueue } from '@golems/claude/lib/chat-queue';
           const q = loadQueue();
           const item = enqueue(q, '$3', '${4:-chat}', '${5:-cli}');
           saveQueue(q);
@@ -797,7 +802,7 @@ case "${1:-status}" in
           exit 1
         fi
         cd "$GOLEMS_HOME" && bun -e "
-          import { loadQueue, saveQueue, dequeue } from './src/lib/chat-queue';
+          import { loadQueue, saveQueue, dequeue } from '@golems/claude/lib/chat-queue';
           const q = loadQueue();
           const item = dequeue(q, '$3');
           if (item) {
@@ -810,7 +815,7 @@ case "${1:-status}" in
         ;;
       clean)
         cd "$GOLEMS_HOME" && bun -e "
-          import { loadQueue, saveQueue, cleanOld } from './src/lib/chat-queue';
+          import { loadQueue, saveQueue, cleanOld } from '@golems/claude/lib/chat-queue';
           const q = loadQueue();
           const removed = cleanOld(q, ${3:-7});
           saveQueue(q);
@@ -832,7 +837,7 @@ case "${1:-status}" in
       summary|"")
         echo -e "${BLUE}=== API COSTS ===${NC}"
         cd "$GOLEMS_HOME" && bun -e "
-          import { readCostLog, filterByPeriod, summarize, formatSummary } from './src/lib/cost-tracker';
+          import { readCostLog, filterByPeriod, summarize, formatSummary } from '@golems/shared/lib/cost-tracker';
           const entries = readCostLog('$COST_LOG');
           const periods = ['today', 'week', 'month', 'all'];
           for (const p of periods) {
@@ -845,7 +850,7 @@ case "${1:-status}" in
       by-source)
         echo -e "${BLUE}=== COSTS BY SOURCE ===${NC}"
         cd "$GOLEMS_HOME" && bun -e "
-          import { readCostLog, filterByPeriod, groupBySource, formatBySource } from './src/lib/cost-tracker';
+          import { readCostLog, filterByPeriod, groupBySource, formatBySource } from '@golems/shared/lib/cost-tracker';
           const entries = readCostLog('$COST_LOG');
           const period = '${3:-all}';
           const filtered = filterByPeriod(entries, period);
@@ -856,7 +861,7 @@ case "${1:-status}" in
       by-model)
         echo -e "${BLUE}=== COSTS BY MODEL ===${NC}"
         cd "$GOLEMS_HOME" && bun -e "
-          import { readCostLog, filterByPeriod, groupByModel, formatByModel } from './src/lib/cost-tracker';
+          import { readCostLog, filterByPeriod, groupByModel, formatByModel } from '@golems/shared/lib/cost-tracker';
           const entries = readCostLog('$COST_LOG');
           const period = '${3:-all}';
           const filtered = filterByPeriod(entries, period);
@@ -867,7 +872,7 @@ case "${1:-status}" in
       daily)
         echo -e "${BLUE}=== DAILY BREAKDOWN ===${NC}"
         cd "$GOLEMS_HOME" && bun -e "
-          import { readCostLog, groupByDay, formatDaily } from './src/lib/cost-tracker';
+          import { readCostLog, groupByDay, formatDaily } from '@golems/shared/lib/cost-tracker';
           const entries = readCostLog('$COST_LOG');
           console.log(formatDaily(groupByDay(entries)));
         "
@@ -901,7 +906,7 @@ case "${1:-status}" in
   maintain|maintenance)
     echo -e "${BLUE}=== MAINTENANCE CHECK ===${NC}"
     cd "$GOLEMS_HOME" && bun -e "
-      import { runMaintenanceChecks, formatReport } from './src/lib/maintainer-golem';
+      import { runMaintenanceChecks, formatReport } from '@golems/shared/lib/maintainer-golem';
       const report = runMaintenanceChecks({
         reposPath: '$HOME/Gits',
         stateDir: '$HOME/.golems-zikaron',
@@ -934,13 +939,13 @@ case "${1:-status}" in
     case "${2:-random}" in
       random|"")
         cd "$GOLEMS_HOME" && bun -e "
-          import { formatSplash } from './src/lib/ascii-mascots';
+          import { formatSplash } from '@golems/shared/lib/ascii-mascots';
           console.log(formatSplash());
         "
         ;;
       list)
         cd "$GOLEMS_HOME" && bun -e "
-          import { formatCatalog } from './src/lib/ascii-mascots';
+          import { formatCatalog } from '@golems/shared/lib/ascii-mascots';
           console.log(formatCatalog());
         "
         ;;
@@ -951,7 +956,7 @@ case "${1:-status}" in
           exit 1
         fi
         cd "$GOLEMS_HOME" && bun -e "
-          import { getMascot, formatMascotPreview } from './src/lib/ascii-mascots';
+          import { getMascot, formatMascotPreview } from '@golems/shared/lib/ascii-mascots';
           const m = getMascot('$3');
           if (!m) { console.log('Unknown mascot: $3'); process.exit(1); }
           console.log(formatMascotPreview(m));
@@ -966,7 +971,7 @@ case "${1:-status}" in
     ;;
   sweep|quality)
     cd "$GOLEMS_HOME" && bun -e "
-      import { runSweep, formatSweepReport } from './src/lib/quality-sweep';
+      import { runSweep, formatSweepReport } from '@golems/shared/lib/quality-sweep';
       const pkgDir = '${2:-$GOLEMS_HOME}';
       const report = runSweep(pkgDir, '$HOME/Gits/golems');
       console.log(formatSweepReport(report));
@@ -976,7 +981,7 @@ case "${1:-status}" in
     case "${2:-info}" in
       info|"")
         cd "$GOLEMS_HOME" && bun -e "
-          import { formatLocaleInfo, detectLocale } from './src/lib/i18n';
+          import { formatLocaleInfo, detectLocale } from '@golems/shared/lib/i18n';
           console.log(formatLocaleInfo(detectLocale()));
         "
         ;;
@@ -986,14 +991,14 @@ case "${1:-status}" in
           exit 1
         fi
         cd "$GOLEMS_HOME" && bun -e "
-          import { setLocale, formatLocaleInfo } from './src/lib/i18n';
+          import { setLocale, formatLocaleInfo } from '@golems/shared/lib/i18n';
           setLocale('$3');
           console.log(formatLocaleInfo('$3'));
         "
         ;;
       keys)
         cd "$GOLEMS_HOME" && bun -e "
-          import { getTranslationKeys, getTranslationCount } from './src/lib/i18n';
+          import { getTranslationKeys, getTranslationCount } from '@golems/shared/lib/i18n';
           console.log('Translation keys: ' + getTranslationCount());
           for (const k of getTranslationKeys()) console.log('  ' + k);
         "
@@ -1019,13 +1024,13 @@ I18N_EOF
     case "${2:-status}" in
       status|"")
         cd "$GOLEMS_HOME" && bun -e "
-          import { loadState, formatStateOverview } from './src/lib/exploration';
+          import { loadState, formatStateOverview } from '@golems/shared/lib/exploration';
           console.log(formatStateOverview(loadState()));
         "
         ;;
       templates)
         cd "$GOLEMS_HOME" && bun -e "
-          import { EXPLORATION_TEMPLATES } from './src/lib/exploration';
+          import { EXPLORATION_TEMPLATES } from '@golems/shared/lib/exploration';
           for (const t of EXPLORATION_TEMPLATES) {
             console.log('  ' + t.name.padEnd(24) + t.description);
           }
@@ -1033,7 +1038,7 @@ I18N_EOF
         ;;
       latest)
         cd "$GOLEMS_HOME" && bun -e "
-          import { loadState, getLatestSession, formatSessionSummary } from './src/lib/exploration';
+          import { loadState, getLatestSession, formatSessionSummary } from '@golems/shared/lib/exploration';
           const s = loadState();
           const session = getLatestSession(s);
           if (!session) { console.log('No explorations yet.'); process.exit(0); }
@@ -1042,7 +1047,7 @@ I18N_EOF
         ;;
       agents)
         cd "$GOLEMS_HOME" && bun -e "
-          import { getAvailableAgents } from './src/lib/exploration';
+          import { getAvailableAgents } from '@golems/shared/lib/exploration';
           const agents = getAvailableAgents();
           if (agents.length === 0) { console.log('No agents available.'); process.exit(0); }
           console.log('Available agents: ' + agents.join(', '));
@@ -1067,7 +1072,104 @@ EXPLORE_EOF
     esac
     ;;
   index-whatsapp)
-    cd "$GOLEMS_HOME" && bun run src/whatsapp-index-cli.ts "${@:2}"
+    cd "$GOLEMS_HOME" && bun run packages/services/src/whatsapp-index-cli.ts "${@:2}"
+    ;;
+  rules)
+    RULES_LIB="$GOLEMS_HOME/rules-library"
+    case "${2:-check}" in
+      check)
+        TARGET="${3:-.}"
+        TARGET="$(cd "$TARGET" 2>/dev/null && pwd || echo "$TARGET")"
+        REPO_NAME="$(basename "$TARGET")"
+        echo -e "${BLUE}=== RULES CHECK: $REPO_NAME ===${NC}"
+
+        # Check for @context references in CLAUDE.md
+        if [ -f "$TARGET/CLAUDE.md" ]; then
+          CONTEXTS=$(grep '^@context:' "$TARGET/CLAUDE.md" 2>/dev/null | sed 's/@context: *//')
+          if [ -n "$CONTEXTS" ]; then
+            echo -e "${YELLOW}⚠  Found @context: references (deprecated):${NC}"
+            while IFS= read -r ctx; do
+              if [ -f "$RULES_LIB/$ctx.md" ]; then
+                echo -e "  ${GREEN}✅${NC} $ctx.md — available in rules-library"
+              else
+                echo -e "  ${RED}❌${NC} $ctx.md — MISSING from rules-library"
+              fi
+            done <<< "$CONTEXTS"
+            echo ""
+            echo "Migrate: copy rules to $TARGET/.claude/rules/ and remove @context: lines"
+          fi
+        fi
+
+        # Check .claude/rules/ if it exists
+        if [ -d "$TARGET/.claude/rules" ]; then
+          RULE_COUNT=$(find "$TARGET/.claude/rules" -maxdepth 1 -name '*.md' -type f 2>/dev/null | wc -l | tr -d ' ')
+          echo -e "${GREEN}✅${NC} .claude/rules/ exists ($RULE_COUNT rules)"
+          for f in "$TARGET/.claude/rules/"*.md; do
+            [ -f "$f" ] || continue
+            NAME=$(basename "$f")
+            HAS_GLOBS=$(head -5 "$f" | grep -c 'globs:' || true)
+            if [ "$HAS_GLOBS" -gt 0 ]; then
+              GLOB_VAL=$(head -5 "$f" | grep 'globs:' | sed 's/globs: *//')
+              echo -e "  📄 $NAME ${GRAY}(globs: $GLOB_VAL)${NC}"
+            else
+              echo -e "  📄 $NAME ${GRAY}(always loaded)${NC}"
+            fi
+          done
+        else
+          echo -e "${YELLOW}○${NC} No .claude/rules/ directory"
+        fi
+        ;;
+      list)
+        echo -e "${BLUE}=== RULES LIBRARY ===${NC}"
+        echo "Path: $RULES_LIB"
+        echo ""
+        while IFS= read -r f; do
+          [ -f "$f" ] || continue
+          REL="${f#$RULES_LIB/}"
+          echo "  📄 $REL"
+        done < <(find "$RULES_LIB" -name '*.md' -type f | sort)
+        ;;
+      export)
+        TARGET="${4:-.}"
+        RULE="${3}"
+        if [ -z "$RULE" ]; then
+          echo "Usage: golems rules export <rule-name> [target-repo]"
+          echo "Example: golems rules export tech/react-native ~/Gits/domica"
+          exit 1
+        fi
+        TARGET="$(cd "$TARGET" 2>/dev/null && pwd || echo "$TARGET")"
+        SRC="$RULES_LIB/$RULE.md"
+        DEST="$TARGET/.claude/rules/$(basename "$RULE").md"
+        if [ ! -f "$SRC" ]; then
+          echo -e "${RED}❌ Rule not found: $RULE${NC}"
+          echo "Run 'golems rules list' to see available rules"
+          exit 1
+        fi
+        mkdir -p "$TARGET/.claude/rules"
+        cp "$SRC" "$DEST"
+        echo -e "${GREEN}✅${NC} Exported $RULE → $DEST"
+        ;;
+      help)
+        cat << 'RULES_EOF'
+golems rules — Manage Claude Code rules across projects
+
+  golems rules                    Check current dir for rule status
+  golems rules check [path]       Check a repo's rules (default: .)
+  golems rules list               List all rules in the library
+  golems rules export <rule> [path]  Copy a rule to a project's .claude/rules/
+
+Examples:
+  golems rules check ~/Gits/domica
+  golems rules export tech/react-native ~/Gits/domica
+  golems rules export workflow/rtl ~/Gits/domica
+RULES_EOF
+        ;;
+      *)
+        echo "Unknown rules command: $2"
+        echo "Run 'golems rules help' for usage"
+        exit 1
+        ;;
+    esac
     ;;
   *)
     echo "Unknown command: $1"

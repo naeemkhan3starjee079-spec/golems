@@ -6,6 +6,7 @@ node_modules/
 # Project-level Claude config (may have keys)
 .claude/*
 !.claude/rules/
+!.claude/agents/
 
 # Local research docs (cherry-pick to real docs when ready)
 research.docs.local/

@@ -42,7 +42,7 @@ export interface WizardState {
 export interface WiringError {
   id: string;
   repo: string;
-  category: "claude-md" | "mcp-config" | "skills" | "cli-helper" | "service" | "config";
+  category: "claude-md" | "mcp-config" | "skills" | "cli-helper" | "service" | "config" | "rules";
   message: string;
   suggestedFix?: string;
   foundAt: string;
@@ -271,6 +271,54 @@ export function checkRepoSkillsDir(repoPath: string, repoName: string): WiringCh
   }
 }
 
+export function checkRepoRules(repoPath: string, repoName: string): WiringCheck {
+  const rulesDir = join(repoPath, ".claude", "rules");
+  const claudeMdPath = join(repoPath, "CLAUDE.md");
+
+  // Check for deprecated @context: syntax
+  let hasDeprecatedContexts = false;
+  if (existsSync(claudeMdPath)) {
+    try {
+      const content = readFileSync(claudeMdPath, "utf-8");
+      hasDeprecatedContexts = /^@context:/m.test(content);
+    } catch {}
+  }
+
+  const rulesExist = existsSync(rulesDir);
+  let ruleCount = 0;
+  if (rulesExist) {
+    try {
+      ruleCount = readdirSync(rulesDir).filter(f => f.endsWith(".md")).length;
+    } catch {}
+  }
+
+  if (hasDeprecatedContexts) {
+    return {
+      name: `${repoName}/.claude/rules`,
+      repo: repoName,
+      passed: false,
+      message: `CLAUDE.md has deprecated @context: syntax — migrate to .claude/rules/`,
+      category: "rules",
+      suggestedFix: `Run: golems rules check ${repoPath}`,
+    };
+  }
+
+  return {
+    name: `${repoName}/.claude/rules`,
+    repo: repoName,
+    passed: rulesExist && ruleCount > 0,
+    message: rulesExist
+      ? `${ruleCount} rule(s) in .claude/rules/`
+      : `.claude/rules/ not found (optional but recommended)`,
+    category: "rules",
+    suggestedFix: !rulesExist
+      ? `Run: golems rules export base ${repoPath}`
+      : ruleCount === 0
+        ? `Rules dir exists but is empty. Run: golems rules export base ${repoPath}`
+        : undefined,
+  };
+}
+
 export function checkCliHelper(name: string, versionFlag: string): WiringCheck {
   const result = shellExec(`${name} ${versionFlag} 2>&1`);
   return {
@@ -331,6 +379,7 @@ export function runWiringChecks(options: CheckOptions = {}): WiringCheck[] {
     checks.push(checkRepoClaudeMd(repoPath, repo.name));
     checks.push(checkRepoMcpConfig(repoPath, repo.name));
     checks.push(checkRepoSkillsDir(repoPath, repo.name));
+    checks.push(checkRepoRules(repoPath, repo.name));
   }
 
   // Check config
