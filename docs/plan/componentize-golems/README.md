@@ -36,15 +36,15 @@
 
 ### Phase 3: Thin Telegram Router — `feature/componentize-phase-3-thin-router`
 
-- [ ] **3.1** [context7] Confirm grammy Composer API patterns
-- [ ] **3.2** [Cursor work] Create JobGolem Composer (~180 lines)
-- [ ] **3.3** [Cursor work] Create RecruiterGolem Composer (~320 lines)
-- [ ] **3.4** [Opus] Create ClaudeGolem Composer (~600 lines)
-- [ ] **3.5** [Cursor work] Extract notification server to standalone
-- [ ] **3.6** [Opus] Reduce telegram-bot.ts to ~300-line thin router
-- [ ] **3.7** [Cursor work] Remove auto-scrape loop from bot
-- [ ] **3.8** [Opus] Update GOLEM_REGISTRY
-- [ ] **3.9** [manual] Test all Telegram commands
+- [x] **3.1** [context7] Confirm grammy Composer API patterns
+- [x] **3.2** [Opus] Created JobGolem Composer — /jobs, /jobq, jobs:* pagination (src/composers/job-composer.ts)
+- [x] **3.3** [Opus] Created RecruiterGolem Composer — /practice, /stats, /outreach, /followup + callbacks (src/composers/recruiter-composer.ts)
+- [x] **3.4** [Opus] Created ClaudeGolem Composer — /start, /status, /admin, /trigger, /fork, /setup, /tonight, /repos + message:text (src/composers/claude-composer.ts)
+- [x] **3.5** [Opus] Extracted notification server to src/lib/notify-server.ts (startNotifyServer returns Server for shutdown)
+- [x] **3.6** [Opus] Reduced telegram-bot.ts from 1957 → 97 lines (auth middleware, composer registration, startup, shutdown)
+- [x] **3.7** [Opus] Removed auto-scrape loop — Railway handles scheduling via cloud-worker.ts
+- [x] **3.8** [Opus] Updated GOLEM_REGISTRY — cwds now point to actual golem source dirs under monorepo
+- [ ] **3.9** [manual] Test all Telegram commands (deferred — bot must be restarted to test live)
 - [ ] **3.10** [bun test] All tests pass → commit → PR → merge
 
 ### Phase 4: Bun Workspaces — `feature/componentize-phase-4-workspaces`
