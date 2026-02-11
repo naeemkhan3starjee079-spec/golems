@@ -4,7 +4,8 @@
  * Generates monthly and annual financial reports from the payments table.
  */
 
-import { createDbClient, getSubscriptionSummary } from "../email-golem/db-client";
+import { getSupabase } from "../lib/supabase-factory";
+import { getSubscriptionSummary } from "./db";
 import type { MonthlyReport, TaxReport, TaxCategory } from "./types";
 
 const ALL_CATEGORIES: TaxCategory[] = [
@@ -20,7 +21,15 @@ const ALL_CATEGORIES: TaxCategory[] = [
  * @returns Promise resolving to monthly report with totals by category and vendor
  */
 export async function generateMonthlyReport(month: string): Promise<MonthlyReport> {
-  const supabase = createDbClient();
+  const emptyCategories = Object.fromEntries(
+    ALL_CATEGORIES.map((c) => [c, 0])
+  ) as Record<TaxCategory, number>;
+
+  const supabase = getSupabase();
+  if (!supabase) {
+    return { month, totalSpend: 0, byCategory: emptyCategories, byVendor: {}, subscriptionCount: 0 };
+  }
+
   const startDate = `${month}-01`;
   const endDate = getLastDayOfMonth(month);
 
@@ -29,10 +38,6 @@ export async function generateMonthlyReport(month: string): Promise<MonthlyRepor
     .select("*")
     .gte("paid_at", startDate)
     .lte("paid_at", endDate);
-
-  const emptyCategories = Object.fromEntries(
-    ALL_CATEGORIES.map((c) => [c, 0])
-  ) as Record<TaxCategory, number>;
 
   if (error || !data || data.length === 0) {
     return {
@@ -60,7 +65,7 @@ export async function generateMonthlyReport(month: string): Promise<MonthlyRepor
     byVendor[vendor] = (byVendor[vendor] || 0) + amount;
   }
 
-  const subSummary = await getSubscriptionSummary(supabase);
+  const subSummary = await getSubscriptionSummary();
 
   return {
     month,
@@ -79,7 +84,15 @@ export async function generateMonthlyReport(month: string): Promise<MonthlyRepor
  * @returns Promise resolving to tax report with deductible totals and item breakdowns
  */
 export async function generateTaxReport(year: number): Promise<TaxReport> {
-  const supabase = createDbClient();
+  const emptyByCategory = Object.fromEntries(
+    ALL_CATEGORIES.map((c) => [c, { total: 0, items: [] as Array<{ vendor: string; amount: number }> }])
+  ) as TaxReport["byCategory"];
+
+  const supabase = getSupabase();
+  if (!supabase) {
+    return { year, totalDeductible: 0, byCategory: emptyByCategory };
+  }
+
   const startDate = `${year}-01-01`;
   const endDate = `${year}-12-31`;
 
@@ -88,10 +101,6 @@ export async function generateTaxReport(year: number): Promise<TaxReport> {
     .select("*")
     .gte("paid_at", startDate)
     .lte("paid_at", endDate);
-
-  const emptyByCategory = Object.fromEntries(
-    ALL_CATEGORIES.map((c) => [c, { total: 0, items: [] as Array<{ vendor: string; amount: number }> }])
-  ) as TaxReport["byCategory"];
 
   if (error || !data || data.length === 0) {
     return { year, totalDeductible: 0, byCategory: emptyByCategory };

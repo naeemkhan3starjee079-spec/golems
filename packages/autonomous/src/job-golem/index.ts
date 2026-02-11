@@ -16,14 +16,9 @@ import { syncJobs, syncScores } from "./sync-to-supabase";
 import { matchJobs, prefilterJobs, type MatchResult } from "./matcher";
 import { writeFileSync, existsSync, readdirSync, unlinkSync, statSync, mkdirSync } from "fs";
 import { join } from "path";
-import {
-  processHotMatches,
-  formatHotMatchSummary,
-  type JobMatch,
-} from "../recruiter-golem/auto-outreach";
 import { logEvent } from "../lib/event-log";
 import { sendNotification } from "../lib/telegram-direct";
-import { reportServiceRun } from "../lib/state-store";
+import { getState, reportServiceRun } from "../lib/state-store";
 
 const HOME = process.env.HOME;
 if (!HOME) throw new Error("HOME environment variable is required");
@@ -198,29 +193,32 @@ export async function runJobSearch(): Promise<{ scraped: number; filtered: numbe
   }
 
   // 4.6. Auto-outreach for hot matches (score 8+)
+  // Uses dynamic import so job-golem has no hard dependency on recruiter-golem
   const hotMatches = matches.filter(m => m.score >= 8);
   if (hotMatches.length > 0) {
     console.log(`\n🎯 Processing ${hotMatches.length} hot matches for outreach...`);
     try {
-      // Convert MatchResult to JobMatch format
-      const jobMatches: JobMatch[] = hotMatches.map(m => ({
-        id: m.job.url, // Use URL as unique ID
+      const { processHotMatches, formatHotMatchSummary } = await import(
+        "../recruiter-golem/auto-outreach"
+      );
+
+      const jobMatches = hotMatches.map(m => ({
+        id: m.job.url,
         title: m.job.title,
         company: m.job.company,
         location: m.job.location || "Israel",
         url: m.job.url,
-        techStack: [], // Will be extracted from description
+        techStack: [],
         description: m.job.description,
         score: m.score,
         reason: m.reason,
       }));
 
       const outreachResults = await processHotMatches(jobMatches);
-      const totalDrafts = outreachResults.reduce((sum, r) => sum + r.draftsCreated, 0);
+      const totalDrafts = outreachResults.reduce((sum: number, r: any) => sum + r.draftsCreated, 0);
 
       console.log(`   ✅ Created ${totalDrafts} outreach drafts`);
 
-      // Send outreach summary notification
       if (totalDrafts > 0) {
         const summary = formatHotMatchSummary(outreachResults);
         await sendTelegram("🎯 Outreach Ready", summary);
@@ -267,6 +265,15 @@ export async function runJobSearch(): Promise<{ scraped: number; filtered: numbe
       scrapeStartedAt = null;
     }
   }
+}
+
+/** Standard status interface for dashboard/Telegram */
+export async function getStatus(): Promise<import("../lib/shared-types").GolemStatus> {
+  const lastRun = await getState<string>("lastJobRun");
+  const summary = lastRun
+    ? `Last scrape: ${new Date(lastRun).toLocaleString()}`
+    : "Never run";
+  return { name: "JobGolem", healthy: !!lastRun, lastRun, summary };
 }
 
 // CLI

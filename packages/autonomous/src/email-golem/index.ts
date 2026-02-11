@@ -434,6 +434,15 @@ async function runSearch(query: string, maxResults: number) {
   }
 }
 
+/** Standard status interface for dashboard/Telegram */
+export async function getStatus(): Promise<import("../lib/shared-types").GolemStatus> {
+  const lastRun = await getState<string>("lastEmailCheck");
+  const summary = lastRun
+    ? `Last check: ${new Date(lastRun).toLocaleString()}`
+    : "Never run";
+  return { name: "EmailGolem", healthy: !!lastRun, lastRun, summary };
+}
+
 /**
  * CLI
  */

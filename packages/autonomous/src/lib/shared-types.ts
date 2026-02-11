@@ -23,3 +23,17 @@ export interface SemanticStyleData {
   topics: Record<string, TopicStyle>;
   insights: string[];
 }
+
+/** Standard status response from any golem */
+export interface GolemStatus {
+  /** Golem identifier */
+  name: string;
+  /** Whether the golem is operational */
+  healthy: boolean;
+  /** ISO timestamp of last successful run */
+  lastRun: string | null;
+  /** Human-readable summary line */
+  summary: string;
+  /** Optional key-value details */
+  details?: Record<string, string | number | boolean>;
+}

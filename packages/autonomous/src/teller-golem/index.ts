@@ -11,8 +11,8 @@
  */
 
 import "../lib/load-env";
-import { createDbClient, recordPayment, trackSubscription } from "../email-golem/db-client";
 import { logEvent } from "../lib/event-log";
+import { recordPayment, trackSubscription } from "./db";
 import { categorizeExpense } from "./categorizer";
 import { detectPaymentFailure, sendPaymentAlert } from "./alerts";
 import {
@@ -21,8 +21,7 @@ import {
   formatMonthlyReportText,
   formatTaxReportText,
 } from "./report";
-import type { ScoredEmail, MonthlyReport, TaxReport } from "./types";
-import type { ScoredEmail as EmailGolemScoredEmail } from "../email-golem/types";
+import type { ScoredEmail, MonthlyReport, TaxReport, InboundEmail } from "./types";
 
 /**
  * Generate a monthly financial report for a given month.
@@ -59,11 +58,9 @@ export async function generateTaxReport(year?: number): Promise<TaxReport> {
  * @returns Promise that resolves when email processing is complete
  */
 export async function processSubscriptionEmail(
-  emailGolemEmail: EmailGolemScoredEmail
+  emailGolemEmail: InboundEmail
 ): Promise<void> {
-  const db = createDbClient();
-
-  // Convert email-golem ScoredEmail to teller-golem ScoredEmail format
+  // Convert inbound email to teller-golem ScoredEmail format
   const email: ScoredEmail = {
     id: emailGolemEmail.email.id,
     from: emailGolemEmail.email.from,
@@ -86,7 +83,7 @@ export async function processSubscriptionEmail(
 
   // 3. Record payment if amount detected
   if (expense.amount) {
-    const result = await recordPayment(db, {
+    const result = await recordPayment({
       subscription_id: null,
       email_id: emailGolemEmail.email.id,
       amount: expense.amount,
@@ -94,7 +91,7 @@ export async function processSubscriptionEmail(
       paid_at: new Date(emailGolemEmail.email.internalDate || Date.now()),
     });
 
-    if (!result.success && !result.queued) {
+    if (!result.success) {
       console.error(
         `[teller-golem] Failed to record payment: ${result.error}`
       );
@@ -103,7 +100,7 @@ export async function processSubscriptionEmail(
 
   // 4. Track subscription
   if (expense.vendor) {
-    const result = await trackSubscription(db, {
+    const result = await trackSubscription({
       service_name: expense.vendor,
       amount: expense.amount || 0,
       currency: "USD",
@@ -112,7 +109,7 @@ export async function processSubscriptionEmail(
       first_seen: new Date(emailGolemEmail.email.internalDate || Date.now()),
     });
 
-    if (!result.success && !result.queued) {
+    if (!result.success) {
       console.error(
         `[teller-golem] Failed to track subscription: ${result.error}`
       );
@@ -137,6 +134,16 @@ export async function processSubscriptionEmail(
   console.warn(
     `[teller-golem] Processed: ${expense.vendor} (${expense.category}${expense.amount ? ` - $${expense.amount.toFixed(2)}` : ""})`
   );
+}
+
+/** Standard status interface for dashboard/Telegram */
+export async function getStatus(): Promise<import("../lib/shared-types").GolemStatus> {
+  let summary = "Financial domain expert";
+  try {
+    const report = await generateMonthlyReport();
+    summary = `This month: $${report.totalSpend.toFixed(2)} across ${report.subscriptionCount} subscriptions`;
+  } catch { /* optional */ }
+  return { name: "TellerGolem", healthy: true, lastRun: null, summary };
 }
 
 // CLI mode

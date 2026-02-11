@@ -86,6 +86,35 @@ export interface TaxReport {
   >;
 }
 
+/** Monthly subscription spending summary */
+export interface SubscriptionSummary {
+  totalMonthly: number;
+  services: Array<{
+    name: string;
+    amount: number;
+    currency: string;
+    status: string;
+  }>;
+  newThisMonth: string[];
+  cancelledThisMonth: string[];
+}
+
+/**
+ * Inbound email from email-golem router.
+ * Minimal interface — avoids importing email-golem types directly.
+ */
+export interface InboundEmail {
+  email: {
+    id: string;
+    from: string;
+    subject: string;
+    snippet: string;
+    internalDate?: number;
+  };
+  score: number;
+  category: string;
+}
+
 /**
  * Scored email input from email-golem scorer
  * @interface ScoredEmail

@@ -1,5 +1,6 @@
 import { describe, test, expect, mock, beforeEach, afterEach, spyOn } from "bun:test";
-import * as dbClientModule from "../email-golem/db-client";
+import * as supabaseFactory from "../lib/supabase-factory";
+import * as tellerDb from "../teller-golem/db";
 import {
   generateMonthlyReport,
   generateTaxReport,
@@ -22,9 +23,10 @@ describe("TellerGolem Report", () => {
     mockSelect.mockClear();
     mockGte.mockClear();
     mockLte.mockClear();
-    // Use spyOn instead of mock.module to avoid global pollution
-    spyOn(dbClientModule, "createDbClient").mockReturnValue(mockDbClient as any);
-    spyOn(dbClientModule, "getSubscriptionSummary").mockImplementation(async () => ({
+    // Mock supabase-factory to return our mock client
+    spyOn(supabaseFactory, "getSupabase").mockReturnValue(mockDbClient as any);
+    // Mock teller-golem/db getSubscriptionSummary
+    spyOn(tellerDb, "getSubscriptionSummary").mockImplementation(async () => ({
       totalMonthly: 50,
       services: [{ name: "Netflix" }, { name: "Spotify" }] as any[],
       newThisMonth: [],
