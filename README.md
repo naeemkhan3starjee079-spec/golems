@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/images/golems-mascot.svg" alt="Golems Mascot" width="420" />
+</p>
+
 <h1 align="center">Golems</h1>
 
 <p align="center">
@@ -7,8 +11,9 @@
 
 <p align="center">
   <a href="https://etanheyman.com/golems/"><img src="https://img.shields.io/badge/docs-live-1a1a2e?style=flat-square&logo=vercel" alt="Docs" /></a>
-  <a href="packages/ralph/"><img src="https://img.shields.io/badge/ralph-autonomous_coding-7b2ff7?style=flat-square" alt="Ralph" /></a>
-  <a href="packages/zikaron/"><img src="https://img.shields.io/badge/zikaron-memory_layer-0f3460?style=flat-square" alt="Zikaron" /></a>
+  <a href="packages/recruiter/"><img src="https://img.shields.io/badge/recruiter-outreach_%26_practice-c4783c?style=flat-square" alt="Recruiter" /></a>
+  <a href="packages/teller/"><img src="https://img.shields.io/badge/teller-finance_%26_tax-0f3460?style=flat-square" alt="Teller" /></a>
+  <a href="packages/coach/"><img src="https://img.shields.io/badge/coach-calendar_%26_plans-7b2ff7?style=flat-square" alt="Coach" /></a>
 </p>
 
 ---
