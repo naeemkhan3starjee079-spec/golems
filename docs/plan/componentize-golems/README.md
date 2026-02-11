@@ -62,15 +62,15 @@
 
 ### Phase 5: CC Plugin Packaging — `feature/componentize-phase-5-plugins`
 
-- [ ] **5.1** [Cursor work] Create plugin.json for each golem
-- [ ] **5.2** [Gemini] CC plugin best practices research
-- [ ] **5.3** [Opus] Write CLAUDE.md per golem (persona + capabilities)
-- [ ] **5.4** [Opus] Create commands/ per golem
-- [ ] **5.5** [Opus] Create skills/ per golem
-- [ ] **5.6** [Cursor work] Create .mcp.json per golem
-- [ ] **5.7** [manual] Test each plugin locally
-- [ ] **5.8** [manual] Verify namespaced commands
-- [ ] **5.9** [Opus] Create CLI aliases per golem in .zshrc
+- [x] **5.1** [Opus] Created .claude-plugin/plugin.json for 7 golem packages (proper author object, keywords, semver)
+- [x] **5.2** [Opus + Exa + WebFetch] CC plugin best practices research — official docs, Exa, community specs. Key: commands/ is legacy, use skills/SKILL.md
+- [x] **5.3** [Opus] Wrote CLAUDE.md per golem (persona + capabilities + architecture + domain rules)
+- [x] **5.4** [Opus] Created 16 skills across 7 packages using skills/<name>/SKILL.md with YAML frontmatter (not legacy commands/)
+- [x] **5.5** [Opus] Created 3 agents (interview-coach, content-critic, health-checker) with YAML frontmatter
+- [x] **5.6** [Opus] Created .mcp.json for jobs + shared (MCP servers use ${CLAUDE_PLUGIN_ROOT})
+- [ ] **5.7** [manual] Test each plugin locally with --plugin-dir (deferred — needs interactive session)
+- [ ] **5.8** [manual] Verify namespaced skills (deferred — needs interactive session)
+- [x] **5.9** CLI aliases already existed in .zshrc (recruiterClaude, tellerClaude, etc. + golemsClaude)
 - [ ] **5.10** Commit → PR → merge
 
 ### Phase 6: CoachGolem — `feature/componentize-phase-6-coach`

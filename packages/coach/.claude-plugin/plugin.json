@@ -1,0 +1,12 @@
+{
+  "name": "coach-golem",
+  "version": "1.0.0",
+  "description": "CoachGolem — daily schedule planning, calendar integration, habit tracking, and life coaching",
+  "author": {
+    "name": "Etan Heyman",
+    "url": "https://github.com/EtanHey"
+  },
+  "repository": "https://github.com/EtanHey/golems",
+  "license": "MIT",
+  "keywords": ["golem", "coach", "calendar", "schedule", "habits"]
+}
