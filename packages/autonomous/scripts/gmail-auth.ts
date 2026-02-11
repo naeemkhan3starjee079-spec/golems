@@ -18,13 +18,16 @@ if (!CLIENT_ID || !CLIENT_SECRET) {
 const oauth2Client = new google.auth.OAuth2(
   CLIENT_ID,
   CLIENT_SECRET,
-  "http://localhost:3000/oauth2callback" // Redirect URI for desktop apps
+  "http://localhost:9876" // Redirect URI matching Google Cloud Console
 );
 
 // Generate auth URL
 const authUrl = oauth2Client.generateAuthUrl({
   access_type: "offline",
-  scope: ["https://www.googleapis.com/auth/gmail.readonly"],
+  scope: [
+    "https://www.googleapis.com/auth/gmail.readonly",
+    "https://www.googleapis.com/auth/calendar.events",
+  ],
   prompt: "consent", // Force refresh token generation
 });
 
