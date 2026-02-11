@@ -270,4 +270,4 @@ fi
 - Relative paths like `./scripts/foo.sh` fail when cwd != skill directory
 - BASH_SOURCE provides reliable self-location regardless of invocation context
 
-See `contexts/skill-authoring.md` for full details.
+See `rules-library/skill-authoring.md` for full details.

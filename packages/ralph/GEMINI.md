@@ -26,7 +26,7 @@ done
 - **Core**: Zsh scripts (`ralph.zsh`, modular `lib/*.zsh`)
 - **UI**: Bun + React Ink (TypeScript)
 - **Skills**: SKILL.md + scripts/ pattern in `skills/golem-powers/`
-- **Contexts**: Shared markdown files in `contexts/`
+- **Rules**: Auto-loaded from `.claude/rules/`, exportable library in `rules-library/`
 - **PRD Format**: JSON with `prd-json/index.json` + `stories/*.json`
 
 ## Directory Structure
@@ -37,7 +37,7 @@ claude-golem/
 ├── lib/                   # Modular zsh library
 ├── bun/                   # TypeScript core (story management)
 ├── ralph-ui/              # React Ink dashboard
-├── contexts/              # Shared CLAUDE.md contexts
+├── rules-library/         # Exportable rules/context library
 ├── skills/golem-powers/   # Skills for Claude
 ├── prompts/               # Story-type prompts (US.md, BUG.md, etc.)
 ├── tests/                 # Test suite (156+ ZSH + 83 Bun tests)

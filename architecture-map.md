@@ -11,8 +11,9 @@ CLI commands, data stores, and how everything connects.
 | `packages/autonomous` | Main golem runtime: Telegram bot, cloud worker, golems, LLM tooling |
 | `packages/ralph` | Ralph autonomous coding loop (Zsh + Bun + React Ink TUI) |
 | `packages/zikaron` | Memory pipeline (Python, sqlite-vec, MCP server) |
-| `packages/docsite` | Docusaurus documentation site |
-| `contexts/` | Shared Claude context files used by golems and Ralph |
+| `.claude/rules/` | Auto-loaded rules (survives compaction) |
+| `rules-library/` | Exportable context/rules library |
+| `docs/architecture/` | Architecture decisions (Zikaron-indexed) |
 | `skills/golem-powers/` | Skills used by Ralph and Claude |
 | `docs/` | Global architecture notes |
 | `docs.local/` | Local research and planning (gitignored) |
@@ -254,7 +255,7 @@ Cloud worker schedule in `src/cloud-worker.ts` (Asia/Jerusalem):
 - **Role**: Autonomous coding loop wrapper around Claude Code.
 - **Entry**: `ralph.zsh`, `lib/`, `ralph-ui/`, `bun/`.
 - **Key data**: `~/.config/ralphtools/` (config, registry, costs).
-- **Skills**: uses `skills/golem-powers/` and `contexts/`.
+- **Skills**: uses `skills/golem-powers/` and `.claude/rules/`.
 - **Connection to golems**: NightShift reuses Ralph worktree and PR patterns.
 
 ### packages/zikaron

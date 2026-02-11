@@ -1,7 +1,6 @@
 # Golem Ecosystem Reference
 
-> Load this context to understand the full golem system.
-> `@contexts/golem-ecosystem.md`
+> Full golem ecosystem reference. Export to `.claude/rules/` if needed.
 
 ---
 

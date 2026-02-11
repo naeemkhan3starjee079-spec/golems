@@ -82,7 +82,9 @@ golems/
 │   ├── ralph/          # Autonomous coding loop (PRD → stories → code → review)
 │   └── zikaron/        # Memory layer (226k+ chunks, semantic search)
 ├── skills/             # 34 golem-powers skills in 6 categories
-├── contexts/           # Shared Claude context files
+├── .claude/rules/      # Auto-loaded rules (survives compaction)
+├── rules-library/      # Exportable context/rules library
+├── docs/architecture/  # Architecture decisions (Zikaron-indexed)
 ├── launchd/            # macOS service plists
 └── Dockerfile          # Railway deployment
 ```

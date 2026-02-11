@@ -88,7 +88,9 @@ golems wizard          # Guided setup
 
 | Path | Purpose |
 |------|---------|
-| `contexts/` | Shared Claude context files |
+| `.claude/rules/` | Auto-loaded rules (survives compaction) |
+| `rules-library/` | Exportable context/rules library |
+| `docs/architecture/` | Architecture decisions (indexed by Zikaron) |
 | `skills/golem-powers/` | Skills (symlinked to ralph) |
 | `docs/plan/` | Active plans and phase tracking |
 | `launchd/` | macOS launchd service plists |

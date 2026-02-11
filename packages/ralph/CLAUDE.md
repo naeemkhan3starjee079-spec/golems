@@ -3,22 +3,17 @@
 > This is the equivalent of CLAUDE.md for OpenCode.
 > Auto-loaded as context when OpenCode runs in this directory.
 
-## 📚 Required Contexts
+## Rules (Auto-Loaded)
 
-**Always load these contexts based on mode:**
+Rules in `.claude/rules/` are auto-loaded by Claude Code:
+- `golems-base.md` — AIDEV-NOTE, TypeScript safety, architecture decisions
+- `ralph-workflow.md` — PRD execution, story types, CodeRabbit rules (targets `packages/ralph/**`)
+- `tech-ink.md` — Ink keyboard/stdin setup (targets `ralph-ui/**`)
 
-| Mode | Context File | Key Rules |
-|------|--------------|-----------|
-| **Interactive** | `contexts/workflow/interactive.md` | CLAUDE_COUNTER (count down from 10), git safety |
-| **Ralph** | `contexts/workflow/ralph.md` | Autonomous execution, story completion |
-| **All** | `contexts/base.md` | Notifications, scratchpad, AIDEV-NOTE |
-
-**Load on start:**
-```
-@contexts/base.md
-@contexts/workflow/interactive.md  (if chatting with user)
-@contexts/workflow/ralph.md        (if running autonomously)
-```
+**Reference docs** (read when needed, not auto-loaded):
+- `rules-library/workflow/ralph.md` — Full Ralph workflow documentation
+- `rules-library/workflow/interactive.md` — Interactive session rules
+- `rules-library/base.md` — Base context (most rules now in `.claude/rules/` or `~/.claude/CLAUDE.md`)
 
 ---
 
@@ -42,7 +37,7 @@ done
 | `ralph-ui/` | React Ink dashboard |
 | `bun/` | TypeScript story management |
 | `skills/golem-powers/` | Skills for Claude (reference only) |
-| `contexts/` | Shared context rules |
+| `rules-library/` | Exportable rules/context library |
 | `prd-json/` | PRD stories |
 
 ## Available Commands

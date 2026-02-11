@@ -1,6 +1,6 @@
 # Base Context - Universal Rules
 
-> This context contains universal rules that apply to ALL projects and ALL execution modes (interactive Claude AND Ralph). Include this context in every CLAUDE.md.
+> Universal rules for all projects. Key rules are auto-loaded via `.claude/rules/golems-base.md`. This file is the full reference.
 
 ---
 
@@ -10,14 +10,14 @@
 
 1. **Update the file tree** in CLAUDE.md if new directories/files are created
 2. **Add learnings** to `docs.local/learnings/` (gitignored) or project CLAUDE.md
-3. **Update contexts** in `~/.claude/contexts/` if pattern applies across projects
+3. **Update rules-library** if pattern applies across projects, then export to `.claude/rules/`
 4. **Every subdirectory** with code should have a README.md explaining its contents
 
 **Key locations to keep updated:**
 - Project CLAUDE.md - file tree, project-specific rules
-- `contexts/base.md` - universal patterns (applies to all projects)
-- `contexts/workflow/*.md` - workflow-specific patterns
-- `contexts/tech/*.md` - technology-specific patterns
+- `rules-library/base.md` - universal patterns (applies to all projects)
+- `rules-library/workflow/*.md` - workflow-specific patterns
+- `rules-library/tech/*.md` - technology-specific patterns
 
 ---
 

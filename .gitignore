@@ -4,7 +4,8 @@ node_modules/
 .mcp.json
 
 # Project-level Claude config (may have keys)
-.claude/
+.claude/*
+!.claude/rules/
 
 # Local research docs (cherry-pick to real docs when ready)
 research.docs.local/

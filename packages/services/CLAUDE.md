@@ -87,7 +87,7 @@ Runs at 4am via launchd. Per-repo Claude sessions:
 
 When debugging issues or understanding why something is wired a certain way:
 
-1. **Architecture decisions:** `docs/architecture-decisions.md` — key decisions from componentization
+1. **Architecture decisions:** `docs/architecture/` — key decisions and migration records
 2. **Phase findings:** `docs/plan/componentize-golems/phase-*/findings.md` — detailed per-phase notes
 3. **Zikaron search:** Use the Zikaron MCP to search past session transcripts:
    ```

@@ -110,39 +110,30 @@ Skills are then available as `/golem-powers:skill-name`:
 | `~/.config/claude-golem/config.json` | User settings |
 | `~/.claude/commands/golem-powers` | Skills symlink |
 | `~/.claude/CLAUDE.md` | Global Claude instructions |
-| `~/.claude/contexts/` | Modular context files |
+| `.claude/rules/` | Auto-loaded rules (per-repo, in git) |
 
 ---
 
-## Contexts Directory
+## Rules Directory
 
-The contexts directory contains reusable CLAUDE.md modules:
+Rules are auto-loaded `.md` files in each repo's `.claude/rules/` directory:
 
 ```
-~/.claude/contexts/
-├── base.md               # Universal rules (scratchpad, AIDEV-NOTE, type safety)
-├── tech/
-│   ├── nextjs.md         # Next.js patterns
-│   ├── supabase.md       # Supabase patterns
-│   ├── convex.md         # Convex patterns
-│   └── react-native.md   # React Native patterns
-└── workflow/
-    ├── interactive.md    # Interactive Claude rules (CLAUDE_COUNTER)
-    ├── ralph.md          # Ralph autonomous execution
-    ├── rtl.md            # RTL layout rules
-    ├── testing.md        # Testing standards
-    └── design-system.md  # Component guidelines
+project/.claude/rules/
+├── golems-base.md        # Universal rules (AIDEV-NOTE, type safety, architecture)
+├── ralph-workflow.md     # Ralph execution rules (globs: packages/ralph/**)
+└── tech-ink.md           # Ink CLI rules (globs: **/ralph-ui/**)
 ```
 
-Projects reference contexts with `@context:` directives:
-```markdown
-## Contexts
-@context: base
-@context: tech/nextjs
-@context: workflow/rtl
+Rules support YAML frontmatter for path targeting:
+```yaml
+---
+globs: packages/ralph/**
+---
+# Only loaded when working in packages/ralph/
 ```
 
-The contexts are in the claude-golem repo at `~/.claude/contexts/` (not symlinked, copied during setup).
+No import syntax needed — Claude Code auto-loads all matching rules.
 
 ---
 
