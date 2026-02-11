@@ -9,7 +9,7 @@ View logs from the Railway cloud worker deployment.
 
 ## Process
 
-1. Fetch recent logs: `railway logs --lines 100`
+1. Fetch recent logs: `railway logs --num 100`
 2. Parse for errors, warnings, and key events
 3. Summarize: last deploy time, any errors, cron job execution status
 4. Highlight any failed email polls, job scrapes, or API errors

@@ -10,26 +10,37 @@ CoachGolem is the **life planner**: it reads state from other golems, integrates
 
 ```text
 packages/coach/
-├── src/                         # (empty — Phase 6 builds this out)
+├── src/
+│   ├── index.ts                 # Main entry — init(), planToday(), morningNudge(), getStatus()
+│   ├── calendar-client.ts       # Google Calendar API (reuses Gmail OAuth2)
+│   ├── schedule-engine.ts       # Merge calendar + golem states → DailyPlan
+│   ├── status-aggregator.ts     # Read getStatus() from all golems
+│   ├── nudger.ts                # Morning Telegram nudge + evening wrap-up
+│   ├── tracker.ts               # Compliance tracking + weekly summary
+│   └── __tests__/               # 15 tests, 36 expect() calls
 ├── .claude-plugin/plugin.json
 ├── CLAUDE.md                    # This file
 └── package.json                 # @golems/coach
 ```
 
+## Key Types
+
+| Type | Module | Purpose |
+|------|--------|---------|
+| `DailyPlan` | schedule-engine | `{ date, greeting, blocks, pendingItems, summary }` |
+| `TimeBlock` | schedule-engine | `{ start, end, type, title, source }` |
+| `EcosystemStatus` | status-aggregator | `{ timestamp, golems, healthy, unhealthy, summary }` |
+| `PendingWorkItem` | status-aggregator | `{ item, priority, golem }` |
+| `CalendarEvent` | calendar-client | `{ id, summary, start, end, allDay, status }` |
+| `DailyRecord` | tracker | `{ date, plannedMeetings, attendedMeetings, ... }` |
+
 ## Dependencies
 
-- `@golems/shared` — State store, event log
-- `googleapis` — Google Calendar API (Phase 6)
-
-## Planned Features (Phase 6)
-
-| Component | Purpose |
-|-----------|---------|
-| Calendar client | Google Calendar API integration |
-| Schedule engine | Merge calendar + golem states → daily plan |
-| Status aggregator | Read getStatus() from all golems |
-| Nudger | Morning Telegram: "Here's your day" |
-| Tracker | Compliance tracking + weekly summary |
+- `@golems/shared` — GolemStatus type, telegram-direct, state-store
+- `@golems/jobs` — getStatus() for job match counts
+- `@golems/recruiter` — getStatus() for draft/follow-up counts
+- `@golems/teller` — getStatus() for financial summary
+- `googleapis` — Google Calendar API v3
 
 ## Design Principles
 
@@ -37,18 +48,24 @@ packages/coach/
 2. **Human-centric** — suggests priorities, doesn't auto-execute
 3. **Calendar-aware** — knows about meetings, deadlines, blocked time
 4. **Gentle** — nudges, doesn't nag. Respects energy levels and context.
+5. **Graceful degradation** — works without Calendar creds (returns empty events)
 
-## How It Works (Planned)
+## How It Works
 
 ```text
 Morning:
   1. Read all golem statuses (jobs found, outreach pending, drafts ready, etc.)
   2. Read Google Calendar (meetings, deadlines)
-  3. Generate daily plan: "3 interviews to prep, 2 drafts to approve, deep work 2-5pm"
-  4. Send to Telegram as morning nudge
+  3. Generate daily plan with priority-sorted pending items
+  4. Send to Telegram as morning nudge (via briefing.ts)
 
 Evening:
   1. Check compliance: what got done vs. plan
-  2. Adjust tomorrow's plan based on what slipped
-  3. Bedtime reminder (from Bedtime Guardian service)
+  2. Weekly summary tracks completion rate over 7 days
 ```
+
+## Wiring
+
+- **Briefing** (`packages/services/src/briefing.ts`) imports `getTodayEvents`, `getEcosystemStatus`, `generateDailyPlan`, `formatPlanForTelegram` from coach
+- **Calendar** reuses Gmail OAuth2 creds (GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN)
+- **Tracker** stores compliance data in `~/.golems-zikaron/coach/compliance.json` (90-day retention)

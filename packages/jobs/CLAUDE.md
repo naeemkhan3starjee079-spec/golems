@@ -62,4 +62,4 @@ packages/jobs/
 | Table | Purpose |
 |-------|---------|
 | `golem_seen_jobs` | Deduplication — already-processed listings |
-| Jobs stored via `sync-to-supabase.ts` | Full job data with scores |
+| `golem_jobs` | Full job data with scores (synced via `sync-to-supabase.ts`) |

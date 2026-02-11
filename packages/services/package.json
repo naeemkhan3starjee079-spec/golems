@@ -14,6 +14,7 @@
   "dependencies": {
     "@golems/jobs": "workspace:*",
     "@golems/shared": "workspace:*",
+    "@golems/coach": "workspace:*",
     "@golems/teller": "workspace:*",
     "googleapis": "^171.1.0"
   }

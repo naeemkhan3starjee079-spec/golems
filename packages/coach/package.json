@@ -4,9 +4,13 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./*": "./src/*"
+    "./*": "./src/*.ts"
   },
   "dependencies": {
-    "@golems/shared": "workspace:*"
+    "@golems/shared": "workspace:*",
+    "@golems/jobs": "workspace:*",
+    "@golems/recruiter": "workspace:*",
+    "@golems/teller": "workspace:*",
+    "googleapis": "^171.1.0"
   }
 }

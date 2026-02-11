@@ -24,6 +24,12 @@ import type { Email, SubscriptionSummary } from "@golems/shared/email/types";
 
 import { generateMonthlyReport } from "@golems/teller/report";
 import { reportServiceRun } from "@golems/shared/lib/state-store";
+import {
+  getTodayEvents,
+  getEcosystemStatus,
+  generateDailyPlan,
+  formatPlanForTelegram,
+} from "@golems/coach/index";
 
 const HOME = process.env.HOME || "/Users/etanheyman";
 const STATE_FILE = join(HOME, ".golems-zikaron/state.json");
@@ -268,6 +274,21 @@ async function sendBriefing() {
     } catch (err) {
       console.log("[Briefing] Could not fetch subscription summary:", err);
     }
+  }
+
+  // CoachGolem Daily Plan Section
+  try {
+    const [events, statuses] = await Promise.all([
+      getTodayEvents().catch(() => []),
+      getEcosystemStatus(),
+    ]);
+    const plan = generateDailyPlan(events, statuses);
+    const planMsg = formatPlanForTelegram(plan);
+    if (planMsg) {
+      msg += "🗓 *Daily Plan*\n" + planMsg + "\n" + separator;
+    }
+  } catch (err) {
+    console.log("[Briefing] Could not generate daily plan:", err);
   }
 
   // Send via telegram-direct (works on both Railway and local)

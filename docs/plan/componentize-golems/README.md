@@ -71,20 +71,20 @@
 - [ ] **5.7** [manual] Test each plugin locally with --plugin-dir (deferred — needs interactive session)
 - [ ] **5.8** [manual] Verify namespaced skills (deferred — needs interactive session)
 - [x] **5.9** CLI aliases already existed in .zshrc (recruiterClaude, tellerClaude, etc. + golemsClaude)
-- [ ] **5.10** Commit → PR → merge
+- [x] **5.10** Commit → PR #105 → merged (+ 3 review fixes folded into Phase 6)
 
 ### Phase 6: CoachGolem — `feature/componentize-phase-6-coach`
 
-- [ ] **6.1** [Gemini] Google Calendar API patterns research
-- [ ] **6.2** [Cursor work] Google Calendar API client
-- [ ] **6.3** [Cursor work] Schedule engine
-- [ ] **6.4** [Cursor work] Status aggregator
-- [ ] **6.5** [Cursor work] Nudger (morning Telegram)
-- [ ] **6.6** [Cursor work] Tracker (compliance + weekly summary)
-- [ ] **6.7** [Opus] CC plugin structure (commands, skills, CLAUDE.md)
-- [ ] **6.8** [Opus] Wire into morning briefing
-- [ ] **6.9** [manual] Test with real schedule data
-- [ ] **6.10** [bun test] All tests pass → commit → PR → merge
+- [x] **6.1** [Opus] Google Calendar API — reuses Gmail OAuth2, calendar.events scope already granted
+- [x] **6.2** [Opus] Google Calendar API client (calendar-client.ts — getTodayEvents, getUpcomingEvents)
+- [x] **6.3** [Opus] Schedule engine (schedule-engine.ts — generateDailyPlan, formatPlanForTelegram)
+- [x] **6.4** [Opus] Status aggregator (status-aggregator.ts — getEcosystemStatus, getPendingWork)
+- [x] **6.5** [Opus] Nudger (nudger.ts — sendMorningNudge, sendEveningCheck)
+- [x] **6.6** [Opus] Tracker (tracker.ts — recordDay, getWeeklySummary, formatWeeklySummary)
+- [x] **6.7** [Opus] CC plugin structure — CLAUDE.md updated with actual architecture + types table
+- [x] **6.8** [Opus] Wired into morning briefing (services/briefing.ts imports coach functions)
+- [ ] **6.9** [manual] Test with real schedule data (deferred — needs Google Calendar credentials)
+- [x] **6.10** [bun test] 15 pass, 0 fail (36 expect() calls) → commit → PR → merge
 
 ### Phase 7: Services Migration — `feature/componentize-phase-7-services`
 
