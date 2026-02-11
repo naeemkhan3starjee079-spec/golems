@@ -10,7 +10,7 @@
 
 import "./lib/load-env";
 import { sendNotification } from "./lib/telegram-direct";
-import { logEvent } from "./event-log";
+import { logEvent } from "./lib/event-log";
 
 const WIND_DOWN_MESSAGES = [
   "Time to wind down. Close the laptop, you'll thank yourself tomorrow.",

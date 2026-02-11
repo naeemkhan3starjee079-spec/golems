@@ -29,7 +29,7 @@ import {
 } from "./db-client";
 import { determineTargetGolem } from "./router";
 import { trackSender, parseListUnsubscribe } from "./sender-tracker";
-import { logEvent } from "../event-log";
+import { logEvent } from "../lib/event-log";
 import { sendNotification as sendTelegramNotification } from "../lib/telegram-direct";
 import { getState, setState, reportServiceRun } from "../lib/state-store";
 import type { SupabaseClient } from "@supabase/supabase-js";

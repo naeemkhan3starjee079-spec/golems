@@ -1,6 +1,6 @@
 import { sendNotification } from "../lib/telegram-direct";
-import { logEvent } from "../event-log";
-import { runLLMJSON } from "../llm";
+import { logEvent } from "../lib/event-log";
+import { runLLMJSON } from "../lib/llm";
 import { extractVendor } from "./categorizer";
 import type { PaymentFailure, ScoredEmail } from "./types";
 

@@ -12,7 +12,7 @@
 
 import "../lib/load-env";
 import { createDbClient, recordPayment, trackSubscription } from "../email-golem/db-client";
-import { logEvent } from "../event-log";
+import { logEvent } from "../lib/event-log";
 import { categorizeExpense } from "./categorizer";
 import { detectPaymentFailure, sendPaymentAlert } from "./alerts";
 import {

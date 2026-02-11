@@ -12,7 +12,7 @@
 // IMPORTANT: Load env FIRST - fixes launchd cwd issues
 import "../lib/load-env";
 
-import { createClient } from "@supabase/supabase-js";
+import { getSupabase } from "../lib/supabase-factory";
 import { existsSync, readFileSync, writeFileSync, unlinkSync } from "fs";
 import { join } from "path";
 import type { JobListing } from "./scraper";
@@ -86,7 +86,7 @@ async function syncJobs(filteredJobs?: JobListing[], dryRun = false) {
     process.exit(1);
   }
 
-  const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+  const supabase = getSupabase()!;
   // Use provided filtered jobs OR fall back to file (for backward compat/CLI)
   const jobs = filteredJobs ?? loadScrapedJobs();
   const syncState = loadSyncState();
@@ -196,7 +196,7 @@ async function syncScores(matches: MatchResult[]) {
     return;
   }
 
-  const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+  const supabase = getSupabase()!;
   let updated = 0;
   let errors = 0;
 
@@ -253,7 +253,7 @@ export async function logScrapeActivity(entries: ScrapeActivityEntry[]) {
     return;
   }
 
-  const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+  const supabase = getSupabase()!;
 
   for (const entry of entries) {
     const { error } = await supabase.from("scrape_activity").insert({

@@ -21,7 +21,7 @@ import {
   formatHotMatchSummary,
   type JobMatch,
 } from "../recruiter-golem/auto-outreach";
-import { logEvent } from "../event-log";
+import { logEvent } from "../lib/event-log";
 import { sendNotification } from "../lib/telegram-direct";
 import { reportServiceRun } from "../lib/state-store";
 
@@ -82,33 +82,6 @@ async function sendJobMatches(matches: MatchResult[]) {
   const title = hotMatches.length > 0 ? `🔥 ${hotMatches.length} Hot Matches!` : "Job Matches";
 
   await sendTelegram(title, lines.join("\n"), priority);
-}
-
-// Format job matches for Telegram (legacy - used for /jobs command)
-function formatMatchesForTelegram(matches: MatchResult[]): string {
-  if (matches.length === 0) {
-    return "No new matching jobs found.";
-  }
-
-  const lines: string[] = [];
-
-  for (const match of matches.slice(0, 10)) {
-    const emoji = match.score >= 8 ? "🔥" : match.score >= 7 ? "✨" : "👍";
-    const location = match.job.location || "Israel";
-
-    lines.push(
-      `${emoji} *${match.score}/10* - ${match.job.title}`,
-      `   🇮🇱 ${match.job.company} • ${location}`,
-      `   ${match.job.url}`,
-      ""
-    );
-  }
-
-  if (matches.length > 10) {
-    lines.push(`\n_+${matches.length - 10} more_\nUse /jobs to see all`);
-  }
-
-  return lines.join("\n");
 }
 
 // Save results to file

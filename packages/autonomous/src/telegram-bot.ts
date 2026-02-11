@@ -2,7 +2,8 @@ import { Bot, InlineKeyboard, Keyboard } from "grammy";
 import { $ } from "bun";
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync } from "fs";
 import { join } from "path";
-import { logEvent, getRecentEvents, formatEventsForClaude } from "./event-log";
+import { logEvent, getRecentEvents, formatEventsForClaude } from "./lib/event-log";
+import { getSupabase } from "./lib/supabase-factory";
 import { runJobSearch } from "./job-golem/index";
 import { runCursorResearch, runCursorVerification, readResearch } from "./lib/agent-runner";
 import {
@@ -323,8 +324,8 @@ async function checkRailwayHealth(): Promise<string> {
 // Shared: Supabase daily stats
 async function getDailyStats(): Promise<{ emailStats: string; jobStats: string }> {
   try {
-    const { createClient } = await import("@supabase/supabase-js");
-    const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
+    const supabase = getSupabase();
+    if (!supabase) return { emailStats: "", jobStats: "" };
     const today = new Date().toISOString().slice(0, 10);
     const [emailsToday, urgentEmails, jobsToday] = await Promise.all([
       supabase.from("emails").select("id", { count: "exact", head: true }).gte("received_at", today),
@@ -1333,16 +1334,6 @@ bot.command("repos", (ctx) => {
   ctx.reply(`📁 ${state.rotation.map(r => `\`${r}\``).join(" • ")}`, { parse_mode: "Markdown" });
 });
 
-// Surf command - disabled for now
-bot.command("surf", async (ctx) => {
-  await ctx.reply("🏄 Surfing disabled - feature being reworked");
-});
-
-// Forage command - disabled for now
-bot.command("forage", async (ctx) => {
-  await ctx.reply("🌾 Foraging disabled - feature being reworked");
-});
-
 
 // ═══════════════════════════════════════════════════════
 // Inline Keyboard Callback Handlers
@@ -1621,8 +1612,8 @@ ${draftContent.content.slice(0, 2000)}${draftContent.content.length > 2000 ? "..
   if (text === "📅 Queue") {
     // Show golem activity queue from Supabase events
     try {
-      const { createClient } = await import("@supabase/supabase-js");
-      const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
+      const supabase = getSupabase();
+      if (!supabase) { await ctx.reply("📅 Supabase not configured."); return; }
 
       const { data: events } = await supabase
         .from("golem_events")

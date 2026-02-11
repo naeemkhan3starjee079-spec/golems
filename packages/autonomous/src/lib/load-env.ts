@@ -26,8 +26,8 @@ function findPackageRoot(startPath: string): string {
     if (parent === dir) break;
     dir = parent;
   }
-  // Fallback to known location
-  return join(process.env.HOME || "", "Gits/golems/packages/autonomous");
+  // No package.json found — fall back to the starting directory itself
+  return startPath;
 }
 
 let _loaded = false;

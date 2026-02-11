@@ -1,7 +1,7 @@
 import { describe, test, expect, mock, beforeEach, afterEach, spyOn } from "bun:test";
-import * as llm from "../llm";
+import * as llm from "../lib/llm";
 import * as telegramDirect from "../lib/telegram-direct";
-import * as eventLog from "../event-log";
+import * as eventLog from "../lib/event-log";
 import { detectPaymentFailure, sendPaymentAlert } from "../teller-golem/alerts";
 import type { ScoredEmail } from "../teller-golem/types";
 

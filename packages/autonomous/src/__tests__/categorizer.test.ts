@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, mock, beforeEach, afterEach, spyOn } from "bun:test";
-import * as llm from "../llm";
+import * as llm from "../lib/llm";
 import { categorizeExpense, extractVendor } from "../teller-golem/categorizer";
 import type { CategorizedExpense, ScoredEmail } from "../teller-golem/types";
 

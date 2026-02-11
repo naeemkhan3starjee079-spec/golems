@@ -2,19 +2,127 @@
 
 > Each golem becomes a self-contained CC plugin that can be worked on independently, shared with friends, and monetized.
 
-## Progress
+## Progress — Global Sequence
 
-| # | Phase | Folder | Status | Branch | Notes |
-|---|-------|--------|--------|--------|-------|
-| 1 | Extract shared lib | [phase-1-shared-lib](phase-1-shared-lib/) | pending | | Supabase, events, notify, LLM, state, costs |
-| 2 | Decouple golems | [phase-2-decouple-golems](phase-2-decouple-golems/) | pending | | Break cross-golem imports, add status interfaces |
-| 3 | Thin Telegram router | [phase-3-thin-router](phase-3-thin-router/) | pending | | Split 1967-line bot into Composers |
-| 4 | Bun workspaces | [phase-4-bun-workspaces](phase-4-bun-workspaces/) | pending | | Monorepo setup, package.json per golem |
-| 5 | CC plugin packaging | [phase-5-golem-plugins](phase-5-golem-plugins/) | pending | | plugin.json, CLAUDE.md, commands, skills, MCP |
-| 6 | CoachGolem | [phase-6-coach-golem](phase-6-coach-golem/) | pending | | Schedule engine, Google Calendar, nudger |
-| 7 | Services migration | [phase-7-services-migration](phase-7-services-migration/) | pending | | Night Shift, Bedtime Guardian, Briefing, Cloud Worker |
-| 8 | Launchd + infra | [phase-8-launchd-infra](phase-8-launchd-infra/) | pending | | Plists, Dockerfile, Railway, .env, pre-commit |
-| 9 | Distribution + docs | [phase-9-distribution](phase-9-distribution/) | pending | | npm publish, marketplace, docsite, README |
+> After compaction: read this checklist, find the first unchecked item, that's where you are.
+> Branch: check git branch name. Status: check the checkbox below.
+
+### Phase 1: Extract Shared Library — `feature/componentize-phase-1-shared-lib`
+
+- [x] **1.1** [Opus] Create `packages/shared/` scaffold (package.json, src/)
+- [x] **1.2** [Opus] Extract Supabase client factory (12 files) → `src/lib/supabase-factory.ts`
+- [x] **1.3** [Opus] Move event-log.ts → `src/lib/event-log.ts` (10 imports updated)
+- [x] **1.4** Already in `src/lib/telegram-direct.ts` — no move needed
+- [x] **1.5** [Opus] Move llm.ts → `src/lib/llm.ts` (8 imports updated)
+- [x] **1.6** Already in `src/lib/state-store.ts` — no move needed
+- [x] **1.7** Already in `src/lib/cost-tracker.ts` — no move needed
+- [x] **1.8** Routing maps stay in place (email: router.ts, telegram: bot.ts) — unified in Phase 3
+- [x] **1.9** [Opus] Deleted 3 dead items: ollama-wrapper.ts, formatMatchesForTelegram, /surf+/forage stubs. 3 items were false positives.
+- [x] **1.10** [Opus] Fixed load-env.ts — removed hardcoded fallback path, uses startPath instead
+- [x] **1.11** Option 4: email files stay in email-golem/ (domain-specific), teaching.ts already in lib/. Move to packages/ in Phase 4.
+- [x] **1.12** [Opus grep] Verified: no stale imports for event-log, llm, ollama-wrapper, or createClient outside factory+db-client
+- [x] **1.13** [bun test] 890 pass, 0 fail → committed → PR created
+
+### Phase 2: Decouple Golems — `feature/componentize-phase-2-decouple`
+
+- [ ] **2.1** [Gemini] Map ALL cross-golem imports — verify completeness
+- [ ] **2.2** [Cursor work] Break Email↔Teller coupling
+- [ ] **2.3** [Cursor work] Break Job↔Recruiter coupling
+- [ ] **2.4** [Opus] Add `getStatus()` interface to each golem
+- [ ] **2.5** [Opus] Add shared golem-status types → `shared/src/golem-status.ts`
+- [ ] **2.6** [Gemini] Verify zero cross-golem imports remain
+- [ ] **2.7** [Cursor work] Fix cross-golem tests (6 files)
+- [ ] **2.8** [bun test] All tests pass → commit → PR → merge
+
+### Phase 3: Thin Telegram Router — `feature/componentize-phase-3-thin-router`
+
+- [ ] **3.1** [context7] Confirm grammy Composer API patterns
+- [ ] **3.2** [Cursor work] Create JobGolem Composer (~180 lines)
+- [ ] **3.3** [Cursor work] Create RecruiterGolem Composer (~320 lines)
+- [ ] **3.4** [Opus] Create ClaudeGolem Composer (~600 lines)
+- [ ] **3.5** [Cursor work] Extract notification server to standalone
+- [ ] **3.6** [Opus] Reduce telegram-bot.ts to ~300-line thin router
+- [ ] **3.7** [Cursor work] Remove auto-scrape loop from bot
+- [ ] **3.8** [Opus] Update GOLEM_REGISTRY
+- [ ] **3.9** [manual] Test all Telegram commands
+- [ ] **3.10** [bun test] All tests pass → commit → PR → merge
+
+### Phase 4: Bun Workspaces — `feature/componentize-phase-4-workspaces`
+
+- [ ] **4.1** [Opus] Create root workspace config (package.json, tsconfig.base.json)
+- [ ] **4.2** [Cursor work] Create package scaffolds (8 packages)
+- [ ] **4.3** [Cursor work] Move files to new packages (per file move manifest)
+- [ ] **4.4** [Cursor work] Update all imports to `@golems/*`
+- [ ] **4.5** [Opus] Create strangler wrappers in packages/autonomous
+- [ ] **4.6** [Cursor work] Move recruiter tests from non-standard location
+- [ ] **4.7** [bun install] Verify workspace resolution
+- [ ] **4.8** [bun test] All tests pass
+- [ ] **4.9** [Gemini] Verify .gitignore covers all packages
+- [ ] **4.10** Commit → PR → merge
+
+### Phase 5: CC Plugin Packaging — `feature/componentize-phase-5-plugins`
+
+- [ ] **5.1** [Cursor work] Create plugin.json for each golem
+- [ ] **5.2** [Gemini] CC plugin best practices research
+- [ ] **5.3** [Opus] Write CLAUDE.md per golem (persona + capabilities)
+- [ ] **5.4** [Opus] Create commands/ per golem
+- [ ] **5.5** [Opus] Create skills/ per golem
+- [ ] **5.6** [Cursor work] Create .mcp.json per golem
+- [ ] **5.7** [manual] Test each plugin locally
+- [ ] **5.8** [manual] Verify namespaced commands
+- [ ] **5.9** [Opus] Create CLI aliases per golem in .zshrc
+- [ ] **5.10** Commit → PR → merge
+
+### Phase 6: CoachGolem — `feature/componentize-phase-6-coach`
+
+- [ ] **6.1** [Gemini] Google Calendar API patterns research
+- [ ] **6.2** [Cursor work] Google Calendar API client
+- [ ] **6.3** [Cursor work] Schedule engine
+- [ ] **6.4** [Cursor work] Status aggregator
+- [ ] **6.5** [Cursor work] Nudger (morning Telegram)
+- [ ] **6.6** [Cursor work] Tracker (compliance + weekly summary)
+- [ ] **6.7** [Opus] CC plugin structure (commands, skills, CLAUDE.md)
+- [ ] **6.8** [Opus] Wire into morning briefing
+- [ ] **6.9** [manual] Test with real schedule data
+- [ ] **6.10** [bun test] All tests pass → commit → PR → merge
+
+### Phase 7: Services Migration — `feature/componentize-phase-7-services`
+
+- [ ] **7.1** [Cursor work] Move services to packages/services/
+- [ ] **7.2** [Cursor work] Update service imports
+- [ ] **7.3** [Opus] Wire Bedtime Guardian to CoachGolem
+- [ ] **7.4** [Opus] Update cloud-worker.ts entry points
+- [ ] **7.5** [Gemini] Railway workspace Docker best practices
+- [ ] **7.6** [Cursor work] Update Dockerfile
+- [ ] **7.7** [Cursor work] Update railway.json
+- [ ] **7.8** [Opus] Remove strangler wrappers
+- [ ] **7.9** [bun run] Local cloud worker test
+- [ ] **7.10** [/railway deploy] Railway staging test → commit → PR → merge
+
+### Phase 8: Launchd + Infra — `feature/componentize-phase-8-infra`
+
+- [ ] **8.1** [Opus] Update 9 launchd plists
+- [ ] **8.2** [Opus] Consolidate .env strategy
+- [ ] **8.3** [Cursor work] Update pre-commit hook
+- [ ] **8.4** [Cursor work] Update .deepsource.toml
+- [ ] **8.5** [Opus] Update project bindings
+- [ ] **8.6** [Gemini] Verify all runtime state paths
+- [ ] **8.7** [Opus] Update golems CLI (doctor/wizard/status)
+- [ ] **8.8** [manual] Unload/reload launchd plists
+- [ ] **8.9** [manual] 24h smoke test → commit → PR → merge
+
+### Phase 9: Distribution + Docs — `feature/componentize-phase-9-distribution`
+
+- [ ] **9.1** [Cursor work] npm package metadata
+- [ ] **9.2** [Gemini] CC marketplace format research
+- [ ] **9.3** [Cursor work] Bundle shared for CC plugins
+- [ ] **9.4** [Opus] CC marketplace entry
+- [ ] **9.5** [Opus] README per package
+- [ ] **9.6** [Cursor work] Update docsite
+- [ ] **9.7** [Opus] Migration guide
+- [ ] **9.8** [Opus] Update CLAUDE.md files
+- [ ] **9.9** [Opus] Update memory files
+- [ ] **9.10** [bun test + manual] Final verification → commit → PR → merge
 
 ## Priority
 
@@ -61,6 +169,22 @@ golem-name/
 ```
 
 ## Execution Rules
+
+### STOP-ON-BLOCK Policy
+
+This is a critical refactor of the entire codebase. Speed is NOT the priority — correctness is.
+
+1. **Follow the sequence strictly** — Phase 1 before 2, step 1 before step 2. No skipping ahead.
+2. **If blocked, STOP** — don't work around it, don't improvise, don't push through. Stop and notify on Telegram.
+3. **Notify between major steps** — Telegram update after each extraction/move/split completes.
+4. **Blocked = any of these:**
+   - A test fails and the fix isn't obvious
+   - A dependency is missing or an import doesn't resolve
+   - The findings don't match reality (dead code that isn't dead, coupling not documented)
+   - A CLI helper fails or hits rate limits mid-step
+   - Anything that feels wrong or surprising
+5. **When stopped:** Write what happened to `claude.scratchpad.md`, notify on Telegram, wait for human.
+6. **Resume:** Human reviews the blocker, we adjust the plan if needed, then continue.
 
 ### Migration Strategy: Incremental + Strangler Wrappers
 

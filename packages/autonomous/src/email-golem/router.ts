@@ -17,7 +17,7 @@
  * - ClaudeGolem handlers for tech-update/urgent (see CLAUDE.md)
  */
 
-import type { GolemActor } from "../event-log";
+import type { GolemActor } from "../lib/event-log";
 import type { ScoredEmail } from "./types";
 
 /** Canonical golem → category mapping. Single source of truth for routing. */

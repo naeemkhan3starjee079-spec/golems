@@ -73,11 +73,7 @@ async function getBriefing() {
 // ═══════════════════════════════════════════════════════
 
 async function getServiceRunReporter() {
-  const { createClient } = await import("@supabase/supabase-js");
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
-  if (!url || !key) return null;
-  return createClient(url, key);
+  return (await import("./lib/supabase-factory")).getSupabase();
 }
 
 async function safeRun(name: string, fn: () => Promise<unknown>): Promise<void> {

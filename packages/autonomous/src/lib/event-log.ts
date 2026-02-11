@@ -15,26 +15,13 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
 import { dirname, join } from "path";
 import { randomUUID } from "crypto";
 import { homedir } from "os";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { getSupabase } from "./supabase-factory";
 
 // Default event log path
 const DEFAULT_EVENT_LOG_PATH = join(homedir(), ".golems-zikaron", "event-log.json");
 
 // Maximum events to keep
 const MAX_EVENTS = 100;
-
-// ─── Supabase (persistent storage for dashboard) ─────────────────
-
-let _supabase: SupabaseClient | null = null;
-
-function getSupabase(): SupabaseClient | null {
-  if (_supabase) return _supabase;
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
-  if (!url || !key) return null;
-  _supabase = createClient(url, key);
-  return _supabase;
-}
 
 /**
  * Fire-and-forget insert to Supabase golem_events table.

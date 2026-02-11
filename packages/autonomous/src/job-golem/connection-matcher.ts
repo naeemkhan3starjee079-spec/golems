@@ -5,7 +5,7 @@
  * Finds warm intros: "Your connection X works at company Y which is hiring for Z."
  */
 
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "../lib/supabase-factory";
 
 /** Company name suffixes to strip for matching */
 const COMPANY_SUFFIXES = [

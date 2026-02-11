@@ -9,7 +9,7 @@
  * - Notes on what to mention/avoid
  */
 
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "../lib/supabase-factory";
 import { getOutreachStyleGuidelines, getStyleAppropriateGreeting, getStyleAppropriateSignOff, type StyleGuidelines } from "./style-adapter";
 import { getDefaultProfile, type UserProfile } from "./outreach";
 

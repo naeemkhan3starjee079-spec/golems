@@ -17,23 +17,15 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { existsSync, readFileSync, readdirSync } from "fs";
 import { join } from "path";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { getSupabaseAnon } from "../lib/supabase-factory";
 import { loadScrapedJobs, type JobListing } from "./scraper";
 import { getActiveCompanies, getOutreachCandidates } from "./watchlist";
 import { matchJobsToConnections } from "./connection-matcher";
 import { createAndSaveDraft, getOutreachDrafts, updateDraftStatus } from "../recruiter-golem/draft-outreach";
 import { getFullUsageStats, getSupabaseUsageStats, readCostLog, readFromSupabase, groupByDay, formatDaily, CC_SUBSCRIPTION_MONTHLY } from "../lib/cost-tracker";
 
-// Lazy Supabase client for dashboard-integrated tools
-let _supabase: SupabaseClient | null = null;
-function getSupabase(): SupabaseClient | null {
-  if (_supabase) return _supabase;
-  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) return null;
-  _supabase = createClient(url, key);
-  return _supabase;
-}
+// Use shared factory — anon key for RLS-respecting queries
+const getSupabase = getSupabaseAnon;
 
 const RESULTS_DIR =
   process.env.HOME + "/.golems-zikaron/job-golem/results";

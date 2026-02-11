@@ -12,7 +12,7 @@
  * - 1-4: IGNORE (newsletters, promos, spam)
  */
 
-import { runLLMJSON } from "../llm";
+import { runLLMJSON } from "../lib/llm";
 
 /** Raw email input for scoring */
 export interface EmailInput {

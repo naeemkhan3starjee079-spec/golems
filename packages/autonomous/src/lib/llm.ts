@@ -9,9 +9,9 @@
  * Consumers call runLLM/runLLMJSON regardless of backend.
  */
 
-import * as directOllama from "./ollama-helper";
-import * as sandboxedOllama from "./ollama-sandboxed";
-import { runHaiku, runHaikuJSON } from "./lib/cloud-llm";
+import * as directOllama from "../ollama-helper";
+import * as sandboxedOllama from "../ollama-sandboxed";
+import { runHaiku, runHaikuJSON } from "./cloud-llm";
 
 const LLM_BACKEND = process.env.LLM_BACKEND || "ollama";
 const USE_SANDBOX = process.env.OLLAMA_SANDBOXED === "1";

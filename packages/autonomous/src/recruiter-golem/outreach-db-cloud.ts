@@ -5,7 +5,7 @@
  * Active when STATE_BACKEND=supabase.
  */
 
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { getSupabase, type SupabaseClient } from "../lib/supabase-factory";
 import type {
   Contact,
   ContactSource,
@@ -19,18 +19,12 @@ import type {
   SaveCompanyResearchInput,
 } from "./outreach-db";
 
-let supabase: SupabaseClient | null = null;
-
 function getClient(): SupabaseClient {
-  if (!supabase) {
-    const url = process.env.SUPABASE_URL;
-    const key = process.env.SUPABASE_SERVICE_KEY;
-    if (!url || !key) {
-      throw new Error("SUPABASE_URL and SUPABASE_SERVICE_KEY required for cloud outreach-db");
-    }
-    supabase = createClient(url, key);
+  const client = getSupabase();
+  if (!client) {
+    throw new Error("SUPABASE_URL and SUPABASE_SERVICE_KEY required for cloud outreach-db");
   }
-  return supabase;
+  return client;
 }
 
 // ============ Contact Functions ============

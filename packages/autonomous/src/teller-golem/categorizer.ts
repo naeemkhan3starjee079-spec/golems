@@ -5,7 +5,7 @@
  * IRS Schedule C tax categories.
  */
 
-import { runLLMJSON } from "../llm";
+import { runLLMJSON } from "../lib/llm";
 import type { CategorizedExpense, ScoredEmail, TaxCategory } from "./types";
 
 /** Valid IRS Schedule C expense categories */

@@ -16,7 +16,7 @@
 
 import { readFileSync, existsSync, appendFileSync, mkdirSync } from "fs";
 import { join, dirname } from "path";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { getSupabase } from "./supabase-factory";
 
 // ─── Types ─────────────────────────────────────────────────────────
 
@@ -67,17 +67,6 @@ export interface FullUsageStats {
 }
 
 // ─── Supabase (persistent storage) ────────────────────────────────
-
-let _supabase: SupabaseClient | null = null;
-
-function getSupabase(): SupabaseClient | null {
-  if (_supabase) return _supabase;
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
-  if (!url || !key) return null;
-  _supabase = createClient(url, key);
-  return _supabase;
-}
 
 /**
  * Fire-and-forget insert to Supabase llm_usage table.

@@ -16,8 +16,8 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
 import { join, dirname } from "path";
 import { homedir } from "os";
 import { randomUUID } from "crypto";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import type { GolemActor, EventType, GolemEvent } from "../event-log";
+import { getSupabase, type SupabaseClient } from "./supabase-factory";
+import type { GolemActor, EventType, GolemEvent } from "./event-log";
 
 const STATE_BACKEND = process.env.STATE_BACKEND || "file";
 
@@ -29,21 +29,14 @@ const SEEN_JOBS_FILE = join(GOLEMS_DIR, "job-golem", "seen-jobs.json");
 
 const MAX_EVENTS = 100;
 
-// Supabase client (lazy init)
-let supabase: SupabaseClient | null = null;
-
-function getSupabase(): SupabaseClient {
-  if (!supabase) {
-    const url = process.env.SUPABASE_URL;
-    const key = process.env.SUPABASE_SERVICE_KEY;
-    if (!url || !key) {
-      throw new Error(
-        "SUPABASE_URL and SUPABASE_SERVICE_KEY required when STATE_BACKEND=supabase"
-      );
-    }
-    supabase = createClient(url, key);
+function getSupabaseOrThrow(): SupabaseClient {
+  const client = getSupabase();
+  if (!client) {
+    throw new Error(
+      "SUPABASE_URL and SUPABASE_SERVICE_KEY required when STATE_BACKEND=supabase"
+    );
   }
-  return supabase;
+  return client;
 }
 
 function ensureDir(filePath: string) {
@@ -60,7 +53,7 @@ function ensureDir(filePath: string) {
 /** Get a state value by key */
 export async function getState<T = unknown>(key: string): Promise<T | null> {
   if (STATE_BACKEND === "supabase") {
-    const { data, error } = await getSupabase()
+    const { data, error } = await getSupabaseOrThrow()
       .from("golem_state")
       .select("value")
       .eq("key", key)
@@ -83,7 +76,7 @@ export async function getState<T = unknown>(key: string): Promise<T | null> {
 /** Set a state value by key */
 export async function setState<T = unknown>(key: string, value: T): Promise<void> {
   if (STATE_BACKEND === "supabase") {
-    const { error } = await getSupabase()
+    const { error } = await getSupabaseOrThrow()
       .from("golem_state")
       .upsert({ key, value, updated_at: new Date().toISOString() });
 
@@ -117,7 +110,7 @@ export async function logEvent(
   actor: GolemActor = "claudegolem"
 ): Promise<void> {
   if (STATE_BACKEND === "supabase") {
-    const { error } = await getSupabase()
+    const { error } = await getSupabaseOrThrow()
       .from("golem_events")
       .insert({ actor, type, data, created_at: new Date().toISOString() });
 
@@ -155,7 +148,7 @@ export async function logEvent(
 export async function getRecentEvents(hours: number = 24): Promise<GolemEvent[]> {
   if (STATE_BACKEND === "supabase") {
     const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
-    const { data, error } = await getSupabase()
+    const { data, error } = await getSupabaseOrThrow()
       .from("golem_events")
       .select("id, actor, type, data, created_at")
       .gte("created_at", cutoff)
@@ -192,7 +185,7 @@ export async function getRecentEvents(hours: number = 24): Promise<GolemEvent[]>
 /** Check if a job has been seen */
 export async function isJobSeen(jobId: string): Promise<boolean> {
   if (STATE_BACKEND === "supabase") {
-    const { data } = await getSupabase()
+    const { data } = await getSupabaseOrThrow()
       .from("golem_seen_jobs")
       .select("job_id")
       .eq("job_id", jobId)
@@ -214,7 +207,7 @@ export async function isJobSeen(jobId: string): Promise<boolean> {
 /** Mark a job as seen */
 export async function markJobSeen(jobId: string): Promise<void> {
   if (STATE_BACKEND === "supabase") {
-    const { error } = await getSupabase()
+    const { error } = await getSupabaseOrThrow()
       .from("golem_seen_jobs")
       .upsert({ job_id: jobId, seen_at: new Date().toISOString() });
 
@@ -243,7 +236,7 @@ export async function markJobSeen(jobId: string): Promise<void> {
 export async function markJobsSeen(jobIds: string[]): Promise<void> {
   if (STATE_BACKEND === "supabase") {
     const rows = jobIds.map((id) => ({ job_id: id, seen_at: new Date().toISOString() }));
-    const { error } = await getSupabase()
+    const { error } = await getSupabaseOrThrow()
       .from("golem_seen_jobs")
       .upsert(rows);
 
@@ -286,7 +279,8 @@ export async function reportServiceRun(key: string): Promise<void> {
   if (!url || !serviceKey) return;
 
   try {
-    const client = STATE_BACKEND === "supabase" ? getSupabase() : createClient(url, serviceKey);
+    const client = getSupabase();
+    if (!client) return;
     const { error } = await client.from("golem_state").upsert({
       key,
       value: new Date().toISOString(),
@@ -304,7 +298,7 @@ export async function reportServiceRun(key: string): Promise<void> {
 /** Get all seen job IDs (for compatibility with Set-based scraper) */
 export async function getSeenJobIds(): Promise<Set<string>> {
   if (STATE_BACKEND === "supabase") {
-    const { data } = await getSupabase()
+    const { data } = await getSupabaseOrThrow()
       .from("golem_seen_jobs")
       .select("job_id");
 

@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, mock, beforeEach, afterEach, spyOn } from "bun:test";
-import * as llm from "../../llm";
+import * as llm from "../../lib/llm";
 import { scoreEmail, scoreEmails, extractSubscriptionInfo, SCORE_THRESHOLDS } from "../../email-golem/scorer";
 import type { EmailInput, ScoredEmail } from "../../email-golem/scorer";
 

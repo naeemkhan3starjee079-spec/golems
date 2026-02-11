@@ -9,7 +9,7 @@
 import { readFileSync, existsSync } from "fs";
 import { join } from "path";
 import type { JobListing } from "./scraper";
-import { forJobGolem } from "../llm";
+import { forJobGolem } from "../lib/llm";
 
 // Try multiple paths — import.meta.dir can differ between local/Railway/compiled
 const PROFILE_CANDIDATES = [

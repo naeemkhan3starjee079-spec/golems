@@ -8,7 +8,9 @@
 // IMPORTANT: Load env FIRST - fixes launchd cwd issues
 import "../lib/load-env";
 
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { getSupabase } from '../lib/supabase-factory';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { dirname } from 'path';
 import type { Email, Subscription, Payment, QueuedItem, SubscriptionSummary, SafeResult } from './types';
@@ -18,19 +20,18 @@ import { GOLEM_CATEGORIES } from './router';
 export const OFFLINE_QUEUE_PATH = process.env.HOME + '/.golems-zikaron/offline-queue.json';
 
 /**
- * Create Supabase client with credentials from env or custom config
+ * Create Supabase client with credentials from env or custom config.
+ * Uses shared factory for default case, custom createClient for overrides.
  */
 export function createDbClient(config?: { url: string; key: string }): SupabaseClient {
-  const url = config?.url || process.env.SUPABASE_URL;
-  // SECURITY: Use service_role key only (server-only, bypasses RLS)
-  // Anon key is blocked by RLS - do NOT fall back to it
-  const key = config?.key || process.env.SUPABASE_SERVICE_KEY;
-
-  if (!url || !key) {
+  if (config) {
+    return createClient(config.url, config.key);
+  }
+  const client = getSupabase();
+  if (!client) {
     throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_KEY in environment');
   }
-
-  return createClient(url, key);
+  return client;
 }
 
 /**

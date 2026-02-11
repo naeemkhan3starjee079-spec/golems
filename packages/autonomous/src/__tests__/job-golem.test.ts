@@ -14,7 +14,7 @@ const TEST_EVENT_LOG = "/tmp/golems-zikaron-test/job-golem/event-log.json";
 
 // Import will fail initially if code not implemented
 import { loadScrapedJobs, type JobListing, scrapeGreenhouse, scrapeLever } from "../job-golem/scraper";
-import { logEvent, type GolemEvent } from "../event-log";
+import { logEvent, type GolemEvent } from "../lib/event-log";
 
 describe("Job Golem - loadScrapedJobs()", () => {
   const TEST_JOBS_FILE = join(TEST_DIR, "scraped-jobs.json");
