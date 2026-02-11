@@ -1880,7 +1880,7 @@ async function sendNotificationToTelegram(data: {
 }
 
 // Start HTTP server for receiving notifications from hooks
-Bun.serve({
+const notifyServer = Bun.serve({
   port: NOTIFY_PORT,
   hostname: "127.0.0.1", // Bind to localhost only — prevents network exposure
   fetch: async (req) => {
@@ -1948,3 +1948,19 @@ bot.start({
     console.log(`✅ @${botInfo.username} running`);
   },
 });
+
+// Graceful shutdown — release port 3847 before exit so KeepAlive restarts cleanly
+async function gracefulShutdown(signal: string) {
+  console.log(`[Shutdown] ${signal} received, cleaning up...`);
+  try {
+    await bot.stop();
+    await notifyServer.stop(true);
+    console.log("[Shutdown] Server and bot stopped cleanly");
+  } catch (err) {
+    console.error("[Shutdown] Error during cleanup:", err);
+  }
+  process.exit(0);
+}
+
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
