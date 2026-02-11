@@ -1,8 +1,23 @@
 {
   "name": "@golems/content",
   "version": "1.0.0",
+  "description": "ContentGolem — content creation and publishing for LinkedIn, Soltome, and ghostwriting with critique-wave refinement.",
+  "author": "Etan Heyman <etan@heyman.net>",
+  "license": "MIT",
   "private": true,
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/EtanHey/golems",
+    "directory": "packages/content"
+  },
+  "keywords": [
+    "golems",
+    "ai-agent",
+    "content-creation",
+    "linkedin",
+    "publishing"
+  ],
   "exports": {
     "./*": "./src/*.ts"
   },

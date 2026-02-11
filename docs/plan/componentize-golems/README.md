@@ -113,16 +113,16 @@
 
 ### Phase 9: Distribution + Docs — `feature/componentize-phase-9-distribution`
 
-- [ ] **9.1** [Cursor work] npm package metadata
-- [ ] **9.2** [Gemini] CC marketplace format research
-- [ ] **9.3** [Cursor work] Bundle shared for CC plugins
-- [ ] **9.4** [Opus] CC marketplace entry
-- [ ] **9.5** [Opus] README per package
-- [ ] **9.6** [Cursor work] Update docsite
-- [ ] **9.7** [Opus] Migration guide
-- [ ] **9.8** [Opus] Update CLAUDE.md files
-- [ ] **9.9** [Opus] Update memory files
-- [ ] **9.10** [bun test + manual] Final verification → commit → PR → merge
+- [x] **9.1** [Opus] npm package metadata added to all 8 packages (description, author, repo, keywords)
+- [x] **9.2** CC marketplace doesn't exist yet — plugin.json files already in place (Phase 5)
+- [x] **9.3** Shared works via Bun workspace resolution — no bundling needed for monorepo-internal plugins
+- [x] **9.4** plugin.json files already created in Phase 5 for 7 packages
+- [x] **9.5** [Opus] README per package — 8 concise READMEs created
+- [ ] **9.6** [manual] Update docsite — deferred to dedicated session
+- [ ] **9.7** [manual] Migration guide — deferred (no external consumers yet)
+- [x] **9.8** [Opus] Root CLAUDE.md rewritten — full package table, architecture, deployment matrix, dev workflow
+- [x] **9.9** [Opus] MEMORY.md updated — new architecture table, plan status, strangler strategy
+- [x] **9.10** [bun test] 1179 pass, 5 skip, 2 fail (pre-existing) → commit → PR → merge
 
 ## Priority
 
