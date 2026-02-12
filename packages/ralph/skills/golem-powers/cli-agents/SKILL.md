@@ -1,6 +1,6 @@
 ---
 name: cli-agents
-description: Run external CLI agents (Gemini, Cursor, Codex, Kiro) for research AND implementation. Research mode captures text output. Work mode lets cursor/codex modify files directly — use for parallel implementation instead of Claude subagents.
+description: Run external CLI agents (Gemini, Cursor, Codex, Kiro, Kilo) for research AND implementation. Research mode captures text output. Work mode lets cursor/codex/kilo modify files directly — use for parallel implementation instead of Claude subagents.
 ---
 
 # CLI Agents Skill
@@ -77,12 +77,13 @@ Bash(cd /repo && ~/.claude/commands/golem-powers/cli-agents/scripts/run.sh --wor
 
 ## Agent Capabilities
 
-| Agent | Model | Research | Work | Cost |
-|-------|-------|----------|------|------|
-| `gemini` | Gemini 2.5 Pro | Yes | No (text-only) | Free (1K/day) |
-| `cursor` | GPT-5.2 Codex XHigh | Yes | **Yes** | Cursor Pro ($20/mo) |
-| `codex` | OpenAI Codex | Yes | **Yes** | ChatGPT Plus |
-| `kiro` | Kiro 1.24 | Yes | No (text-only) | Free tier |
+| Agent | Model | Research | Work | Cost | Safety |
+|-------|-------|----------|------|------|--------|
+| `gemini` | Gemini 2.5 Pro | Yes | No (text-only) | Free (1K/day) | Cloud |
+| `cursor` | GPT-5.2 Codex XHigh | Yes | **Yes** | Cursor Pro ($20/mo) | Cloud |
+| `codex` | OpenAI Codex | Yes | **Yes** | ChatGPT Plus | Cloud |
+| `kiro` | Kiro 1.24 | Yes | No (text-only) | Free tier | Cloud |
+| `kilo` | Qwen3-Coder (free) | Yes | **Yes** | Free (Kilo Gateway) | **Blocked from golems** |
 
 ## Rules
 
@@ -100,3 +101,5 @@ Bash(cd /repo && ~/.claude/commands/golem-powers/cli-agents/scripts/run.sh --wor
 |-----|---------|---------|
 | `CURSOR_MODEL` | `gpt-5.2-codex-xhigh` | Override cursor model |
 | `CODEX_BIN` | `codex` | Path to codex binary |
+| `KILO_BIN` | `~/.nvm/.../bin/kilo` | Path to kilo binary |
+| `KILO_MODEL` | `kilo/qwen/qwen3-coder:free` | Override kilo model |

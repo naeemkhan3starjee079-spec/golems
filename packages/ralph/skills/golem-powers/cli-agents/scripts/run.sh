@@ -11,7 +11,9 @@
 #   run.sh <agent> @/tmp/my-prompt.txt [output-file]
 #   run.sh --work cursor @/tmp/my-prompt.txt [log-file]
 #
-# Agents: gemini, cursor, codex, kiro
+# Agents: gemini, cursor, codex, kiro, kilo
+#
+# SAFETY: kilo has full file access — blocked from golems/personal dirs
 
 set -euo pipefail
 
@@ -26,7 +28,7 @@ while [[ "${1:-}" == --* ]]; do
   esac
 done
 
-AGENT="${1:?Usage: run.sh [--work] <gemini|cursor|codex|kiro> \"prompt\" [output-file]}"
+AGENT="${1:?Usage: run.sh [--work] <gemini|cursor|codex|kiro|kilo> \"prompt\" [output-file]}"
 PROMPT_ARG="${2:?Missing prompt}"
 OUTPUT="${3:-/tmp/cli-agent-${AGENT}-$(date +%s).md}"
 
@@ -89,9 +91,33 @@ case "$AGENT" in
     kiro-cli chat --no-interactive "$PROMPT" 2>/dev/null | sed 's/\x1b\[[0-9;]*[a-zA-Z]//g; s/\x1b\[[0-9;]*m//g; s/^> //' > "$OUTPUT"
     ;;
 
+  kilo)
+    KILO_BIN="${KILO_BIN:-/Users/etanheyman/.nvm/versions/node/v22.22.0/bin/kilo}"
+    KILO_MODEL="${KILO_MODEL:-kilo/qwen/qwen3-coder:free}"
+
+    # SAFETY CHECK: block kilo from accessing golems/personal directories
+    CURRENT_DIR="$(pwd)"
+    BLOCKED_PATTERNS="golems|\.claude|\.golems-zikaron|\.local/share/zikaron"
+    if echo "$CURRENT_DIR" | grep -qE "$BLOCKED_PATTERNS"; then
+      echo "=== SAFETY BLOCK ===" >&2
+      echo "Kilo is blocked from running in: $CURRENT_DIR" >&2
+      echo "Kilo sends code to external APIs — only use in non-sensitive projects" >&2
+      echo "Allowed: ~/Gits/songscript, ~/Gits/domica, ~/Gits/union, ~/Gits/rudy" >&2
+      exit 1
+    fi
+
+    echo "WARNING: Kilo sends code to external APIs. Current dir: $CURRENT_DIR" >&2
+
+    if [[ "$MODE" == "work" ]]; then
+      $KILO_BIN run -m "$KILO_MODEL" "$PROMPT" > "$OUTPUT" 2>&1
+    else
+      $KILO_BIN run -m "$KILO_MODEL" "$PROMPT" > "$OUTPUT" 2>&1
+    fi
+    ;;
+
   *)
     echo "Unknown agent: ${AGENT}" >&2
-    echo "Available: gemini, cursor, codex, kiro" >&2
+    echo "Available: gemini, cursor, codex, kiro, kilo" >&2
     exit 1
     ;;
 esac

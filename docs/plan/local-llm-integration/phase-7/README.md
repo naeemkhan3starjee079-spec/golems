@@ -73,13 +73,14 @@ Kilo Code CLI is **confirmed real** — launched Feb 3, 2026:
 ## Status
 
 - [x] Research Kilo CLI (deep research — confirmed real)
-- [ ] Install Kilo CLI
-- [ ] Test non-interactive mode
-- [ ] Test model selection
-- [ ] Add to cli-agents skill
-- [ ] Implement KILO_SAFE_DIRS check
-- [ ] Add warning banner
-- [ ] Write kilo-safety.md rule
-- [ ] Consider Qwen Code + Aider additions
-- [ ] Update memory/cli-agents.md
-- [ ] Test on non-sensitive project
+- [x] Install Kilo CLI (`npm i -g @kilocode/cli` → v1.0.16)
+- [x] Test non-interactive mode (`kilo run -m model "prompt"`)
+- [x] Test model selection (`kilo models` → 30+ free models available)
+- [x] Add to cli-agents skill (run.sh + SKILL.md)
+- [x] Implement KILO_SAFE_DIRS check (blocks golems/personal dirs)
+- [x] Add warning banner (prints WARNING when kilo selected)
+- [x] Write kilo-safety.md rule (`.claude/rules/kilo-safety.md`)
+- [ ] Kilo auth login — **needs user** (opens browser for OAuth)
+- [ ] Consider Qwen Code + Aider additions (deferred — Kilo covers the use case)
+- [x] Update memory/cli-agents.md
+- [ ] Test on non-sensitive project (after auth setup)
