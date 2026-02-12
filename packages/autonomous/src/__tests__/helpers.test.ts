@@ -119,7 +119,7 @@ describe("helpers rate limiting", () => {
       const now = new Date("2026-02-07T14:30:00Z");
       const status = getHelperStatus(now);
 
-      expect(Object.keys(status)).toEqual(["gemini", "kiro", "codex", "cursor", "haiku"]);
+      expect(Object.keys(status)).toEqual(["gemini", "kiro", "codex", "cursor", "glm", "haiku"]);
     });
 
     test("all available by default", () => {
@@ -168,7 +168,7 @@ describe("helpers rate limiting", () => {
 
     test("all backends can be limited", () => {
       const now = new Date("2026-02-07T14:30:00Z");
-      const backends: HelperBackend[] = ["gemini", "kiro", "codex", "cursor", "haiku"];
+      const backends: HelperBackend[] = ["gemini", "kiro", "codex", "cursor", "glm", "haiku"];
 
       for (const b of backends) {
         helperLimitReached(b, now);

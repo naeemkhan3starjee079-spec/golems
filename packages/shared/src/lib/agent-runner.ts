@@ -389,6 +389,7 @@ const HELPER_BINARIES: Record<HelperBackend, string> = {
   cursor: "cursor",
   codex: "codex",
   kiro: "kiro-cli",
+  glm: "", // Local Ollama API — no CLI binary
   haiku: "", // API-based, no binary
 };
 

@@ -132,12 +132,13 @@
 |------|-------|--------|
 | Create glm-llm.ts (Ollama HTTP, model glm-4.7-flash) | Cursor | Done |
 | Add LLM_BACKEND=glm to llm.ts | Cursor | Done |
-| Update helpers.ts fallback chain (glm before haiku) | — | Pending |
-| Update exploration.ts with glm agent | — | Pending |
-| Update agent-runner.ts with glm option | — | Pending |
-| Decide thread-compactor routing | — | Pending |
-| Update .env.example | — | Pending |
-| Test email + job scoring | — | Pending |
+| Update helpers.ts fallback chain (glm before haiku) | Claude | Done |
+| Update exploration.ts with glm agent | Claude | Done |
+| Update agent-runner.ts with glm option | Claude | Done |
+| Update tests (helpers.test.ts, agent-runner.test.ts) | Claude | Done |
+| Decide thread-compactor routing | — | Deferred (separate concern) |
+| Set LLM_BACKEND=glm in .env | User | Pending (gitignored) |
+| Test email + job scoring with GLM | — | Integration (after merge) |
 
 ## Cursor Implementation Notes (2026-02-12)
 

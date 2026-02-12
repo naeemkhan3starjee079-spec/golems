@@ -61,7 +61,7 @@ describe("Agent Runner", () => {
     });
 
     it("works with all helper backends", () => {
-      const helperBackends: AgentBackend[] = ["gemini", "kiro", "codex", "cursor", "haiku"];
+      const helperBackends: AgentBackend[] = ["gemini", "kiro", "codex", "cursor", "glm", "haiku"];
       for (const backend of helperBackends) {
         const result: AgentRunResult = { output: "", success: true, backend };
         expect(result.backend).toBe(backend);
@@ -105,7 +105,7 @@ describe("Agent Runner", () => {
     });
 
     it("returns only AgentBackend values", () => {
-      const validBackends = new Set(["gemini", "cursor", "codex", "kiro", "haiku", "ollama", "claude"]);
+      const validBackends = new Set(["gemini", "cursor", "codex", "kiro", "glm", "haiku", "ollama", "claude"]);
       const backends = getAvailableBackends();
       for (const b of backends) {
         expect(validBackends.has(b)).toBe(true);

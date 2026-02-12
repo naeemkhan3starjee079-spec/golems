@@ -51,10 +51,11 @@ Add `LLM_BACKEND=glm` option so all local Mac processes use Ollama GLM-4.7-Flash
 
 - [x] Create glm-llm.ts (Cursor)
 - [x] Update llm.ts backend switch (Cursor)
-- [ ] Update helpers.ts fallback chain
-- [ ] Update exploration.ts
-- [ ] Update agent-runner.ts
-- [ ] Update .env.example
-- [ ] Update launchd plists
-- [ ] Test email + job scoring
-- [ ] Verify cost tracking
+- [x] Update helpers.ts fallback chain (glm between cursor and haiku)
+- [x] Update exploration.ts (glm agent via curl + Ollama HTTP)
+- [x] Update agent-runner.ts (glm in HELPER_BINARIES)
+- [x] Update tests (helpers.test.ts, agent-runner.test.ts)
+- [x] All 1179 tests pass
+- [ ] Update .env with LLM_BACKEND=glm (user action — .env is gitignored)
+- [ ] Test email + job scoring with GLM backend (integration test)
+- [ ] Verify cost tracking logs GLM as tier: "free"

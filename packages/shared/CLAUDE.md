@@ -51,9 +51,18 @@ import { getSupabase } from "@golems/shared/lib/supabase-factory";
 ```
 
 ### `lib/llm`
-Multi-backend LLM runner. Switch via `LLM_BACKEND` env var.
+Multi-backend LLM runner. Switch via `LLM_BACKEND` env var (`ollama` | `glm` | `haiku`).
 ```typescript
-import { runLLMJSON, runLLMText } from "@golems/shared/lib/llm";
+import { runLLM, runLLMJSON } from "@golems/shared/lib/llm";
+```
+- `ollama` (default): Local Ollama CLI, model from `OLLAMA_MODEL` env
+- `glm`: GLM-4.7-Flash via Ollama HTTP (free, local, 127.0.0.1:11434)
+- `haiku`: Claude Haiku 4.5 via Anthropic API (paid)
+
+### `lib/glm-llm`
+GLM-4.7-Flash backend via Ollama HTTP. Used when `LLM_BACKEND=glm`.
+```typescript
+import { runGLM, runGLMJSON } from "@golems/shared/lib/glm-llm";
 ```
 
 ### `lib/telegram-direct`

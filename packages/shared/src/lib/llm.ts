@@ -12,12 +12,15 @@
 import * as directOllama from "./ollama-helper";
 import * as sandboxedOllama from "./ollama-sandboxed";
 import { runHaiku, runHaikuJSON } from "./cloud-llm";
+import { runGLM, runGLMJSON } from "./glm-llm";
 
 const LLM_BACKEND = process.env.LLM_BACKEND || "ollama";
 const USE_SANDBOX = process.env.OLLAMA_SANDBOXED === "1";
 
 if (LLM_BACKEND === "haiku") {
   console.log("[LLM] Using HAIKU mode (Anthropic API)");
+} else if (LLM_BACKEND === "glm") {
+  console.log("[LLM] Using GLM mode (glm-4.7-flash via Ollama)");
 } else if (USE_SANDBOX) {
   console.log("[LLM] Using SANDBOXED Ollama mode (validation queue)");
 } else {
@@ -28,11 +31,16 @@ if (LLM_BACKEND === "haiku") {
  * Run an LLM prompt. Backend determined by LLM_BACKEND env var.
  *
  * - "haiku": Claude Haiku 4.5 via Anthropic SDK
+ * - "glm": GLM-4.7-Flash via Ollama HTTP (local, free)
  * - "ollama" (default): Local Ollama, optionally sandboxed
  */
 export async function runLLM(prompt: string, source = "unknown"): Promise<string> {
   if (LLM_BACKEND === "haiku") {
     return runHaiku(prompt, source);
+  }
+
+  if (LLM_BACKEND === "glm") {
+    return runGLM(prompt, source);
   }
 
   if (USE_SANDBOX) {
@@ -56,6 +64,10 @@ export async function runLLM(prompt: string, source = "unknown"): Promise<string
 export async function runLLMJSON<T>(prompt: string, source = "unknown"): Promise<T | null> {
   if (LLM_BACKEND === "haiku") {
     return runHaikuJSON<T>(prompt, source);
+  }
+
+  if (LLM_BACKEND === "glm") {
+    return runGLMJSON<T>(prompt, source);
   }
 
   const result = await runLLM(prompt, source);

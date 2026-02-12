@@ -19,6 +19,11 @@
     "limited_at": null,
     "resets_at": null
   },
+  "glm": {
+    "limited": false,
+    "limited_at": null,
+    "resets_at": null
+  },
   "haiku": {
     "limited": false,
     "limited_at": null,

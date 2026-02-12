@@ -13,7 +13,7 @@ import { execSync } from "child_process";
 // Types
 // ---------------------------------------------------------------------------
 
-export type ExplorationAgent = "gemini" | "cursor" | "codex" | "kiro" | "haiku";
+export type ExplorationAgent = "gemini" | "cursor" | "codex" | "kiro" | "glm" | "haiku";
 
 export interface ExplorationPrompt {
   id: string;
@@ -69,6 +69,7 @@ const AGENT_COMMANDS: Record<ExplorationAgent, string> = {
   cursor: 'cursor agent "{prompt}" --output-format text 2>/dev/null',
   codex: '~/.nvm/versions/node/v22.22.0/bin/codex exec --full-auto "{prompt}" 2>/dev/null',
   kiro: 'kiro agent "{prompt}" 2>/dev/null',
+  glm: 'curl -s http://127.0.0.1:11434/api/generate -d \'{"model":"glm-4.7-flash","prompt":"{prompt}","stream":false}\' | jq -r .response 2>/dev/null',
   haiku: 'echo "{prompt}" | claude --model claude-haiku-4-5-20251001 --print 2>/dev/null',
 };
 
@@ -191,6 +192,7 @@ export function isAgentAvailable(agent: ExplorationAgent): boolean {
     cursor: "which cursor 2>/dev/null",
     codex: "ls ~/.nvm/versions/node/v22.22.0/bin/codex 2>/dev/null",
     kiro: "which kiro 2>/dev/null",
+    glm: "curl -sf http://127.0.0.1:11434/api/tags >/dev/null 2>&1",
     haiku: "which claude 2>/dev/null",
   };
   try {
@@ -202,7 +204,7 @@ export function isAgentAvailable(agent: ExplorationAgent): boolean {
 }
 
 export function getAvailableAgents(): ExplorationAgent[] {
-  const agents: ExplorationAgent[] = ["gemini", "cursor", "codex", "kiro", "haiku"];
+  const agents: ExplorationAgent[] = ["gemini", "cursor", "codex", "kiro", "glm", "haiku"];
   return agents.filter(isAgentAvailable);
 }
 

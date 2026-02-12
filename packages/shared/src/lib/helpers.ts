@@ -6,10 +6,11 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
 import { join } from "path";
 import { runHaiku as runCloudLLM } from "./cloud-llm";
+import { runGLM as runLocalGLM } from "./glm-llm";
 import { logCost } from "./cost-tracker";
 
 /** Available external CLI helper backends */
-export type HelperBackend = "gemini" | "cursor" | "codex" | "kiro" | "haiku";
+export type HelperBackend = "gemini" | "cursor" | "codex" | "kiro" | "glm" | "haiku";
 
 /** Result from running an external helper */
 export interface HelperResult {
@@ -35,10 +36,10 @@ interface RateLimitEntry {
 
 type RateLimitsFile = Record<HelperBackend, RateLimitEntry>;
 
-const ALL_BACKENDS: HelperBackend[] = ["gemini", "kiro", "codex", "cursor", "haiku"];
+const ALL_BACKENDS: HelperBackend[] = ["gemini", "kiro", "codex", "cursor", "glm", "haiku"];
 
 /** Default fallback order when a backend is rate-limited */
-export const FALLBACK_CHAIN: HelperBackend[] = ["gemini", "kiro", "codex", "cursor", "haiku"];
+export const FALLBACK_CHAIN: HelperBackend[] = ["gemini", "kiro", "codex", "cursor", "glm", "haiku"];
 
 function getStateDir(): string {
   return process.env.GOLEMS_STATE_DIR || join(process.env.HOME || "~", ".golems-zikaron");
@@ -55,6 +56,7 @@ function readRateLimits(): RateLimitsFile {
     kiro: { limited: false, limited_at: null, resets_at: null },
     codex: { limited: false, limited_at: null, resets_at: null },
     cursor: { limited: false, limited_at: null, resets_at: null },
+    glm: { limited: false, limited_at: null, resets_at: null },
     haiku: { limited: false, limited_at: null, resets_at: null },
   };
   try {
@@ -99,6 +101,10 @@ function computeResetsAt(backend: HelperBackend, now: Date = new Date()): string
     case "cursor": {
       // Monthly (30 days)
       return new Date(now.getTime() + 30 * 24 * 60 * 60_000).toISOString();
+    }
+    case "glm": {
+      // Local model — no real rate limit, but in case of Ollama overload: 1 minute
+      return new Date(now.getTime() + 60_000).toISOString();
     }
     case "haiku": {
       // 1 minute RPM
@@ -186,6 +192,9 @@ function buildCommand(backend: HelperBackend, prompt: string, opts: HelperOption
     case "kiro":
       // Reads prompt from stdin
       return ["kiro-cli", "chat", "--no-interactive", "-w", "never"];
+    case "glm":
+      // Handled separately via glm-llm (local Ollama)
+      return [];
     case "haiku":
       // Handled separately via cloud-llm
       return [];
@@ -254,14 +263,16 @@ export async function runHelper(prompt: string, opts: HelperOptions = {}): Promi
       let output: string;
       if (backend === "haiku") {
         output = await runCloudLLM(prompt, opts.source || "helpers");
+      } else if (backend === "glm") {
+        output = await runLocalGLM(prompt, opts.source || "helpers");
       } else {
         output = await runCliHelper(backend, prompt, opts);
       }
 
       const durationMs = Date.now() - start;
 
-      // Log free CLI helper calls only — haiku is already logged by cloud-llm.ts
-      if (backend !== "haiku") {
+      // Log free CLI helper calls only — haiku/glm are already logged by their own modules
+      if (backend !== "haiku" && backend !== "glm") {
         try {
           const costLogPath = join(getStateDir(), "api_costs.jsonl");
           logCost(costLogPath, {
