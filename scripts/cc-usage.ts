@@ -20,6 +20,7 @@
  *   bun scripts/cc-usage.ts --by-project       # By project
  *   bun scripts/cc-usage.ts --by-model         # By model
  *   bun scripts/cc-usage.ts --json             # JSON output (for statusline)
+ *   bun scripts/cc-usage.ts --send-axiom       # Send CC sessions to Axiom
  */
 
 import { readdirSync, statSync, readFileSync, existsSync } from "fs";
@@ -678,6 +679,36 @@ function renderJSON(sessions: SessionUsage[], apiEntries: SupabaseEntry[], perio
 
 // ─── Main ─────────────────────────────────────────────────────────
 
+// ─── Axiom Integration ──────────────────────────────────────────
+
+async function sendToAxiom(sessions: SessionUsage[]): Promise<void> {
+  try {
+    const { logCCUsage, flushAxiom } = await import("../packages/shared/src/lib/axiom");
+
+    let sent = 0;
+    for (const s of sessions) {
+      logCCUsage({
+        model: s.model,
+        project: s.project,
+        input_tokens: s.inputTokens,
+        output_tokens: s.outputTokens,
+        cache_read_tokens: s.cacheReadTokens,
+        cache_write_tokens: s.cacheCreateTokens,
+        cost_estimate_usd: s.costUsd,
+        session_id: s.sessionId,
+      });
+      sent++;
+    }
+
+    await flushAxiom();
+    console.log(`${c.green}Sent ${sent} CC sessions to Axiom${c.reset}`);
+  } catch (err) {
+    console.error(`${c.red}Failed to send to Axiom:${c.reset}`, (err as Error).message);
+  }
+}
+
+// ─── Main ─────────────────────────────────────────────────────────
+
 async function main() {
   const args = process.argv.slice(2);
   const period = args.find(a => a.startsWith("--period="))?.split("=")[1] || "month";
@@ -685,6 +716,7 @@ async function main() {
   const byProject = args.includes("--by-project");
   const byModel = args.includes("--by-model");
   const jsonOutput = args.includes("--json");
+  const sendAxiom = args.includes("--send-axiom");
 
   // Load env for Supabase access
   try {
@@ -699,6 +731,11 @@ async function main() {
 
   // Fetch Supabase API costs
   const apiEntries = await fetchSupabaseCosts(period);
+
+  // Send CC session data to Axiom if requested
+  if (sendAxiom) {
+    await sendToAxiom(sessions);
+  }
 
   if (jsonOutput) {
     renderJSON(sessions, apiEntries, period);

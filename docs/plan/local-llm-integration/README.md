@@ -51,8 +51,8 @@
 
 | Step | What | Folder | Status | PR |
 |------|------|--------|--------|----|
-| 9 | Email scorer body fix | — | `in-progress` | — |
-| 10 | Axiom full observability | [phase-axiom](phase-axiom/) | `pending` | — |
+| 9 | Email scorer body fix | — | `done` | #128 |
+| 10 | Axiom full observability | [phase-axiom](phase-axiom/) | `in-progress` | — |
 | 11 | Auto-indexing (5 AM cron) | [phase-8](phase-8/) (8e) | `pending` | — |
 | 12 | Git overlay + file timeline | [phase-8](phase-8/) (8b) | `pending` | — |
 | 13 | Style card v2 (multi-source) | [phase-style](phase-style/) | `pending` | — |

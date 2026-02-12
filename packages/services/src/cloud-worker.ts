@@ -36,6 +36,12 @@ if (!process.env.LLM_BACKEND) process.env.LLM_BACKEND = "haiku";
 if (!process.env.STATE_BACKEND) process.env.STATE_BACKEND = "supabase";
 if (!process.env.TELEGRAM_MODE) process.env.TELEGRAM_MODE = "direct";
 
+// Axiom observability (lazy)
+async function getAxiomHelpers() {
+  const mod = await import("@golems/shared/lib/axiom");
+  return { logServiceEvent: mod.logServiceEvent, logError: mod.logError, flushAxiom: mod.flushAxiom };
+}
+
 // ALL imports are lazy — health endpoint must start before any module loads
 async function getSendNotification() {
   const mod = await import("@golems/shared/lib/telegram-direct");
@@ -107,6 +113,28 @@ async function safeRun(name: string, fn: () => Promise<unknown>): Promise<void> 
       source: "healthcheck",
       priority: "high",
     }).catch(() => {}); // Don't let notification failure cascade
+  }
+
+  // Report to Axiom (fire-and-forget)
+  try {
+    const { logServiceEvent, logError: logAxiomError } = await getAxiomHelpers();
+    const durationMs = Date.now() - start;
+    logServiceEvent({
+      service: name.toLowerCase().replace(/[^a-z0-9-]/g, "-"),
+      event: "run",
+      status: status === "success" ? "success" : "failure",
+      duration_ms: durationMs,
+      metadata: error ? { error } : result,
+    });
+    if (error) {
+      logAxiomError({
+        service: name.toLowerCase().replace(/[^a-z0-9-]/g, "-"),
+        error_message: error,
+        error_type: "service_run_failure",
+      });
+    }
+  } catch {
+    // Non-critical
   }
 
   // Report service run to Supabase (fire-and-forget)
@@ -421,6 +449,16 @@ try {
     priority: "high",
   }).catch(() => {});
 }
+
+// Flush Axiom on shutdown
+process.on("SIGTERM", async () => {
+  console.log("[CloudWorker] SIGTERM received, flushing Axiom...");
+  try {
+    const { flushAxiom } = await getAxiomHelpers();
+    await flushAxiom();
+  } catch {}
+  process.exit(0);
+});
 
 // Send startup notification
 const notifyStart = await getSendNotification();

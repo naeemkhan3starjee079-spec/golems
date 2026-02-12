@@ -75,13 +75,12 @@ Full observability across all golems — every LLM call, email poll, job scrape,
 4. Store token in 1Password: `AXIOM_TOKEN`
 5. Update `~/.golems/config.yaml`: `observability.enabled: true, axiomDataset: golems`
 
-### LLM Call Tracking (axiom/ai)
-6. Install `axiom` package: `bun add axiom`
-7. Create `packages/shared/src/lib/axiom.ts` — Axiom client singleton
-8. Wrap Vercel AI SDK models in `vercel-llm.ts` with `wrapAISDKModel()`
-9. Add Axiom event logging to `cloud-llm.ts` (Haiku calls)
-10. Add Axiom event logging to `glm-llm.ts` (local GLM calls)
-11. Add Axiom event logging to `llm.ts` (routing layer)
+### LLM Call Tracking (@axiomhq/js — direct events)
+6. Install `@axiomhq/js` package
+7. Create `packages/shared/src/lib/axiom.ts` — singleton client + event types + fire-and-forget helpers
+8. Add Axiom event logging to `cloud-llm.ts` (Haiku calls)
+9. Add Axiom event logging to `glm-llm.ts` (local GLM calls)
+10. Add Axiom event logging to `vercel-llm.ts` (Gemini/Groq calls)
 
 ### Service Health Events
 12. Create `logServiceEvent()` helper in `axiom.ts`:
@@ -125,14 +124,17 @@ Full observability across all golems — every LLM call, email poll, job scrape,
 
 ## Status
 
-- [ ] Create Axiom account + dataset + token
-- [ ] Install axiom package
-- [ ] Create axiom.ts singleton
-- [ ] Wrap Vercel AI SDK models
-- [ ] Add to cloud-llm.ts (Haiku)
-- [ ] Add to glm-llm.ts (local GLM)
-- [ ] Service health events
-- [ ] Error tracking
-- [ ] CC usage integration
-- [ ] Dashboard setup
-- [ ] Doctor + wizard updates
+- [x] Create Axiom account + dataset + token (user creating — dataset: "golems", event logs, 30d)
+- [x] Install axiom package (`@axiomhq/js@1.4.0`)
+- [x] Create axiom.ts singleton (event types: LLMCall, Service, Error, CCUsage)
+- [ ] ~~Wrap Vercel AI SDK models~~ (skipped — using direct event logging instead of wrapAISDKModel)
+- [x] Add to cloud-llm.ts (Haiku) — logLLMCall + logError
+- [x] Add to glm-llm.ts (local GLM) — logLLMCall + logError + timing
+- [x] Add to vercel-llm.ts (Gemini/Groq) — logLLMCall + logError + timing
+- [x] Service health events — cloud-worker safeRun() sends logServiceEvent + logError
+- [x] Error tracking — wired into all LLM backends + cloud-worker
+- [x] CC usage integration (`bun scripts/cc-usage.ts --send-axiom`)
+- [ ] Dashboard setup (Axiom built-in dashboards)
+- [x] Doctor check (Axiom config verification)
+- [ ] Wizard setup (Axiom token entry)
+- [ ] Set AXIOM_TOKEN env var (waiting for user to create token)

@@ -13,6 +13,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { join } from "path";
 import { homedir } from "os";
 import { logCost, type CostEntry } from "./cost-tracker";
+import { logLLMCall, logError } from "./axiom";
 
 const MODEL = "claude-haiku-4-5-20251001";
 
@@ -73,6 +74,8 @@ function trackUsage(source: string, inputTokens: number, outputTokens: number) {
     usageLog.splice(0, usageLog.length - 1000);
   }
 
+  const roundedCost = Math.round(costUsd * 1_000_000) / 1_000_000;
+
   // Persist to JSONL via unified cost tracker
   try {
     logCost(COST_LOG_PATH, {
@@ -81,12 +84,25 @@ function trackUsage(source: string, inputTokens: number, outputTokens: number) {
       source,
       input_tokens: inputTokens,
       output_tokens: outputTokens,
-      cost_usd: Math.round(costUsd * 1_000_000) / 1_000_000,
+      cost_usd: roundedCost,
       tier: "paid",
     });
   } catch {
     // Don't let logging failures break the main flow
   }
+
+  // Send to Axiom (fire-and-forget)
+  logLLMCall({
+    model: MODEL,
+    source,
+    backend: "haiku",
+    input_tokens: inputTokens,
+    output_tokens: outputTokens,
+    cost_usd: roundedCost,
+    duration_ms: 0, // Not tracked at this level
+    tier: "paid",
+    success: true,
+  });
 
   // Log every 10 calls for visibility
   if (totalCalls % 10 === 0) {
@@ -156,6 +172,11 @@ export async function runHaiku(prompt: string, source = "unknown"): Promise<stri
     return textBlock?.text?.trim() ?? "";
   } catch (err) {
     console.error(`[Haiku] Error (source: ${source}):`, err);
+    logError({
+      service: source,
+      error_message: (err as Error).message,
+      error_type: "haiku_api_error",
+    });
     return "";
   }
 }

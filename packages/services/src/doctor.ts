@@ -262,7 +262,46 @@ async function checkSupabase() {
   }
 }
 
-// Check 8: Railway cloud worker
+// Check 8: Axiom observability
+async function checkAxiom() {
+  try {
+    const { loadConfig } = await import("@golems/shared/lib/config");
+    const config = loadConfig();
+    const token = process.env.AXIOM_TOKEN || config.observability.axiomToken;
+    const enabled = config.observability.enabled;
+
+    if (!enabled) {
+      results.push({
+        name: "Axiom",
+        status: "warn",
+        message: "Disabled in config",
+        fix: "Set observability.enabled: true in ~/.golems/config.yaml",
+      });
+    } else if (!token) {
+      results.push({
+        name: "Axiom",
+        status: "warn",
+        message: "Enabled but no token configured",
+        fix: "Set AXIOM_TOKEN env var or axiomToken in ~/.golems/config.yaml",
+      });
+    } else {
+      results.push({
+        name: "Axiom",
+        status: "pass",
+        message: `Configured (dataset: ${config.observability.axiomDataset || "golems"})`,
+      });
+    }
+  } catch {
+    results.push({
+      name: "Axiom",
+      status: "warn",
+      message: "Could not load config",
+      fix: "Run: golems wizard",
+    });
+  }
+}
+
+// Check 9: Railway cloud worker
 async function checkRailway() {
   const url = process.env.RAILWAY_URL || "https://golems-production.up.railway.app";
   try {
@@ -345,6 +384,7 @@ async function main() {
   await checkStateFile();
   await checkEnvFile();
   await checkSupabase();
+  await checkAxiom();
   await checkRailway();
 
   printResults();

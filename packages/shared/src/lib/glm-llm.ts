@@ -10,6 +10,7 @@
 import { join } from "path";
 import { homedir } from "os";
 import { logCost } from "./cost-tracker";
+import { logLLMCall, logError } from "./axiom";
 
 const OLLAMA_URL = "http://127.0.0.1:11434/api/generate";
 const MODEL = "glm-4.7-flash";
@@ -23,7 +24,7 @@ function estimateInputTokens(prompt: string): number {
   return Math.ceil(prompt.length / 4);
 }
 
-function trackUsage(source: string, inputTokens: number, outputTokens: number) {
+function trackUsage(source: string, inputTokens: number, outputTokens: number, durationMs = 0) {
   const timestamp = new Date().toISOString();
   try {
     logCost(COST_LOG_PATH, {
@@ -38,12 +39,26 @@ function trackUsage(source: string, inputTokens: number, outputTokens: number) {
   } catch {
     // Don't let logging failures break the main flow
   }
+
+  // Send to Axiom (fire-and-forget)
+  logLLMCall({
+    model: MODEL,
+    source,
+    backend: "glm",
+    input_tokens: inputTokens,
+    output_tokens: outputTokens,
+    cost_usd: 0,
+    duration_ms: durationMs,
+    tier: "free",
+    success: true,
+  });
 }
 
 /**
  * Run a prompt through GLM-4.7-Flash via Ollama HTTP API.
  */
 export async function runGLM(prompt: string, source = "unknown"): Promise<string> {
+  const startMs = Date.now();
   try {
     const resp = await fetch(OLLAMA_URL, {
       method: "POST",
@@ -54,6 +69,7 @@ export async function runGLM(prompt: string, source = "unknown"): Promise<string
     if (!resp.ok) {
       const errBody = await resp.text();
       console.error(`[GLM] API error ${resp.status} (source: ${source}):`, errBody);
+      logError({ service: source, error_message: `GLM API ${resp.status}: ${errBody.slice(0, 200)}`, error_type: "glm_api_error" });
       return "";
     }
 
@@ -61,11 +77,13 @@ export async function runGLM(prompt: string, source = "unknown"): Promise<string
     const text = data.response?.trim() ?? "";
     const outputTokens = data.eval_count ?? 0;
     const inputTokens = estimateInputTokens(prompt);
+    const durationMs = Date.now() - startMs;
 
-    trackUsage(source, inputTokens, outputTokens);
+    trackUsage(source, inputTokens, outputTokens, durationMs);
     return text;
   } catch (err) {
     console.error(`[GLM] Error (source: ${source}):`, err);
+    logError({ service: source, error_message: (err as Error).message, error_type: "glm_connection_error" });
     return "";
   }
 }

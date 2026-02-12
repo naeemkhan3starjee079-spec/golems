@@ -18,6 +18,7 @@ import { createGroq } from "@ai-sdk/groq";
 import { join } from "path";
 import { homedir } from "os";
 import { logCost } from "./cost-tracker";
+import { logLLMCall, logError } from "./axiom";
 
 // Models
 const GEMINI_MODEL = "gemini-2.5-flash-lite";
@@ -60,10 +61,12 @@ let totalCalls = 0;
 let totalInputTokens = 0;
 let totalOutputTokens = 0;
 
-function trackUsage(model: string, source: string, inputTokens: number, outputTokens: number) {
+function trackUsage(model: string, source: string, inputTokens: number, outputTokens: number, durationMs = 0) {
   totalInputTokens += inputTokens;
   totalOutputTokens += outputTokens;
   totalCalls++;
+
+  const backend = model.includes("gemini") ? "gemini" : "groq";
 
   try {
     logCost(COST_LOG_PATH, {
@@ -79,6 +82,19 @@ function trackUsage(model: string, source: string, inputTokens: number, outputTo
     // Don't let logging failures break the main flow
   }
 
+  // Send to Axiom (fire-and-forget)
+  logLLMCall({
+    model,
+    source,
+    backend,
+    input_tokens: inputTokens,
+    output_tokens: outputTokens,
+    cost_usd: 0,
+    duration_ms: durationMs,
+    tier: "free",
+    success: true,
+  });
+
   if (totalCalls % 10 === 0) {
     console.log(
       `[Cloud LLM] ${totalCalls} calls | ${totalInputTokens} in + ${totalOutputTokens} out tokens (free tier)`
@@ -91,19 +107,20 @@ function trackUsage(model: string, source: string, inputTokens: number, outputTo
  * Same interface as runHaiku — drop-in replacement.
  */
 export async function runCloudFree(prompt: string, source = "unknown"): Promise<string> {
-  const backend = process.env.LLM_BACKEND || "gemini";
-  const providers = backend === "groq"
+  const backendEnv = process.env.LLM_BACKEND || "gemini";
+  const providers = backendEnv === "groq"
     ? [{ name: "groq", get: getGroqProvider, model: GROQ_MODEL }]
     : [{ name: "gemini", get: getGeminiProvider, model: GEMINI_MODEL }];
 
   // Add fallback: if primary is gemini, fallback to groq and vice versa
-  if (backend === "gemini" && process.env.GROQ_API_KEY) {
+  if (backendEnv === "gemini" && process.env.GROQ_API_KEY) {
     providers.push({ name: "groq", get: getGroqProvider, model: GROQ_MODEL });
-  } else if (backend === "groq" && process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+  } else if (backendEnv === "groq" && process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
     providers.push({ name: "gemini", get: getGeminiProvider, model: GEMINI_MODEL });
   }
 
   for (const p of providers) {
+    const startMs = Date.now();
     try {
       const provider = p.get();
       const result = await generateText({
@@ -114,7 +131,8 @@ export async function runCloudFree(prompt: string, source = "unknown"): Promise<
 
       const inputTokens = result.usage?.inputTokens ?? 0;
       const outputTokens = result.usage?.outputTokens ?? 0;
-      trackUsage(p.model, source, inputTokens, outputTokens);
+      const durationMs = Date.now() - startMs;
+      trackUsage(p.model, source, inputTokens, outputTokens, durationMs);
 
       return result.text.trim();
     } catch (err: any) {
@@ -124,6 +142,7 @@ export async function runCloudFree(prompt: string, source = "unknown"): Promise<
         continue;
       }
       console.error(`[Cloud LLM] Error from ${p.name} (source: ${source}):`, err?.message || err);
+      logError({ service: source, error_message: err?.message || String(err), error_type: `${p.name}_api_error` });
       if (providers.indexOf(p) < providers.length - 1) continue;
       return "";
     }
