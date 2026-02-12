@@ -6,14 +6,18 @@
  * computes language, formality, length, emoji, and pattern metrics,
  * then stores profiles in Supabase and generates a style card markdown.
  *
+ * Config (env vars):
+ *   GOLEMS_OWNER_NAME    — Filter LinkedIn messages by sender (default: "Owner")
+ *   LINKEDIN_EXPORT_DIR  — LinkedIn export path (default: docs.local/linkedin/ or ~/Downloads)
+ *
  * Usage:
  *   bun scripts/build-style-profiles.ts              # Build all profiles
  *   bun scripts/build-style-profiles.ts --card-only   # Just regenerate card from Supabase
  *   bun scripts/build-style-profiles.ts --dry-run     # Compute but don't save
+ *   bun scripts/build-style-profiles.ts --linkedin=/path/to/export  # Explicit LinkedIn path
  */
 
-import { readFileSync } from "fs";
-import { writeFileSync } from "fs";
+import { readFileSync, writeFileSync, existsSync, readdirSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
 import { Database } from "bun:sqlite";
@@ -38,6 +42,119 @@ interface StyleProfile {
 const ZIKARON_DB = join(homedir(), ".local/share/zikaron/zikaron.db");
 const STYLE_CARD_PATH = join(homedir(), ".golems-zikaron/style/style-card-v2.md");
 const STYLE_DATA_PATH = join(homedir(), ".golems-zikaron/style/style-profiles-v2.json");
+
+// LinkedIn export path — checks docs.local/linkedin/ first, then ~/Downloads
+// Override with --linkedin=PATH or LINKEDIN_EXPORT_DIR env
+const LINKEDIN_DIR_DEFAULT = process.env.LINKEDIN_EXPORT_DIR
+  || (existsSync(join(process.cwd(), "docs.local/linkedin")) ? join(process.cwd(), "docs.local/linkedin") : join(homedir(), "Downloads"));
+// Owner name(s) for filtering "my messages" in LinkedIn export
+// Comma-separated for variations (e.g. "Jane Doe,Jane A. Doe")
+const OWNER_NAMES = (process.env.GOLEMS_OWNER_NAME || "Owner")
+  .split(",")
+  .map(n => n.trim().toLowerCase());
+
+/**
+ * Auto-discover LinkedIn export directory within a base path.
+ * Looks for folders matching "Complete_LinkedInDataExport*" or containing messages.csv.
+ */
+function findLinkedInExport(basePath: string): string {
+  if (!existsSync(basePath)) return basePath;
+
+  // If basePath itself has messages.csv, it IS the export
+  if (existsSync(join(basePath, "messages.csv"))) return basePath;
+
+  // Scan for LinkedIn export folders
+  try {
+    const entries = readdirSync(basePath);
+    const match = entries
+      .filter(e => e.toLowerCase().includes("linkedindataexport"))
+      .sort()
+      .pop(); // most recent by name
+    if (match) return join(basePath, match);
+  } catch { /* not a directory */ }
+
+  return basePath;
+}
+
+// ─── CSV Parser (handles quoted multi-line fields) ─────────────
+
+function parseCSV(text: string): string[][] {
+  const rows: string[][] = [];
+  let i = 0;
+  const len = text.length;
+
+  while (i < len) {
+    const row: string[] = [];
+    while (i < len) {
+      if (text[i] === '"') {
+        // Quoted field — consume until closing quote
+        i++; // skip opening quote
+        let field = "";
+        while (i < len) {
+          if (text[i] === '"') {
+            if (i + 1 < len && text[i + 1] === '"') {
+              field += '"';
+              i += 2; // escaped quote
+            } else {
+              i++; // closing quote
+              break;
+            }
+          } else {
+            field += text[i];
+            i++;
+          }
+        }
+        row.push(field);
+        // Skip comma or newline after quoted field
+        if (i < len && text[i] === ',') i++;
+        else if (i < len && (text[i] === '\n' || text[i] === '\r')) {
+          if (text[i] === '\r' && i + 1 < len && text[i + 1] === '\n') i += 2;
+          else i++;
+          break;
+        }
+      } else if (text[i] === '\n' || text[i] === '\r') {
+        // End of row (empty last field)
+        row.push("");
+        if (text[i] === '\r' && i + 1 < len && text[i + 1] === '\n') i += 2;
+        else i++;
+        break;
+      } else {
+        // Unquoted field
+        let field = "";
+        while (i < len && text[i] !== ',' && text[i] !== '\n' && text[i] !== '\r') {
+          field += text[i];
+          i++;
+        }
+        row.push(field);
+        if (i < len && text[i] === ',') i++;
+        else if (i < len && (text[i] === '\n' || text[i] === '\r')) {
+          if (text[i] === '\r' && i + 1 < len && text[i + 1] === '\n') i += 2;
+          else i++;
+          break;
+        }
+      }
+    }
+    if (row.length > 0 && !(row.length === 1 && row[0] === "")) {
+      rows.push(row);
+    }
+  }
+  return rows;
+}
+
+function stripHTML(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
 
 // Emoji regex (basic — catches common unicode emoji ranges)
 const EMOJI_RE = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{200D}\u{20E3}\u{231A}-\u{231B}\u{23E9}-\u{23F3}\u{23F8}-\u{23FA}\u{25AA}-\u{25AB}\u{25B6}\u{25C0}\u{25FB}-\u{25FE}]/gu;
@@ -294,6 +411,145 @@ function buildCCProfile(chunks: ChunkRow[]): StyleProfile {
   };
 }
 
+// ─── LinkedIn Data Loaders ──────────────────────────────────────
+
+interface LinkedInMessage {
+  content: string;
+  from: string;
+  date: string;
+}
+
+function loadLinkedInMessages(dir: string): LinkedInMessage[] {
+  const path = join(dir, "messages.csv");
+  if (!existsSync(path)) return [];
+
+  const raw = readFileSync(path, "utf-8");
+  const rows = parseCSV(raw);
+  if (rows.length < 2) return [];
+
+  // Header: CONVERSATION ID,CONVERSATION TITLE,FROM,SENDER PROFILE URL,TO,RECIPIENT PROFILE URLS,DATE,SUBJECT,CONTENT,FOLDER,ATTACHMENTS
+  const header = rows[0];
+  const fromIdx = header.indexOf("FROM");
+  const contentIdx = header.indexOf("CONTENT");
+  const dateIdx = header.indexOf("DATE");
+
+  const messages: LinkedInMessage[] = [];
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    const from = row[fromIdx] || "";
+    const rawContent = row[contentIdx] || "";
+    const content = stripHTML(rawContent).trim();
+    if (OWNER_NAMES.includes(from.toLowerCase()) && content.length > 3) {
+      messages.push({ content, from, date: row[dateIdx] || "" });
+    }
+  }
+  return messages;
+}
+
+function loadLinkedInComments(dir: string): string[] {
+  const path = join(dir, "Comments.csv");
+  if (!existsSync(path)) return [];
+
+  const raw = readFileSync(path, "utf-8");
+  const rows = parseCSV(raw);
+  if (rows.length < 2) return [];
+
+  // Header: Date,Link,Message
+  const msgIdx = rows[0].indexOf("Message");
+  return rows.slice(1)
+    .map(r => (r[msgIdx] || "").trim())
+    .filter(m => m.length > 3);
+}
+
+function loadLinkedInShares(dir: string): string[] {
+  const path = join(dir, "Shares.csv");
+  if (!existsSync(path)) return [];
+
+  const raw = readFileSync(path, "utf-8");
+  const rows = parseCSV(raw);
+  if (rows.length < 2) return [];
+
+  // Header: Date,ShareLink,ShareCommentary,SharedUrl,MediaUrl,Visibility
+  const commentaryIdx = rows[0].indexOf("ShareCommentary");
+  return rows.slice(1)
+    .map(r => (r[commentaryIdx] || "").trim())
+    .filter(m => m.length > 10);
+}
+
+function buildLinkedInProfile(dir: string): StyleProfile | null {
+  const dms = loadLinkedInMessages(dir);
+  const comments = loadLinkedInComments(dir);
+  const shares = loadLinkedInShares(dir);
+
+  const dmTexts = dms.map(m => m.content);
+  const allMessages = [...dmTexts, ...comments, ...shares];
+
+  if (allMessages.length === 0) return null;
+
+  const langDist = { hebrew: 0, english: 0, mixed: 0 };
+  const emojiCounts: Record<string, number> = {};
+  let totalEmojis = 0;
+
+  for (const msg of allMessages) {
+    const lang = detectLanguage(msg);
+    langDist[lang]++;
+    const { count, emojis } = countEmojis(msg);
+    totalEmojis += count;
+    for (const e of emojis) {
+      emojiCounts[e] = (emojiCounts[e] || 0) + 1;
+    }
+  }
+
+  const formalities = allMessages.map(m => estimateFormality(m, "mixed"));
+  const avgFormality = formalities.reduce((a, b) => a + b, 0) / formalities.length;
+  const avgLength = allMessages.reduce((sum, m) => sum + m.length, 0) / allMessages.length;
+  const emojiRate = totalEmojis / allMessages.length;
+
+  const topEmojis = Object.entries(emojiCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([emoji, count]) => `${emoji} (${count})`);
+
+  const patterns = extractPatterns(allMessages);
+
+  // Sub-context breakdown
+  const dmFormalities = dmTexts.length > 0
+    ? dmTexts.map(m => estimateFormality(m, "mixed")).reduce((a, b) => a + b, 0) / dmTexts.length
+    : 0;
+  const commentFormalities = comments.length > 0
+    ? comments.map(m => estimateFormality(m, "mixed")).reduce((a, b) => a + b, 0) / comments.length
+    : 0;
+  const shareFormalities = shares.length > 0
+    ? shares.map(m => estimateFormality(m, "mixed")).reduce((a, b) => a + b, 0) / shares.length
+    : 0;
+
+  return {
+    context: "linkedin",
+    language: langDist.hebrew > langDist.english ? "hebrew" : "english",
+    formality_score: Math.round(avgFormality * 10) / 10,
+    avg_message_length: Math.round(avgLength),
+    emoji_rate: Math.round(emojiRate * 1000) / 1000,
+    top_emojis: topEmojis,
+    patterns,
+    topic_clusters: {},
+    sample_count: allMessages.length,
+    raw_metrics: {
+      language_distribution: langDist,
+      total_emojis: totalEmojis,
+      sub_contexts: {
+        dms: { count: dmTexts.length, avg_length: dmTexts.length > 0 ? Math.round(dmTexts.reduce((s, m) => s + m.length, 0) / dmTexts.length) : 0, formality: Math.round(dmFormalities * 10) / 10 },
+        comments: { count: comments.length, avg_length: comments.length > 0 ? Math.round(comments.reduce((s, m) => s + m.length, 0) / comments.length) : 0, formality: Math.round(commentFormalities * 10) / 10 },
+        shares: { count: shares.length, avg_length: shares.length > 0 ? Math.round(shares.reduce((s, m) => s + m.length, 0) / shares.length) : 0, formality: Math.round(shareFormalities * 10) / 10 },
+      },
+      formality_histogram: {
+        "1-3": formalities.filter(f => f <= 3).length,
+        "4-6": formalities.filter(f => f > 3 && f <= 6).length,
+        "7-10": formalities.filter(f => f > 6).length,
+      },
+    },
+  };
+}
+
 // ─── Style Card Generator ───────────────────────────────────────
 
 function generateStyleCard(profiles: StyleProfile[]): string {
@@ -301,7 +557,7 @@ function generateStyleCard(profiles: StyleProfile[]): string {
 
   lines.push("# Owner Communication Style Card v2");
   lines.push("");
-  lines.push("> Generated from Zikaron data — WhatsApp, Claude Code, and more.");
+  lines.push("> Generated from Zikaron + LinkedIn data — WhatsApp, Claude Code, LinkedIn.");
   lines.push(`> Last updated: ${new Date().toISOString().split("T")[0]}`);
   lines.push(`> Total samples analyzed: ${profiles.reduce((s, p) => s + p.sample_count, 0).toLocaleString()}`);
   lines.push("");
@@ -311,20 +567,33 @@ function generateStyleCard(profiles: StyleProfile[]): string {
   // Overview
   const wa = profiles.find(p => p.context === "whatsapp");
   const cc = profiles.find(p => p.context === "claude_code");
+  const li = profiles.find(p => p.context === "linkedin");
 
   lines.push("## Quick Reference");
   lines.push("");
-  lines.push("| Trait | WhatsApp | Claude Code |");
-  lines.push("|-------|----------|-------------|");
-  lines.push(`| Language | ${wa ? `${wa.raw_metrics.language_distribution.hebrew > wa.raw_metrics.language_distribution.english ? "Hebrew-dominant" : "English-dominant"} (${Math.round(wa.raw_metrics.language_distribution.hebrew / wa.sample_count * 100)}% he)` : "—"} | ${cc ? `${Math.round(cc.raw_metrics.language_distribution.english / cc.sample_count * 100)}% English` : "—"} |`);
-  lines.push(`| Formality | ${wa?.formality_score.toFixed(1) || "—"}/10 | ${cc?.formality_score.toFixed(1) || "—"}/10 |`);
-  lines.push(`| Avg Length | ${wa?.avg_message_length || "—"} chars | ${cc?.avg_message_length || "—"} chars |`);
-  lines.push(`| Emoji Rate | ${wa ? (wa.emoji_rate * 100).toFixed(1) + "%" : "—"} | ${cc ? (cc.emoji_rate * 100).toFixed(1) + "%" : "—"} |`);
+  lines.push("| Trait | WhatsApp | Claude Code | LinkedIn |");
+  lines.push("|-------|----------|-------------|----------|");
+
+  const fmtLang = (p: StyleProfile | undefined) => {
+    if (!p) return "—";
+    const ld = p.raw_metrics.language_distribution;
+    const dominant = ld.hebrew > ld.english ? "Hebrew" : "English";
+    const pct = Math.round(Math.max(ld.hebrew, ld.english) / p.sample_count * 100);
+    return `${dominant} (${pct}%)`;
+  };
+  lines.push(`| Language | ${fmtLang(wa)} | ${fmtLang(cc)} | ${fmtLang(li)} |`);
+  lines.push(`| Formality | ${wa?.formality_score.toFixed(1) || "—"}/10 | ${cc?.formality_score.toFixed(1) || "—"}/10 | ${li?.formality_score.toFixed(1) || "—"}/10 |`);
+  lines.push(`| Avg Length | ${wa?.avg_message_length || "—"} chars | ${cc?.avg_message_length || "—"} chars | ${li?.avg_message_length || "—"} chars |`);
+  lines.push(`| Emoji Rate | ${wa ? (wa.emoji_rate * 100).toFixed(1) + "%" : "—"} | ${cc ? (cc.emoji_rate * 100).toFixed(1) + "%" : "—"} | ${li ? (li.emoji_rate * 100).toFixed(1) + "%" : "—"} |`);
   lines.push("");
 
   // Per-context sections
   for (const profile of profiles) {
-    lines.push(`## ${profile.context === "whatsapp" ? "WhatsApp Style" : profile.context === "claude_code" ? "Claude Code Instructions Style" : profile.context}`);
+    const contextLabel = profile.context === "whatsapp" ? "WhatsApp Style"
+      : profile.context === "claude_code" ? "Claude Code Instructions Style"
+      : profile.context === "linkedin" ? "LinkedIn Style"
+      : profile.context;
+    lines.push(`## ${contextLabel}`);
     lines.push("");
     lines.push(`**${profile.sample_count.toLocaleString()} messages analyzed**`);
     lines.push("");
@@ -381,6 +650,16 @@ function generateStyleCard(profiles: StyleProfile[]): string {
       lines.push("");
     }
 
+    // LinkedIn sub-contexts
+    const subContexts = profile.raw_metrics.sub_contexts;
+    if (subContexts) {
+      lines.push("**Sub-Contexts:**");
+      lines.push(`- DMs: ${subContexts.dms.count} messages, avg ${subContexts.dms.avg_length} chars, formality ${subContexts.dms.formality}/10`);
+      lines.push(`- Comments: ${subContexts.comments.count} comments, avg ${subContexts.comments.avg_length} chars, formality ${subContexts.comments.formality}/10`);
+      lines.push(`- Posts/Shares: ${subContexts.shares.count} posts, avg ${subContexts.shares.avg_length} chars, formality ${subContexts.shares.formality}/10`);
+      lines.push("");
+    }
+
     lines.push("---");
     lines.push("");
   }
@@ -401,6 +680,13 @@ function generateStyleCard(profiles: StyleProfile[]): string {
   lines.push("3. **Reference prior context** — \"like we did with X\"");
   lines.push("4. **Quick iteration** — try it, see result, adjust");
   lines.push("5. **No hand-holding** — assume competence, skip explanations");
+  lines.push("");
+  lines.push("### When Writing LinkedIn Content:");
+  lines.push("1. **Bilingual** — Hebrew for Israeli audience, English for international");
+  lines.push("2. **DMs are casual** — like WhatsApp, short and direct");
+  lines.push("3. **Posts are structured** — bullet points, emojis for section markers");
+  lines.push("4. **Comments are brief** — 1-2 sentences, conversational");
+  lines.push("5. **Technical credibility** — mention tools, repos, specifics");
   lines.push("");
 
   return lines.join("\n");
@@ -447,6 +733,10 @@ async function main() {
   const args = process.argv.slice(2);
   const dryRun = args.includes("--dry-run");
   const cardOnly = args.includes("--card-only");
+  const linkedinArg = args.find(a => a.startsWith("--linkedin="));
+  const linkedinDir = linkedinArg
+    ? linkedinArg.substring(linkedinArg.indexOf("=") + 1)
+    : findLinkedInExport(LINKEDIN_DIR_DEFAULT);
 
   console.log("=== Style Card v2 Builder ===\n");
 
@@ -498,13 +788,32 @@ async function main() {
 
   db.close();
 
+  // 3. LinkedIn
+  console.log("\n3. Analyzing LinkedIn data...");
+  if (existsSync(linkedinDir)) {
+    const liProfile = buildLinkedInProfile(linkedinDir);
+    if (liProfile) {
+      profiles.push(liProfile);
+      const sc = liProfile.raw_metrics.sub_contexts;
+      console.log(`   Total: ${liProfile.sample_count} items (${sc.dms.count} DMs, ${sc.comments.count} comments, ${sc.shares.count} posts)`);
+      console.log(`   Formality: ${liProfile.formality_score}/10`);
+      console.log(`   Avg length: ${liProfile.avg_message_length} chars`);
+      console.log(`   Language: ${liProfile.language} (${liProfile.raw_metrics.language_distribution.hebrew} he / ${liProfile.raw_metrics.language_distribution.english} en)`);
+    } else {
+      console.log("   No LinkedIn data found in export.");
+    }
+  } else {
+    console.log(`   LinkedIn export not found at: ${linkedinDir}`);
+    console.log("   Set LINKEDIN_EXPORT_DIR env or use --linkedin=/path/to/export");
+  }
+
   if (profiles.length === 0) {
     console.log("\nNo data found. Nothing to generate.");
     return;
   }
 
   // Generate card
-  console.log("\n3. Generating style card...");
+  console.log("\n4. Generating style card...");
   const card = generateStyleCard(profiles);
 
   if (dryRun) {
@@ -522,7 +831,7 @@ async function main() {
   console.log(`   Style card: ${STYLE_CARD_PATH}`);
 
   // Save to Supabase
-  console.log("\n4. Saving to Supabase...");
+  console.log("\n5. Saving to Supabase...");
   await saveToSupabase(profiles);
 
   console.log("\n=== Done! ===");
