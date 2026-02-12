@@ -57,7 +57,7 @@ COMMANDS:
   helpers       Show external CLI helper backends status
   instructions  Show Claude Chat project files to upload
   enrich        Zikaron enrichment (start [N], stop, status)
-  regen-style   Regenerate style card from Zikaron data
+  style         Style profiles (v2|v1|build|show)
   setup|wizard  Setup wizard (check, status, continue, add-project <path>)
   autopilot     Toggle autonomous plan execution (on/off/status)
   skills        Show available integrations and their status
@@ -559,10 +559,33 @@ cmd_cloud() {
 }
 
 cmd_regen_style() {
-  echo "Regenerating style card from Zikaron data..."
-  cd "$GOLEMS_HOME" && bun packages/shared/src/lib/style-export.ts "$CHAT_DIR/style-card.md"
-  echo -e "${GREEN}✓ Style card updated${NC}"
-  echo "  Re-upload to your claude.ai projects."
+  local subcmd="${1:-v2}"
+  case "$subcmd" in
+    v1)
+      echo "Regenerating style card v1 from Zikaron data..."
+      cd "$GOLEMS_HOME" && bun packages/shared/src/lib/style-export.ts "$CHAT_DIR/style-card.md"
+      echo -e "${GREEN}✓ Style card v1 updated${NC}"
+      echo "  Re-upload to your claude.ai projects."
+      ;;
+    v2|build)
+      echo "Building style profiles v2 from Zikaron..."
+      cd "$GOLEMS_HOME" && bun scripts/build-style-profiles.ts
+      ;;
+    show)
+      local card="${HOME}/.golems-zikaron/style/style-card-v2.md"
+      if [ -f "$card" ]; then
+        cat "$card"
+      else
+        echo "No style card found. Run: golems style build"
+      fi
+      ;;
+    *)
+      echo "Usage: golems style [v2|v1|build|show]"
+      echo "  v2/build  Build per-context profiles from Zikaron (default)"
+      echo "  v1        Legacy single-file style card"
+      echo "  show      Display current style card"
+      ;;
+  esac
 }
 
 # Main
@@ -659,7 +682,7 @@ case "${1:-status}" in
     bash "$GOLEMS_HOME/scripts/enrich.sh" "${2:-status}" "${3:-}"
     ;;
   regen-style|style)
-    cmd_regen_style
+    cmd_regen_style "${2:-v2}"
     ;;
   setup|wizard)
     case "${2:-interactive}" in

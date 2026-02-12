@@ -24,6 +24,7 @@ FRESHNESS_MIN=30  # Skip sessions modified within this many minutes
 MAX_ENRICH=5000
 INDEX_ONLY=false
 ENRICH_ONLY=false
+DURATION=0
 
 # Parse args
 for arg in "$@"; do
@@ -35,6 +36,9 @@ for arg in "$@"; do
 done
 
 mkdir -p "$LOG_DIR"
+
+# Log rotation — keep last 14 days
+find "$LOG_DIR" -name "auto-index-*.log" -mtime +14 -delete 2>/dev/null || true
 
 log() {
   echo "[$(date '+%H:%M:%S')] $*" | tee -a "$LOG_FILE"

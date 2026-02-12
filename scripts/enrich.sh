@@ -21,6 +21,11 @@ LOG_FILE="${LOG_DIR}/enrich-on-demand.log"
 
 mkdir -p "$LOG_DIR"
 
+# Rotate on-demand log if > 10MB
+if [ -f "$LOG_FILE" ] && [ "$(stat -f %z "$LOG_FILE" 2>/dev/null || echo 0)" -gt 10485760 ]; then
+  mv "$LOG_FILE" "${LOG_FILE}.$(date +%Y%m%d)"
+fi
+
 case "${1:-status}" in
   start)
     MAX="${2:-5000}"
