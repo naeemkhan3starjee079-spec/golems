@@ -2,14 +2,16 @@
 # Auto-index + enrich — runs daily at 5 AM via launchd
 #
 # 1. Index new Claude Code conversations (skip active sessions)
-# 2. Enrich unenriched chunks via GLM (up to MAX_ENRICH)
-# 3. Log results to Axiom
+# 2. Enrich unenriched Zikaron chunks via GLM (up to MAX_ENRICH)
+# 3. Taba enrichment — enrich Hebrew expert opinion chunks + ingest new PDFs
+# 4. Log results to Axiom
 #
 # Usage:
 #   ./scripts/auto-index.sh                  # Default: index + enrich 2000
 #   ./scripts/auto-index.sh --max=5000       # Custom enrichment count
 #   ./scripts/auto-index.sh --index-only     # Skip enrichment
 #   ./scripts/auto-index.sh --enrich-only    # Skip indexing
+#   ./scripts/auto-index.sh --taba-only      # Only run Taba enrichment
 
 set -euo pipefail
 
@@ -24,6 +26,7 @@ FRESHNESS_MIN=30  # Skip sessions modified within this many minutes
 MAX_ENRICH=5000
 INDEX_ONLY=false
 ENRICH_ONLY=false
+TABA_ONLY=false
 DURATION=0
 
 # Parse args
@@ -32,6 +35,7 @@ for arg in "$@"; do
     --max=*) MAX_ENRICH="${arg#*=}" ;;
     --index-only) INDEX_ONLY=true ;;
     --enrich-only) ENRICH_ONLY=true ;;
+    --taba-only) TABA_ONLY=true ;;
   esac
 done
 
@@ -45,7 +49,7 @@ log() {
 }
 
 log "=== Auto-Index Start ==="
-log "Max enrich: ${MAX_ENRICH}, Index-only: ${INDEX_ONLY}, Enrich-only: ${ENRICH_ONLY}"
+log "Max enrich: ${MAX_ENRICH}, Index-only: ${INDEX_ONLY}, Enrich-only: ${ENRICH_ONLY}, Taba-only: ${TABA_ONLY}"
 
 # Check Ollama is running
 if ! curl -sf http://127.0.0.1:11434/api/tags > /dev/null 2>&1; then
@@ -63,7 +67,7 @@ fi
 INDEXED=0
 SKIPPED_ACTIVE=0
 
-if [ "$ENRICH_ONLY" = false ]; then
+if [ "$ENRICH_ONLY" = false ] && [ "$TABA_ONLY" = false ]; then
   log "Step 1: Indexing new conversations..."
 
   # Find recently modified .jsonl files (changed in last 48 hours)
@@ -120,7 +124,7 @@ fi
 
 ENRICHED=0
 
-if [ "$INDEX_ONLY" = false ] && [ "$MAX_ENRICH" -gt 0 ]; then
+if [ "$INDEX_ONLY" = false ] && [ "$TABA_ONLY" = false ] && [ "$MAX_ENRICH" -gt 0 ]; then
   log "Step 2: Enriching up to ${MAX_ENRICH} chunks via GLM..."
   source "$VENV" 2>/dev/null || true
 
@@ -147,12 +151,64 @@ if [ "$INDEX_ONLY" = false ] && [ "$MAX_ENRICH" -gt 0 ]; then
   echo "$ENRICH_OUTPUT" | tail -5 >> "$LOG_FILE"
 fi
 
-# ─── Step 3: Report ─────────────────────────────────────────────
+# ─── Step 3: Taba Enrichment ───────────────────────────────────
+
+TABA_ENRICHED=0
+TABA_INGESTED=0
+TABA_STATS=""
+
+if [ "$INDEX_ONLY" = false ]; then
+  TABA_DIR="${HOME}/Gits/taba"
+  TABA_VENV="${TABA_DIR}/.venv/bin/activate"
+
+  if [ -d "$TABA_DIR" ] && [ -f "$TABA_VENV" ]; then
+    log "Step 3: Taba enrichment (up to 200 chunks)..."
+
+    if curl -sf http://127.0.0.1:11434/api/tags > /dev/null 2>&1; then
+      source "$TABA_VENV"
+      cd "$TABA_DIR"
+
+      # 3a: Enrich existing chunks
+      TABA_OUTPUT=$(python3 -m src.enrichment --batch-size=50 --max=200 2>&1) || true
+      # Output format: "Processed: N (M ok, K fail)"
+      TABA_ENRICHED=$(echo "$TABA_OUTPUT" | sed -n 's/.*Processed: \([0-9][0-9]*\).*/\1/p' | tail -1)
+      TABA_ENRICHED="${TABA_ENRICHED:-0}"
+
+      # 3b: Get progress stats — format: "enriched/total (percent)"
+      TABA_STATS=$(echo "$TABA_OUTPUT" | sed -n 's/.*Progress: \(.*\)/\1/p' | tail -1)
+      TABA_STATS="${TABA_STATS:-unknown}"
+
+      log "  Taba enriched: ${TABA_ENRICHED} chunks"
+      log "  Taba progress: ${TABA_STATS}"
+      echo "$TABA_OUTPUT" | tail -5 >> "$LOG_FILE"
+
+      # 3c: Ingest any new PDFs
+      INGEST_OUTPUT=$(python3 -m src.ingest --quiet 2>&1) || true
+      # Check if anything was ingested (non-empty output with chunk count)
+      TABA_INGESTED=$(echo "$INGEST_OUTPUT" | sed -n 's/.*[^0-9]\([0-9][0-9]*\) chunks.*/\1/p' | tail -1)
+      TABA_INGESTED="${TABA_INGESTED:-0}"
+      if [ "${TABA_INGESTED}" != "0" ]; then
+        log "  Taba ingested: ${TABA_INGESTED} new chunks from PDFs"
+      fi
+
+      cd "$GOLEMS_DIR"
+    else
+      log "  Ollama not running — skipping Taba enrichment"
+    fi
+  else
+    log "  Taba dir not found — skipping"
+  fi
+fi
+
+# ─── Step 4: Report ─────────────────────────────────────────────
 
 log "=== Summary ==="
 log "  New chunks indexed: ${INDEXED}"
 log "  Skipped (active):   ${SKIPPED_ACTIVE}"
 log "  Chunks enriched:    ${ENRICHED}"
+log "  Taba enriched:      ${TABA_ENRICHED}"
+log "  Taba ingested:      ${TABA_INGESTED}"
+log "  Taba progress:      ${TABA_STATS:-n/a}"
 log "=== Auto-Index Done ==="
 
 # Send Axiom event (if configured)
@@ -169,6 +225,8 @@ if command -v bun &> /dev/null; then
         indexed: ${INDEXED},
         enriched: ${ENRICHED:-0},
         skipped_active: ${SKIPPED_ACTIVE},
+        taba_enriched: ${TABA_ENRICHED:-0},
+        taba_ingested: ${TABA_INGESTED:-0},
       },
     });
     await flushAxiom();
@@ -178,5 +236,5 @@ fi
 # Send Telegram notification (use full path — launchd may not have golems in PATH)
 NOTIFY="${HOME}/.local/bin/notify"
 if [ -x "$NOTIFY" ]; then
-  "$NOTIFY" "Auto-Index Done" "Indexed: ${INDEXED}, Enriched: ${ENRICHED:-0}, Skipped: ${SKIPPED_ACTIVE}" 2>/dev/null || true
+  "$NOTIFY" "Auto-Index Done" "Zikaron: ${INDEXED} indexed, ${ENRICHED:-0} enriched. Taba: ${TABA_ENRICHED:-0} enriched (${TABA_STATS:-n/a})" 2>/dev/null || true
 fi
