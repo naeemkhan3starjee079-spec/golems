@@ -52,11 +52,11 @@ Wire the GLM MCP server into the daily workflow to pre-summarize content that cu
 
 ## Status
 
-- [ ] Update /pr-comments skill
-- [ ] Update summarize-file.sh
-- [ ] Add web search summarization rule
-- [ ] Add Zikaron synthesis integration
-- [ ] Update subagent output pattern
-- [ ] Write glm-context-reduction.md rule
-- [ ] Update memory docs
-- [ ] Measure context usage improvement
+- [x] Write glm-context-reduction.md rule (`.claude/rules/glm-context-reduction.md`)
+- [x] Update summarize-file.sh (added `glm` model option)
+- [x] Update memory docs (cli-agents.md: added `glm` to agents table)
+- [x] Add web search summarization rule (in glm-context-reduction.md)
+- [x] Update subagent output pattern (in glm-context-reduction.md)
+- [x] Add Zikaron synthesis integration (in glm-context-reduction.md)
+- [ ] Update /pr-comments skill (deferred — script works well, GLM summary adds latency)
+- [ ] Measure context usage improvement (requires real usage data over time)

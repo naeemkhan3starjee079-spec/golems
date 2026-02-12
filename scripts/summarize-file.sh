@@ -7,6 +7,7 @@
 #
 # Models:
 #   gemini  (default) - Free, fast, good for summaries
+#   glm     - Local GLM-4.7-Flash via Ollama (free, no network, private)
 #   cursor  - GPT-5.2 Codex (paid $20/mo), deep analysis
 #   codex   - OpenAI Codex CLI (ChatGPT Plus), non-interactive agent
 #   kiro    - Free, AWS-backed, good for code analysis
@@ -46,6 +47,28 @@ $(cat "$FILE")
 Remember: Be concise. Max 100 lines of output. Focus on what was asked."
 
 case "$MODEL" in
+  glm)
+    # GLM-4.7-Flash via local Ollama - free, no network, private
+    OLLAMA_URL="${OLLAMA_URL:-http://127.0.0.1:11434}"
+    if ! curl -sf "$OLLAMA_URL/api/tags" &>/dev/null; then
+      echo "Error: Ollama not running at $OLLAMA_URL. Start with: ollama serve" >&2
+      exit 1
+    fi
+    # Build JSON payload safely (escape prompt for JSON)
+    PAYLOAD=$(jq -n --arg prompt "$FULL_PROMPT" --arg model "glm-4.7-flash" \
+      '{model: $model, prompt: $prompt, stream: false}')
+    RESPONSE=$(curl -sf "$OLLAMA_URL/api/generate" -d "$PAYLOAD" 2>/dev/null)
+    if [ -z "$RESPONSE" ]; then
+      echo "Error: GLM request failed. Is glm-4.7-flash model pulled? Run: ollama pull glm-4.7-flash" >&2
+      exit 1
+    fi
+    SUMMARY=$(echo "$RESPONSE" | jq -r '.response // empty')
+    if [ -z "$SUMMARY" ]; then
+      echo "Error: GLM returned empty response" >&2
+      exit 1
+    fi
+    echo "$SUMMARY" > "$OUTFILE"
+    ;;
   gemini)
     # Gemini CLI - free, 1K requests/day
     if command -v gemini &>/dev/null; then
@@ -108,7 +131,7 @@ case "$MODEL" in
     rm -f "$PROMPTFILE"
     ;;
   *)
-    echo "Error: Unknown model '$MODEL'. Use: gemini, cursor, codex, kiro, haiku" >&2
+    echo "Error: Unknown model '$MODEL'. Use: glm, gemini, cursor, codex, kiro, haiku" >&2
     exit 1
     ;;
 esac
