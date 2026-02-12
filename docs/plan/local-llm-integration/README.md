@@ -55,18 +55,20 @@
 | 10 | Axiom full observability | [phase-axiom](phase-axiom/) | `done` | #129 |
 | 11 | Auto-indexing (5 AM cron) + enrichment CLI | — | `done` | #130 |
 | 12 | Git overlay + file timeline | [phase-8](phase-8/) (8b) | `pending` | — |
-| 13 | Style card v2 (multi-source) | [phase-style](phase-style/) | `done` | #131 |
+| 13 | Style card v2 (multi-source + LinkedIn) | [phase-style](phase-style/) | `done` | #131, #132 |
 | 14 | Operation grouping | [phase-8](phase-8/) (8a) | `pending` | — |
 | 15 | Temporal chains + regression | [phase-8](phase-8/) (8d) | `pending` | — |
 | 16 | Plan linking | [phase-8](phase-8/) (8c) | `pending` | — |
 | 17 | Obsidian Brain View | [phase-9](phase-9/) | `pending` | — |
 | 18 | Fine-tune (MLX QLoRA) | [phase-10](phase-10/) | `parked` | — |
+| 19 | CC session telemetry (auto Axiom) | — | `done` | #133 |
 
 ### Also Built (Not Phase-Specific)
 
 | What | File | Status |
 |------|------|--------|
-| Style Profiles v2 | `scripts/build-style-profiles.ts` | Done — WhatsApp + CC analysis, Supabase storage |
+| Style Profiles v2 | `scripts/build-style-profiles.ts` | Done — WhatsApp + CC + LinkedIn analysis, Supabase storage |
+| CC Axiom Reporter | `scripts/cc-axiom-reporter.ts` | Done — SessionEnd hook, auto-reports to Axiom |
 | CC Usage Tracker | `scripts/cc-usage.ts` | Done — daily/monthly/by-project/by-model views |
 | CC StatusLine | `scripts/cc-statusline.ts` | Done — lightweight ccstatusline replacement |
 | Batch Email Scorer | `scripts/batch-score-emails.ts` | Done — lazy-fetch, download-only, from-file modes |

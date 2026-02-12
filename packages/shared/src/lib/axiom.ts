@@ -82,6 +82,13 @@ export interface CCUsageEvent {
   cache_write_tokens?: number;
   cost_estimate_usd: number;
   session_id?: string;
+  duration_seconds?: number;
+  message_count?: number;
+  started_at?: string;
+  ended_at?: string;
+  source?: string;
+  hostname?: string;
+  branch?: string;
 }
 
 type AxiomEvent = LLMCallEvent | ServiceEvent | ErrorEvent | CCUsageEvent;
