@@ -222,26 +222,43 @@ export async function fetchEmailsSince(
  */
 export async function searchEmails(
   query: string,
-  maxResults: number = 20
+  maxResults: number = 20,
+  options?: { includeSpamTrash?: boolean }
 ): Promise<GmailEmail[]> {
   const gmail = getGmailClient();
+  const includeSpamTrash = options?.includeSpamTrash ?? false;
 
-  const listResponse = await gmail.users.messages.list({
-    userId: "me",
-    maxResults,
-    q: query,
-  });
+  // Gmail API caps at 500 per page — paginate if maxResults > 500
+  const allMessageIds: Array<{ id: string }> = [];
+  let pageToken: string | undefined;
 
-  const messageIds = listResponse.data.messages;
-  if (!messageIds || messageIds.length === 0) {
-    return [];
+  while (allMessageIds.length < maxResults) {
+    const pageSize = Math.min(maxResults - allMessageIds.length, 500);
+    const listResponse = await gmail.users.messages.list({
+      userId: "me",
+      maxResults: pageSize,
+      q: query,
+      includeSpamTrash,
+      pageToken,
+    });
+
+    const messages = listResponse.data.messages;
+    if (!messages || messages.length === 0) break;
+
+    for (const msg of messages) {
+      if (msg.id) allMessageIds.push({ id: msg.id });
+    }
+
+    pageToken = listResponse.data.nextPageToken ?? undefined;
+    if (!pageToken) break;
   }
 
+  if (allMessageIds.length === 0) return [];
+
+  // Fetch full message data for each
   const emails: GmailEmail[] = [];
 
-  for (const msg of messageIds) {
-    if (!msg.id) continue;
-
+  for (const msg of allMessageIds) {
     const fullMessage = await gmail.users.messages.get({
       userId: "me",
       id: msg.id,
@@ -253,6 +270,66 @@ export async function searchEmails(
   }
 
   return emails;
+}
+
+/**
+ * List email IDs matching a query without fetching full message data.
+ * Much faster than searchEmails() for counting or lazy fetching.
+ *
+ * @example
+ * const ids = await listEmailIds("after:2025/01/01", 2000);
+ * console.log(`Found ${ids.length} emails`);
+ */
+export async function listEmailIds(
+  query: string,
+  maxResults: number = 500,
+  options?: { includeSpamTrash?: boolean }
+): Promise<string[]> {
+  const gmail = getGmailClient();
+  const includeSpamTrash = options?.includeSpamTrash ?? false;
+
+  const allIds: string[] = [];
+  let pageToken: string | undefined;
+
+  while (allIds.length < maxResults) {
+    const pageSize = Math.min(maxResults - allIds.length, 500);
+    const listResponse = await gmail.users.messages.list({
+      userId: "me",
+      maxResults: pageSize,
+      q: query,
+      includeSpamTrash,
+      pageToken,
+    });
+
+    const messages = listResponse.data.messages;
+    if (!messages || messages.length === 0) break;
+
+    for (const msg of messages) {
+      if (msg.id) allIds.push(msg.id);
+    }
+
+    pageToken = listResponse.data.nextPageToken ?? undefined;
+    if (!pageToken) break;
+  }
+
+  return allIds;
+}
+
+/**
+ * Fetch a single email by ID.
+ *
+ * @example
+ * const email = await getEmailById("msg-id-123");
+ */
+export async function getEmailById(id: string): Promise<GmailEmail> {
+  const gmail = getGmailClient();
+  const fullMessage = await gmail.users.messages.get({
+    userId: "me",
+    id,
+    format: "metadata",
+    metadataHeaders: ["From", "Subject", "Date", "List-Unsubscribe"],
+  });
+  return parseEmail(fullMessage.data);
 }
 
 /**
