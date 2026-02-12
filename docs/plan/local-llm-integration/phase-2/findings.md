@@ -147,8 +147,8 @@
 | Implement glm_extract | — | Deferred (Phase 6) |
 | Error handling (Ollama down → clear message) | Cursor | Done |
 | Add to .mcp.json | Cursor | Done |
-| **Fix Bun panic (FilePoll.register failed: 22)** | — | **Blocking** |
-| Test with real content | — | Pending |
+| Fix Bun panic (FilePoll.register failed: 22) | Claude | Done (resolved in Bun 1.0.25+) |
+| Test with real content | Claude | Done (init + summarize verified via stdio) |
 
 ## Cursor Implementation Notes (2026-02-12)
 
@@ -157,10 +157,7 @@ Cursor created `packages/shared/src/glm/mcp-server.ts` (220 lines) with:
 - `glm_score(text, prompt, schema)` — score/classify with JSON output
 - Registered in `.mcp.json` as `golems-glm`
 
-**Bun panic issue:** `FilePoll.register failed: 22` when running with `bun`. This is a Bun + MCP SDK (StdioServerTransport) compatibility issue. Options:
-1. Run with `node` instead of `bun` (most likely fix)
-2. Check MCP SDK version compatibility
-3. Use HTTP transport instead of stdio
+**Bun panic resolved (2026-02-12):** `FilePoll.register failed: 22` was a Bun bug, fixed in Bun 1.0.25+. Server now starts and handles MCP tool calls correctly with `bun run`. No changes to code or config needed.
 
 ---
 

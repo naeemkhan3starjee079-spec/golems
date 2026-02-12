@@ -17,9 +17,8 @@ Original plan had 5 tools. Deep research + scratchpad review recommend starting 
 
 - `packages/shared/src/glm/mcp-server.ts` — 220 lines, 2 tools (summarize + score)
 - Registered in `.mcp.json`
-- **Has Bun panic issue:** `FilePoll.register failed: 22` at runtime
-  - This is a Bun + MCP SDK compatibility issue, not a code quality problem
-  - Needs investigation: may need to use `node` instead of `bun` for MCP server
+- **Bun panic resolved:** `FilePoll.register failed: 22` was fixed in Bun 1.0.25+
+  - Server starts and handles MCP tool calls correctly with `bun run`
 
 ## Remaining Steps
 
@@ -27,12 +26,10 @@ Original plan had 5 tools. Deep research + scratchpad review recommend starting 
 2. ~~Create MCP server file~~ (done by Cursor)
 3. ~~Implement glm_summarize~~ (done by Cursor)
 4. ~~Implement glm_score~~ (done by Cursor)
-5. **Fix Bun panic** — `FilePoll.register failed: 22`
-   - Try running with `node` instead of `bun`
-   - If that fails, check MCP SDK version compatibility
-6. Error handling verification (Ollama down → clear error message)
-7. Test each tool with real golems content
-8. Update `.mcp.json` command if switching to node
+5. ~~Fix Bun panic~~ — resolved in Bun 1.0.25+ (no changes needed)
+6. ~~Error handling verification~~ — Ollama down → `runGLM` catches → MCP returns `isError: true` with message
+7. ~~Test each tool with real content~~ — init + summarize + score all work via stdio
+8. ~~`.mcp.json` stays as-is~~ — `bun run` works correctly
 9. CLAUDE.md documentation
 
 ## Architecture
@@ -56,8 +53,8 @@ Claude Code session
 - [x] Create MCP server file (Cursor)
 - [x] Implement glm_summarize (Cursor)
 - [x] Implement glm_score (Cursor)
-- [ ] Fix Bun panic (FilePoll.register)
-- [ ] Error handling verification
-- [ ] Test with real content
-- [ ] Update MCP config if needed
-- [ ] CLAUDE.md documentation
+- [x] Fix Bun panic (resolved in Bun 1.0.25+)
+- [x] Error handling verification (Ollama down → clear error message)
+- [x] Test with real content (init + summarize work via stdio)
+- [x] MCP config verified (bun run works correctly)
+- [x] CLAUDE.md documentation

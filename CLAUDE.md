@@ -93,6 +93,7 @@ golems wizard          # Guided setup
 | **golems-jobs** | `bun run packages/jobs/src/mcp-server.ts` | Job discovery — recent matches, search, stats |
 | **supabase** | `@supabase/mcp-server-supabase` | Database access — tables, SQL, migrations, types |
 | **exa** | `exa-mcp-server` | Web search — code context, company research |
+| **golems-glm** | `bun run packages/shared/src/glm/mcp-server.ts` | Local GLM-4.7-Flash — summarize text, score/classify with JSON output |
 | **sophtron** | `@sophtron/sophtron-mcp-server` | Bank account access — transactions, identity |
 
 ### Zikaron MCP

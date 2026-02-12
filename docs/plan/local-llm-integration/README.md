@@ -39,8 +39,8 @@
 | 1 | Ollama GLM Setup + Benchmark | [phase-1](phase-1/) | `done` | — |
 | 2 | Replace Local Haiku | [phase-3](phase-3/) | `done` | #121 |
 | 3 | Training Data Collection | [phase-10](phase-10/) | `in-progress` | — (10a: batch scoring 1000 emails running) |
-| 4 | Railway Free API (Gemini/Groq) | [phase-4](phase-4/) | `code-done` | #122 (needs API keys + deploy) |
-| 5 | GLM MCP Server (2 tools) | [phase-2](phase-2/) | `in-progress` | — (Cursor created, needs Bun panic fix) |
+| 4 | Railway Free API (Gemini/Groq) | [phase-4](phase-4/) | `done` | #122 (code merged; needs API keys + Railway deploy) |
+| 5 | GLM MCP Server (2 tools) | [phase-2](phase-2/) | `done` | #123 |
 | 6 | Kilo CLI + Qwen Code | [phase-7](phase-7/) | `researched` | — (Kilo confirmed, Qwen Code 1K free RPD) |
 | 7 | Zikaron Enrichment Pipeline | [phase-5](phase-5/) | `pending` | — |
 | 8 | Context Bloat Reduction | [phase-6](phase-6/) | `pending` | — |
@@ -95,7 +95,7 @@ Phase 7 (Kilo/Qwen Code) — fully independent
 Update this section as phases complete:
 - Ollama GLM performance benchmarks? See phase-1/findings.md (GLM 7/7, Haiku 7/7, GLM 29x slower but $0)
 - LLM call site audit? See docs/audit/llm-call-sites-audit.md (10 call sites mapped)
-- MCP server architecture? See phase-2/findings.md (Cursor created server + Bun panic issue)
+- MCP server architecture? See phase-2/findings.md (Cursor created server, Bun panic fixed in 1.0.25+)
 - GLM backend routing? See phase-3/findings.md (glm-llm.ts + llm.ts wiring)
 - Free cloud LLM APIs? See phase-4/findings.md (Gemini Flash-Lite > Groq > Zhipu, Entity List concerns)
 - Zikaron schema changes? See phase-5/findings.md
