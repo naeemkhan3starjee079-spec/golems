@@ -54,7 +54,7 @@
 | 9 | Email scorer body fix | — | `done` | #128 |
 | 10 | Axiom full observability | [phase-axiom](phase-axiom/) | `done` | #129 |
 | 11 | Auto-indexing (5 AM cron) + enrichment CLI | — | `done` | #130 |
-| 12 | Git overlay + file timeline | [phase-8](phase-8/) (8b) | `pending` | — |
+| 12 | Git overlay + file timeline | [phase-8](phase-8/) (8b) | `done` | #134 |
 | 13 | Style card v2 (multi-source + LinkedIn) | [phase-style](phase-style/) | `done` | #131, #132 |
 | 14 | Operation grouping | [phase-8](phase-8/) (8a) | `pending` | — |
 | 15 | Temporal chains + regression | [phase-8](phase-8/) (8d) | `pending` | — |
