@@ -1,0 +1,178 @@
+#!/usr/bin/env bash
+# Auto-index + enrich — runs daily at 5 AM via launchd
+#
+# 1. Index new Claude Code conversations (skip active sessions)
+# 2. Enrich unenriched chunks via GLM (up to MAX_ENRICH)
+# 3. Log results to Axiom
+#
+# Usage:
+#   ./scripts/auto-index.sh                  # Default: index + enrich 2000
+#   ./scripts/auto-index.sh --max=5000       # Custom enrichment count
+#   ./scripts/auto-index.sh --index-only     # Skip enrichment
+#   ./scripts/auto-index.sh --enrich-only    # Skip indexing
+
+set -euo pipefail
+
+GOLEMS_DIR="${HOME}/Gits/golems"
+ZIKARON_DIR="${GOLEMS_DIR}/packages/zikaron"
+VENV="${ZIKARON_DIR}/.venv/bin/activate"
+LOG_DIR="${HOME}/.golems-zikaron/logs"
+LOG_FILE="${LOG_DIR}/auto-index-$(date +%Y-%m-%d).log"
+PROJECTS_DIR="${HOME}/.claude/projects"
+FRESHNESS_MIN=30  # Skip sessions modified within this many minutes
+
+MAX_ENRICH=5000
+INDEX_ONLY=false
+ENRICH_ONLY=false
+
+# Parse args
+for arg in "$@"; do
+  case $arg in
+    --max=*) MAX_ENRICH="${arg#*=}" ;;
+    --index-only) INDEX_ONLY=true ;;
+    --enrich-only) ENRICH_ONLY=true ;;
+  esac
+done
+
+mkdir -p "$LOG_DIR"
+
+log() {
+  echo "[$(date '+%H:%M:%S')] $*" | tee -a "$LOG_FILE"
+}
+
+log "=== Auto-Index Start ==="
+log "Max enrich: ${MAX_ENRICH}, Index-only: ${INDEX_ONLY}, Enrich-only: ${ENRICH_ONLY}"
+
+# Check Ollama is running
+if ! curl -sf http://127.0.0.1:11434/api/tags > /dev/null 2>&1; then
+  log "ERROR: Ollama not running. Attempting to start..."
+  open -a OllamaHelper 2>/dev/null || ollama serve &
+  sleep 5
+  if ! curl -sf http://127.0.0.1:11434/api/tags > /dev/null 2>&1; then
+    log "ERROR: Could not start Ollama. Skipping enrichment."
+    INDEX_ONLY=true
+  fi
+fi
+
+# ─── Step 1: Index new conversations ────────────────────────────
+
+INDEXED=0
+SKIPPED_ACTIVE=0
+
+if [ "$ENRICH_ONLY" = false ]; then
+  log "Step 1: Indexing new conversations..."
+
+  # Find recently modified .jsonl files (changed in last 48 hours)
+  # but skip ones modified in last FRESHNESS_MIN minutes (active sessions)
+  TEMP_LIST=$(mktemp)
+  find "$PROJECTS_DIR" -name "*.jsonl" -mtime -2 2>/dev/null | while read -r f; do
+    # Check freshness — skip if modified too recently
+    AGE_MIN=$(( ($(date +%s) - $(stat -f %m "$f")) / 60 ))
+    if [ "$AGE_MIN" -lt "$FRESHNESS_MIN" ]; then
+      log "  SKIP (active, ${AGE_MIN}m old): $(basename "$f")"
+      echo "skip" >> "$TEMP_LIST"
+    else
+      echo "$f" >> "$TEMP_LIST"
+    fi
+  done
+
+  SKIPPED_ACTIVE=$(grep -c "^skip$" "$TEMP_LIST" 2>/dev/null || echo "0")
+  FILE_COUNT=$(grep -v "^skip$" "$TEMP_LIST" 2>/dev/null | grep -c . || echo "0")
+  rm -f "$TEMP_LIST"
+
+  if [ "$FILE_COUNT" -gt 0 ]; then
+    log "  Found ${FILE_COUNT} files to index (${SKIPPED_ACTIVE} skipped as active)"
+
+    # Activate venv and run indexing
+    source "$VENV"
+    BEFORE=$(python3 -c "
+from zikaron.vector_store import VectorStore
+from pathlib import Path
+s = VectorStore(Path.home() / '.local/share/zikaron/zikaron.db')
+print(s.get_stats().get('total_chunks', 0))
+s.close()
+" 2>/dev/null || echo "0")
+
+    zikaron index 2>&1 | tail -5 | tee -a "$LOG_FILE" || {
+      log "  WARNING: zikaron index failed (exit $?), continuing..."
+    }
+
+    AFTER=$(python3 -c "
+from zikaron.vector_store import VectorStore
+from pathlib import Path
+s = VectorStore(Path.home() / '.local/share/zikaron/zikaron.db')
+print(s.get_stats().get('total_chunks', 0))
+s.close()
+" 2>/dev/null || echo "0")
+
+    INDEXED=$((AFTER - BEFORE))
+    log "  Indexed ${INDEXED} new chunks (${BEFORE} → ${AFTER})"
+  else
+    log "  No new files to index (${SKIPPED_ACTIVE} skipped as active)"
+  fi
+fi
+
+# ─── Step 2: Enrich unenriched chunks ───────────────────────────
+
+ENRICHED=0
+
+if [ "$INDEX_ONLY" = false ] && [ "$MAX_ENRICH" -gt 0 ]; then
+  log "Step 2: Enriching up to ${MAX_ENRICH} chunks via GLM..."
+  source "$VENV" 2>/dev/null || true
+
+  START_TIME=$(date +%s)
+
+  # Run enrichment, capture output
+  ENRICH_OUTPUT=$(python3 -m zikaron.pipeline.enrichment \
+    --batch-size=50 \
+    --max="$MAX_ENRICH" \
+    2>&1) || true
+
+  END_TIME=$(date +%s)
+  DURATION=$((END_TIME - START_TIME))
+
+  # Extract counts from output (macOS-compatible — no grep -P)
+  ENRICHED=$(echo "$ENRICH_OUTPUT" | sed -n 's/.*Processed: \([0-9][0-9]*\).*/\1/p' | tail -1)
+  # Also try alternate format: "N ok" — use awk to avoid greedy sed issues
+  if [ -z "$ENRICHED" ] || [ "$ENRICHED" = "0" ]; then
+    ENRICHED=$(echo "$ENRICH_OUTPUT" | awk '/[0-9]+ ok/{for(i=1;i<=NF;i++) if($i ~ /^[0-9]+$/ && $(i+1)=="ok") print $i}' | tail -1)
+  fi
+  ENRICHED="${ENRICHED:-0}"
+
+  log "  Enriched: ${ENRICHED} chunks in ${DURATION}s ($((DURATION / 60))min)"
+  echo "$ENRICH_OUTPUT" | tail -5 >> "$LOG_FILE"
+fi
+
+# ─── Step 3: Report ─────────────────────────────────────────────
+
+log "=== Summary ==="
+log "  New chunks indexed: ${INDEXED}"
+log "  Skipped (active):   ${SKIPPED_ACTIVE}"
+log "  Chunks enriched:    ${ENRICHED}"
+log "=== Auto-Index Done ==="
+
+# Send Axiom event (if configured)
+if command -v bun &> /dev/null; then
+  cd "$GOLEMS_DIR"
+  bun -e "
+    import { logServiceEvent, flushAxiom } from './packages/shared/src/lib/axiom';
+    logServiceEvent({
+      service: 'auto-indexing',
+      event: 'run',
+      status: 'success',
+      duration_ms: ${DURATION:-0} * 1000,
+      metadata: {
+        indexed: ${INDEXED},
+        enriched: ${ENRICHED:-0},
+        skipped_active: ${SKIPPED_ACTIVE},
+      },
+    });
+    await flushAxiom();
+  " 2>/dev/null || true
+fi
+
+# Send Telegram notification (use full path — launchd may not have golems in PATH)
+NOTIFY="${HOME}/.local/bin/notify"
+if [ -x "$NOTIFY" ]; then
+  "$NOTIFY" "Auto-Index Done" "Indexed: ${INDEXED}, Enriched: ${ENRICHED:-0}, Skipped: ${SKIPPED_ACTIVE}" 2>/dev/null || true
+fi

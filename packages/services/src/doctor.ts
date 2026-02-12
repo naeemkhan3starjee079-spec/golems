@@ -148,6 +148,7 @@ async function checkLaunchd() {
     { name: "compactor", label: "com.golemszikaron.compactor" },
     { name: "bedtime-guardian", label: "com.golems.bedtime-guardian" },
     { name: "session-archiver", label: "com.golems.session-archiver" },
+    { name: "auto-index", label: "com.golems.auto-index" },
   ];
   const launchResult = runCommand("launchctl list 2>/dev/null | grep -E 'golem|zikaron' || true");
   const loadedOutput = launchResult.output;
