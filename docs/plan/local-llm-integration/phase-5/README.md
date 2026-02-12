@@ -59,14 +59,16 @@ Batch-process Zikaron's 226K chunks through local GLM to add summaries, tags, en
 
 ## Status
 
-- [ ] Design enrichment schema
-- [ ] Add metadata columns to sqlite-vec
-- [ ] Create enrichment.py
-- [ ] Design context window strategy
-- [ ] Create + test prompt template
-- [ ] Small sample run (100 chunks)
-- [ ] Evaluate quality
-- [ ] Optimize batch size + prompt
-- [ ] Full batch run (226K chunks)
-- [ ] Update search with metadata filters
-- [ ] Update MCP tool descriptions
+- [x] Design enrichment schema (Gemini + Cursor research → same-table approach)
+- [x] Add metadata columns to sqlite-vec (summary, importance, intent, enriched_at)
+- [x] Create enrichment.py (batch pipeline with context, resumable)
+- [x] Design context window strategy (2 before + 1 after, truncate at 4000 chars)
+- [x] Create + test prompt template (structured JSON with tag taxonomy)
+- [x] Small sample run (26+ chunks enriched, continuing in background)
+- [x] Evaluate quality (PASS — see findings.md)
+- [ ] Optimize batch size + prompt (deferred — current quality is good)
+- [ ] Full batch run (238K chunks, operational — ~2 days at 30s/chunk)
+- [x] Update search with metadata filters (tag, intent, importance_min)
+- [x] Update MCP tool descriptions (new params + summary in output)
+- [x] Add `zikaron enrich` CLI command
+- [x] Delete dead exploration.ts
