@@ -20,6 +20,7 @@ export interface EmailInput {
   subject: string;
   from: string;
   snippet: string;
+  body?: string;
   receivedAt: string;
 }
 
@@ -160,13 +161,17 @@ export function extractSubscriptionInfo(
  * Build the scoring prompt for Ollama
  */
 function buildScoringPrompt(email: EmailInput): string {
+  const bodySection = email.body
+    ? `\n- Body (first ~1000 chars):\n"""\n${email.body.replace(/"""/g, "'''")}\n"""`
+    : "";
+
   return `You are an email triage assistant for a developer who works heavily with Claude/Anthropic.
 Score this email for urgency and categorize it.
 
 EMAIL:
 - Subject: ${email.subject}
 - From: ${email.from}
-- Preview: ${email.snippet}
+- Preview: ${email.snippet}${bodySection}
 - Received: ${email.receivedAt}
 
 SCORING CRITERIA:
@@ -206,8 +211,11 @@ SCORING CRITERIA:
   * Social notifications (LinkedIn views, follows)
   * Spam
 
-IMPORTANT: Generic newsletters and "weekly digest" type emails are 2-3, NOT 7+.
-Only score 7+ if the content is DIRECTLY actionable or about Claude/Anthropic specifically.
+IMPORTANT RULES:
+- Generic newsletters and "weekly digest" type emails are 2-3, NOT 7+.
+- Only score 7+ if the content is DIRECTLY actionable or about Claude/Anthropic specifically.
+- READ THE BODY CAREFULLY: Many job platform emails have misleading subjects like "Interview Update" but the body reveals it's a rejection. Score rejections 3-4, NOT 10.
+- If subject says "interview" but body says "not moving forward", "decided not to proceed", "other candidates" → it's a REJECTION (score 3-4), not an interview invite.
 
 CATEGORIES: interview, urgent, job, subscription, tech-update, newsletter, promo, social, other
 

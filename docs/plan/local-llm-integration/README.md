@@ -34,19 +34,33 @@
 
 ## Progress (Execution Order)
 
+### v1: Kill Haiku Costs (DONE)
+
 | Step | Phase | Folder | Status | PR |
 |------|-------|--------|--------|----|
 | 1 | Ollama GLM Setup + Benchmark | [phase-1](phase-1/) | `done` | — |
 | 2 | Replace Local Haiku | [phase-3](phase-3/) | `done` | #121 |
-| 3 | Training Data Collection | [phase-10](phase-10/) | `in-progress` | — (10a: batch scoring 1000 emails running) |
-| 4 | Railway Free API (Gemini/Groq) | [phase-4](phase-4/) | `done` | #122 (code merged; needs API keys + Railway deploy) |
+| 3 | Training Data Collection | [phase-10](phase-10/) | `paused` | — (10a: 453/1000 emails scored) |
+| 4 | Railway Free API (Gemini/Groq) | [phase-4](phase-4/) | `done` | #122 |
 | 5 | GLM MCP Server (2 tools) | [phase-2](phase-2/) | `done` | #123 |
-| 6 | Kilo CLI + Qwen Code | [phase-7](phase-7/) | `done` | #125 (needs `kilo auth login` for free models) |
+| 6 | Kilo CLI + Qwen Code | [phase-7](phase-7/) | `done` | #125 |
 | 7 | Zikaron Enrichment Pipeline | [phase-5](phase-5/) | `done` | #126 |
 | 8 | Context Bloat Reduction | [phase-6](phase-6/) | `done` | #124 |
-| 9 | Fine-Tune Model (MLX QLoRA) | [phase-10](phase-10/) | `pending` | — (10b-e: after training data ready) |
-| 10 | Knowledge Graph + Auto-Indexing | [phase-8](phase-8/) | `pending` | — |
-| 11 | Obsidian Brain View | [phase-9](phase-9/) | `pending` | — |
+
+### v2: Intelligence Layer (ACTIVE)
+
+| Step | What | Folder | Status | PR |
+|------|------|--------|--------|----|
+| 9 | Email scorer body fix | — | `in-progress` | — |
+| 10 | Axiom full observability | [phase-axiom](phase-axiom/) | `pending` | — |
+| 11 | Auto-indexing (5 AM cron) | [phase-8](phase-8/) (8e) | `pending` | — |
+| 12 | Git overlay + file timeline | [phase-8](phase-8/) (8b) | `pending` | — |
+| 13 | Style card v2 (multi-source) | [phase-style](phase-style/) | `pending` | — |
+| 14 | Operation grouping | [phase-8](phase-8/) (8a) | `pending` | — |
+| 15 | Temporal chains + regression | [phase-8](phase-8/) (8d) | `pending` | — |
+| 16 | Plan linking | [phase-8](phase-8/) (8c) | `pending` | — |
+| 17 | Obsidian Brain View | [phase-9](phase-9/) | `pending` | — |
+| 18 | Fine-tune (MLX QLoRA) | [phase-10](phase-10/) | `parked` | — |
 
 ### Also Built (Not Phase-Specific)
 

@@ -15,7 +15,7 @@
 
 import { readFileSync, writeFileSync, existsSync } from "fs";
 import { join } from "path";
-import { fetchRecentEmails, fetchEmailsSince, searchEmails, type GmailEmail } from "./gmail-client";
+import { fetchRecentEmails, fetchEmailsSince, searchEmails, getEmailBodyText, type GmailEmail } from "./gmail-client";
 import { scoreEmail, shouldNotifyImmediately, shouldTrackSubscription, type ScoredEmail, type EmailInput } from "./scorer";
 import {
   createDbClient,
@@ -150,12 +150,13 @@ async function sendNotification(title: string, body: string) {
 /**
  * Convert GmailEmail to EmailInput for scorer
  */
-function toEmailInput(gmail: GmailEmail): EmailInput {
+function toEmailInput(gmail: GmailEmail, body?: string): EmailInput {
   return {
     id: gmail.id,
     subject: gmail.subject,
     from: gmail.from,
     snippet: gmail.snippet,
+    body,
     receivedAt: gmail.receivedAt.toISOString(),
   };
 }
@@ -185,7 +186,15 @@ async function processEmail(
   db: SupabaseClient | null,
   dryRun: boolean
 ): Promise<ScoredEmail> {
-  const input = toEmailInput(gmail);
+  // Fetch email body for better scoring accuracy (catches rejection vs interview, etc.)
+  let bodyText: string | undefined;
+  try {
+    bodyText = await getEmailBodyText(gmail.id, 1000);
+  } catch (err) {
+    console.log(`  ⚠️  Could not fetch body for ${gmail.id} — scoring with subject+snippet only`, (err as Error).message);
+  }
+
+  const input = toEmailInput(gmail, bodyText);
   console.log(`  📧 Scoring: ${input.subject.slice(0, 50)}...`);
 
   const scored = await scoreEmail(input);

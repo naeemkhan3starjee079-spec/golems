@@ -14,6 +14,7 @@ export interface GmailEmail {
   from: string;
   fromName?: string;
   snippet: string;
+  bodyText?: string;
   receivedAt: Date;
   labelIds?: string[];
   listUnsubscribe?: string;
@@ -330,6 +331,55 @@ export async function getEmailById(id: string): Promise<GmailEmail> {
     metadataHeaders: ["From", "Subject", "Date", "List-Unsubscribe"],
   });
   return parseEmail(fullMessage.data);
+}
+
+/**
+ * Extract plain text body from a Gmail message's MIME parts.
+ * Handles both simple and multipart messages.
+ */
+function extractBodyText(payload: any): string {
+  // Simple message — body directly on payload (text/plain only, skip HTML)
+  if (payload?.body?.data && payload.mimeType === "text/plain") {
+    return Buffer.from(payload.body.data, "base64url").toString("utf-8");
+  }
+
+  // Multipart — find text/plain part
+  if (payload?.parts) {
+    for (const part of payload.parts) {
+      if (part.mimeType === "text/plain" && part.body?.data) {
+        return Buffer.from(part.body.data, "base64url").toString("utf-8");
+      }
+      // Recurse into nested multipart (e.g., multipart/alternative inside multipart/mixed)
+      if (part.parts) {
+        const nested = extractBodyText(part);
+        if (nested) return nested;
+      }
+    }
+  }
+
+  return "";
+}
+
+/**
+ * Fetch the plain text body of an email by ID.
+ * Returns truncated body text (first maxChars characters).
+ *
+ * @param id - Gmail message ID
+ * @param maxChars - Maximum characters to return (default: 1000)
+ */
+export async function getEmailBodyText(
+  id: string,
+  maxChars: number = 1000
+): Promise<string> {
+  const gmail = getGmailClient();
+  const fullMessage = await gmail.users.messages.get({
+    userId: "me",
+    id,
+    format: "full",
+  });
+
+  const body = extractBodyText(fullMessage.data.payload);
+  return body.slice(0, maxChars).trim();
 }
 
 /**
