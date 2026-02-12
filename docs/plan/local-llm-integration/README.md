@@ -57,7 +57,7 @@
 | 12 | Git overlay + file timeline | [phase-8](phase-8/) (8b) | `done` | #134 |
 | 13 | Style card v2 (multi-source + LinkedIn) | [phase-style](phase-style/) | `done` | #131, #132 |
 | 14 | Operation grouping | [phase-8](phase-8/) (8a) | `done` | #135 |
-| 15 | Temporal chains + regression | [phase-8](phase-8/) (8d) | `pending` | — |
+| 15 | Temporal chains + regression | [phase-8](phase-8/) (8d) | `done` | #137 |
 | 16 | Plan linking | [phase-8](phase-8/) (8c) | `pending` | — |
 | 17 | Obsidian Brain View | [phase-9](phase-9/) | `pending` | — |
 | 18 | Fine-tune (MLX QLoRA) | [phase-10](phase-10/) | `parked` | — |
