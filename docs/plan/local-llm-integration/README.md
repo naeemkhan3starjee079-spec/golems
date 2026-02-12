@@ -42,7 +42,7 @@
 | 4 | Railway Free API (Gemini/Groq) | [phase-4](phase-4/) | `done` | #122 (code merged; needs API keys + Railway deploy) |
 | 5 | GLM MCP Server (2 tools) | [phase-2](phase-2/) | `done` | #123 |
 | 6 | Kilo CLI + Qwen Code | [phase-7](phase-7/) | `done` | #125 (needs `kilo auth login` for free models) |
-| 7 | Zikaron Enrichment Pipeline | [phase-5](phase-5/) | `pending` | — |
+| 7 | Zikaron Enrichment Pipeline | [phase-5](phase-5/) | `done` | #126 |
 | 8 | Context Bloat Reduction | [phase-6](phase-6/) | `done` | #124 |
 | 9 | Fine-Tune Model (MLX QLoRA) | [phase-10](phase-10/) | `pending` | — (10b-e: after training data ready) |
 | 10 | Knowledge Graph + Auto-Indexing | [phase-8](phase-8/) | `pending` | — |
