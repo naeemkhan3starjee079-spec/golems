@@ -39,7 +39,7 @@
 | 1 | Ollama GLM Setup + Benchmark | [phase-1](phase-1/) | `done` | — |
 | 2 | Replace Local Haiku | [phase-3](phase-3/) | `done` | #121 |
 | 3 | Training Data Collection | [phase-10](phase-10/) | `in-progress` | — (10a: batch scoring 1000 emails running) |
-| 4 | Railway Free API (Gemini/Groq) | [phase-4](phase-4/) | `researched` | — (Vercel AI SDK, pivoted from Zhipu) |
+| 4 | Railway Free API (Gemini/Groq) | [phase-4](phase-4/) | `code-done` | #122 (needs API keys + deploy) |
 | 5 | GLM MCP Server (2 tools) | [phase-2](phase-2/) | `in-progress` | — (Cursor created, needs Bun panic fix) |
 | 6 | Kilo CLI + Qwen Code | [phase-7](phase-7/) | `researched` | — (Kilo confirmed, Qwen Code 1K free RPD) |
 | 7 | Zikaron Enrichment Pipeline | [phase-5](phase-5/) | `pending` | — |

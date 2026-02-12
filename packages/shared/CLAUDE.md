@@ -65,6 +65,15 @@ GLM-4.7-Flash backend via Ollama HTTP. Used when `LLM_BACKEND=glm`.
 import { runGLM, runGLMJSON } from "@golems/shared/lib/glm-llm";
 ```
 
+### `lib/vercel-llm`
+Free cloud LLM backend via Vercel AI SDK (Gemini/Groq). Used when `LLM_BACKEND=gemini` or `groq`.
+```typescript
+import { runCloudFree, runCloudFreeJSON } from "@golems/shared/lib/vercel-llm";
+```
+- `gemini`: Gemini 2.5 Flash-Lite (1K RPD free, Google)
+- `groq`: Llama 4 Scout (1K RPD free, Groq)
+- Auto-fallback between providers on 429
+
 ### `lib/telegram-direct`
 Dual-mode notification sender. `TELEGRAM_MODE=local|direct`.
 ```typescript

@@ -81,13 +81,14 @@ Gemini/Groq API is acceptable here — same kind of data that was going to Anthr
 ## Status
 
 - [x] Research free LLM APIs (deep research)
-- [ ] Install Vercel AI SDK (`bun add ai @ai-sdk/google @ai-sdk/groq`)
-- [ ] Create vercel-llm.ts (unified provider interface)
-- [ ] Update LLM backend switch (gemini + groq)
-- [ ] Add fallback chain (gemini → groq → haiku)
-- [ ] Get API keys (Gemini + Groq)
+- [x] Install Vercel AI SDK (`bun add ai @ai-sdk/google @ai-sdk/groq`)
+- [x] Create vercel-llm.ts (unified provider interface with fallback)
+- [x] Update LLM backend switch (gemini + groq routes in llm.ts)
+- [x] Add fallback chain (gemini → groq on 429)
+- [x] All 1179 tests pass
+- [ ] Get API keys (Gemini: aistudio.google.com, Groq: console.groq.com) — **needs user**
 - [ ] Store keys in 1Password
-- [ ] Set Railway env vars
-- [ ] Deploy + test
+- [ ] Set Railway env vars (`LLM_BACKEND=gemini` + keys)
+- [ ] Deploy + test on Railway
 - [ ] Monitor 24h
 - [ ] Remove ANTHROPIC_API_KEY from Railway
