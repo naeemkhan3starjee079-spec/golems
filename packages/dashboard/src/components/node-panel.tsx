@@ -1,6 +1,7 @@
 "use client";
 
-import { X, GitBranch, FileCode, Layers, Clock, Star } from "lucide-react";
+import { X, GitBranch, FileCode, Layers, Clock, Star, ExternalLink } from "lucide-react";
+import Link from "next/link";
 import type { GraphNode, GraphEdge } from "@/lib/types";
 import { getNodeColorHex } from "@/lib/graph-colors";
 
@@ -136,6 +137,17 @@ export function NodePanel({ node, edges, allNodes, onClose }: Props) {
             <div className="text-[10px] text-muted">Files</div>
           </div>
         </div>
+
+        {/* View Session */}
+        {node.session_id && (
+          <Link
+            href={`/session?id=${encodeURIComponent(node.session_id)}`}
+            className="flex items-center justify-center gap-2 w-full px-3 py-2 text-xs font-medium bg-accent/10 text-accent border border-accent/20 rounded-lg hover:bg-accent/20 transition-colors"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            View Session Detail
+          </Link>
+        )}
 
         {/* Community */}
         <div className="space-y-1">

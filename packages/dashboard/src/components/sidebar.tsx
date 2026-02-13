@@ -8,6 +8,7 @@ import {
   Coins,
   Database,
   KanbanSquare,
+  Search,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -17,6 +18,9 @@ const NAV_ITEMS = [
   { href: "/enrichment", label: "Enrichment", icon: Database },
   { href: "/backlog", label: "Backlog", icon: KanbanSquare },
 ];
+
+// Search is handled via Cmd+K overlay, not a nav link
+const SEARCH_ACTION = { label: "Search", icon: Search };
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -50,6 +54,21 @@ export function Sidebar() {
             </Link>
           );
         })}
+        {/* Search action (opens Cmd+K overlay) */}
+        <button
+          type="button"
+          onClick={() =>
+            window.dispatchEvent(
+              new KeyboardEvent("keydown", { key: "k", metaKey: true })
+            )
+          }
+          className="flex items-center gap-3 px-4 py-2.5 text-sm text-muted hover:text-foreground hover:bg-surface-hover transition-colors w-full"
+        >
+          <SEARCH_ACTION.icon className="w-5 h-5 shrink-0" />
+          <span className="opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+            {SEARCH_ACTION.label}
+          </span>
+        </button>
       </nav>
 
     </aside>

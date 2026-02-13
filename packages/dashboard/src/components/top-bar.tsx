@@ -1,6 +1,6 @@
 "use client";
 
-import { Circle } from "lucide-react";
+import { Circle, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export function TopBar() {
@@ -30,6 +30,22 @@ export function TopBar() {
   return (
     <header className="flex items-center justify-between px-6 py-3 border-b border-border bg-surface">
       <h1 className="text-sm font-medium text-muted">Dashboard</h1>
+
+      <button
+          type="button"
+          onClick={() => {
+            window.dispatchEvent(
+              new KeyboardEvent("keydown", { key: "k", metaKey: true })
+            );
+          }}
+          className="flex items-center gap-2 px-3 py-1.5 text-xs text-muted/60 bg-background border border-border/50 rounded-lg hover:text-muted hover:border-border transition-colors"
+        >
+          <Search className="w-3.5 h-3.5" />
+          <span>Search</span>
+          <kbd className="text-[10px] bg-surface px-1 py-0.5 rounded border border-border/30 ml-1">
+            ⌘K
+          </kbd>
+        </button>
 
       <div className="flex items-center gap-4 text-xs text-muted">
         {lastUpdated && <span>Updated {lastUpdated}</span>}
