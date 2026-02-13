@@ -24,7 +24,7 @@ const CLAUDE_BIN = `${HOME}/.local/bin/claude`;
 const GEMINI_BIN = `${HOME}/.nvm/versions/node/v22.0.0/bin/gemini`;
 const KIRO_BIN = `${HOME}/.local/bin/kiro-cli`;
 const CURSOR_BIN = `${HOME}/.local/bin/cursor`;
-const GH_BIN = "/usr/local/bin/gh";
+const GH_BIN = ["/opt/homebrew/bin/gh", "/usr/local/bin/gh"].find(p => existsSync(p)) || "gh";
 
 // ─── State Management ──────────────────────────────────────────────
 
@@ -470,6 +470,8 @@ If nothing actionable, output: NOTHING_TO_FIX`;
 
   try {
     // Fresh session each run — prevents old context from drowning out findings
+    // Strip ANTHROPIC_API_KEY so Claude uses subscription auth (not a potentially stale API key)
+    const { ANTHROPIC_API_KEY: _stripKey, ...cleanEnv } = process.env;
     const proc = Bun.spawn(
       [
         CLAUDE_BIN,
@@ -481,6 +483,7 @@ If nothing actionable, output: NOTHING_TO_FIX`;
         cwd: worktreePath,
         stdout: "pipe",
         stderr: "pipe",
+        env: cleanEnv,
       }
     );
 
