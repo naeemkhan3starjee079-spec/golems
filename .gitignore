@@ -3,6 +3,12 @@ node_modules/
 .env.local
 .mcp.json
 
+# Claude scratchpads (temp working files)
+claude.scratchpad*.md
+**/claude.scratchpad*.md
+nohup.out
+**/nohup.out
+
 # Project-level Claude config (may have keys)
 .claude/*
 !.claude/rules/
