@@ -44,19 +44,39 @@ mkdir -p "$LOG_DIR"
 # Log rotation — keep last 14 days
 find "$LOG_DIR" -name "auto-index-*.log" -mtime +14 -delete 2>/dev/null || true
 
+# PID lock — prevent overlapping enrichment runs
+LOCK_FILE="${LOG_DIR}/auto-index.pid"
+if [ -f "$LOCK_FILE" ]; then
+  OLD_PID=$(cat "$LOCK_FILE" 2>/dev/null || true)
+  if kill -0 "$OLD_PID" 2>/dev/null; then
+    echo "[$(date '+%H:%M:%S')] Already running (PID ${OLD_PID}), skipping." | tee -a "$LOG_FILE"
+    exit 0
+  else
+    rm -f "$LOCK_FILE"
+  fi
+fi
+echo $$ > "$LOCK_FILE"
+trap 'rm -f "$LOCK_FILE"' EXIT
+
 log() {
   echo "[$(date '+%H:%M:%S')] $*" | tee -a "$LOG_FILE"
 }
 
+SCRIPT_START=$(date +%s)
 log "=== Auto-Index Start ==="
 log "Max enrich: ${MAX_ENRICH}, Index-only: ${INDEX_ONLY}, Enrich-only: ${ENRICH_ONLY}, Taba-only: ${TABA_ONLY}"
 
-# Check Ollama is running
-if ! curl -sf http://127.0.0.1:11434/api/tags > /dev/null 2>&1; then
+# Check Ollama is running (capture at startup for Axiom telemetry)
+OLLAMA_AVAILABLE=false
+if curl -sf http://127.0.0.1:11434/api/tags > /dev/null 2>&1; then
+  OLLAMA_AVAILABLE=true
+else
   log "ERROR: Ollama not running. Attempting to start..."
   open -a OllamaHelper 2>/dev/null || ollama serve &
   sleep 5
-  if ! curl -sf http://127.0.0.1:11434/api/tags > /dev/null 2>&1; then
+  if curl -sf http://127.0.0.1:11434/api/tags > /dev/null 2>&1; then
+    OLLAMA_AVAILABLE=true
+  else
     log "ERROR: Could not start Ollama. Skipping enrichment."
     INDEX_ONLY=true
   fi
@@ -123,6 +143,7 @@ fi
 # ─── Step 2: Enrich unenriched chunks ───────────────────────────
 
 ENRICHED=0
+ENRICH_OK=true
 
 if [ "$INDEX_ONLY" = false ] && [ "$TABA_ONLY" = false ] && [ "$MAX_ENRICH" -gt 0 ]; then
   log "Step 2: Enriching up to ${MAX_ENRICH} chunks via GLM..."
@@ -130,11 +151,11 @@ if [ "$INDEX_ONLY" = false ] && [ "$TABA_ONLY" = false ] && [ "$MAX_ENRICH" -gt 
 
   START_TIME=$(date +%s)
 
-  # Run enrichment, capture output
+  # Run enrichment, capture output and exit code
   ENRICH_OUTPUT=$(python3 -m zikaron.pipeline.enrichment \
     --batch-size=50 \
     --max="$MAX_ENRICH" \
-    2>&1) || true
+    2>&1) || ENRICH_OK=false
 
   END_TIME=$(date +%s)
   DURATION=$((END_TIME - START_TIME))
@@ -202,14 +223,35 @@ fi
 
 # ─── Step 4: Report ─────────────────────────────────────────────
 
+TOTAL_END=$(date +%s)
+TOTAL_DURATION=$((TOTAL_END - ${SCRIPT_START:-$TOTAL_END}))
+TOTAL_DURATION_MS=$((TOTAL_DURATION * 1000))
+
+# Determine overall status (based on exit codes, not zero counts — zero is fine when fully enriched)
+ERRORS=0
+STATUS="success"
+[ "$ENRICH_OK" = false ] && [ "$INDEX_ONLY" = false ] && [ "$TABA_ONLY" = false ] && ERRORS=$((ERRORS + 1))
+[ "${TABA_ENRICHED:-0}" = "0" ] && [ "$INDEX_ONLY" = false ] && [ -d "${TABA_DIR:-/nonexistent}" ] && [ "$OLLAMA_AVAILABLE" = true ] && ERRORS=$((ERRORS + 1))
+[ "$ERRORS" -gt 0 ] && STATUS="partial"
+
 log "=== Summary ==="
+log "  Status:             ${STATUS}"
+log "  Total duration:     ${TOTAL_DURATION}s ($((TOTAL_DURATION / 60))min)"
 log "  New chunks indexed: ${INDEXED}"
 log "  Skipped (active):   ${SKIPPED_ACTIVE}"
-log "  Chunks enriched:    ${ENRICHED}"
+log "  Chunks enriched:    ${ENRICHED} (${DURATION:-0}s)"
 log "  Taba enriched:      ${TABA_ENRICHED}"
 log "  Taba ingested:      ${TABA_INGESTED}"
 log "  Taba progress:      ${TABA_STATS:-n/a}"
+log "  Lock PID:           $$"
 log "=== Auto-Index Done ==="
+
+# Compute run mode for Axiom metadata
+if [ "$TABA_ONLY" = "true" ]; then RUN_MODE="taba-only"
+elif [ "$INDEX_ONLY" = "true" ]; then RUN_MODE="index-only"
+elif [ "$ENRICH_ONLY" = "true" ]; then RUN_MODE="enrich-only"
+else RUN_MODE="full"
+fi
 
 # Send Axiom event (if configured)
 if command -v bun &> /dev/null; then
@@ -219,14 +261,20 @@ if command -v bun &> /dev/null; then
     logServiceEvent({
       service: 'auto-indexing',
       event: 'run',
-      status: 'success',
-      duration_ms: ${DURATION:-0} * 1000,
+      status: '${STATUS}',
+      duration_ms: ${TOTAL_DURATION_MS},
       metadata: {
         indexed: ${INDEXED},
         enriched: ${ENRICHED:-0},
+        enrich_duration_s: ${DURATION:-0},
         skipped_active: ${SKIPPED_ACTIVE},
         taba_enriched: ${TABA_ENRICHED:-0},
         taba_ingested: ${TABA_INGESTED:-0},
+        taba_progress: '${TABA_STATS:-n/a}',
+        mode: '${RUN_MODE}',
+        ollama_available: ${OLLAMA_AVAILABLE},
+        max_enrich: ${MAX_ENRICH},
+        pid: $$,
       },
     });
     await flushAxiom();
@@ -236,5 +284,9 @@ fi
 # Send Telegram notification (use full path — launchd may not have golems in PATH)
 NOTIFY="${HOME}/.local/bin/notify"
 if [ -x "$NOTIFY" ]; then
-  "$NOTIFY" "Auto-Index Done" "Zikaron: ${INDEXED} indexed, ${ENRICHED:-0} enriched. Taba: ${TABA_ENRICHED:-0} enriched (${TABA_STATS:-n/a})" 2>/dev/null || true
+  if [ "$STATUS" = "success" ]; then
+    "$NOTIFY" "Auto-Index Done" "Zikaron: ${INDEXED} indexed, ${ENRICHED:-0} enriched (${DURATION:-0}s). Taba: ${TABA_ENRICHED:-0} enriched (${TABA_STATS:-n/a}). Total: $((TOTAL_DURATION / 60))min" 2>/dev/null || true
+  else
+    "$NOTIFY" "Auto-Index Partial" "Some steps had 0 results. Zikaron: ${ENRICHED:-0} enriched. Taba: ${TABA_ENRICHED:-0}. Check logs." 2>/dev/null || true
+  fi
 fi
