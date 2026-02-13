@@ -13,8 +13,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { PageSkeleton } from "@/components/skeleton";
-import { cleanProject, cleanPath } from "@/lib/format";
-import { TYPE_ICONS, TYPE_COLORS, TYPE_BORDER_COLORS } from "@/lib/content-types";
+import { cleanProject, cleanPath, TYPE_ICONS, TYPE_COLORS, TYPE_BORDER_COLORS } from "@/lib/format";
 
 type SessionChunk = {
   id: string;

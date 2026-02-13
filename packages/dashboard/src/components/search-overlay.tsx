@@ -1,9 +1,10 @@
 "use client";
 
-import { Search, X, FileCode, MessageSquare, Code, Terminal, Hash, Brain } from "lucide-react";
+import { Search, X, Brain } from "lucide-react";
+import { MessageSquare } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { cleanProject, sanitizeSnippet } from "@/lib/format";
+import { cleanProject, sanitizeSnippet, TYPE_ICONS, TYPE_COLORS } from "@/lib/format";
 
 type SearchResult = {
   id: string;
@@ -16,24 +17,6 @@ type SearchResult = {
   intent: string | null;
   snippet: string;
   rank: number;
-};
-
-const TYPE_ICONS: Record<string, typeof FileCode> = {
-  ai_code: Code,
-  user_message: MessageSquare,
-  assistant_text: MessageSquare,
-  file_read: FileCode,
-  git_diff: Hash,
-  stack_trace: Terminal,
-};
-
-const TYPE_COLORS: Record<string, string> = {
-  ai_code: "text-cyan",
-  user_message: "text-accent",
-  assistant_text: "text-emerald",
-  file_read: "text-muted",
-  git_diff: "text-amber",
-  stack_trace: "text-rose",
 };
 
 function deriveSession(result: SearchResult): string {
