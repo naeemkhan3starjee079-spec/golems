@@ -37,35 +37,17 @@ Linear-style project management board built into the dashboard. Manage all proje
 -- Backlog items
 backlog_items (
   id uuid PK,
-  user_id uuid FK → auth.users,
-  project text NOT NULL,         -- 'golems', 'songscript', etc.
+  project text NOT NULL DEFAULT 'golems',
   title text NOT NULL,
   description text,
   status text DEFAULT 'backlog', -- backlog | in_progress | done | archived
   priority text DEFAULT 'medium', -- low | medium | high | urgent
-  tags text[],                   -- free-form tags
-  brain_clusters int[],          -- linked brain graph community IDs
-  brain_sessions text[],         -- linked session IDs
+  tags text[],
+  created_by text DEFAULT 'dashboard',
   created_at timestamptz,
-  updated_at timestamptz,
-  created_by text               -- 'dashboard' | 'telegram' | 'claude' | 'voice'
-)
-
--- Project sharing
-backlog_projects (
-  id uuid PK,
-  owner_id uuid FK → auth.users,
-  name text NOT NULL,
-  description text,
-  shared_with jsonb DEFAULT '[]' -- [{user_id, role: 'viewer'|'editor'}]
+  updated_at timestamptz (auto-trigger)
 )
 ```
-
-## Research Needed
-
-- **Best kanban board UX patterns for developers** — what makes Linear feel so good?
-- **Voice-to-backlog pipeline** — Whisper/Deepgram → structured item
-- **Embedding-based linking** — how to match backlog text to brain graph clusters efficiently
 
 ## Steps
 
@@ -86,11 +68,36 @@ backlog_projects (
 
 ## Status
 
-- [ ] Research kanban UX patterns
-- [ ] Supabase migration for backlog tables
-- [ ] Backlog CRUD API
-- [ ] Kanban board UI
-- [ ] Quick-add input
-- [ ] Brain graph linking
-- [ ] Telegram integration
-- [ ] Claude skill/MCP
+- [x] Supabase migration for backlog tables (with RLS, updated_at trigger)
+- [x] Backlog CRUD API (GET/POST/PATCH/DELETE via daemon → Supabase)
+- [x] Kanban board UI (4 columns, quick-add, project filter, priority badges)
+- [x] Quick-add input (Enter to submit, project/priority selectors)
+- [ ] Brain graph linking (deferred — needs embedding similarity)
+- [ ] Telegram integration (deferred — needs `/backlog` command)
+- [ ] Claude skill/MCP (deferred — needs MCP tool)
+- [ ] Drag-and-drop (deferred — needs dnd-kit library)
+
+## What Was Built
+
+### Supabase Migration
+- `backlog_items` table with status/priority CHECK constraints
+- Indexes on status, project, priority
+- RLS enabled with service_role policy
+- Auto-updating `updated_at` trigger
+
+### Daemon API (packages/zikaron/src/zikaron/daemon.py)
+- `GET /backlog/items?project=X&status=Y` — list with optional filters
+- `POST /backlog/items` — create with title, project, priority, tags
+- `PATCH /backlog/items/:id` — update status, title, description, priority, tags
+- `DELETE /backlog/items/:id` — remove item
+- Shared `_supabase_mutate()` helper for POST/PATCH/DELETE
+
+### Kanban Board (packages/dashboard/src/app/backlog/page.tsx)
+- 4-column Kanban: Backlog, In Progress, Done, Archived
+- Quick-add bar with project/priority selectors + Enter key
+- Arrow button to advance items to next status
+- Delete button on hover
+- Project filter dropdown
+- Priority badges (urgent=rose, high=amber, medium=accent, low=muted)
+- Optimistic UI updates (instant visual feedback, revert on error)
+- Refresh button
