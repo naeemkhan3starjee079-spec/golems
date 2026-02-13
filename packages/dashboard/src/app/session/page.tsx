@@ -5,19 +5,16 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
-  Code,
-  FileCode,
   GitBranch,
-  Hash,
   Layers,
   MessageSquare,
-  Terminal,
 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { PageSkeleton } from "@/components/skeleton";
 import { cleanProject, cleanPath } from "@/lib/format";
+import { TYPE_ICONS, TYPE_COLORS, TYPE_BORDER_COLORS } from "@/lib/content-types";
 
 type SessionChunk = {
   id: string;
@@ -56,25 +53,6 @@ type SessionData = {
   type_distribution: Record<string, number>;
 };
 
-const TYPE_COLORS: Record<string, string> = {
-  ai_code: "border-l-cyan text-cyan",
-  user_message: "border-l-accent text-accent",
-  assistant_text: "border-l-emerald text-emerald",
-  file_read: "border-l-muted text-muted",
-  git_diff: "border-l-amber text-amber",
-  stack_trace: "border-l-rose text-rose",
-  build_log: "border-l-muted text-muted",
-  dir_listing: "border-l-muted text-muted",
-};
-
-const TYPE_ICONS: Record<string, typeof Code> = {
-  ai_code: Code,
-  user_message: MessageSquare,
-  assistant_text: MessageSquare,
-  file_read: FileCode,
-  git_diff: Hash,
-  stack_trace: Terminal,
-};
 
 function SessionContent() {
   const searchParams = useSearchParams();
@@ -91,7 +69,7 @@ function SessionContent() {
       page: String(page),
       per_page: String(perPage),
     });
-    if (filterType) params.set("type", filterType);
+    if (filterType) params.set("content_type", filterType);
     fetch(`/api/session/${encodeURIComponent(sessionId)}?${params}`)
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -179,8 +157,7 @@ function SessionContent() {
           {Object.entries(data.type_distribution)
             .sort((a, b) => b[1] - a[1])
             .map(([type, count]) => {
-              const tc = TYPE_COLORS[type] ?? "border-l-muted text-muted";
-              const color = tc.split(" ")[1] ?? "text-muted";
+              const color = TYPE_COLORS[type] ?? "text-muted";
               return (
                 <button
                   key={type}
@@ -256,7 +233,7 @@ function SessionContent() {
       {/* Chunks */}
       <div className="flex-1 min-h-0 overflow-y-auto space-y-2">
         {data.chunks.map((chunk) => {
-          const tc = TYPE_COLORS[chunk.content_type] ?? "border-l-muted";
+          const tc = TYPE_BORDER_COLORS[chunk.content_type] ?? "border-l-muted text-muted";
           const borderClass = tc.split(" ")[0] ?? "border-l-muted";
           const Icon = TYPE_ICONS[chunk.content_type] ?? MessageSquare;
           return (
@@ -283,9 +260,13 @@ function SessionContent() {
                   {chunk.summary}
                 </div>
               )}
-              <pre className="text-xs whitespace-pre-wrap break-words leading-relaxed text-foreground/80 max-h-40 overflow-y-auto">
-                {chunk.content}
-              </pre>
+              {chunk.content ? (
+                <pre className="text-xs whitespace-pre-wrap break-words leading-relaxed text-foreground/80 max-h-40 overflow-y-auto">
+                  {chunk.content}
+                </pre>
+              ) : (
+                <span className="text-[10px] text-muted/30 italic">No content</span>
+              )}
             </div>
           );
         })}

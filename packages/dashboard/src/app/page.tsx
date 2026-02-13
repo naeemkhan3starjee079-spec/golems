@@ -36,7 +36,7 @@ function BrainViewContent() {
       const node = graph.nodes.find(
         (n) => n.id === nodeParam || n.session_id === nodeParam
       );
-      if (node) setSelectedNode(node);
+      setSelectedNode(node ?? null);
     }
   }, [graph, nodeParam]);
 

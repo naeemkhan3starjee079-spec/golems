@@ -637,7 +637,7 @@ async def backlog_delete(item_id: str):
 # ──────────────────────────────────────────────
 
 @app.get("/dashboard/search")
-async def dashboard_search(q: str = "", project: str = "", type: str = "", limit: int = 20):
+async def dashboard_search(q: str = "", project: str = "", content_type: str = "", limit: int = 20):
     """Fast FTS5 text search across all chunks. Returns ranked results with snippets."""
     if not q.strip():
         return {"results": [], "query": q, "total": 0, "time_ms": 0}
@@ -663,9 +663,9 @@ async def dashboard_search(q: str = "", project: str = "", type: str = "", limit
             if project:
                 where_parts.append("c.project LIKE ?")
                 params.append(f"%{project}%")
-            if type:
+            if content_type:
                 where_parts.append("c.content_type = ?")
-                params.append(type)
+                params.append(content_type)
             where_clause = (" AND " + " AND ".join(where_parts)) if where_parts else ""
 
             sql = f"""
@@ -691,6 +691,12 @@ async def dashboard_search(q: str = "", project: str = "", type: str = "", limit
     rows = await asyncio.to_thread(_run_search)
     elapsed = (time.time() - start_time) * 1000
 
+    def _sanitize_snippet(raw: str) -> str:
+        """Escape HTML in FTS5 snippet except <mark> tags (defense-in-depth)."""
+        import html
+        escaped = html.escape(raw)
+        return escaped.replace("&lt;mark&gt;", "<mark>").replace("&lt;/mark&gt;", "</mark>")
+
     results = []
     for row in rows:
         chunk_id, content_type, proj, conv_id, importance, tags, summary, intent, snippet_text, rank = row
@@ -703,7 +709,7 @@ async def dashboard_search(q: str = "", project: str = "", type: str = "", limit
             "tags": tags,
             "summary": summary,
             "intent": intent,
-            "snippet": snippet_text,
+            "snippet": _sanitize_snippet(snippet_text) if snippet_text else "",
             "rank": rank,
         })
 
@@ -711,7 +717,7 @@ async def dashboard_search(q: str = "", project: str = "", type: str = "", limit
 
 
 @app.get("/session/{session_id:path}")
-async def session_detail(session_id: str, page: int = 1, per_page: int = 50, type: str = ""):
+async def session_detail(session_id: str, page: int = 1, per_page: int = 50, content_type: str = ""):
     """Get session detail: chunks (paginated), files touched, metadata.
 
     Sessions are matched by conversation_id OR by chunk ID prefix (for newer chunks
@@ -754,9 +760,9 @@ async def session_detail(session_id: str, page: int = 1, per_page: int = 50, typ
             # Add type filter if specified
             type_where = ""
             type_params: list = []
-            if type:
+            if content_type:
                 type_where = " AND content_type = ?"
-                type_params = [type]
+                type_params = [content_type]
                 # Recalculate total with type filter
                 total = list(cursor.execute(
                     f"SELECT COUNT(*) FROM chunks WHERE {where}{type_where}",
@@ -774,9 +780,12 @@ async def session_detail(session_id: str, page: int = 1, per_page: int = 50, typ
             """, wparams + type_params + [per_page, offset]))
 
             # Session context (if available)
-            ctx = list(cursor.execute(
-                "SELECT * FROM session_context WHERE session_id = ?", [session_id]
-            ))
+            ctx = list(cursor.execute("""
+                SELECT session_id, project, branch, pr_number, commit_shas,
+                       files_changed, started_at, ended_at, created_at,
+                       plan_name, plan_phase, story_id
+                FROM session_context WHERE session_id = ?
+            """, [session_id]))
 
             # Unique files touched in this session
             files = list(cursor.execute(f"""
