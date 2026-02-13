@@ -711,11 +711,12 @@ async def dashboard_search(q: str = "", project: str = "", type: str = "", limit
 
 
 @app.get("/session/{session_id:path}")
-async def session_detail(session_id: str, page: int = 1, per_page: int = 50):
+async def session_detail(session_id: str, page: int = 1, per_page: int = 50, type: str = ""):
     """Get session detail: chunks (paginated), files touched, metadata.
 
     Sessions are matched by conversation_id OR by chunk ID prefix (for newer chunks
     that don't have conversation_id set). The chunk ID format is '{jsonl_path}:{N}'.
+    Optionally filter by content_type.
     """
     per_page = max(1, min(per_page, 200))
     offset = (max(1, page) - 1) * per_page
@@ -750,15 +751,27 @@ async def session_detail(session_id: str, page: int = 1, per_page: int = 50):
 
             where, wparams = id_filter
 
+            # Add type filter if specified
+            type_where = ""
+            type_params: list = []
+            if type:
+                type_where = " AND content_type = ?"
+                type_params = [type]
+                # Recalculate total with type filter
+                total = list(cursor.execute(
+                    f"SELECT COUNT(*) FROM chunks WHERE {where}{type_where}",
+                    wparams + type_params
+                ))[0][0]
+
             # Paginated chunks
             chunks = list(cursor.execute(f"""
                 SELECT id, content_type, project, position, importance,
                        tags, summary, intent, content, source_file
                 FROM chunks
-                WHERE {where}
+                WHERE {where}{type_where}
                 ORDER BY position ASC, rowid ASC
                 LIMIT ? OFFSET ?
-            """, wparams + [per_page, offset]))
+            """, wparams + type_params + [per_page, offset]))
 
             # Session context (if available)
             ctx = list(cursor.execute(

@@ -17,6 +17,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { PageSkeleton } from "@/components/skeleton";
+import { cleanProject, cleanPath } from "@/lib/format";
 
 type SessionChunk = {
   id: string;
@@ -75,20 +76,6 @@ const TYPE_ICONS: Record<string, typeof Code> = {
   stack_trace: Terminal,
 };
 
-function cleanProject(project: string): string {
-  return project
-    .replace(/^-Users-etanheyman-Gits-/, "~/")
-    .replace(/^-Users-etanheyman-Desktop-Gits-/, "~/old/")
-    .replace(/^-Users-etanheyman-/, "~/")
-    .replace(/^-$/, "global");
-}
-
-function cleanPath(path: string): string {
-  return path
-    .replace(/^\/Users\/etanheyman\/Gits\//, "~/")
-    .replace(/^\/Users\/etanheyman\//, "~/");
-}
-
 function SessionContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("id") ?? "";
@@ -100,16 +87,23 @@ function SessionContent() {
 
   const fetchSession = useCallback(() => {
     if (!sessionId) return;
-    fetch(
-      `/api/session/${encodeURIComponent(sessionId)}?page=${page}&per_page=${perPage}`
-    )
+    const params = new URLSearchParams({
+      page: String(page),
+      per_page: String(perPage),
+    });
+    if (filterType) params.set("type", filterType);
+    fetch(`/api/session/${encodeURIComponent(sessionId)}?${params}`)
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json();
       })
       .then(setData)
       .catch((err) => setError(err.message));
-  }, [sessionId, page]);
+  }, [sessionId, page, filterType]);
+
+  useEffect(() => {
+    setPage(1); // Reset to page 1 when filter changes
+  }, [filterType]);
 
   useEffect(() => {
     fetchSession();
@@ -132,9 +126,6 @@ function SessionContent() {
   if (!data) return <PageSkeleton />;
 
   const totalPages = Math.ceil(data.total_chunks / perPage);
-  const filteredChunks = filterType
-    ? data.chunks.filter((c) => c.content_type === filterType)
-    : data.chunks;
 
   // Derive a short label for the session
   const sessionLabel = sessionId.split("/").pop()?.replace(".jsonl", "") ?? sessionId;
@@ -264,7 +255,7 @@ function SessionContent() {
 
       {/* Chunks */}
       <div className="flex-1 min-h-0 overflow-y-auto space-y-2">
-        {filteredChunks.map((chunk) => {
+        {data.chunks.map((chunk) => {
           const tc = TYPE_COLORS[chunk.content_type] ?? "border-l-muted";
           const borderClass = tc.split(" ")[0] ?? "border-l-muted";
           const Icon = TYPE_ICONS[chunk.content_type] ?? MessageSquare;

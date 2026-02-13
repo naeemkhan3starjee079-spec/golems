@@ -3,6 +3,7 @@
 import { Search, X, FileCode, MessageSquare, Code, Terminal, Hash, Brain } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { cleanProject, sanitizeSnippet } from "@/lib/format";
 
 type SearchResult = {
   id: string;
@@ -34,14 +35,6 @@ const TYPE_COLORS: Record<string, string> = {
   git_diff: "text-amber",
   stack_trace: "text-rose",
 };
-
-function cleanProject(project: string): string {
-  return project
-    .replace(/^-Users-etanheyman-Gits-/, "~/")
-    .replace(/^-Users-etanheyman-Desktop-Gits-/, "~/old/")
-    .replace(/^-Users-etanheyman-/, "~/")
-    .replace(/^-$/, "global");
-}
 
 function deriveSession(result: SearchResult): string {
   // Use conversation_id if available, otherwise derive from chunk ID
@@ -230,7 +223,7 @@ export function SearchOverlay() {
                     <div className="flex-1 min-w-0 space-y-1">
                       <div
                         className="text-xs leading-relaxed line-clamp-2"
-                        dangerouslySetInnerHTML={{ __html: result.snippet }}
+                        dangerouslySetInnerHTML={{ __html: sanitizeSnippet(result.snippet) }}
                       />
                       <div className="flex items-center gap-2 text-[10px] text-muted/60">
                         <span className="font-mono">
