@@ -1,41 +1,70 @@
-# Phase 6: Search & Drill-down
+# Phase 7: Search & Drill-down
 
 > [Back to main plan](../README.md)
 
 ## Goal
 
-Full-text search into the 240K chunks from the dashboard. Click a graph node → see actual conversation content. Search across all sessions.
+Full-text search into the 245K chunks from the dashboard. Click a graph node → see actual conversation content. Search across all sessions.
 
 ## Tools
 
-- **Research:** Gemini — Turso edge SQLite setup, Vercel edge functions
-- **Code:** Opus — Turso integration, edge function API routes
-- **MCPs:** supabase (if using Supabase instead of Turso)
+- **Code:** Opus — daemon endpoints, Next.js pages, search overlay component
+- **DB:** Existing Zikaron sqlite-vec DB with FTS5 (no Turso needed)
 
-## Steps
+## Decision: Use Existing Zikaron DB
 
-1. Decide: Turso (edge SQLite, free 1B reads/mo) vs Supabase (already have it)
-2. Set up edge database with FTS5 index on chunks
-3. Sync pipeline: Python script to push chunks to edge DB
-4. API route: `/api/search?q=...` → FTS5 query → return ranked results
-5. API route: `/api/node/:id` → session detail with linked chunks, files, operations
-6. Search UI: command-palette style (Cmd+K) overlay
-7. Results: ranked list with content preview, click to navigate to graph node
-8. Session detail panel: conversation chunks (paginated), files touched, operations timeline
-9. Graph integration: search highlights matching nodes in brain view
+**Chose:** Use the existing Zikaron daemon's sqlite DB with its pre-built FTS5 index.
+- 245K chunks already indexed in `chunks_fts` table
+- FTS5 search returns results in <100ms
+- No need for Turso, edge DB, or sync pipeline — the daemon IS the search engine
+- Same `/api/*` → daemon proxy pattern as all other dashboard endpoints
 
-## Depends On
+## What Was Built
 
-- Phase 4 (brain view for graph integration)
-- Phase 2 (API layer)
+### Daemon Endpoints (daemon.py)
+- `GET /dashboard/search?q=...&project=...&type=...&limit=N` — FTS5 text search
+  - Multi-word queries split into AND terms
+  - Returns ranked results with `snippet()` highlighting (`<mark>` tags)
+  - Partial project matching (LIKE `%golems%`)
+  - Content type filtering
+- `GET /session/{session_id}?page=N&per_page=N` — Session detail
+  - Chunks paginated with content, type, importance, tags, summary
+  - Files touched (distinct source_files)
+  - Content type distribution
+  - Session context (branch, PR, plan, phase) if available
+  - Handles both conversation_id and ID prefix matching (for newer chunks)
+
+### Search Overlay (Cmd+K)
+- Global `SearchOverlay` component in layout — opens on `⌘K` / `Ctrl+K`
+- Command-palette style with debounced input (200ms)
+- Results show FTS5 snippets with highlighted matches
+- Type icons and colors (code, messages, files, diffs, errors)
+- Keyboard navigation (↑↓ arrows, Enter to open, Esc to close)
+- Click result → session detail page
+- Brain icon → view in Brain View with node pre-selected
+- Search button in TopBar and sidebar
+
+### Session Detail Page (/session?id=...)
+- Full session viewer with paginated conversation chunks
+- Content type filter pills (click to filter by type)
+- Session context panel (project, branch, PR, plan, phase)
+- Collapsible files list
+- Color-coded chunks by type (left border colors)
+- Metadata per chunk (importance, intent, summary)
+
+### Graph Integration
+- Node panel "View Session Detail" button → links to session page
+- Brain View accepts `?node=` query param for pre-selecting a node
+- Search results "View in Brain" icon → navigates to Brain View
+- Bidirectional: search → graph node, graph node → session detail
 
 ## Status
 
-- [ ] Choose edge DB (Turso vs Supabase)
-- [ ] Set up edge database + FTS5 index
-- [ ] Sync pipeline
-- [ ] Search API route
-- [ ] Node detail API route
-- [ ] Search UI (Cmd+K)
-- [ ] Session detail panel
-- [ ] Graph↔search integration
+- [x] Choose edge DB (use existing Zikaron DB — no Turso needed)
+- [x] FTS5 already indexed — no setup needed
+- [x] No sync pipeline needed — daemon queries DB directly
+- [x] Search API route (`/dashboard/search`)
+- [x] Session detail API route (`/session/{id}`)
+- [x] Search UI (Cmd+K overlay)
+- [x] Session detail panel (paginated, filterable)
+- [x] Graph↔search integration (bidirectional navigation)

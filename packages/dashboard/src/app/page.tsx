@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import type { BrainGraph as BrainGraphType, GraphNode } from "@/lib/types";
 import { BrainGraph3D } from "@/components/brain-graph";
 import { BrainMinimap } from "@/components/brain-minimap";
@@ -9,12 +10,14 @@ import { BrainSearch } from "@/components/brain-search";
 import { BrainStats } from "@/components/brain-stats";
 import { PageSkeleton } from "@/components/skeleton";
 
-export default function BrainViewPage() {
+function BrainViewContent() {
   const [graph, setGraph] = useState<BrainGraphType | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const graphRef = useRef<any>(null);
+  const searchParams = useSearchParams();
+  const nodeParam = searchParams.get("node");
 
   // Fetch graph data
   useEffect(() => {
@@ -26,6 +29,16 @@ export default function BrainViewPage() {
       .then((data) => setGraph(data))
       .catch((err) => setError(err.message));
   }, []);
+
+  // Auto-select node from URL param
+  useEffect(() => {
+    if (graph && nodeParam) {
+      const node = graph.nodes.find(
+        (n) => n.id === nodeParam || n.session_id === nodeParam
+      );
+      if (node) setSelectedNode(node);
+    }
+  }, [graph, nodeParam]);
 
   const handleNodeClick = useCallback((node: GraphNode | null) => {
     setSelectedNode(node);
@@ -94,5 +107,13 @@ export default function BrainViewPage() {
         />
       )}
     </div>
+  );
+}
+
+export default function BrainViewPage() {
+  return (
+    <Suspense fallback={<PageSkeleton />}>
+      <BrainViewContent />
+    </Suspense>
   );
 }
