@@ -568,11 +568,12 @@ def _supabase_mutate(method: str, path: str, body: dict | None = None, params: s
 @app.get("/backlog/items")
 async def backlog_list(project: str = "", status: str = ""):
     """List backlog items, optionally filtered by project and/or status."""
+    from urllib.parse import quote
     params = "select=*&order=updated_at.desc&limit=200"
     if project:
-        params += f"&project=eq.{project}"
+        params += f"&project=eq.{quote(project, safe='')}"
     if status:
-        params += f"&status=eq.{status}"
+        params += f"&status=eq.{quote(status, safe='')}"
     rows = await asyncio.to_thread(_supabase_get, "backlog_items", params)
     return {"items": rows, "count": len(rows)}
 
@@ -602,6 +603,7 @@ async def backlog_create(request: Request):
 @app.patch("/backlog/items/{item_id}")
 async def backlog_update(item_id: str, request: Request):
     """Update a backlog item."""
+    from urllib.parse import quote
     body = await request.json()
     # Only allow safe fields
     allowed = {"title", "description", "status", "priority", "tags", "project"}
@@ -610,7 +612,7 @@ async def backlog_update(item_id: str, request: Request):
         return JSONResponse({"error": "no valid fields to update"}, status_code=400)
     result = await asyncio.to_thread(
         _supabase_mutate, "PATCH", "backlog_items",
-        update, f"id=eq.{item_id}"
+        update, f"id=eq.{quote(item_id, safe='')}"
     )
     if result and len(result) > 0:
         return result[0]
@@ -620,9 +622,10 @@ async def backlog_update(item_id: str, request: Request):
 @app.delete("/backlog/items/{item_id}")
 async def backlog_delete(item_id: str):
     """Delete a backlog item."""
+    from urllib.parse import quote
     result = await asyncio.to_thread(
         _supabase_mutate, "DELETE", "backlog_items",
-        None, f"id=eq.{item_id}"
+        None, f"id=eq.{quote(item_id, safe='')}"
     )
     if result is None:
         return JSONResponse({"error": "delete failed"}, status_code=500)
