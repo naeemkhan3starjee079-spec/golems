@@ -624,7 +624,9 @@ async def backlog_delete(item_id: str):
         _supabase_mutate, "DELETE", "backlog_items",
         None, f"id=eq.{item_id}"
     )
-    return {"deleted": True}
+    if result is None:
+        return JSONResponse({"error": "delete failed"}, status_code=500)
+    return {"deleted": True, "count": len(result) if isinstance(result, list) else 0}
 
 
 # ──────────────────────────────────────────────

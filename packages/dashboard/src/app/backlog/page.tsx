@@ -72,10 +72,8 @@ export default function BacklogPage() {
     const params = filterProject ? `?project=${filterProject}` : "";
     fetch(`/api/backlog/items${params}`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        if (d) setItems(d.items ?? []);
-      })
-      .catch(() => {})
+      .then((d) => setItems(d?.items ?? []))
+      .catch(() => setItems((prev) => prev ?? []))
       .finally(() => setRefreshing(false));
   }, [filterProject]);
 
@@ -98,7 +96,10 @@ export default function BacklogPage() {
       });
       if (res.ok) {
         const item = await res.json();
-        setItems((prev) => (prev ? [item, ...prev] : [item]));
+        // Only prepend if it matches the current filter (or no filter)
+        if (!filterProject || item.project === filterProject) {
+          setItems((prev) => (prev ? [item, ...prev] : [item]));
+        }
         setNewTitle("");
         inputRef.current?.focus();
       }
@@ -114,20 +115,22 @@ export default function BacklogPage() {
       prev ? prev.map((i) => (i.id === id ? { ...i, status } : i)) : prev
     );
     try {
-      await fetch(`/api/backlog/items/${id}`, {
+      const res = await fetch(`/api/backlog/items/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
       });
+      if (!res.ok) fetchItems(); // revert on error
     } catch {
-      fetchItems(); // revert on error
+      fetchItems();
     }
   }, [fetchItems]);
 
   const deleteItem = useCallback(async (id: string) => {
     setItems((prev) => (prev ? prev.filter((i) => i.id !== id) : prev));
     try {
-      await fetch(`/api/backlog/items/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/backlog/items/${id}`, { method: "DELETE" });
+      if (!res.ok) fetchItems(); // revert on error
     } catch {
       fetchItems();
     }
