@@ -16,12 +16,21 @@
     "ai-agent",
     "content-creation",
     "linkedin",
-    "publishing"
+    "publishing",
+    "remotion",
+    "video"
   ],
   "exports": {
-    "./*": "./src/*.ts"
+    "./*": "./src/*.ts",
+    "./remotion": "./src/remotion/index.ts",
+    "./remotion/*": "./src/remotion/*.ts"
   },
   "dependencies": {
-    "@golems/shared": "workspace:*"
+    "@golems/shared": "workspace:*",
+    "@remotion/google-fonts": "4.0.421",
+    "@remotion/paths": "4.0.421"
+  },
+  "peerDependencies": {
+    "remotion": "4.0.421"
   }
 }
