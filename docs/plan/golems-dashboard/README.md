@@ -58,7 +58,7 @@ One dashboard at etanheyman.com that shows:
 | 1 | [Aggregation Pipeline](phase-1-aggregation-pipeline/README.md) | `feature/dashboard-phase1` | Done (PR #143) |
 | 2 | [API Layer](phase-2-api-layer/README.md) | `feature/dashboard-phase2` | Done (PR #145) |
 | 3 | [Frontend Shell](phase-3-frontend-shell/README.md) | `feature/dashboard-phase3` | Done (PR #146) |
-| 4 | [Brain View](phase-4-brain-view/README.md) | `feature/dashboard-phase4` | Pending |
+| 4 | [Brain View](phase-4-brain-view/README.md) | `feature/dashboard-phase4` | Done |
 | 5 | [Ops Dashboard](phase-5-ops-dashboard/README.md) | `feature/dashboard-phase5` | Pending |
 | 6 | [Backlog & Project Manager](phase-6-backlog/README.md) | `feature/dashboard-phase6` | Pending |
 | 7 | [Search & Drill-down](phase-7-search-drilldown/README.md) | `feature/dashboard-phase7` | Pending |

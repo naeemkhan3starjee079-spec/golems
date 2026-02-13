@@ -50,14 +50,14 @@ The main event. Interactive 3D knowledge graph with the neural-network / star-ma
 
 ## Status
 
-- [ ] react-force-graph-3d setup
-- [ ] Basic graph rendering
-- [ ] Node styling (size, color, glow)
-- [ ] Edge styling (dim, particles)
-- [ ] Bloom post-processing
-- [ ] Semantic zoom
-- [ ] Hover tooltips
-- [ ] Click → side panel
-- [ ] Camera fly-to
-- [ ] Search-to-highlight
-- [ ] Minimap
+- [x] react-force-graph-3d setup
+- [x] Basic graph rendering
+- [x] Node styling (size, color, glow)
+- [x] Edge styling (dim, particles)
+- [x] Bloom post-processing
+- [x] Semantic zoom
+- [x] Hover tooltips
+- [x] Click → side panel
+- [x] Camera fly-to
+- [x] Search-to-highlight
+- [x] Minimap

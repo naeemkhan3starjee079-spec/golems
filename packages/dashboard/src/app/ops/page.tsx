@@ -39,7 +39,11 @@ export default function OpsPage() {
               </span>
               <Circle
                 className={`w-3 h-3 fill-current ${
-                  info.status === "up" ? "text-emerald" : "text-rose"
+                  info.status === "up" ? "text-emerald"
+                    : info.status === "idle" ? "text-amber"
+                    : info.status === "error" ? "text-rose"
+                    : info.status === "down" ? "text-rose"
+                    : "text-muted"
                 }`}
               />
             </div>
