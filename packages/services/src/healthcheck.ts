@@ -19,7 +19,7 @@ import { $ } from "bun";
 const HOME = process.env.HOME || "/Users/etanheyman";
 const STATE_FILE = join(HOME, ".golems-zikaron/state.json");
 const NOTIFY_URL = "http://localhost:3847/notify";
-const RAILWAY_URL_DEFAULT = "https://golems-cloud.up.railway.app";
+const RAILWAY_URL_DEFAULT = "https://helpful-empathy-production-482d.up.railway.app";
 
 interface HealthStatus {
   name: string;

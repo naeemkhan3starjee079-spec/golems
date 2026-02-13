@@ -27,7 +27,7 @@ export const HOME = process.env.HOME || homedir();
 export const GITS = join(HOME, "Gits");
 export const STATE_FILE = join(HOME, ".golems-zikaron/state.json");
 export const SOUL_FILE = join(GITS, "golems/packages/claude/SOUL.md");
-export const RAILWAY_HEALTH_URL = process.env.RAILWAY_HEALTH_URL || "https://golems-production.up.railway.app/health";
+export const RAILWAY_HEALTH_URL = process.env.RAILWAY_HEALTH_URL || "https://helpful-empathy-production-482d.up.railway.app/health";
 
 // Re-export for composers that need forking
 export { shouldSuggestForking, extractTaskName, createForkSession };

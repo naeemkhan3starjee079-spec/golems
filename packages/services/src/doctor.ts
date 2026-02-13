@@ -304,7 +304,7 @@ async function checkAxiom() {
 
 // Check 9: Railway cloud worker
 async function checkRailway() {
-  const url = process.env.RAILWAY_URL || "https://golems-production.up.railway.app";
+  const url = process.env.RAILWAY_URL || "https://helpful-empathy-production-482d.up.railway.app";
   try {
     const response = await fetch(`${url}/health`, {
       signal: AbortSignal.timeout(5000),
