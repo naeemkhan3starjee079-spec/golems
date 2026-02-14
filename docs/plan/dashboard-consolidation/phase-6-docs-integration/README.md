@@ -24,9 +24,9 @@ Move the 30 golems documentation pages from `etanheyman.com/golems/docs/` into t
 - Phase 4 (deletes the old docs route from portfolio)
 
 ## Status
-- [ ] Copy doc content
-- [ ] Markdown renderer
-- [ ] Docs sidebar
-- [ ] Styling
+- [x] Copy doc content
+- [x] Markdown renderer
+- [x] Docs sidebar
+- [x] Styling
 - [ ] Search integration
-- [ ] Sidebar nav link
+- [x] Sidebar nav link

@@ -31,6 +31,8 @@ packages/dashboard/
 │   │       ├── content/page.tsx    # Content pipeline status
 │   │       ├── enrichment/page.tsx # Enrichment progress tracker
 │   │       ├── tokens/page.tsx     # LLM token usage + cost tracking
+│   │       ├── docs/page.tsx       # Docs index (redirect to getting-started)
+│   │       ├── docs/[...slug]/    # Docs pages (markdown → HTML, sidebar nav)
 │   │       ├── session/page.tsx    # Session detail viewer
 │   │       └── settings/page.tsx   # Account, graph upload, sign out
 │   ├── components/
@@ -46,6 +48,7 @@ packages/dashboard/
 │   │   └── skeleton.tsx            # Loading skeletons
 │   ├── lib/
 │   │   ├── types.ts                # BrainGraph, GraphNode, GraphEdge interfaces
+│   │   ├── docs/index.ts            # Doc loading (getAllDocSlugs, getDoc, getDocsNav)
 │   │   ├── format.ts               # Number/date formatting utilities
 │   │   ├── graph-colors.ts         # Color palette for graph nodes
 │   │   └── supabase/
@@ -65,6 +68,7 @@ packages/dashboard/
 - `next` 16.1.6, `react` 19.2.3 — App Router with route groups
 - `@supabase/ssr` + `@supabase/supabase-js` — Auth (email, OAuth, cookies)
 - `react-force-graph-3d` + `three` — 3D knowledge graph visualization
+- `gray-matter` + `marked` — Markdown docs rendering (frontmatter + HTML)
 - `lucide-react` — Icons
 - `tailwindcss` 4 — Styling
 
@@ -81,6 +85,7 @@ packages/dashboard/
 | `/recruiter` | Recruiter — outreach pipeline, LinkedIn network stats | Supabase `outreach_contacts`, `outreach_messages`, `linkedin_connections` |
 | `/teller` | Teller — subscription tracker, payment history | Supabase `subscriptions`, `payments` |
 | `/content` | Content Pipeline — pipeline runs, routing stats, recent outputs | Supabase `pipeline_runs` |
+| `/docs` | Documentation — 24 golems docs pages with sidebar nav | Static markdown (`content/docs/`) via `gray-matter` + `marked` |
 | `/enrichment` | Enrichment Progress — chunk processing stats, enrichment queue | Daemon `/api/stats/enrichment` (local only) |
 | `/tokens` | Token Tracking — LLM usage by model, daily costs, aggregates | Supabase `llm_usage` |
 | `/session` | Session Detail — drill into a specific session's chunks | Daemon `/api/session/:id` (local only) |

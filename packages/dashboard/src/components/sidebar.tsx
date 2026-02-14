@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Bell,
+  BookOpen,
   Brain,
   Briefcase,
   Activity,
@@ -46,6 +47,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/backlog", label: "Backlog", icon: KanbanSquare },
       { href: "/content", label: "Content", icon: Palette },
+      { href: "/docs", label: "Docs", icon: BookOpen },
       { href: "/settings", label: "Settings", icon: Settings },
     ],
   },
