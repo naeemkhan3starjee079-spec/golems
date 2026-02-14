@@ -17,6 +17,14 @@ packages/content/
 │   ├── remotion/                # Shared animation components + types
 │   │   ├── lib/                 # motion.ts, types.ts, design-tokens.ts, brand-bridge.ts, responsive.ts
 │   │   └── components/          # AnimatedText, FadeIn, SlideIn, scenes/, audio/
+│   ├── comfyui/                 # ComfyUI image generation client
+│   │   ├── client.ts            # Connection, queueing, progress, output retrieval
+│   │   ├── generate.ts          # Full generation pipeline (workflow + quality + retry)
+│   │   ├── workflows/           # Flux GGUF workflow builders (base, social, merch, meme, draft)
+│   │   └── index.ts             # Barrel export
+│   ├── quality/                 # Image quality scoring pipeline
+│   │   ├── scoring.ts           # CLIP Score, LAION Aesthetic, BRISQUE — Python bridge
+│   │   └── index.ts             # Barrel export
 │   └── render/                  # Programmatic render service
 │       ├── render-service.ts    # renderVideo(), renderThumbnail(), job tracking
 │       └── index.ts             # Barrel export
@@ -30,7 +38,9 @@ packages/content/
 │   └── political-merch/         # brand.json + templates/ + outputs/
 ├── scripts/
 │   ├── validate-brand.ts        # CLI: bun run validate-brand [project]
-│   └── render.ts                # CLI: bun run render <compositionId> [--project <name>]
+│   ├── render.ts                # CLI: bun run render <compositionId> [--project <name>]
+│   ├── generate.ts              # CLI: bun run generate <prompt> [--style social|merch|meme]
+│   └── quality-score.py         # Python quality scoring (CLIP + Aesthetic + BRISQUE)
 ├── CLAUDE.md                    # This file
 └── package.json                 # @golems/content
 ```
@@ -117,6 +127,81 @@ Converts Phase 1 `BrandConfig` → Remotion's `BrandColors`:
 import { brandConfigToColors } from "@golems/content/remotion/lib/brand-bridge";
 const colors = brandConfigToColors(config);
 // → { primary, primaryDark, background, surface, text, textMuted, accent }
+```
+
+## Flux Image Generation (ComfyUI)
+
+### Prerequisites
+
+ComfyUI installed at `~/Gits/ComfyUI` with:
+- Flux.1 Dev Q6_K GGUF (9.2 GB) in `models/diffusion_models/`
+- T5-XXL Q4_K_M GGUF (2.7 GB) + CLIP-L (235 MB) in `models/text_encoders/`
+- VAE ae.safetensors (321 MB) in `models/vae/`
+- Custom nodes: ComfyUI-GGUF, ComfyUI-TeaCache, ComfyUI-Impact-Pack, ComfyUI_UltimateSDUpscale
+
+### ComfyUI Service
+
+```bash
+# Start ComfyUI
+launchctl load ~/Library/LaunchAgents/com.golems.comfyui.plist
+
+# Stop ComfyUI
+launchctl unload ~/Library/LaunchAgents/com.golems.comfyui.plist
+
+# Check status
+bun run generate:status
+```
+
+### Generation Commands
+
+```bash
+# Generate an image
+bun run generate "A futuristic city at sunset" --style social
+
+# Quick draft (512x512, fast)
+bun run generate "Logo concept" --style merch --quick
+
+# With brand config
+bun run generate "Product showcase" --project golems-showcase --style social
+
+# List available models
+bun run generate:models
+```
+
+### Styles
+
+| Style | Size | Steps | Use Case |
+|-------|------|-------|----------|
+| `base` | 768x768 | 25 | General purpose |
+| `social` | 1080x1080 | 25 | Instagram/LinkedIn square |
+| `merch` | 1024x1024 | 30 | Print-quality (upscaled 4x) |
+| `meme` | 1280x720 | 20 | Landscape memes |
+| Quick draft | 512x512 | 15 | Fast iteration (2-4 min) |
+
+### Quality Pipeline
+
+Generated images are scored against 3 gates:
+- **CLIP Score** >= 0.25 (prompt adherence)
+- **LAION Aesthetic** >= 5.5 social / >= 6.0 print (visual quality)
+- **BRISQUE** <= 40 (perceptual quality)
+
+Auto-retries with new seed up to 3x. Best result returned even if gates fail.
+
+### Programmatic API
+
+```typescript
+import { generate } from "@golems/content/comfyui";
+
+const result = await generate({
+  prompt: "Minimalist logo, dark background",
+  style: "social",
+  quality: "social",
+  brand: myBrandConfig,
+  onProgress: ({ percent }) => console.log(`${(percent * 100).toFixed(0)}%`),
+});
+
+console.log(result.imagePath);
+console.log(result.scoreSummary);
 ```
 
 ## Current State
