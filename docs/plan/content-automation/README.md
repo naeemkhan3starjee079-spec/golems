@@ -28,8 +28,8 @@
 | 3 | Flux/ComfyUI Image Generation | [phase-3-flux-comfyui](phase-3-flux-comfyui/) | done | ComfyUI + models + TS client + quality pipeline + CLI (PR #160) |
 | 4 | n8n Orchestration Layer | [phase-4-n8n-orchestration](phase-4-n8n-orchestration/) | done | Orchestrator pkg, render service, workflow templates, Docker Compose (PR #161) |
 | 5 | Data Visualization Pipeline | [phase-5-data-viz](phase-5-data-viz/) | done | 4 data fetchers, SVG charts, 3 infographic templates, 3 Remotion compositions, CLI (PR #162) |
-| 6 | Pipeline Intelligence | [phase-6-pipeline-intelligence](phase-6-pipeline-intelligence/) | in PR | Registry, AI router, executor, tracker, Supabase table, CLI |
-| 7 | Dashboard Integration | [phase-7-dashboard-integration](phase-7-dashboard-integration/) | pending | Content tab in Ops Dashboard |
+| 6 | Pipeline Intelligence | [phase-6-pipeline-intelligence](phase-6-pipeline-intelligence/) | done | Registry, AI router, executor, tracker, Supabase table, CLI (PR #163) |
+| 7 | Dashboard Integration | [phase-7-dashboard-integration](phase-7-dashboard-integration/) | in PR | Content tab, pipeline cards, request form, daemon API routes |
 
 ---
 

@@ -43,10 +43,12 @@ Add a "Content" tab to the Ops Dashboard showing pipeline status, recent outputs
 
 ## Status
 
-- [ ] "Content" nav item + page shell
-- [ ] Pipeline status cards
-- [ ] Recent outputs thumbnail grid
-- [ ] Per-project gallery with filters
-- [ ] n8n workflow viewer
-- [ ] Content request form
-- [ ] Supabase content metadata table
+- [x] "Content" nav item + page shell — sidebar.tsx + app/content/page.tsx
+- [x] Pipeline status cards — available pipelines with live stats from Supabase
+- [x] Recent pipeline runs list — scrollable list with success/fail, duration, quality
+- [x] Content request form — idea input → AI routing → pipeline suggestion with confidence
+- [x] Zikaron daemon API routes — /content/pipeline-runs, /content/pipeline-stats
+- [x] Pipeline performance stats — per-pipeline aggregation (runs, success rate, avg time)
+- [ ] Per-project gallery with filters — deferred (needs content storage)
+- [ ] n8n workflow viewer — deferred (needs n8n API integration)
+- [ ] Supabase content metadata table — deferred (pipeline_runs covers tracking)
