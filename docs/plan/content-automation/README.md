@@ -35,7 +35,7 @@
 
 ## Architecture
 
-```
+```text
 User (idea via Telegram or CLI)
   → n8n ORCHESTRATOR (Docker, port 5678)
     → AI Agent (Claude) picks pipeline
@@ -60,7 +60,7 @@ User (idea via Telegram or CLI)
 
 ### Per-Project Structure
 
-```
+```text
 content-projects/                    # Private repo or gitignored
 ├── schema.json                      # Centralized schema all projects follow
 ├── golems-showcase/

@@ -22,7 +22,7 @@ Full deep research docs:
 
 ### Key Architecture
 
-```
+```text
 TELEGRAM (triggers + previews + approvals)
   → n8n ORCHESTRATOR (Docker, port 5678)
     → AI Agent (Claude) picks pipeline

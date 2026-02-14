@@ -51,7 +51,7 @@ python main.py --use-pytorch-cross-attention --force-fp16
 `@stable-canvas/comfyui-client` — pipeline DSL, zero deps, CLI codegen from workflow JSON
 
 ### Quality Pipeline
-```
+```text
 Generate → CLIP Score ≥0.25 → Aesthetic Score ≥5.5 → BRISQUE ≤40
   → PASS: upscale + post-processing
   → FAIL: regenerate with new seed (up to 3x), then flag for human review

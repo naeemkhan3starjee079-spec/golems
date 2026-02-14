@@ -100,7 +100,7 @@ Set up local AI image generation via Flux.1 Dev Q6_K GGUF + ComfyUI on Mac M1 Pr
 
 ## Multi-Pass Strategy (Max Quality)
 
-```
+```text
 1. Generate at 768x768, Q6_K, 25 steps (5-8 min)
 2. FaceDetailer pass
 3. 4x upscale with 4x-UltraSharp model
@@ -111,7 +111,7 @@ Set up local AI image generation via Flux.1 Dev Q6_K GGUF + ComfyUI on Mac M1 Pr
 
 ## Draft Strategy (Fast Iteration)
 
-```
+```text
 1. Generate at 512x512 with TeaCache (2-4 min)
 2. Quick quality gate (CLIP Score only)
 3. Show draft in Telegram
