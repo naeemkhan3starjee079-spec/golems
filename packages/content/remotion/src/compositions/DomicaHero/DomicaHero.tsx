@@ -221,7 +221,61 @@ export const DomicaHero: React.FC = () => {
 
       {/* ===== LEFT SIDE: Property card + decorative elements ===== */}
 
-      {/* Main property card — tilted, floating */}
+      {/* Deepest background card — furthest behind */}
+      <AnimateIn delay={0} from="left" distance={180}>
+        <div
+          style={{
+            position: "absolute",
+            left: 60,
+            top: 40,
+            width: 840,
+            height: 540,
+            borderRadius: 22,
+            background: "rgba(255,255,255,0.35)",
+            border: "1.5px solid rgba(211,224,251,0.4)",
+            boxShadow: "0 4px 24px rgba(37,99,235,0.04)",
+          }}
+        />
+      </AnimateIn>
+
+      {/* Background skeleton card — wider, behind main card */}
+      <AnimateIn delay={1} from="left" distance={160}>
+        <div
+          style={{
+            position: "absolute",
+            left: 100,
+            top: 60,
+            width: 820,
+            height: 520,
+            borderRadius: 20,
+            background: "rgba(255,255,255,0.6)",
+            border: "2px solid rgba(211,224,251,0.6)",
+            boxShadow: "0 8px 40px rgba(37,99,235,0.06)",
+            padding: "28px 24px",
+            display: "flex",
+            flexDirection: "row",
+            gap: 24,
+          }}
+          dir="rtl"
+        >
+          {/* Placeholder image area */}
+          <div style={{ width: 300, height: "100%", borderRadius: 14, background: "rgba(211,224,251,0.25)" }} />
+          {/* Placeholder text bars */}
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 14, paddingTop: 16 }}>
+            <div style={{ width: "90%", height: 18, borderRadius: 8, background: "rgba(37,99,235,0.12)" }} />
+            <div style={{ width: "70%", height: 18, borderRadius: 8, background: "rgba(37,99,235,0.12)" }} />
+            <div style={{ width: "60%", height: 14, borderRadius: 8, background: "rgba(107,114,128,0.1)" }} />
+            <div style={{ width: "80%", height: 14, borderRadius: 8, background: "rgba(107,114,128,0.1)" }} />
+            <div style={{ marginTop: "auto", display: "flex", gap: 12 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(211,224,251,0.4)" }} />
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(211,224,251,0.4)" }} />
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(211,224,251,0.4)" }} />
+            </div>
+          </div>
+        </div>
+      </AnimateIn>
+
+      {/* Main property card — tilted, floating above background card */}
       <AnimateIn delay={3} from="left" distance={140}>
         <div
           style={{
@@ -277,7 +331,7 @@ export const DomicaHero: React.FC = () => {
       </AnimateIn>
 
       {/* Magnifying glass — large, overlapping card bottom-right */}
-      <MagnifyingGlass x={580} y={280} delay={22} size={300} />
+      <MagnifyingGlass x={500} y={280} delay={22} size={400} />
 
       {/* Glass bubbles scattered */}
       <DecorativeBubble x={250} y={15} delay={33} size={10} amplitude={6} speed={0.016} />
