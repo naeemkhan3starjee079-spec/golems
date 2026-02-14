@@ -72,7 +72,7 @@ def extract_embeddings(db_path: str):
     cursor = conn.cursor()
 
     total = list(cursor.execute("SELECT COUNT(*) FROM chunk_vectors"))[0][0]
-    logger.info(f"Extracting {total} embeddings in batches of {batch_size}...")
+    logger.info(f"Extracting {total} embeddings...")
 
     # Read all chunk IDs first (ordered by rowid for deterministic ordering)
     logger.info("  Reading chunk IDs...")
@@ -204,6 +204,7 @@ def find_resolution_for_target(
             weights=weights,
             resolution_parameter=mid,
             n_iterations=3,  # Fewer iterations for search
+            seed=42,
         )
         n_clusters = len(set(partition.membership))
 
@@ -280,6 +281,7 @@ def recursive_leiden(
         weights=weights,
         resolution_parameter=resolution,
         n_iterations=-1,  # Until convergence
+        seed=42,
     )
 
     membership = partition.membership
@@ -345,7 +347,9 @@ def create_cluster_schema(conn: apsw.Connection):
             ctfidf_label TEXT,
             chunk_count INTEGER DEFAULT 0,
             silhouette_score REAL,
-            created_at TEXT
+            avg_intra_dist REAL,
+            created_at TEXT,
+            updated_at TEXT
         )
     """)
 
@@ -355,6 +359,8 @@ def create_cluster_schema(conn: apsw.Connection):
             cluster_id TEXT NOT NULL,
             level INTEGER NOT NULL,
             dist_to_centroid REAL,
+            assignment_method TEXT DEFAULT 'initial',
+            assigned_at TEXT,
             PRIMARY KEY (chunk_id, level)
         )
     """)
@@ -370,6 +376,7 @@ def create_cluster_schema(conn: apsw.Connection):
             id TEXT PRIMARY KEY,
             started_at TEXT,
             completed_at TEXT,
+            status TEXT DEFAULT 'running',
             total_chunks INTEGER,
             level_counts TEXT,
             params TEXT,
@@ -410,14 +417,18 @@ def write_clusters(
     for cluster in clusters:
         # Write cluster
         cursor.execute(
-            "INSERT INTO clusters (id, level, parent_id, path, chunk_count, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-            (cluster["id"], cluster["level"], cluster["parent_id"], cluster["path"], cluster["chunk_count"], now),
+            "INSERT INTO clusters (id, level, parent_id, path, chunk_count, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (cluster["id"], cluster["level"], cluster["parent_id"], cluster["path"], cluster["chunk_count"], now, now),
         )
 
-        # Write centroid
+        # Write centroid (L2-normalize for cosine similarity via sqlite-vec match)
+        centroid = cluster["centroid"].copy()
+        norm = np.linalg.norm(centroid)
+        if norm > 0:
+            centroid /= norm
         cursor.execute(
             "INSERT INTO vec_cluster_centroids (cluster_id, centroid) VALUES (?, ?)",
-            (cluster["id"], serialize_f32(cluster["centroid"].tolist())),
+            (cluster["id"], serialize_f32(centroid.tolist())),
         )
 
         # Write chunk assignments
@@ -425,8 +436,8 @@ def write_clusters(
             cid = chunk_ids[global_idx]
             dist = float(np.linalg.norm(embeddings[global_idx] - cluster["centroid"]))
             cursor.execute(
-                "INSERT OR REPLACE INTO chunk_clusters (chunk_id, cluster_id, level, dist_to_centroid) VALUES (?, ?, ?, ?)",
-                (cid, cluster["id"], cluster["level"], dist),
+                "INSERT OR REPLACE INTO chunk_clusters (chunk_id, cluster_id, level, dist_to_centroid, assignment_method, assigned_at) VALUES (?, ?, ?, ?, 'initial', ?)",
+                (cid, cluster["id"], cluster["level"], dist, now),
             )
 
     logger.info(f"Written {len(clusters)} clusters to DB")
@@ -649,7 +660,7 @@ def run_clustering(
     now = datetime.now(timezone.utc).isoformat()
     cursor = conn.cursor()
     cursor.execute(
-        "INSERT INTO clustering_runs (id, started_at, completed_at, total_chunks, level_counts, params, silhouette_scores) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO clustering_runs (id, started_at, completed_at, status, total_chunks, level_counts, params, silhouette_scores) VALUES (?, ?, ?, 'completed', ?, ?, ?, ?)",
         (
             run_id,
             datetime.fromtimestamp(t0, tz=timezone.utc).isoformat(),

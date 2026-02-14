@@ -20,8 +20,8 @@ bge-large-en-v1.5 has virtually zero Hebrew tokens — Hebrew characters decompo
 1. Install BGE-M3: `pip install FlagEmbedding` or use sentence-transformers with `BAAI/bge-m3`
 2. Benchmark locally: embed 100 Hebrew WhatsApp chunks, verify cosine similarity makes sense
 3. Decision: re-embed ALL 245K (ideal, ~$2 on RunPod A100, 1-2 hours) or just 16K WhatsApp (~10 min on T4)
-4. If mixing models: create separate `vec_chunks_m3` table, don't mix with existing vec0
-5. If full re-embed: replace `vec_chunks` entirely, update daemon/MCP to use new table
+4. If mixing models: create separate `chunk_vectors_m3` table, don't mix with existing vec0
+5. If full re-embed: replace `chunk_vectors` entirely, update daemon/MCP to use new table
 6. Verify: search for Hebrew queries, confirm results are relevant
 
 ## Key Decision
