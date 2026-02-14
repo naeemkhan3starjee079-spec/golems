@@ -14,13 +14,23 @@ packages/content/
 │   ├── brand/                   # Brand config schema + validation
 │   │   ├── schema.ts            # BrandConfig interface + validator
 │   │   └── index.ts             # Barrel export
-│   └── remotion/                # Remotion animation components
+│   ├── remotion/                # Shared animation components + types
+│   │   ├── lib/                 # motion.ts, types.ts, design-tokens.ts, brand-bridge.ts, responsive.ts
+│   │   └── components/          # AnimatedText, FadeIn, SlideIn, scenes/, audio/
+│   └── render/                  # Programmatic render service
+│       ├── render-service.ts    # renderVideo(), renderThumbnail(), job tracking
+│       └── index.ts             # Barrel export
+├── remotion/                    # Standalone Remotion project (compositions)
+│   └── src/
+│       ├── Root.tsx             # All registered compositions
+│       └── compositions/        # DomicaHero, CodeShowcase, ArchDiagram, MetricsDashboard, ProductHero
 ├── projects/                    # Per-project brand configs (outputs gitignored)
 │   ├── golems-showcase/         # brand.json + templates/ + outputs/
 │   ├── techgym-posts/           # brand.json + templates/ + outputs/
 │   └── political-merch/         # brand.json + templates/ + outputs/
 ├── scripts/
-│   └── validate-brand.ts        # CLI: bun run validate-brand [project]
+│   ├── validate-brand.ts        # CLI: bun run validate-brand [project]
+│   └── render.ts                # CLI: bun run render <compositionId> [--project <name>]
 ├── CLAUDE.md                    # This file
 └── package.json                 # @golems/content
 ```
@@ -49,6 +59,65 @@ if (errors.length > 0) throw new Error(`Invalid brand config: ${errors.map(e => 
 | `political-merch` | Bold merch designs (t-shirts, stickers) | `projects/political-merch/brand.json` |
 
 Validate all configs: `bun run validate-brand` (runs from packages/content/).
+
+## Remotion Render Pipeline
+
+### Compositions
+
+| ID | What | Default Size |
+|----|------|-------------|
+| `DomicaHero` | Domica real estate hero with 3D magnifying glass | 1920x700 |
+| `CodeShowcase` | Animated code walkthrough with syntax highlighting | 1920x1080 |
+| `ArchDiagram` | Animated architecture diagram (boxes + arrows) | 1920x1080 |
+| `MetricsDashboard` | Animated stats with count-up, trends, sparklines | 1920x1080 |
+| `ProductHero` | Scene sequencer (title → screenshots → metrics) | 1920x1080 |
+
+All compositions (except DomicaHero) have `-LinkedIn` (1080x1080) variants.
+MetricsDashboard also has a `-GIF` (800x450) variant.
+
+### Render Commands
+
+```bash
+# List available compositions and projects
+bun run render:list
+
+# Render a composition (YouTube 1080p by default)
+bun run render CodeShowcase --project golems-showcase
+
+# Render for LinkedIn (1:1)
+bun run render MetricsDashboard --project golems-showcase --platform linkedin
+
+# Render a still/thumbnail
+bun run render:still ArchDiagram --frame 90
+
+# Open Remotion Studio for visual preview
+bun run render:preview
+bun run studio  # shortcut — opens Studio directly
+```
+
+### Programmatic Rendering
+
+```typescript
+import { renderVideo, buildBrandProps } from "@golems/content/render";
+
+const brand = await buildBrandProps("projects/golems-showcase");
+const job = await renderVideo({
+  compositionId: "CodeShowcase",
+  inputProps: { ...brand },
+  outputPath: "out/code-showcase.mp4",
+  onProgress: (p) => console.log(`${p}%`),
+});
+```
+
+### Brand Bridge
+
+Converts Phase 1 `BrandConfig` → Remotion's `BrandColors`:
+
+```typescript
+import { brandConfigToColors } from "@golems/content/remotion/lib/brand-bridge";
+const colors = brandConfigToColors(config);
+// → { primary, primaryDark, background, surface, text, textMuted, accent }
+```
 
 ## Current State
 
