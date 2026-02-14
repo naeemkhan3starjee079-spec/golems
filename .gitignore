@@ -14,6 +14,9 @@ nohup.out
 !.claude/rules/
 !.claude/agents/
 
+# Personal profile symlink (real data lives in golem-profiles private repo)
+.claude/rules/owner-profile.md
+
 # Local research docs (cherry-pick to real docs when ready)
 research.docs.local/
 docs.local/

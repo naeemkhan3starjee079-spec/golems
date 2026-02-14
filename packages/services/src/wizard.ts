@@ -520,7 +520,116 @@ export async function phaseVerify(
 }
 
 // ---------------------------------------------------------------------------
-// Phase 7: Post-flight (SETUP_LOG.md generation)
+// Phase 7: Golem Profiles
+// ---------------------------------------------------------------------------
+
+const GOLEM_PROFILES_DIR = join(
+  process.env.HOME || "/tmp",
+  "Gits/golem-profiles"
+);
+const SETUP_SCRIPT = join(GOLEMS_HOME, "scripts/setup-golem-profiles.sh");
+
+export async function phaseGolemProfiles(
+  log: SetupLogEntry[]
+): Promise<void> {
+  header("Phase 7: Golem Profiles");
+
+  print("Personal data lives in a private git repo (golem-profiles),");
+  print("symlinked into standalone golem directories.\n");
+
+  // Check if golem-profiles repo exists
+  if (existsSync(join(GOLEM_PROFILES_DIR, ".git"))) {
+    success("golem-profiles repo found");
+    log.push({
+      phase: "profiles",
+      item: "golem_profiles_repo",
+      status: "ok",
+    });
+  } else {
+    warn("golem-profiles repo not found");
+    if (await confirm("Initialize golem-profiles from template?")) {
+      info("Running setup-golem-profiles.sh --init...");
+      const init = shellExec(`zsh "${SETUP_SCRIPT}" --init`);
+      if (init.ok) {
+        success("golem-profiles initialized");
+        log.push({
+          phase: "profiles",
+          item: "golem_profiles_init",
+          status: "ok",
+        });
+        print("");
+        warn("Edit ~/Gits/golem-profiles/owner-profile.md with your real data");
+        warn(
+          "Create CLAUDE.md and .mcp.json for each golem in their subdirectory"
+        );
+      } else {
+        fail("Initialization failed");
+        log.push({
+          phase: "profiles",
+          item: "golem_profiles_init",
+          status: "failed",
+          detail: "script error",
+        });
+        return;
+      }
+    } else {
+      info("Skipping — run scripts/setup-golem-profiles.sh --init later");
+      log.push({
+        phase: "profiles",
+        item: "golem_profiles_init",
+        status: "skipped",
+      });
+      return;
+    }
+  }
+
+  // Set up / fix symlinks
+  if (await confirm("Set up symlinks for all golems?")) {
+    info("Running setup-golem-profiles.sh...");
+    const setup = shellExec(`zsh "${SETUP_SCRIPT}"`);
+    if (setup.ok) {
+      success("All symlinks set up");
+      log.push({
+        phase: "profiles",
+        item: "symlinks_setup",
+        status: "ok",
+      });
+    } else {
+      fail("Symlink setup failed");
+      log.push({
+        phase: "profiles",
+        item: "symlinks_setup",
+        status: "failed",
+      });
+    }
+  } else {
+    log.push({
+      phase: "profiles",
+      item: "symlinks_setup",
+      status: "skipped",
+    });
+    return;
+  }
+
+  // Verify (only if symlinks were set up)
+  info("Verifying symlinks...");
+  const verify = shellExec(`zsh "${SETUP_SCRIPT}" --verify`);
+  if (verify.ok) {
+    success("All symlinks verified");
+    log.push({ phase: "profiles", item: "verify", status: "ok" });
+  } else {
+    warn("Some symlinks have issues — run scripts/setup-golem-profiles.sh --fix");
+    log.push({
+      phase: "profiles",
+      item: "verify",
+      status: "warning",
+      detail: "symlink issues",
+    });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Phase 8: Post-flight (SETUP_LOG.md generation)
 // ---------------------------------------------------------------------------
 
 export function generateSetupLog(
@@ -540,7 +649,7 @@ export function generateSetupLog(
   ];
 
   // Group by phase
-  const phases = ["preflight", "core", "services", "secrets", "deploy", "verify"];
+  const phases = ["preflight", "core", "services", "secrets", "deploy", "verify", "profiles"];
   for (const phase of phases) {
     const entries = log.filter((e) => e.phase === phase);
     if (entries.length === 0) continue;
@@ -579,7 +688,7 @@ export async function phasePostflight(
   log: SetupLogEntry[],
   selectedServices: string[]
 ): Promise<void> {
-  header("Phase 7: Post-flight");
+  header("Phase 8: Post-flight");
 
   const content = generateSetupLog(log, selectedServices);
   const logPath = join(GOLEMS_HOME, "SETUP_LOG.md");
@@ -637,6 +746,9 @@ export async function runWizard(): Promise<void> {
     await phaseVerify(selected, log);
 
     // Phase 7
+    await phaseGolemProfiles(log);
+
+    // Phase 8
     await phasePostflight(log, selected);
 
     print("Setup complete!");

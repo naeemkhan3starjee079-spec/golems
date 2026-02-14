@@ -334,6 +334,82 @@ async function checkRailway() {
   }
 }
 
+// Check 10: Golem Profiles
+async function checkGolemProfiles() {
+  const home = process.env.HOME;
+  if (!home) {
+    results.push({
+      name: "Golem Profiles",
+      status: "warn",
+      message: "HOME not set",
+      fix: "Set HOME environment variable",
+    });
+    return;
+  }
+  const profilesDir = `${home}/Gits/golem-profiles`;
+  const ownerProfile = `${profilesDir}/owner-profile.md`;
+  const symlink = `${process.cwd()}/.claude/rules/owner-profile.md`;
+
+  try {
+    await fs.access(profilesDir);
+  } catch {
+    results.push({
+      name: "Golem Profiles",
+      status: "fail",
+      message: "golem-profiles repo not found",
+      fix: "scripts/setup-golem-profiles.sh --init",
+    });
+    return;
+  }
+
+  try {
+    await fs.access(ownerProfile);
+  } catch {
+    results.push({
+      name: "Golem Profiles",
+      status: "fail",
+      message: "owner-profile.md missing in golem-profiles",
+      fix: "Create ~/Gits/golem-profiles/owner-profile.md from template",
+    });
+    return;
+  }
+
+  try {
+    const stat = await fs.lstat(symlink);
+    if (stat.isSymbolicLink()) {
+      const target = await fs.readlink(symlink);
+      if (target === ownerProfile) {
+        results.push({
+          name: "Golem Profiles",
+          status: "pass",
+          message: "Repo + symlinks OK",
+        });
+      } else {
+        results.push({
+          name: "Golem Profiles",
+          status: "warn",
+          message: `Symlink points to wrong target: ${target}`,
+          fix: "scripts/setup-golem-profiles.sh --fix",
+        });
+      }
+    } else {
+      results.push({
+        name: "Golem Profiles",
+        status: "warn",
+        message: "owner-profile.md is a regular file (should be symlink)",
+        fix: "scripts/setup-golem-profiles.sh --fix",
+      });
+    }
+  } catch {
+    results.push({
+      name: "Golem Profiles",
+      status: "warn",
+      message: "Symlink not set up in .claude/rules/",
+      fix: "scripts/setup-golem-profiles.sh --fix",
+    });
+  }
+}
+
 // Format and print results
 function printResults() {
   console.log(`\n${colors.blue}=== GOLEMS HEALTH CHECK ===${colors.reset}\n`);
@@ -387,6 +463,7 @@ async function main() {
   await checkSupabase();
   await checkAxiom();
   await checkRailway();
+  await checkGolemProfiles();
 
   printResults();
 }
