@@ -175,6 +175,17 @@ export function validateBrandConfig(config: unknown): ValidationError[] {
     });
   }
 
+  // Validate required object fields have correct types
+  const objectFields = ["colors", "typography", "logos", "tone", "social"] as const;
+  for (const field of objectFields) {
+    if (field in c && (typeof c[field] !== "object" || c[field] === null)) {
+      errors.push({
+        path: field,
+        message: `${field} must be an object, got ${c[field] === null ? "null" : typeof c[field]}`,
+      });
+    }
+  }
+
   // Colors
   if (c.colors && typeof c.colors === "object") {
     const colors = c.colors as Record<string, unknown>;
@@ -306,7 +317,18 @@ export async function loadBrandConfig(
     };
   }
 
-  const raw = await file.json();
+  let raw: unknown;
+  try {
+    raw = await file.json();
+  } catch (e) {
+    return {
+      config: {} as BrandConfig,
+      errors: [{
+        path: brandJsonPath,
+        message: `Invalid JSON: ${e instanceof Error ? e.message : String(e)}`,
+      }],
+    };
+  }
   const errors = validateBrandConfig(raw);
   return { config: raw as BrandConfig, errors };
 }
