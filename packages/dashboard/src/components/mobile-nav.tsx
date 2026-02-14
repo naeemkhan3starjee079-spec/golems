@@ -5,16 +5,16 @@ import { usePathname } from "next/navigation";
 import {
   Brain,
   Activity,
+  Briefcase,
   KanbanSquare,
-  Palette,
   Settings,
 } from "lucide-react";
 
 const MOBILE_NAV = [
   { href: "/", label: "Brain", icon: Brain },
   { href: "/ops", label: "Ops", icon: Activity },
+  { href: "/jobs", label: "Jobs", icon: Briefcase },
   { href: "/backlog", label: "Board", icon: KanbanSquare },
-  { href: "/content", label: "Content", icon: Palette },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

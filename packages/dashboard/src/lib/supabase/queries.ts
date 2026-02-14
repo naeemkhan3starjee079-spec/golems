@@ -293,3 +293,175 @@ export async function fetchPipelineStats() {
     total_runs: rows.length,
   };
 }
+
+// --- Jobs ---
+
+export async function fetchJobs(limit = 100) {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("golem_jobs")
+    .select("id, title, company, location, url, source, status, match_score, tags, match_reasons, scraped_at, applied_at, created_at")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function fetchJobStats() {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("golem_jobs")
+    .select("status, match_score, source, created_at");
+  if (error) throw error;
+
+  const rows = data ?? [];
+  const byStatus: Record<string, number> = {};
+  const bySource: Record<string, number> = {};
+  let totalScore = 0;
+  let scoredCount = 0;
+
+  for (const row of rows) {
+    byStatus[row.status ?? "new"] = (byStatus[row.status ?? "new"] || 0) + 1;
+    bySource[row.source] = (bySource[row.source] || 0) + 1;
+    if (row.match_score != null) {
+      totalScore += row.match_score;
+      scoredCount++;
+    }
+  }
+
+  return {
+    total: rows.length,
+    by_status: byStatus,
+    by_source: bySource,
+    avg_score: scoredCount > 0 ? totalScore / scoredCount : null,
+  };
+}
+
+export async function fetchScrapeActivity(limit = 30) {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("scrape_activity")
+    .select("id, source, run_at, total_found, new_saved, duplicates_skipped, errors, duration_ms")
+    .order("run_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
+
+// --- Emails ---
+
+export async function fetchEmails(limit = 50) {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("emails")
+    .select("id, subject, from_address, snippet, score, category, received_at, human_score, human_category")
+    .order("received_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function fetchEmailStats() {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("emails")
+    .select("score, category, received_at, human_score, human_category");
+  if (error) throw error;
+
+  const rows = data ?? [];
+  const byCategory: Record<string, number> = {};
+  const now = Date.now();
+  let last24h = 0;
+  let urgent = 0;
+
+  for (const row of rows) {
+    const effectiveCat = row.human_category ?? row.category ?? "unknown";
+    const effectiveScore = row.human_score ?? row.score ?? 0;
+    byCategory[effectiveCat] = (byCategory[effectiveCat] || 0) + 1;
+    if (now - new Date(row.received_at).getTime() < 24 * 60 * 60 * 1000) last24h++;
+    if (effectiveScore >= 8) urgent++;
+  }
+
+  return { total: rows.length, by_category: byCategory, last_24h: last24h, urgent };
+}
+
+export async function fetchEmailSenders(limit = 50) {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("email_senders")
+    .select("email_address, display_name, domain, category, total_emails, avg_score, user_action, last_email_at")
+    .order("total_emails", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
+
+// --- Recruiter ---
+
+export async function fetchOutreachContacts() {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("outreach_contacts")
+    .select("id, name, email, linkedin_url, company, role, source, created_at")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function fetchOutreachMessages() {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("outreach_messages")
+    .select("id, contact_id, message_type, status, sent_at, created_at")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function fetchLinkedInStats() {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("linkedin_connections")
+    .select("company, position, connected_on, relationship_strength");
+  if (error) throw error;
+
+  const rows = data ?? [];
+  const byCompany: Record<string, number> = {};
+  const byStrength: Record<string, number> = {};
+
+  for (const row of rows) {
+    if (row.company) byCompany[row.company] = (byCompany[row.company] || 0) + 1;
+    byStrength[row.relationship_strength ?? "unknown"] = (byStrength[row.relationship_strength ?? "unknown"] || 0) + 1;
+  }
+
+  // Top 10 companies by connection count
+  const topCompanies = Object.entries(byCompany)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([company, count]) => ({ company, count }));
+
+  return { total: rows.length, top_companies: topCompanies, by_strength: byStrength };
+}
+
+// --- Teller ---
+
+export async function fetchSubscriptions() {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("subscriptions")
+    .select("id, service_name, amount, currency, frequency, status, last_payment, created_at")
+    .order("service_name");
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function fetchPayments(limit = 20) {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("payments")
+    .select("id, amount, currency, paid_at, subscription_id")
+    .order("paid_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}

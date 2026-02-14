@@ -21,8 +21,12 @@ packages/dashboard/
 │   │   └── (dashboard)/            # Protected route group (sidebar + topbar)
 │   │       ├── layout.tsx          # Sidebar + TopBar + MobileNav + SearchOverlay
 │   │       ├── page.tsx            # Brain View (3D knowledge graph)
+│   │       ├── emails/page.tsx      # Email inbox with sender profiles
+│   │       ├── jobs/page.tsx       # Job listings with match scores
 │   │       ├── notifications/page.tsx # Notification history + filters
 │   │       ├── ops/page.tsx        # Ops dashboard (service health, events, Night Shift)
+│   │       ├── recruiter/page.tsx  # Outreach pipeline + LinkedIn stats
+│   │       ├── teller/page.tsx     # Subscription tracker + payments
 │   │       ├── backlog/page.tsx    # Kanban board (drag-and-drop)
 │   │       ├── content/page.tsx    # Content pipeline status
 │   │       ├── enrichment/page.tsx # Enrichment progress tracker
@@ -72,6 +76,10 @@ packages/dashboard/
 | `/ops` | Ops Dashboard — service health, events, Night Shift status | Supabase `golem_events`, `service_runs`, `golem_state` |
 | `/notifications` | Notification History — timeline with severity filters, expandable data | Supabase `golem_events` (notification types) |
 | `/backlog` | Kanban Board — columns (Backlog/In Progress/Done/Archived) with CRUD | Supabase `backlog_items` |
+| `/jobs` | Jobs — job listings with search, match scores, scrape activity | Supabase `golem_jobs`, `scrape_activity` |
+| `/emails` | Emails — email list with sender profiles, category filters | Supabase `emails`, `email_senders` |
+| `/recruiter` | Recruiter — outreach pipeline, LinkedIn network stats | Supabase `outreach_contacts`, `outreach_messages`, `linkedin_connections` |
+| `/teller` | Teller — subscription tracker, payment history | Supabase `subscriptions`, `payments` |
 | `/content` | Content Pipeline — pipeline runs, routing stats, recent outputs | Supabase `pipeline_runs` |
 | `/enrichment` | Enrichment Progress — chunk processing stats, enrichment queue | Daemon `/api/stats/enrichment` (local only) |
 | `/tokens` | Token Tracking — LLM usage by model, daily costs, aggregates | Supabase `llm_usage` |
@@ -93,6 +101,10 @@ The dashboard queries Supabase directly for most pages — no daemon required on
 | Notifications | `golem_events` (filtered by notification types) | Yes |
 | Tokens | `llm_usage` table (client-side aggregation) | Yes |
 | Backlog | `backlog_items` table (full CRUD) | Yes |
+| Jobs | `golem_jobs`, `scrape_activity` tables | Yes |
+| Emails | `emails`, `email_senders` tables | Yes |
+| Recruiter | `outreach_contacts`, `outreach_messages`, `linkedin_connections` tables | Yes |
+| Teller | `subscriptions`, `payments` tables | Yes |
 | Content | `pipeline_runs` table | Yes |
 | Enrichment | Zikaron daemon `/api/stats/enrichment` | No — requires local daemon |
 | Session | Zikaron daemon `/api/session/:id` | No — requires local daemon |
@@ -112,6 +124,15 @@ For local dev, set `ZIKARON_DAEMON_URL=http://localhost:8787` in `.env.local` to
 | `service_runs` | Cron job execution logs | Read: authenticated, Write: service_role |
 | `golem_events` | Event log (all golems) | Read: authenticated, Write: service_role |
 | `golem_state` | Key-value state (Night Shift target, rotation) | Read: authenticated, Write: service_role |
+| `golem_jobs` | Job listings from scraper | Read: authenticated, Write: service_role |
+| `scrape_activity` | Scraping run logs | Read: authenticated, Write: service_role |
+| `emails` | Email inbox with AI scoring | Read: authenticated, Write: service_role |
+| `email_senders` | Sender profiles and actions | Read: authenticated, Write: service_role |
+| `outreach_contacts` | Recruiter outreach contacts | Read: authenticated, Write: service_role |
+| `outreach_messages` | Outreach messages | Read: authenticated, Write: service_role |
+| `linkedin_connections` | LinkedIn network data | Read: authenticated, Write: service_role |
+| `subscriptions` | Subscription tracking | Read: authenticated, Write: service_role |
+| `payments` | Payment records | Read: authenticated, Write: service_role |
 
 Legacy rows (null user_id) are readable by all authenticated users.
 

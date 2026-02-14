@@ -24,9 +24,9 @@ Add dedicated pages for each domain golem showing their specific data, actions, 
 - Phase 4 (admin migration provides the feature inventory)
 
 ## Status
-- [ ] Recruiter page
-- [ ] Jobs page
-- [ ] Emails page
-- [ ] Teller page
-- [ ] Sidebar navigation
-- [ ] Wire data sources
+- [x] Recruiter page — pipeline contacts, outreach messages, LinkedIn network stats
+- [x] Jobs page — job list with search/filters, match scores, scrape activity
+- [x] Emails page — email list with sender tab, category filters, score display
+- [x] Teller page — subscription tracker, monthly cost, payment history
+- [x] Sidebar navigation — grouped into Overview/Golems/Manage sections
+- [x] Wire data sources — 8 new query functions in queries.ts
