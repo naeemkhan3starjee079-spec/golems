@@ -1,0 +1,35 @@
+# Phase 4: Admin Migration
+
+> [Back to main plan](../README.md)
+
+## Goal
+Migrate all useful functionality from `etanheyman.com/admin/golem/*` into `dashboard.etanheyman.com`, then delete the admin routes from the portfolio repo.
+
+## Tools
+- **Research:** gemini — review each admin page for reusable logic
+- **Code:** cursor/opus — dashboard pages + portfolio cleanup
+- **MCPs:** supabase
+
+## Steps
+
+1. **Audit admin pages** — Read each of the 8 admin pages and document what data they show, what actions they support, and what Supabase tables they query. Write findings to `findings.md`.
+2. **Map admin features to dashboard** — For each admin feature, decide: merge into existing dashboard page, create new page, or drop (not useful).
+3. **Migrate Monitor page** → ops page (service health + monitoring already exists there)
+4. **Migrate Alerts page** → new `/notifications` page in dashboard (notification history, config)
+5. **Migrate Night Shift page** → section in ops page or standalone `/nightshift` page (run history, target repos, last commits)
+6. **Delete admin routes from portfolio** — Remove `app/(portfolio)/admin/golem/` directory and all sub-pages. Remove NextAuth if only used for admin.
+7. **Delete golems route group from portfolio** — Remove `app/(golems)/` route group and `content/golems/` docs (moved in Phase 6).
+8. **Verify portfolio still builds** — `cd ~/Gits/etanheyman.com && npm run build`
+
+## Depends On
+- Phase 3 (service monitoring should be in place before migrating monitor page)
+
+## Status
+- [ ] Audit admin pages
+- [ ] Map features to dashboard
+- [ ] Migrate Monitor → ops
+- [ ] Migrate Alerts → notifications
+- [ ] Migrate Night Shift
+- [ ] Delete admin routes
+- [ ] Delete golems route group
+- [ ] Verify portfolio build

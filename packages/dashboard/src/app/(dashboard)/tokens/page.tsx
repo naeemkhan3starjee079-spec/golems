@@ -1,11 +1,26 @@
 "use client";
 
-import { Coins, RefreshCw, TrendingUp } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { Coins, RefreshCw, TrendingUp, Clock, Zap } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { PageSkeleton } from "@/components/skeleton";
 import { fetchTokenStats } from "@/lib/supabase/queries";
 
 type DayStats = {
+  calls: number;
+  input_tokens: number;
+  output_tokens: number;
+  cost_usd: number;
+};
+
+type ModelStats = {
+  calls: number;
+  input_tokens: number;
+  output_tokens: number;
+  cost_usd: number;
+  sources: string[];
+};
+
+type SourceStats = {
   calls: number;
   input_tokens: number;
   output_tokens: number;
@@ -17,16 +32,89 @@ type TokenStats = {
   total_cost_usd: number;
   total_input_tokens: number;
   total_output_tokens: number;
+  total_calls: number;
+  unique_sources: number;
   entry_count: number;
-  by_model?: Record<string, { calls: number; input_tokens: number; output_tokens: number; cost_usd: number }>;
+  by_model?: Record<string, ModelStats>;
+  by_source?: Record<string, SourceStats>;
   by_day?: Record<string, DayStats>;
 };
 
 const PERIODS = [7, 14, 30] as const;
 
+const FREE_MODELS = new Set([
+  "glm-4.7-flash",
+  "gemini-2.0-flash-lite",
+  "gemini-2.5-flash-lite",
+  "gemini-flash-lite",
+]);
+
+const CHEAP_MODELS = new Set([
+  "claude-haiku-4-5-20251001",
+  "claude-3-5-haiku-20241022",
+]);
+
+function costTier(model: string): "free" | "cheap" | "expensive" {
+  const lower = model.toLowerCase();
+  for (const m of FREE_MODELS) {
+    if (lower.includes(m)) return "free";
+  }
+  for (const m of CHEAP_MODELS) {
+    if (lower.includes(m)) return "cheap";
+  }
+  return "expensive";
+}
+
+function tierColor(tier: "free" | "cheap" | "expensive"): string {
+  switch (tier) {
+    case "free": return "text-emerald";
+    case "cheap": return "text-amber";
+    case "expensive": return "text-rose";
+  }
+}
+
+function tierBadge(tier: "free" | "cheap" | "expensive"): string {
+  switch (tier) {
+    case "free": return "bg-emerald/10 text-emerald border-emerald/20";
+    case "cheap": return "bg-amber/10 text-amber border-amber/20";
+    case "expensive": return "bg-rose/10 text-rose border-rose/20";
+  }
+}
+
 function formatDate(iso: string): string {
   const d = new Date(iso + "T00:00:00");
   return d.toLocaleDateString("en-IL", { month: "short", day: "numeric" });
+}
+
+function timeAgo(date: Date): string {
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (seconds < 10) return "just now";
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  return `${Math.floor(minutes / 60)}h ago`;
+}
+
+/** Fill missing days with zero values so chart shows gaps.
+ * Uses local date to match the query boundary (which uses setDate(-days) at current time). */
+function fillDays(byDay: Record<string, DayStats>, days: number): { date: string; calls: number; input_tokens: number; output_tokens: number; cost_usd: number }[] {
+  const result: { date: string; calls: number; input_tokens: number; output_tokens: number; cost_usd: number }[] = [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  for (let i = days; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    const stats = byDay[key];
+    result.push({
+      date: key,
+      calls: stats?.calls ?? 0,
+      input_tokens: stats?.input_tokens ?? 0,
+      output_tokens: stats?.output_tokens ?? 0,
+      cost_usd: stats?.cost_usd ?? 0,
+    });
+  }
+  return result;
 }
 
 export default function TokensPage() {
@@ -34,21 +122,42 @@ export default function TokensPage() {
   const [days, setDays] = useState<number>(14);
   const [refreshing, setRefreshing] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [, setTick] = useState(0);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const fetchIdRef = useRef(0);
 
   const fetchData = useCallback(async (d: number) => {
+    const id = ++fetchIdRef.current;
     setRefreshing(true);
     try {
       const result = await fetchTokenStats(d);
+      if (id !== fetchIdRef.current) return; // stale response — discard
       setData(result);
       setFailed(false);
+      setLastUpdated(new Date());
     } catch {
+      if (id !== fetchIdRef.current) return;
       setFailed(true);
     } finally {
-      setRefreshing(false);
+      if (id === fetchIdRef.current) setRefreshing(false);
     }
   }, []);
 
+  // Fetch on mount and period change
   useEffect(() => { fetchData(days); }, [days, fetchData]);
+
+  // Auto-refresh every 30s
+  useEffect(() => {
+    intervalRef.current = setInterval(() => fetchData(days), 30000);
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [days, fetchData]);
+
+  // Tick every 10s to update "last updated" display
+  useEffect(() => {
+    const t = setInterval(() => setTick((n) => n + 1), 10000);
+    return () => clearInterval(t);
+  }, []);
 
   if (failed && !data) {
     return (
@@ -66,59 +175,64 @@ export default function TokensPage() {
 
   if (!data) return <PageSkeleton />;
 
-  // Build sorted daily data array
-  const dailyEntries = data.by_day
-    ? Object.entries(data.by_day)
-        .map(([date, stats]) => ({ date, ...stats }))
-        .sort((a, b) => a.date.localeCompare(b.date))
-    : [];
-
-  const maxDailyCost = Math.max(...dailyEntries.map((d) => d.cost_usd), 0.01);
+  // Build filled daily data array
+  const dailyEntries = fillDays(data.by_day ?? {}, days);
+  const maxDailyCost = Math.max(...dailyEntries.map((d) => d.cost_usd), 0.001);
   const maxDailyCalls = Math.max(...dailyEntries.map((d) => d.calls), 1);
-  const avgDailyCost = days > 0
-    ? data.total_cost_usd / days
-    : 0;
+  const avgDailyCost = days > 0 ? data.total_cost_usd / days : 0;
+  const hasAnyData = dailyEntries.some((d) => d.calls > 0);
 
   return (
     <div className="space-y-6">
-      {/* Header with period selector and refresh */}
+      {/* Header with period selector, refresh, last updated */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold flex items-center gap-2">
           <Coins className="w-5 h-5 text-accent" />
           Token Usage
         </h2>
         <div className="flex items-center gap-3">
+          {lastUpdated && (
+            <span className="text-[10px] text-muted/50 flex items-center gap-1">
+              <Clock className="w-2.5 h-2.5" />
+              {timeAgo(lastUpdated)}
+            </span>
+          )}
           <div className="flex rounded-md border border-border overflow-hidden text-xs">
             {PERIODS.map((p) => (
               <button
                 key={p}
                 type="button"
                 onClick={() => setDays(p)}
+                disabled={refreshing}
                 className={`px-3 py-1.5 transition-colors ${
                   days === p
                     ? "bg-accent text-background font-medium"
                     : "bg-surface hover:bg-surface-hover text-muted"
-                }`}
+                } ${refreshing ? "opacity-50" : ""}`}
               >
                 {p}d
               </button>
             ))}
           </div>
-          <button type="button" onClick={() => fetchData(days)} className="text-muted hover:text-foreground transition-colors">
+          <button type="button" onClick={() => fetchData(days)} disabled={refreshing} className="text-muted hover:text-foreground transition-colors">
             <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
           </button>
         </div>
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <div className="rounded-lg border border-border bg-surface p-4">
           <p className="text-xs text-muted">Total Cost</p>
           <p className="text-2xl font-bold text-amber">${data.total_cost_usd.toFixed(2)}</p>
         </div>
         <div className="rounded-lg border border-border bg-surface p-4">
           <p className="text-xs text-muted">Avg/Day</p>
-          <p className="text-2xl font-bold text-amber">${avgDailyCost.toFixed(2)}</p>
+          <p className="text-2xl font-bold text-amber">${avgDailyCost.toFixed(3)}</p>
+        </div>
+        <div className="rounded-lg border border-border bg-surface p-4">
+          <p className="text-xs text-muted">Total Calls</p>
+          <p className="text-2xl font-bold">{data.total_calls.toLocaleString()}</p>
         </div>
         <div className="rounded-lg border border-border bg-surface p-4">
           <p className="text-xs text-muted">Input Tokens</p>
@@ -131,72 +245,102 @@ export default function TokensPage() {
       </div>
 
       {/* Daily cost bar chart */}
-      {dailyEntries.length > 0 && (
-        <div>
-          <h3 className="text-xs font-medium text-muted uppercase tracking-wider mb-3 flex items-center gap-1.5">
-            <TrendingUp className="w-3.5 h-3.5" />
-            Daily Cost
-          </h3>
-          <div className="rounded-lg border border-border bg-surface p-4">
-            <div className="flex items-end gap-1 h-32">
-              {dailyEntries.map((d) => {
-                const heightPct = Math.max((d.cost_usd / maxDailyCost) * 100, 2);
-                const callsPct = Math.max((d.calls / maxDailyCalls) * 100, 2);
-                return (
-                  <div key={d.date} className="flex-1 flex flex-col items-center gap-1 group relative">
-                    {/* Tooltip */}
-                    <div className="absolute bottom-full mb-2 hidden group-hover:block z-10">
-                      <div className="bg-background border border-border rounded-md px-2 py-1.5 text-[10px] whitespace-nowrap shadow-lg">
-                        <div className="font-medium">{formatDate(d.date)}</div>
-                        <div className="text-amber">${d.cost_usd.toFixed(3)}</div>
-                        <div className="text-muted">{d.calls} calls</div>
-                        <div className="text-muted">{(d.input_tokens + d.output_tokens).toLocaleString()} tok</div>
+      <div>
+        <h3 className="text-xs font-medium text-muted uppercase tracking-wider mb-3 flex items-center gap-1.5">
+          <TrendingUp className="w-3.5 h-3.5" />
+          Daily Cost ({days}d)
+        </h3>
+        <div className="rounded-lg border border-border bg-surface p-4">
+          {!hasAnyData ? (
+            <div className="flex items-center justify-center h-32 text-muted text-sm">
+              No usage data in the last {days} days
+            </div>
+          ) : (
+            <>
+              <div className="flex items-end gap-1 h-32">
+                {dailyEntries.map((d) => {
+                  const heightPct = d.cost_usd > 0 ? Math.max((d.cost_usd / maxDailyCost) * 100, 3) : 0;
+                  const callsPct = d.calls > 0 ? Math.max((d.calls / maxDailyCalls) * 100, 3) : 0;
+                  return (
+                    <div key={d.date} className="flex-1 flex flex-col items-center gap-1 group relative min-w-[4px]">
+                      {/* Tooltip */}
+                      {d.calls > 0 && (
+                        <div className="absolute bottom-full mb-2 hidden group-hover:block z-10">
+                          <div className="bg-background border border-border rounded-md px-2 py-1.5 text-[10px] whitespace-nowrap shadow-lg">
+                            <div className="font-medium">{formatDate(d.date)}</div>
+                            <div className="text-amber">${d.cost_usd.toFixed(4)}</div>
+                            <div className="text-muted">{d.calls} calls</div>
+                            <div className="text-muted">{(d.input_tokens + d.output_tokens).toLocaleString()} tok</div>
+                          </div>
+                        </div>
+                      )}
+                      {/* Bars */}
+                      <div className="w-full flex items-end gap-px" style={{ height: "100%" }}>
+                        <div
+                          className={`flex-1 rounded-t-sm transition-all ${d.cost_usd > 0 ? "bg-amber/70 hover:bg-amber" : "bg-transparent"}`}
+                          style={{ height: `${heightPct}%` }}
+                        />
+                        <div
+                          className={`flex-1 rounded-t-sm transition-all ${d.calls > 0 ? "bg-accent/40 hover:bg-accent/60" : "bg-transparent"}`}
+                          style={{ height: `${callsPct}%` }}
+                        />
                       </div>
                     </div>
-                    {/* Cost bar */}
-                    <div className="w-full flex items-end gap-px" style={{ height: "100%" }}>
-                      <div
-                        className="flex-1 bg-amber/70 rounded-t-sm transition-all hover:bg-amber"
-                        style={{ height: `${heightPct}%` }}
-                      />
-                      <div
-                        className="flex-1 bg-accent/40 rounded-t-sm transition-all hover:bg-accent/60"
-                        style={{ height: `${callsPct}%` }}
-                      />
+                  );
+                })}
+              </div>
+              {/* X-axis labels */}
+              <div className="flex gap-1 mt-2">
+                {dailyEntries.map((d, i) => {
+                  const step = dailyEntries.length > 14 ? 7 : dailyEntries.length > 7 ? 3 : 1;
+                  const show = i % step === 0 || i === dailyEntries.length - 1;
+                  return (
+                    <div key={d.date} className="flex-1 text-center text-[9px] text-muted/60 truncate">
+                      {show ? formatDate(d.date) : ""}
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-            {/* X-axis labels — show every Nth for readability */}
-            <div className="flex gap-1 mt-2">
-              {dailyEntries.map((d, i) => {
-                const step = dailyEntries.length > 14 ? 7 : dailyEntries.length > 7 ? 3 : 1;
-                const show = i % step === 0 || i === dailyEntries.length - 1;
-                return (
-                  <div key={d.date} className="flex-1 text-center text-[9px] text-muted/60 truncate">
-                    {show ? formatDate(d.date) : ""}
-                  </div>
-                );
-              })}
-            </div>
-            {/* Legend */}
-            <div className="flex items-center gap-4 mt-3 text-[10px] text-muted">
-              <div className="flex items-center gap-1">
-                <div className="w-2.5 h-2.5 rounded-sm bg-amber/70" />
-                <span>Cost</span>
+                  );
+                })}
               </div>
-              <div className="flex items-center gap-1">
-                <div className="w-2.5 h-2.5 rounded-sm bg-accent/40" />
-                <span>Calls</span>
+              {/* Legend */}
+              <div className="flex items-center gap-4 mt-3 text-[10px] text-muted">
+                <div className="flex items-center gap-1">
+                  <div className="w-2.5 h-2.5 rounded-sm bg-amber/70" />
+                  <span>Cost</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-2.5 h-2.5 rounded-sm bg-accent/40" />
+                  <span>Calls</span>
+                </div>
               </div>
-            </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* By Source breakdown */}
+      {data.by_source && Object.keys(data.by_source).length > 0 && (
+        <div>
+          <h3 className="text-xs font-medium text-muted uppercase tracking-wider mb-3 flex items-center gap-1.5">
+            <Zap className="w-3.5 h-3.5" />
+            By Source
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {Object.entries(data.by_source)
+              .sort(([, a], [, b]) => b.calls - a.calls)
+              .map(([source, stats]) => (
+                <div key={source} className="rounded-lg border border-border bg-surface p-3">
+                  <p className="text-xs text-muted truncate">{source}</p>
+                  <p className="text-lg font-bold">{stats.calls.toLocaleString()} <span className="text-xs font-normal text-muted">calls</span></p>
+                  <p className="text-xs text-amber">${stats.cost_usd.toFixed(3)}</p>
+                  <p className="text-[10px] text-muted">{(stats.input_tokens + stats.output_tokens).toLocaleString()} tokens</p>
+                </div>
+              ))}
           </div>
         </div>
       )}
 
       {/* Model breakdown table */}
-      {data.by_model && (
+      {data.by_model && Object.keys(data.by_model).length > 0 && (
         <div>
           <h3 className="text-xs font-medium text-muted uppercase tracking-wider mb-3">By Model</h3>
           <div className="rounded-lg border border-border bg-surface overflow-hidden">
@@ -204,6 +348,7 @@ export default function TokensPage() {
               <thead>
                 <tr className="border-b border-border text-xs text-muted">
                   <th className="text-left p-3">Model</th>
+                  <th className="text-left p-3">Source</th>
                   <th className="text-right p-3">Calls</th>
                   <th className="text-right p-3">Input</th>
                   <th className="text-right p-3">Output</th>
@@ -212,28 +357,38 @@ export default function TokensPage() {
               </thead>
               <tbody>
                 {Object.entries(data.by_model)
-                  .sort(([, a], [, b]) => b.cost_usd - a.cost_usd)
-                  .map(([model, stats]) => (
-                    <tr key={model} className="border-b border-border/50 hover:bg-surface-hover">
-                      <td className="p-3 font-mono text-xs">{model}</td>
-                      <td className="p-3 text-right">{stats.calls}</td>
-                      <td className="p-3 text-right">{stats.input_tokens.toLocaleString()}</td>
-                      <td className="p-3 text-right">{stats.output_tokens.toLocaleString()}</td>
-                      <td className="p-3 text-right text-amber">${stats.cost_usd.toFixed(2)}</td>
-                    </tr>
-                  ))}
+                  .sort(([, a], [, b]) => b.cost_usd - a.cost_usd || b.calls - a.calls)
+                  .map(([model, stats]) => {
+                    const tier = costTier(model);
+                    return (
+                      <tr key={model} className="border-b border-border/50 hover:bg-surface-hover">
+                        <td className="p-3">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-xs">{model}</span>
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded border ${tierBadge(tier)}`}>
+                              {tier}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="p-3 text-xs text-muted">{stats.sources.join(", ")}</td>
+                        <td className="p-3 text-right">{stats.calls}</td>
+                        <td className="p-3 text-right">{stats.input_tokens.toLocaleString()}</td>
+                        <td className="p-3 text-right">{stats.output_tokens.toLocaleString()}</td>
+                        <td className={`p-3 text-right ${tierColor(tier)}`}>${stats.cost_usd.toFixed(3)}</td>
+                      </tr>
+                    );
+                  })}
               </tbody>
             </table>
           </div>
         </div>
       )}
 
-      {/* Entry count */}
-      {data.entry_count != null && (
-        <p className="text-[10px] text-muted/40 text-right">
-          {data.entry_count.toLocaleString()} entries in last {data.days ?? days} days
-        </p>
-      )}
+      {/* Footer */}
+      <p className="text-[10px] text-muted/40 text-right">
+        {data.entry_count.toLocaleString()} entries across {data.unique_sources} source{data.unique_sources !== 1 ? "s" : ""} in last {days} days
+        {refreshing && " · refreshing..."}
+      </p>
     </div>
   );
 }

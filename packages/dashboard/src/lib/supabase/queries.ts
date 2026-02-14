@@ -59,10 +59,12 @@ export async function fetchTokenStats(days: number) {
 
   const rows = (data ?? []) as LlmRow[];
 
-  // Aggregate by model
-  const byModel: Record<string, { calls: number; input_tokens: number; output_tokens: number; cost_usd: number }> = {};
+  // Aggregate by model+source
+  const byModel: Record<string, { calls: number; input_tokens: number; output_tokens: number; cost_usd: number; sources: Set<string> }> = {};
   // Aggregate by day
   const byDay: Record<string, { calls: number; input_tokens: number; output_tokens: number; cost_usd: number }> = {};
+  // Aggregate by source
+  const bySource: Record<string, { calls: number; input_tokens: number; output_tokens: number; cost_usd: number }> = {};
 
   let totalCost = 0;
   let totalInput = 0;
@@ -75,12 +77,22 @@ export async function fetchTokenStats(days: number) {
 
     // By model
     if (!byModel[row.model]) {
-      byModel[row.model] = { calls: 0, input_tokens: 0, output_tokens: 0, cost_usd: 0 };
+      byModel[row.model] = { calls: 0, input_tokens: 0, output_tokens: 0, cost_usd: 0, sources: new Set() };
     }
     byModel[row.model].calls++;
     byModel[row.model].input_tokens += row.input_tokens;
     byModel[row.model].output_tokens += row.output_tokens;
     byModel[row.model].cost_usd += Number(row.cost_usd);
+    byModel[row.model].sources.add(row.source);
+
+    // By source
+    if (!bySource[row.source]) {
+      bySource[row.source] = { calls: 0, input_tokens: 0, output_tokens: 0, cost_usd: 0 };
+    }
+    bySource[row.source].calls++;
+    bySource[row.source].input_tokens += row.input_tokens;
+    bySource[row.source].output_tokens += row.output_tokens;
+    bySource[row.source].cost_usd += Number(row.cost_usd);
 
     // By day
     const day = row.created_at.slice(0, 10);
@@ -93,13 +105,22 @@ export async function fetchTokenStats(days: number) {
     byDay[day].cost_usd += Number(row.cost_usd);
   }
 
+  // Convert Set to array for serialization
+  const byModelSerialized: Record<string, { calls: number; input_tokens: number; output_tokens: number; cost_usd: number; sources: string[] }> = {};
+  for (const [model, stats] of Object.entries(byModel)) {
+    byModelSerialized[model] = { ...stats, sources: [...stats.sources] };
+  }
+
   return {
     days,
     total_cost_usd: totalCost,
     total_input_tokens: totalInput,
     total_output_tokens: totalOutput,
+    total_calls: rows.length,
+    unique_sources: Object.keys(bySource).length,
     entry_count: rows.length,
-    by_model: byModel,
+    by_model: byModelSerialized,
+    by_source: bySource,
     by_day: byDay,
   };
 }
