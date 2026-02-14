@@ -280,6 +280,53 @@ export function DocsClient({
     }
   }, []);
 
+  // Render mermaid diagrams client-side
+  useEffect(() => {
+    const blocks = contentRef.current?.querySelectorAll(".mermaid-block");
+    if (!blocks || blocks.length === 0) return;
+
+    let cancelled = false;
+    (async () => {
+      const mermaid = (await import("mermaid")).default;
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: "dark",
+        themeVariables: {
+          darkMode: true,
+          background: "transparent",
+          primaryColor: "#3b82f6",
+          primaryTextColor: "#e4e4e7",
+          primaryBorderColor: "#52525b",
+          lineColor: "#71717a",
+          secondaryColor: "#27272a",
+          tertiaryColor: "#18181b",
+          fontFamily: "ui-monospace, monospace",
+          fontSize: "13px",
+        },
+      });
+      if (cancelled) return;
+
+      for (let i = 0; i < blocks.length; i++) {
+        const block = blocks[i] as HTMLElement;
+        const source = decodeURIComponent(block.dataset.mermaid ?? "");
+        if (!source) continue;
+        try {
+          const id = `mermaid-${currentSlug.replace(/\//g, "-")}-${i}`;
+          const { svg } = await mermaid.render(id, source);
+          if (!cancelled) {
+            block.innerHTML = svg;
+            block.classList.add("mermaid-rendered");
+          }
+        } catch {
+          // Leave raw text visible on render failure
+          block.classList.add("mermaid-error");
+        }
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [html, currentSlug]);
+
   return (
     <div className="flex gap-0 -mx-2">
       {/* Left sidebar nav */}
@@ -316,6 +363,9 @@ export function DocsClient({
               prose-pre:bg-transparent prose-pre:border-0 prose-pre:p-0 prose-pre:rounded-lg prose-pre:text-[13px]
               [&_pre>code]:bg-transparent [&_pre>code]:p-0 [&_pre>code]:rounded-none [&_pre>code]:text-inherit [&_pre>code]:before:content-none [&_pre>code]:after:content-none
               [&_.shiki]:rounded-lg [&_.shiki]:border [&_.shiki]:border-border/40 [&_.shiki]:p-4 [&_.shiki]:overflow-x-auto [&_.shiki]:text-[13px] [&_.shiki]:leading-relaxed
+              [&_.mermaid-block]:my-6 [&_.mermaid-block]:rounded-lg [&_.mermaid-block]:border [&_.mermaid-block]:border-border/40 [&_.mermaid-block]:p-4 [&_.mermaid-block]:overflow-x-auto [&_.mermaid-block]:bg-zinc-900/50
+              [&_.mermaid-rendered]:text-center [&_.mermaid-rendered_svg]:mx-auto [&_.mermaid-rendered_svg]:max-w-full
+              [&_.mermaid-error]:text-[13px] [&_.mermaid-error]:font-mono [&_.mermaid-error]:text-muted [&_.mermaid-error]:whitespace-pre-wrap
               prose-table:text-sm prose-th:text-foreground prose-th:font-medium prose-td:text-muted
               prose-li:text-muted prose-strong:text-foreground
               prose-blockquote:border-accent/30 prose-blockquote:text-muted/80"
