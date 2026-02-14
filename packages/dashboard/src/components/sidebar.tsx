@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Bell,
   Brain,
   Activity,
   Coins,
@@ -16,6 +17,7 @@ import {
 const NAV_ITEMS = [
   { href: "/", label: "Brain View", icon: Brain },
   { href: "/ops", label: "Services", icon: Activity },
+  { href: "/notifications", label: "Notifications", icon: Bell },
   { href: "/tokens", label: "Tokens", icon: Coins },
   { href: "/enrichment", label: "Enrichment", icon: Database },
   { href: "/backlog", label: "Backlog", icon: KanbanSquare },

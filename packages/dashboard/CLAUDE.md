@@ -21,7 +21,8 @@ packages/dashboard/
 │   │   └── (dashboard)/            # Protected route group (sidebar + topbar)
 │   │       ├── layout.tsx          # Sidebar + TopBar + MobileNav + SearchOverlay
 │   │       ├── page.tsx            # Brain View (3D knowledge graph)
-│   │       ├── ops/page.tsx        # Ops dashboard (service health, events)
+│   │       ├── notifications/page.tsx # Notification history + filters
+│   │       ├── ops/page.tsx        # Ops dashboard (service health, events, Night Shift)
 │   │       ├── backlog/page.tsx    # Kanban board (drag-and-drop)
 │   │       ├── content/page.tsx    # Content pipeline status
 │   │       ├── enrichment/page.tsx # Enrichment progress tracker
@@ -68,7 +69,8 @@ packages/dashboard/
 | Path | Page | Data Source |
 |------|------|-------------|
 | `/` | Brain View — 3D knowledge graph with search, minimap, presentation mode, PNG export | Supabase Storage (`brain-graphs/{user_id}/graph.json`) |
-| `/ops` | Ops Dashboard — recent events, service run history | Supabase `golem_events`, `service_runs` |
+| `/ops` | Ops Dashboard — service health, events, Night Shift status | Supabase `golem_events`, `service_runs`, `golem_state` |
+| `/notifications` | Notification History — timeline with severity filters, expandable data | Supabase `golem_events` (notification types) |
 | `/backlog` | Kanban Board — columns (Backlog/In Progress/Done/Archived) with CRUD | Supabase `backlog_items` |
 | `/content` | Content Pipeline — pipeline runs, routing stats, recent outputs | Supabase `pipeline_runs` |
 | `/enrichment` | Enrichment Progress — chunk processing stats, enrichment queue | Daemon `/api/stats/enrichment` (local only) |
@@ -87,7 +89,8 @@ The dashboard queries Supabase directly for most pages — no daemon required on
 | Page | Data Source | Works on Vercel? |
 |------|-------------|-----------------|
 | Brain View | Supabase Storage (`brain-graphs/{user_id}/graph.json`) | Yes |
-| Ops | `golem_events`, `service_runs` tables | Yes |
+| Ops | `golem_events`, `service_runs`, `golem_state` tables | Yes |
+| Notifications | `golem_events` (filtered by notification types) | Yes |
 | Tokens | `llm_usage` table (client-side aggregation) | Yes |
 | Backlog | `backlog_items` table (full CRUD) | Yes |
 | Content | `pipeline_runs` table | Yes |
@@ -108,6 +111,7 @@ For local dev, set `ZIKARON_DAEMON_URL=http://localhost:8787` in `.env.local` to
 | `service_heartbeats` | Service health pings | user_id = auth.uid() |
 | `service_runs` | Cron job execution logs | Read: authenticated, Write: service_role |
 | `golem_events` | Event log (all golems) | Read: authenticated, Write: service_role |
+| `golem_state` | Key-value state (Night Shift target, rotation) | Read: authenticated, Write: service_role |
 
 Legacy rows (null user_id) are readable by all authenticated users.
 

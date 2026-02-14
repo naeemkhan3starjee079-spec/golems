@@ -2,11 +2,12 @@
 
 import {
   Activity, AlertTriangle, Calendar, ChevronDown, ChevronRight,
-  Circle, Clock, Cloud, Database, Filter, RefreshCw, Server, Zap,
+  Circle, Clock, Cloud, Database, Filter, GitPullRequest, Moon, RefreshCw, Server, Target, Zap,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PageSkeleton } from "@/components/skeleton";
-import { fetchRecentEvents, fetchServiceRuns, fetchEnrichmentStats } from "@/lib/supabase/queries";
+import { fetchRecentEvents, fetchServiceRuns, fetchEnrichmentStats, fetchGolemState, fetchNightShiftEvents } from "@/lib/supabase/queries";
+import { timeAgo } from "@/lib/format";
 
 // --- Types ---
 
@@ -43,16 +44,6 @@ function getServiceConfig(name: string) {
 }
 
 // --- Helpers ---
-
-function timeAgo(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
-}
 
 function formatDuration(ms: number): string {
   if (ms < 1000) return `${ms}ms`;
@@ -127,6 +118,14 @@ export default function OpsPage() {
   const [events, setEvents] = useState<GolemEvent[]>([]);
   const [runs, setRuns] = useState<ServiceRun[]>([]);
   const [enrichment, setEnrichment] = useState<{ total: number; enriched: number; pct: number; updatedAt: string | null } | null>(null);
+  const [nightShift, setNightShift] = useState<{
+    target: string | null;
+    lastRun: string | null;
+    prs: Array<{ url: string; repo: string; createdAt: string }>;
+    rotation: string[];
+    events: GolemEvent[];
+  } | null>(null);
+  const [showNightShift, setShowNightShift] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -140,10 +139,12 @@ export default function OpsPage() {
     const id = ++fetchIdRef.current;
     setRefreshing(true);
     try {
-      const [evtsResult, runsResult, enrichResult] = await Promise.allSettled([
+      const [evtsResult, runsResult, enrichResult, stateResult, nsEventsResult] = await Promise.allSettled([
         fetchRecentEvents(50),
         fetchServiceRuns(100, 7),
         fetchEnrichmentStats(),
+        fetchGolemState(),
+        fetchNightShiftEvents(20),
       ]);
       if (id !== fetchIdRef.current) return;
       if (evtsResult.status === "fulfilled") setEvents(evtsResult.value as GolemEvent[]);
@@ -156,6 +157,17 @@ export default function OpsPage() {
           enriched: enrichedCount,
           pct: e.total_chunks > 0 ? Math.round(enrichedCount * 100 / e.total_chunks * 10) / 10 : 0,
           updatedAt: e.updated_at ?? null,
+        });
+      }
+      if (stateResult.status === "fulfilled") {
+        const stateRows = stateResult.value as Array<{ key: string; value: unknown }>;
+        const getVal = (key: string) => stateRows.find((s) => s.key === key)?.value;
+        setNightShift({
+          target: (getVal("nightShiftTarget") as string) ?? null,
+          lastRun: (getVal("lastNightShift") as string) ?? null,
+          prs: (getVal("nightShiftPRs") as Array<{ url: string; repo: string; createdAt: string }>) ?? [],
+          rotation: (getVal("rotation") as string[]) ?? ["songscript", "zikaron", "claude-golem"],
+          events: (nsEventsResult.status === "fulfilled" ? nsEventsResult.value : []) as GolemEvent[],
         });
       }
       setLastRefresh(new Date());
@@ -312,6 +324,127 @@ export default function OpsPage() {
           </div>
         )}
       </div>
+
+      {/* Night Shift */}
+      {nightShift && (
+        <div>
+          <button
+            type="button"
+            onClick={() => setShowNightShift(!showNightShift)}
+            className="text-xs font-medium text-muted uppercase tracking-wider mb-3 flex items-center gap-1.5 hover:text-foreground transition-colors"
+          >
+            <Moon className="w-3.5 h-3.5 text-indigo-400" />
+            Night Shift
+            {nightShift.target && <span className="normal-case text-indigo-400 font-normal ml-1">({nightShift.target})</span>}
+            {showNightShift ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+          </button>
+          {showNightShift && (
+            <div className="space-y-3">
+              {/* Status cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="rounded-lg border border-border bg-surface p-3">
+                  <div className="flex items-center gap-1.5 text-[10px] text-muted mb-1">
+                    <Target className="w-3 h-3" />
+                    Current Target
+                  </div>
+                  <span className="text-sm font-medium">{nightShift.target ?? "Not set"}</span>
+                </div>
+                <div className="rounded-lg border border-border bg-surface p-3">
+                  <div className="flex items-center gap-1.5 text-[10px] text-muted mb-1">
+                    <Clock className="w-3 h-3" />
+                    Last Run
+                  </div>
+                  <span className="text-sm font-medium">{nightShift.lastRun ? timeAgo(nightShift.lastRun) : "Never"}</span>
+                </div>
+                <div className="rounded-lg border border-border bg-surface p-3">
+                  <div className="flex items-center gap-1.5 text-[10px] text-muted mb-1">
+                    <GitPullRequest className="w-3 h-3" />
+                    Pending PRs
+                  </div>
+                  <span className="text-sm font-medium">{nightShift.prs.length}</span>
+                </div>
+              </div>
+
+              {/* Weekly rotation */}
+              <div className="rounded-lg border border-border bg-surface p-3">
+                <div className="text-[10px] text-muted uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <Calendar className="w-3 h-3" />
+                  Weekly Rotation
+                </div>
+                <div className="grid grid-cols-7 gap-1.5">
+                  {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day, idx) => {
+                    const isToday = idx === (new Date().getDay() + 6) % 7;
+                    const repo = nightShift.rotation[idx % nightShift.rotation.length] ?? "—";
+                    return (
+                      <div
+                        key={day}
+                        className={`text-center rounded-md p-1.5 border ${
+                          isToday
+                            ? "bg-indigo-500/15 border-indigo-500/30 text-indigo-400"
+                            : "bg-surface border-border text-muted"
+                        }`}
+                      >
+                        <div className="text-[9px] font-bold uppercase tracking-wider">{day}</div>
+                        <div className={`text-[10px] mt-0.5 ${isToday ? "text-foreground" : ""}`}>{repo}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Pending PRs */}
+              {nightShift.prs.length > 0 && (
+                <div className="rounded-lg border border-border bg-surface p-3">
+                  <div className="text-[10px] text-muted uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <GitPullRequest className="w-3 h-3" />
+                    Night Shift PRs
+                  </div>
+                  <div className="space-y-1.5">
+                    {nightShift.prs.map((pr, i) => (
+                      <a
+                        key={i}
+                        href={pr.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-between px-2.5 py-1.5 rounded bg-surface-hover hover:bg-border/30 transition-colors"
+                      >
+                        <div className="flex items-center gap-2">
+                          <GitPullRequest className="w-3 h-3 text-emerald" />
+                          <span className="text-xs">{pr.repo}</span>
+                        </div>
+                        {pr.createdAt && <span className="text-[10px] text-muted">{timeAgo(pr.createdAt)}</span>}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Recent Activity */}
+              {nightShift.events.length > 0 && (
+                <div className="rounded-lg border border-border bg-surface p-3">
+                  <div className="text-[10px] text-muted uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <Moon className="w-3 h-3" />
+                    Recent Activity ({nightShift.events.length})
+                  </div>
+                  <div className="space-y-1 max-h-40 overflow-y-auto">
+                    {nightShift.events.map((ev, i) => (
+                      <div key={i} className="flex items-center justify-between px-2 py-1 text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted">{ev.type.replace(/_/g, " ")}</span>
+                          {typeof ev.data?.repo === "string" && (
+                            <span className="text-[10px] text-muted/60">{ev.data.repo}</span>
+                          )}
+                        </div>
+                        <span className="text-[10px] text-muted/60">{timeAgo(ev.created_at)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Error History */}
       {errorRuns.length > 0 && (

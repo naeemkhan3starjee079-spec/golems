@@ -131,6 +131,48 @@ export async function fetchTokenStats(days: number) {
   };
 }
 
+// --- Night Shift ---
+
+export async function fetchGolemState() {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("golem_state")
+    .select("key, value, updated_at")
+    .order("updated_at", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function fetchNightShiftEvents(limit = 50) {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("golem_events")
+    .select("id, actor, type, data, created_at")
+    .eq("actor", "nightshift")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
+
+// --- Notifications ---
+
+export async function fetchNotificationEvents(limit = 50) {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("golem_events")
+    .select("id, actor, type, data, created_at")
+    .in("type", [
+      "email_urgent", "email_triaged", "service_error", "service_recovered",
+      "nightshift_started", "nightshift_completed", "nightshift_pr",
+      "job_match", "job_applied", "briefing_sent", "alert",
+    ])
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
+
 // --- Enrichment ---
 
 export async function fetchEnrichmentStats() {

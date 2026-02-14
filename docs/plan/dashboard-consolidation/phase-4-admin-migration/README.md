@@ -26,11 +26,11 @@ Migrate all useful functionality from `etanheyman.com/admin/golem/*` into `dashb
 - Phase 3 (service monitoring should be in place before migrating monitor page)
 
 ## Status
-- [ ] Audit admin pages
-- [ ] Map features to dashboard
-- [ ] Migrate Monitor → ops
-- [ ] Migrate Alerts → notifications (`/frontend-design`)
-- [ ] Migrate Night Shift (`/frontend-design`)
-- [ ] Delete admin routes
-- [ ] Delete golems route group
-- [ ] Verify portfolio build
+- [x] Audit admin pages
+- [x] Map features to dashboard
+- [x] Migrate Monitor → ops (done in Phase 3)
+- [x] Migrate Alerts → notifications (`/frontend-design`)
+- [x] Migrate Night Shift → ops section (`/frontend-design`)
+- [x] Delete admin routes (portfolio PR #31)
+- [x] Delete golems route group (portfolio PR #31, kept content/golems/ for Phase 6)
+- [x] Verify portfolio build
