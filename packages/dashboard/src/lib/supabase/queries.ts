@@ -13,13 +13,19 @@ export async function fetchRecentEvents(limit = 30) {
   return data ?? [];
 }
 
-export async function fetchServiceRuns(limit = 15) {
+export async function fetchServiceRuns(limit = 15, sinceDays?: number) {
   const supabase = createClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("service_runs")
     .select("service, started_at, ended_at, duration_ms, status, error")
-    .order("started_at", { ascending: false })
-    .limit(limit);
+    .order("started_at", { ascending: false });
+  if (sinceDays) {
+    const since = new Date();
+    since.setDate(since.getDate() - sinceDays);
+    query = query.gte("started_at", since.toISOString());
+  }
+  if (!sinceDays) query = query.limit(limit);
+  const { data, error } = await query;
   if (error) throw error;
   return data ?? [];
 }

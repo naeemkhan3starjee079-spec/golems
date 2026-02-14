@@ -29,7 +29,7 @@ Three separate web properties exist:
 |---|-------|--------|--------|----|
 | 1 | Token Tracking Fix | [phase-1-token-tracking-fix](phase-1-token-tracking-fix/) | done | #168 |
 | 2 | Enrichment Connect | [phase-2-enrichment-connect](phase-2-enrichment-connect/) | done | #169 |
-| 3 | Service Monitoring Upgrade | [phase-3-service-monitoring](phase-3-service-monitoring/) | pending | |
+| 3 | Service Monitoring Upgrade | [phase-3-service-monitoring](phase-3-service-monitoring/) | done | #170 |
 | 4 | Admin Migration | [phase-4-admin-migration](phase-4-admin-migration/) | pending | |
 | 5 | Per-Golem Detail Pages | [phase-5-golem-pages](phase-5-golem-pages/) | pending | |
 | 6 | Docs Integration | [phase-6-docs-integration](phase-6-docs-integration/) | pending | |
