@@ -98,3 +98,20 @@ bash scripts/backup-workflows.sh http://localhost:5678
 
 - `@golems/content` — ComfyUI client, Remotion renderer, quality scoring, data viz
 - `@golems/shared` — Supabase, notifications
+
+## Current State
+
+- **Render microservice:** Code complete, untested in production. Wraps `@golems/content` APIs as HTTP endpoints.
+- **n8n Cloud:** Account exists at `etanheyman.app.n8n.cloud`. Workflows not yet imported.
+- **Docker setup:** `docker-compose.yml` ready for self-hosted n8n. Not yet deployed.
+- **Workflow JSON templates:** Created but not validated against a running n8n instance.
+
+### What Works
+- Render service starts and serves all routes locally
+- Workflow JSON files are valid n8n format with correct node structure
+
+### What Needs Setup
+1. Import workflow templates into n8n Cloud (or spin up Docker)
+2. Configure n8n credentials: ComfyUI URL, Telegram bot token, Supabase keys
+3. Test end-to-end: Telegram trigger → AI router → pipeline execution → delivery
+4. Set up error handling webhooks (n8n → Telegram alerts on failure)

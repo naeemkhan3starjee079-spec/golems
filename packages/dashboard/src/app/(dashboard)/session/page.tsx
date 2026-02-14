@@ -95,8 +95,21 @@ function SessionContent() {
 
   if (error)
     return (
-      <div className="text-center text-rose py-20">
-        Failed to load session: {error}
+      <div className="flex flex-col items-center justify-center h-full gap-4 text-muted">
+        <Layers className="w-10 h-10 text-muted/30" />
+        <div className="text-center space-y-2">
+          <p className="text-sm font-medium">Session data requires the Zikaron daemon</p>
+          <p className="text-xs text-muted/60">
+            Run <code className="bg-surface px-1.5 py-0.5 rounded">zikaron serve --http 8787</code> locally to view session details.
+          </p>
+          <p className="text-xs text-muted/40">
+            Session chunks are stored in the local SQLite database and cannot be served from Supabase.
+          </p>
+        </div>
+        <Link href="/" className="text-xs text-accent hover:underline flex items-center gap-1 mt-2">
+          <ArrowLeft className="w-3 h-3" />
+          Back to Brain View
+        </Link>
       </div>
     );
 

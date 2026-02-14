@@ -48,12 +48,14 @@ export default function EnrichmentPage() {
   const [data, setData] = useState<EnrichmentStats | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
+  const [failed, setFailed] = useState(false);
+
   const fetchData = useCallback(() => {
     setRefreshing(true);
     fetch("/api/stats/enrichment")
-      .then((r) => { if (r.ok) return r.json(); })
-      .then((d) => { if (d) setData(d); })
-      .catch(() => {})
+      .then((r) => { if (r.ok) return r.json(); throw new Error("not available"); })
+      .then((d) => { if (d) { setData(d); setFailed(false); } })
+      .catch(() => setFailed(true))
       .finally(() => setRefreshing(false));
   }, []);
 
@@ -62,6 +64,26 @@ export default function EnrichmentPage() {
     const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
   }, [fetchData]);
+
+  if (failed && !data) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-4 text-muted">
+        <Database className="w-10 h-10 text-muted/30" />
+        <div className="text-center space-y-2">
+          <p className="text-sm font-medium">Enrichment data requires the Zikaron daemon</p>
+          <p className="text-xs text-muted/60">
+            Run <code className="bg-surface px-1.5 py-0.5 rounded">zikaron serve --http 8787</code> locally to see enrichment progress.
+          </p>
+          <p className="text-xs text-muted/40">
+            This page queries the local SQLite database and cannot be served from Supabase.
+          </p>
+          <button type="button" onClick={() => { setFailed(false); fetchData(); }} className="text-xs text-accent hover:underline mt-2">
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (!data) return <PageSkeleton />;
 

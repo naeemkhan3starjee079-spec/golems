@@ -3,10 +3,7 @@
 import { Activity, Circle, Clock, RefreshCw, Zap } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { PageSkeleton } from "@/components/skeleton";
-
-type ServiceStatus = {
-  services: Record<string, { status: string; chunks?: number }>;
-};
+import { fetchRecentEvents, fetchServiceRuns } from "@/lib/supabase/queries";
 
 type GolemEvent = {
   actor: string;
@@ -24,14 +21,6 @@ type ServiceRun = {
   error: string | null;
 };
 
-const STATUS_COLOR: Record<string, string> = {
-  up: "text-emerald",
-  idle: "text-amber",
-  error: "text-rose",
-  down: "text-rose",
-  not_loaded: "text-muted",
-};
-
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diff / 60000);
@@ -43,42 +32,45 @@ function timeAgo(iso: string): string {
 }
 
 export default function OpsPage() {
-  const [health, setHealth] = useState<ServiceStatus | null>(null);
   const [events, setEvents] = useState<GolemEvent[]>([]);
   const [runs, setRuns] = useState<ServiceRun[]>([]);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
-  const fetchAll = useCallback(() => {
+  const fetchAll = useCallback(async () => {
     setRefreshing(true);
-    Promise.all([
-      fetch("/api/health/services").then((r) => r.ok ? r.json() : null),
-      fetch("/api/events/recent?limit=30").then((r) => r.ok ? r.json() : null),
-      fetch("/api/stats/service-runs?limit=15").then((r) => r.ok ? r.json() : null),
-    ])
-      .then(([h, e, r]) => {
-        if (h) setHealth(h);
-        if (e) setEvents(e.events ?? []);
-        if (r) setRuns(r.runs ?? []);
-        setLastRefresh(new Date());
-      })
-      .catch(() => {})
-      .finally(() => setRefreshing(false));
+    try {
+      const [evts, svcRuns] = await Promise.all([
+        fetchRecentEvents(30),
+        fetchServiceRuns(15),
+      ]);
+      setEvents(evts as GolemEvent[]);
+      setRuns(svcRuns as ServiceRun[]);
+      setLastRefresh(new Date());
+    } catch {
+      // silent
+    } finally {
+      setRefreshing(false);
+      setLoaded(true);
+    }
   }, []);
 
-  // Initial fetch + 30s auto-refresh
   useEffect(() => {
     fetchAll();
     const interval = setInterval(fetchAll, 30000);
     return () => clearInterval(interval);
   }, [fetchAll]);
 
-  if (!health) return <PageSkeleton />;
+  if (!loaded) return <PageSkeleton />;
 
-  // Split services into remote vs local
-  const remoteServices = ["ollama", "telegram_bot", "railway", "zikaron_daemon"];
-  const remote = Object.entries(health.services).filter(([k]) => remoteServices.includes(k));
-  const local = Object.entries(health.services).filter(([k]) => !remoteServices.includes(k));
+  // Derive service health from recent runs
+  const serviceMap: Record<string, { status: string; lastRun: string }> = {};
+  for (const run of runs) {
+    if (!serviceMap[run.service]) {
+      serviceMap[run.service] = { status: run.status === "success" ? "up" : "error", lastRun: run.started_at };
+    }
+  }
 
   return (
     <div className="space-y-8">
@@ -96,34 +88,18 @@ export default function OpsPage() {
         </div>
       </div>
 
-      {/* Core services */}
-      <div>
-        <h3 className="text-xs font-medium text-muted uppercase tracking-wider mb-3">Core Services</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-          {remote.map(([name, info]) => (
-            <div key={name} className="rounded-lg border border-border bg-surface p-4 space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium capitalize">{name.replace(/_/g, " ")}</span>
-                <Circle className={`w-3 h-3 fill-current ${STATUS_COLOR[info.status] ?? "text-muted"}`} />
-              </div>
-              <p className="text-xs text-muted capitalize">{info.status}</p>
-              {info.chunks !== undefined && (
-                <p className="text-xs text-muted">{info.chunks.toLocaleString()} chunks</p>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Local launchd services */}
-      {local.length > 0 && (
+      {/* Services derived from recent runs */}
+      {Object.keys(serviceMap).length > 0 && (
         <div>
-          <h3 className="text-xs font-medium text-muted uppercase tracking-wider mb-3">Local Services (launchd)</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-            {local.map(([name, info]) => (
-              <div key={name} className="rounded border border-border/50 bg-surface/50 px-3 py-2 flex items-center justify-between">
-                <span className="text-xs font-medium capitalize">{name.replace(/_/g, " ")}</span>
-                <span className={`text-xs capitalize ${STATUS_COLOR[info.status] ?? "text-muted"}`}>{info.status}</span>
+          <h3 className="text-xs font-medium text-muted uppercase tracking-wider mb-3">Services (from recent runs)</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            {Object.entries(serviceMap).map(([name, info]) => (
+              <div key={name} className="rounded-lg border border-border bg-surface p-4 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium capitalize">{name.replace(/_/g, " ")}</span>
+                  <Circle className={`w-3 h-3 fill-current ${info.status === "up" ? "text-emerald" : "text-rose"}`} />
+                </div>
+                <p className="text-xs text-muted">{timeAgo(info.lastRun)}</p>
               </div>
             ))}
           </div>

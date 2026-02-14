@@ -3,6 +3,7 @@
 import { Coins, RefreshCw, TrendingUp } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { PageSkeleton } from "@/components/skeleton";
+import { fetchTokenStats } from "@/lib/supabase/queries";
 
 type DayStats = {
   calls: number;
@@ -32,17 +33,36 @@ export default function TokensPage() {
   const [data, setData] = useState<TokenStats | null>(null);
   const [days, setDays] = useState<number>(14);
   const [refreshing, setRefreshing] = useState(false);
+  const [failed, setFailed] = useState(false);
 
-  const fetchData = useCallback((d: number) => {
+  const fetchData = useCallback(async (d: number) => {
     setRefreshing(true);
-    fetch(`/api/stats/tokens?days=${d}`)
-      .then((r) => { if (r.ok) return r.json(); })
-      .then((res) => { if (res) setData(res); })
-      .catch(() => {})
-      .finally(() => setRefreshing(false));
+    try {
+      const result = await fetchTokenStats(d);
+      setData(result);
+      setFailed(false);
+    } catch {
+      setFailed(true);
+    } finally {
+      setRefreshing(false);
+    }
   }, []);
 
   useEffect(() => { fetchData(days); }, [days, fetchData]);
+
+  if (failed && !data) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-4 text-muted">
+        <Coins className="w-10 h-10 text-muted/30" />
+        <div className="text-center space-y-2">
+          <p className="text-sm font-medium">Failed to load token data</p>
+          <button type="button" onClick={() => fetchData(days)} className="text-xs text-accent hover:underline">
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (!data) return <PageSkeleton />;
 

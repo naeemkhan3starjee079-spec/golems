@@ -107,7 +107,7 @@ function BrainViewContent() {
           Failed to load brain graph: {error}
         </p>
         <p className="text-xs text-muted/60">
-          Make sure the Zikaron daemon is running: <code className="bg-surface px-1.5 py-0.5 rounded">zikaron daemon --http 8787</code>
+          Upload a <code className="bg-surface px-1.5 py-0.5 rounded">graph.json</code> via Settings, or run <code className="bg-surface px-1.5 py-0.5 rounded">zikaron brain-export</code> locally and upload the result.
         </p>
       </div>
     );

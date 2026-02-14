@@ -1,6 +1,6 @@
 # Golems Monorepo
 
-> Autonomous AI agent ecosystem — Bun workspace with 10 packages. Each golem is a self-contained CC plugin.
+> Autonomous AI agent ecosystem — Bun workspace with 13 packages. Each golem is a self-contained CC plugin.
 
 ---
 
@@ -13,12 +13,15 @@
 | **@golems/jobs** | [`packages/jobs/`](packages/jobs/CLAUDE.md) | Job scraping, matching, ATS |
 | **@golems/recruiter** | [`packages/recruiter/`](packages/recruiter/CLAUDE.md) | Outreach, interview practice, contacts |
 | **@golems/teller** | [`packages/teller/`](packages/teller/CLAUDE.md) | Finance, subscriptions, tax |
-| **@golems/content** | [`packages/content/`](packages/content/CLAUDE.md) | LinkedIn, Soltome, ghostwriting |
+| **@golems/content** | [`packages/content/`](packages/content/CLAUDE.md) | Visual content factory (Remotion, ComfyUI, dataviz) + text publishing |
 | **@golems/coach** | [`packages/coach/`](packages/coach/CLAUDE.md) | Calendar, schedule, life planning |
 | **@golems/services** | [`packages/services/`](packages/services/CLAUDE.md) | Night Shift, Briefing, Cloud Worker, Doctor, Wizard |
 | **@golems/orchestrator** | [`packages/orchestrator/`](packages/orchestrator/CLAUDE.md) | n8n orchestration, render microservice |
+| **dashboard** | [`packages/dashboard/`](packages/dashboard/CLAUDE.md) | Next.js web dashboard (brain view, ops, backlog, content, tokens) |
+| **golems-tui** | `packages/golems-tui/` | React Ink terminal dashboard |
+| **tax-helper** | [`packages/tax-helper/`](packages/tax-helper/CLAUDE.md) | Schedule C transaction categorization (Sophtron MCP) |
 | **ralph** | [`packages/ralph/`](packages/ralph/CLAUDE.md) | Autonomous coding loop (PRD execution) |
-| **zikaron** | [`packages/zikaron/`](packages/zikaron/CLAUDE.md) | Memory layer (Python + sqlite-vec) |
+| **zikaron** | [`packages/zikaron/`](packages/zikaron/CLAUDE.md) | Memory layer (Python + sqlite-vec, 226K+ chunks) |
 
 **Always read the package-specific CLAUDE.md when working in that package.**
 
@@ -33,11 +36,16 @@ golems/                              # Bun workspace monorepo
 ├── packages/recruiter/              # RecruiterGolem — outreach, practice
 ├── packages/teller/                 # TellerGolem — finances, categorization
 ├── packages/jobs/                   # JobGolem — scraping, ATS, matching
-├── packages/content/                # ContentGolem — LinkedIn, Soltome, visual content
+├── packages/content/                # ContentGolem — visual content + publishing
 ├── packages/orchestrator/           # n8n orchestration + Bun render microservice
 ├── packages/coach/                  # CoachGolem — schedule, calendar
 ├── packages/services/               # Night Shift, Briefing, Cloud Worker
+├── packages/dashboard/              # Next.js web dashboard (Vercel)
+├── packages/golems-tui/             # React Ink terminal dashboard
+├── packages/tax-helper/             # Schedule C tax categorization
 ├── packages/autonomous/             # Legacy stranglers (1-line re-exports)
+├── packages/ralph/                  # Autonomous coding loop (PRD execution)
+├── packages/zikaron/                # Memory layer (Python + sqlite-vec)
 ├── launchd/                         # macOS service plists
 ├── Dockerfile                       # Root workspace Dockerfile (Railway)
 └── railway.json                     # Railway deploy config
@@ -82,6 +90,7 @@ golems wizard          # Guided setup
 |-------------|-----------|-------|
 | **Local (Mac)** | Telegram bot, Night Shift, Briefing | launchd plists |
 | **Railway** | Email poller, Job scraper, Soltome learner | Cloud Worker |
+| **Vercel** | Dashboard (Next.js) | `etanheyman.com` |
 | **Supabase** | Database, auth, storage | Cloud |
 
 ---
@@ -98,13 +107,17 @@ golems wizard          # Guided setup
 | **golems-glm** | `bun run packages/shared/src/glm/mcp-server.ts` | Local GLM-4.7-Flash — summarize text, score/classify with JSON output |
 | **sophtron** | `@sophtron/sophtron-mcp-server` | Bank account access — transactions, identity |
 
-### Zikaron MCP
+### Zikaron MCP (8 Tools)
 
-Zikaron provides persistent memory across Claude Code sessions. Use it to:
-- Search past solutions: `mcp__zikaron__zikaron_search(query="how did I fix X")`
-- Get context around a result: `mcp__zikaron__zikaron_context(chunk_id="...")`
-- Filter by project: `project="-Users-etanheyman-Gits-golems"`
-- Check stats: `mcp__zikaron__zikaron_stats()`
+Zikaron provides persistent memory across Claude Code sessions:
+- **`zikaron_search`**: Search past conversations (with `project`, `content_type`, `source`, `tag`, `intent`, `importance_min` filters)
+- **`zikaron_context`**: Get surrounding chunks for a search result
+- **`zikaron_stats`**: Knowledge base statistics
+- **`zikaron_list_projects`**: List indexed projects
+- **`zikaron_file_timeline`**: File interaction history across sessions
+- **`zikaron_operations`**: Logical operation groups (read/edit/test cycles)
+- **`zikaron_regression`**: What changed since a file last worked
+- **`zikaron_plan_links`**: Session to plan/phase linkage
 
 ---
 

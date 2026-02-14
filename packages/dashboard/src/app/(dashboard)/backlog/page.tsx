@@ -13,6 +13,12 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PageSkeleton } from "@/components/skeleton";
+import {
+  fetchBacklogItems,
+  createBacklogItem,
+  updateBacklogItem,
+  deleteBacklogItem as removeBacklogItem,
+} from "@/lib/supabase/queries";
 
 type BacklogItem = {
   id: string;
@@ -67,14 +73,16 @@ export default function BacklogPage() {
   const [filterProject, setFilterProject] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const fetchItems = useCallback(() => {
+  const fetchItems = useCallback(async () => {
     setRefreshing(true);
-    const params = filterProject ? `?project=${filterProject}` : "";
-    fetch(`/api/backlog/items${params}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => setItems(d?.items ?? []))
-      .catch(() => setItems((prev) => prev ?? []))
-      .finally(() => setRefreshing(false));
+    try {
+      const data = await fetchBacklogItems(filterProject || undefined);
+      setItems(data as BacklogItem[]);
+    } catch {
+      setItems((prev) => prev ?? []);
+    } finally {
+      setRefreshing(false);
+    }
   }, [filterProject]);
 
   useEffect(() => {
@@ -85,54 +93,40 @@ export default function BacklogPage() {
     if (!newTitle.trim()) return;
     setAdding(true);
     try {
-      const res = await fetch("/api/backlog/items", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: newTitle.trim(),
-          project: newProject,
-          priority: newPriority,
-        }),
+      const item = await createBacklogItem({
+        title: newTitle.trim(),
+        project: newProject,
+        priority: newPriority,
       });
-      if (res.ok) {
-        const item = await res.json();
-        // Only prepend if it matches the current filter (or no filter)
-        if (!filterProject || item.project === filterProject) {
-          setItems((prev) => (prev ? [item, ...prev] : [item]));
-        }
-        setNewTitle("");
-        inputRef.current?.focus();
+      if (!filterProject || item.project === filterProject) {
+        setItems((prev) => (prev ? [item as BacklogItem, ...prev] : [item as BacklogItem]));
       }
+      setNewTitle("");
+      inputRef.current?.focus();
     } catch {
       // silent
     } finally {
       setAdding(false);
     }
-  }, [newTitle, newProject, newPriority]);
+  }, [newTitle, newProject, newPriority, filterProject]);
 
   const updateStatus = useCallback(async (id: string, status: string) => {
     setItems((prev) =>
       prev ? prev.map((i) => (i.id === id ? { ...i, status } : i)) : prev
     );
     try {
-      const res = await fetch(`/api/backlog/items/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
-      });
-      if (!res.ok) fetchItems(); // revert on error
+      await updateBacklogItem(id, { status });
     } catch {
-      fetchItems();
+      fetchItems(); // revert on error
     }
   }, [fetchItems]);
 
   const deleteItem = useCallback(async (id: string) => {
     setItems((prev) => (prev ? prev.filter((i) => i.id !== id) : prev));
     try {
-      const res = await fetch(`/api/backlog/items/${id}`, { method: "DELETE" });
-      if (!res.ok) fetchItems(); // revert on error
+      await removeBacklogItem(id);
     } catch {
-      fetchItems();
+      fetchItems(); // revert on error
     }
   }, [fetchItems]);
 

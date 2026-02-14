@@ -368,14 +368,23 @@ Pipeline runs are logged to `pipeline_runs` Supabase table:
 
 ## Current State
 
-ContentGolem's logic currently lives in:
+ContentGolem has two distinct halves:
+
+### Visual Content Factory (in `src/`)
+Fully implemented: brand system, Remotion compositions, ComfyUI image gen, data viz pipeline, pipeline intelligence router. All code lives in this package.
+
+### Text Publishing (in skills + services)
+Logic is currently spread across other packages:
 - **`golem-powers/content/`** skill — draft workflow (draft → critique → refine → publish)
 - **`golem-powers/linkedin-post/`** skill — LinkedIn-specific drafting with 2026 algorithm rules
 - **Soltome client** — `@golems/services/soltome-client.ts` (API client for soltome.com)
 - **Post generator** — `@golems/services/post-generator.ts` (critique-waves pattern)
 - **Soltome learner** — `@golems/services/soltome-learner.ts` (2am: scrape + learn patterns)
 
-These will migrate into `src/` in a future phase.
+Text publishing logic will migrate into `src/` in a future phase.
+
+### n8n Orchestration (in `packages/orchestrator/`)
+The n8n automation layer and Bun render microservice live in a separate package. See `packages/orchestrator/CLAUDE.md`.
 
 ## Content Pipeline
 

@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { PageSkeleton } from "@/components/skeleton";
+import { fetchPipelineRuns, fetchPipelineStats } from "@/lib/supabase/queries";
 
 // --- Types ---
 
@@ -293,23 +294,23 @@ export default function ContentPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
-  const fetchAll = useCallback(() => {
+  const fetchAll = useCallback(async () => {
     setRefreshing(true);
-    Promise.all([
-      fetch("/api/content/pipeline-stats").then((r) => (r.ok ? r.json() : null)),
-      fetch("/api/content/pipeline-runs?limit=30").then((r) => (r.ok ? r.json() : null)),
-    ])
-      .then(([s, r]) => {
-        if (s) {
-          setStats(s.stats ?? []);
-          setTotalRuns(s.total_runs ?? 0);
-        }
-        if (r) setRuns(r.runs ?? []);
-        setLastRefresh(new Date());
-        setLoaded(true);
-      })
-      .catch(() => setLoaded(true))
-      .finally(() => setRefreshing(false));
+    try {
+      const [statsResult, runsResult] = await Promise.all([
+        fetchPipelineStats(),
+        fetchPipelineRuns(30),
+      ]);
+      setStats(statsResult.stats);
+      setTotalRuns(statsResult.total_runs);
+      setRuns(runsResult as PipelineRun[]);
+      setLastRefresh(new Date());
+    } catch {
+      // silent
+    } finally {
+      setLoaded(true);
+      setRefreshing(false);
+    }
   }, []);
 
   useEffect(() => {

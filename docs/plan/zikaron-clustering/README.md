@@ -2,7 +2,7 @@
 
 > Replace flat semantic search with a 3-level cluster hierarchy for browsing, query-relevant results, and content automation intelligence.
 
-**Status:** Planning complete — ready for execution
+**Status:** Phase 2 complete — 257K chunks clustered into 47/467/1763 hierarchy
 
 ---
 
@@ -10,8 +10,8 @@
 
 | Phase | Name | Status | Branch | PR |
 |-------|------|--------|--------|----|
-| 1 | Hebrew Re-embedding (BGE-M3) | [ ] Pending | - | - |
-| 2 | Initial Clustering (Recursive Leiden) | [ ] Pending | - | - |
+| 1 | Hebrew Re-embedding (BGE-M3) | [x] Done (257K chunks, 5.8h) | feature/domica-hero-svg | - |
+| 2 | Initial Clustering (Recursive Leiden) | [x] Done (47/467/1763, 32.6 min) | feature/domica-hero-svg | - |
 | 3 | Labeling (c-TF-IDF + GLM-4.7) | [ ] Pending | - | - |
 | 4 | Search Integration | [ ] Pending | - | - |
 | 5 | Incremental Updates | [ ] Pending | - | - |
@@ -24,20 +24,20 @@
 ## Architecture
 
 ```text
-245K chunk embeddings (sqlite-vec, 1024 dims)
+257K chunk embeddings (BGE-M3, sqlite-vec, 1024 dims)
   → L2-normalize
-    → Faiss IndexFlatIP k=30 KNN graph (5-15 min, ~2 GB)
-      → igraph conversion
-        → Recursive Leiden at 3 resolutions
-          Level 0: ~40 clusters (resolution ~0.005)
-          Level 1: ~400 clusters (~10 per L0, resolution ~0.05)
-          Level 2: ~4000 clusters (~10 per L1, resolution ~0.5)
+    → Faiss IndexFlatIP k=30 KNN graph (86s, 6.4M edges)
+      → igraph conversion (13s)
+        → Recursive Leiden at 3 resolutions (30 min)
+          Level 0: 47 clusters (resolution 0.0196, silhouette 0.14)
+          Level 1: 467 clusters (resolution varies per L0)
+          Level 2: 1763 clusters (resolution varies per L1)
             → Centroids + materialized paths → SQLite
-              → c-TF-IDF labels (all) + LLM labels (L0+L1)
+              → c-TF-IDF labels (all) + LLM labels (L0+L1, Phase 3)
 ```
 
 **Peak memory:** ~3.6 GB (steps 1-5), then 19 GB for Ollama labeling (sequential, not concurrent)
-**Total time:** ~45-80 minutes local on M1 Pro 32GB
+**Total time:** 32.6 minutes for clustering on M1 Pro 32GB (Phase 1 re-embedding: 5.8h separately)
 
 ---
 
