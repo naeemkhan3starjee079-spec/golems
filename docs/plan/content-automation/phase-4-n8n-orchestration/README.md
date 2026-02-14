@@ -131,17 +131,16 @@ Use "Shadow Mode": run both launchd + n8n for 1 week, compare outputs, then disa
 ## Status
 
 - [x] Deep research results incorporated (both docs)
-- [ ] MVP validated on n8n Cloud
-- [ ] `packages/orchestrator/` structure created
-- [ ] Docker Compose deployed locally
-- [ ] Bun HTTP microservice (render-service)
-- [ ] Community nodes installed
-- [ ] MCP integration (bidirectional)
-- [ ] Image generation sub-workflow
-- [ ] Video render sub-workflow
-- [ ] Template fill sub-workflow
-- [ ] AI routing workflow (Claude agent)
-- [ ] Approval gates (Telegram inline keyboard)
-- [ ] Error handling + monitoring
-- [ ] Workflow version control
-- [ ] Golems doctor/wizard integration
+- [x] `packages/orchestrator/` structure created (package.json, CLAUDE.md)
+- [x] Docker Compose config (n8n + PostgreSQL, filesystem binary, 3 concurrency)
+- [x] Bun HTTP microservice (render-service.ts on port 3001)
+- [x] n8n workflow templates: image-generation, video-render, ai-routing
+- [x] Backup/restore scripts for workflow version control
+- [ ] MVP validated on n8n Cloud (etanheyman.app.n8n.cloud) — needs Docker or cloud test
+- [ ] Docker installed + compose up — deferred (no Docker on machine)
+- [ ] Community nodes installed — requires running n8n instance
+- [ ] MCP integration (bidirectional) — requires running n8n instance
+- [ ] Template fill sub-workflow — Phase 5
+- [ ] Approval gates (Telegram inline keyboard) — requires running n8n
+- [ ] Error handling + monitoring — requires running n8n
+- [ ] Golems doctor/wizard integration — after n8n running
