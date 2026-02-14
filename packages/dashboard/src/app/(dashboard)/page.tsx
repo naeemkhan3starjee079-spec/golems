@@ -9,6 +9,7 @@ import { NodePanel } from "@/components/node-panel";
 import { BrainSearch } from "@/components/brain-search";
 import { BrainStats } from "@/components/brain-stats";
 import { PageSkeleton } from "@/components/skeleton";
+import { downloadGraph } from "@/lib/supabase/graph";
 
 function BrainViewContent() {
   const [graph, setGraph] = useState<BrainGraphType | null>(null);
@@ -19,15 +20,26 @@ function BrainViewContent() {
   const searchParams = useSearchParams();
   const nodeParam = searchParams.get("node");
 
-  // Fetch graph data
+  // Fetch graph data: try Supabase Storage first, fall back to daemon API
   useEffect(() => {
-    fetch("/api/brain/graph")
-      .then((r) => {
+    async function loadGraph() {
+      // Try Supabase Storage (multi-tenant, user-uploaded graph)
+      const { data, error: storageErr } = await downloadGraph();
+      if (data && !storageErr) {
+        setGraph(data as BrainGraphType);
+        return;
+      }
+      // Fall back to local Zikaron daemon
+      try {
+        const r = await fetch("/api/brain/graph");
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json();
-      })
-      .then((data) => setGraph(data))
-      .catch((err) => setError(err.message));
+        const json = await r.json();
+        setGraph(json);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Failed to load graph");
+      }
+    }
+    loadGraph();
   }, []);
 
   // Auto-select node from URL param

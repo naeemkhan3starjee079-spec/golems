@@ -30,9 +30,11 @@ Add Supabase auth so each golems user gets their own dashboard. Data isolation p
 
 ## Status
 
-- [ ] Supabase Auth integration
-- [ ] Login/signup pages
-- [ ] RLS policies
-- [ ] Graph data upload to Storage
-- [ ] Per-user data isolation
-- [ ] Settings page
+- [x] Supabase Auth integration — @supabase/ssr, browser/server/middleware clients
+- [x] Login/signup pages — email/password + GitHub OAuth, (auth) route group
+- [x] RLS policies — user_id on backlog_items, pipeline_runs, llm_usage, service_heartbeats
+- [x] Graph data upload to Storage — brain-graphs bucket, per-user folder, upload/download helpers
+- [x] Per-user data isolation — RLS policies with auth.uid(), legacy null rows accessible
+- [x] Settings page — account info, graph upload, data sources, sign out
+- [ ] Per-user service monitoring config — deferred (needs service configuration schema)
+- [ ] Per-user token tracking — deferred (needs user_id in cloud worker inserts)

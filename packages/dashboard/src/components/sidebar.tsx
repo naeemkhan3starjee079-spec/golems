@@ -10,6 +10,7 @@ import {
   KanbanSquare,
   Palette,
   Search,
+  Settings,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -19,6 +20,7 @@ const NAV_ITEMS = [
   { href: "/enrichment", label: "Enrichment", icon: Database },
   { href: "/backlog", label: "Backlog", icon: KanbanSquare },
   { href: "/content", label: "Content", icon: Palette },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 // Search is handled via Cmd+K overlay, not a nav link

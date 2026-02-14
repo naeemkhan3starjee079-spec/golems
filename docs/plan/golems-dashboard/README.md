@@ -2,7 +2,7 @@
 
 > Multi-tenant personal ops dashboard on etanheyman.com. Live service health, token tracking, Brain View knowledge graph. Each golems user gets their own.
 
-**Status:** Phases 1-7 Done — Phase 8 (Multi-tenant) next
+**Status:** Phases 1-8 Done — Phase 9 (Deploy & Polish) next
 
 ---
 
@@ -62,7 +62,7 @@ One dashboard at etanheyman.com that shows:
 | 5 | [Ops Dashboard](phase-5-ops-dashboard/README.md) | `feature/dashboard-phase5` | Done |
 | 6 | [Backlog & Project Manager](phase-6-backlog/README.md) | `feature/dashboard-phase6` | Done |
 | 7 | [Search & Drill-down](phase-7-search-drilldown/README.md) | `feature/dashboard-phase7` | Done |
-| 8 | [Multi-tenant](phase-8-multi-tenant/README.md) | `feature/dashboard-phase8` | Pending |
+| 8 | [Multi-tenant](phase-8-multi-tenant/README.md) | `feature/dashboard-phase8` | Done |
 | 9 | [Deploy & Polish](phase-9-deploy-polish/README.md) | `feature/dashboard-phase9` | Pending |
 
 ---

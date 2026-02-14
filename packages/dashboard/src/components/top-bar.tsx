@@ -1,11 +1,16 @@
 "use client";
 
-import { Circle, Search } from "lucide-react";
+import { Circle, LogOut, Search } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 export function TopBar() {
   const [status, setStatus] = useState<"connected" | "disconnected" | "loading">("loading");
   const [lastUpdated, setLastUpdated] = useState<string>("");
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const router = useRouter();
+  const supabase = createClient();
 
   useEffect(() => {
     async function checkHealth() {
@@ -22,10 +27,22 @@ export function TopBar() {
       }
     }
 
+    async function getUser() {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserEmail(user?.email ?? null);
+    }
+
     checkHealth();
+    getUser();
     const interval = setInterval(checkHealth, 30_000);
     return () => clearInterval(interval);
-  }, []);
+  }, [supabase.auth]);
+
+  async function handleSignOut() {
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  }
 
   return (
     <header className="flex items-center justify-between px-6 py-3 border-b border-border bg-surface">
@@ -61,6 +78,19 @@ export function TopBar() {
           />
           <span className="capitalize">{status}</span>
         </div>
+        {userEmail && (
+          <>
+            <span className="text-muted/60">{userEmail}</span>
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="p-1 text-muted/60 hover:text-rose transition-colors"
+              title="Sign out"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
+          </>
+        )}
       </div>
     </header>
   );
