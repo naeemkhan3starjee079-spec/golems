@@ -26,7 +26,10 @@
     "render:list": "bun run scripts/render.ts list",
     "render:still": "bun run scripts/render.ts still",
     "render:preview": "bun run scripts/render.ts preview",
-    "studio": "cd remotion && bunx remotion studio src/index.ts"
+    "studio": "cd remotion && bunx remotion studio src/index.ts",
+    "generate": "bun run scripts/generate.ts",
+    "generate:status": "bun run scripts/generate.ts --status",
+    "generate:models": "bun run scripts/generate.ts --models"
   },
   "exports": {
     "./*": "./src/*.ts",
@@ -34,12 +37,16 @@
     "./brand/*": "./src/brand/*.ts",
     "./remotion": "./src/remotion/index.ts",
     "./remotion/*": "./src/remotion/*.ts",
-    "./render": "./src/render/index.ts"
+    "./render": "./src/render/index.ts",
+    "./comfyui": "./src/comfyui/index.ts",
+    "./comfyui/*": "./src/comfyui/*.ts",
+    "./quality": "./src/quality/index.ts"
   },
   "dependencies": {
     "@golems/shared": "workspace:*",
     "@remotion/google-fonts": "4.0.421",
-    "@remotion/paths": "4.0.421"
+    "@remotion/paths": "4.0.421",
+    "@stable-canvas/comfyui-client": "^1.5.9"
   },
   "peerDependencies": {
     "remotion": "4.0.421"

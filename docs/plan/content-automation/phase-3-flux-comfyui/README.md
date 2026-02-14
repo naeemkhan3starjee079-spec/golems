@@ -125,16 +125,18 @@ Set up local AI image generation via Flux.1 Dev Q6_K GGUF + ComfyUI on Mac M1 Pr
 ## Status
 
 - [x] Deep research results incorporated
-- [ ] ComfyUI + Flux installed locally
-- [ ] Required models downloaded
-- [ ] Custom nodes installed
-- [ ] Launchd service created
-- [ ] TypeScript API client (`@stable-canvas/comfyui-client`)
-- [ ] Base workflow JSON templates
-- [ ] Quality scoring pipeline (LAION + CLIP + BRISQUE)
-- [ ] Upscaling pipeline (Real-ESRGAN + FaceDetailer)
-- [ ] Brand overlay pipeline
-- [ ] ControlNet LoRA support
-- [ ] CLI command
-- [ ] Telegram preview
-- [ ] Performance benchmarks
+- [x] ComfyUI + Flux installed locally (~/Gits/ComfyUI with venv)
+- [x] Required models downloaded (Q6_K 9.2GB + T5 2.7GB + CLIP 235MB + VAE 321MB)
+- [x] Custom nodes installed (GGUF, TeaCache, Impact-Pack, UltimateSDUpscale)
+- [x] Launchd service created (com.golems.comfyui.plist)
+- [x] TypeScript API client (`@stable-canvas/comfyui-client` v1.5.9)
+- [x] Flux GGUF workflow builders (base, social, merch, meme, draft)
+- [x] Quality scoring pipeline (Python bridge: CLIP + Aesthetic + BRISQUE)
+- [x] Generation pipeline (generate.ts: workflow + quality + auto-retry)
+- [x] CLI command (bun run generate)
+- [x] Brand overlay (prompt prefix injection from brand.json)
+- [x] CLAUDE.md documented
+- [ ] Upscaling pipeline (Real-ESRGAN + FaceDetailer) — deferred to Phase 4
+- [ ] ControlNet LoRA support — deferred (needs more models)
+- [ ] Telegram preview — deferred to Phase 4 (n8n integration)
+- [ ] Performance benchmarks — needs ComfyUI running with GPU
