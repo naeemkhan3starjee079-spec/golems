@@ -29,7 +29,9 @@
     "studio": "cd remotion && bunx remotion studio src/index.ts",
     "generate": "bun run scripts/generate.ts",
     "generate:status": "bun run scripts/generate.ts --status",
-    "generate:models": "bun run scripts/generate.ts --models"
+    "generate:models": "bun run scripts/generate.ts --models",
+    "dataviz": "bun run scripts/dataviz.ts",
+    "dataviz:all": "bun run scripts/dataviz.ts all"
   },
   "exports": {
     "./*": "./src/*.ts",
@@ -40,13 +42,19 @@
     "./render": "./src/render/index.ts",
     "./comfyui": "./src/comfyui/index.ts",
     "./comfyui/*": "./src/comfyui/*.ts",
-    "./quality": "./src/quality/index.ts"
+    "./quality": "./src/quality/index.ts",
+    "./dataviz": "./src/dataviz/index.ts",
+    "./dataviz/*": "./src/dataviz/*.ts",
+    "./dataviz/fetchers/*": "./src/dataviz/fetchers/*.ts",
+    "./dataviz/charts/*": "./src/dataviz/charts/*.ts",
+    "./dataviz/templates/*": "./src/dataviz/templates/*.ts"
   },
   "dependencies": {
     "@golems/shared": "workspace:*",
     "@remotion/google-fonts": "4.0.421",
     "@remotion/paths": "4.0.421",
-    "@stable-canvas/comfyui-client": "^1.5.9"
+    "@stable-canvas/comfyui-client": "^1.5.9",
+    "sharp": "^0.34.5"
   },
   "peerDependencies": {
     "remotion": "4.0.421"

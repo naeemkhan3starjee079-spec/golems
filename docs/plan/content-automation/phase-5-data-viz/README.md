@@ -38,9 +38,13 @@ Turn golem data (job stats, finance summaries, brain graph snapshots) into brand
 
 ## Status
 
-- [ ] Data fetchers for each golem
-- [ ] D3/Recharts → SVG server-side pipeline
-- [ ] Animated Remotion compositions (3 types)
-- [ ] Static infographic templates (3 formats)
-- [ ] n8n scheduled workflow
-- [ ] Brand-aware chart styling
+- [x] Data fetchers for each golem (jobs, finance, brain, activity)
+- [x] SVG chart generators (bar, donut, line, stat-card) — pure TypeScript, no React needed
+- [x] Animated Remotion compositions (WeeklyJobs, MonthlyFinance, BrainGrowth)
+- [x] Static infographic templates (LinkedIn 1200x627, Instagram 1080x1080, Story 1080x1920)
+- [x] SVG → PNG renderer via sharp
+- [x] n8n scheduled workflow (data-viz-schedule.json — every Monday 9am)
+- [x] Brand-aware chart styling (themeFromBrand + BrandConfig.templates.dataViz)
+- [x] CLI: `bun run dataviz <type> [--format linkedin|instagram|story]`
+- [x] Render service route: POST /api/dataviz/render
+- [x] CLAUDE.md updated with full dataviz documentation

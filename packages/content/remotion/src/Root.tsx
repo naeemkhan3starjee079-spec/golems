@@ -7,6 +7,9 @@
  * - ArchDiagram: Animated architecture diagram
  * - MetricsDashboard: Animated stats/metrics
  * - ProductHero: Scene sequencer (TitleCard → Screenshots → Metrics → ScreenRecording)
+ * - WeeklyJobs: Animated bar chart of top job tags/skills
+ * - MonthlyFinance: Animated donut chart of LLM costs by model
+ * - BrainGrowth: Animated line chart of knowledge base growth
  *
  * Each composition has YouTube (1920x1080), LinkedIn (1080x1080), and GIF (800x450) variants.
  */
@@ -23,6 +26,9 @@ import {
   ProductHero,
   type ProductHeroCompositionProps,
 } from "./compositions/ProductHero/ProductHero";
+import { WeeklyJobs, type WeeklyJobsProps } from "./compositions/WeeklyJobs/WeeklyJobs";
+import { MonthlyFinance, type MonthlyFinanceProps } from "./compositions/MonthlyFinance/MonthlyFinance";
+import { BrainGrowth, type BrainGrowthProps } from "./compositions/BrainGrowth/BrainGrowth";
 
 import "./style.css";
 
@@ -148,6 +154,56 @@ const productHeroDefaults: ProductHeroCompositionProps = {
   ],
 };
 
+const weeklyJobsDefaults: WeeklyJobsProps = {
+  title: "Top Job Skills This Week",
+  subtitle: "Based on 278 scraped listings",
+  brand: defaultDark,
+  tags: [
+    { tag: "TypeScript", count: 45 },
+    { tag: "React", count: 38 },
+    { tag: "Node.js", count: 32 },
+    { tag: "Python", count: 28 },
+    { tag: "Next.js", count: 22 },
+    { tag: "AWS", count: 18 },
+    { tag: "PostgreSQL", count: 15 },
+    { tag: "Docker", count: 12 },
+  ],
+};
+
+const monthlyFinanceDefaults: MonthlyFinanceProps = {
+  title: "LLM Costs This Month",
+  subtitle: "All golem API usage",
+  brand: defaultDark,
+  costs: [
+    { label: "Gemini Flash", value: 0, color: "#06B6D4" },
+    { label: "Claude Haiku", value: 2.40, color: "#6366F1" },
+    { label: "Claude Sonnet", value: 8.50, color: "#8B5CF6" },
+    { label: "Claude Opus", value: 15.20, color: "#EC4899" },
+    { label: "Ollama Local", value: 0, color: "#10B981" },
+  ],
+};
+
+const brainGrowthDefaults: BrainGrowthProps = {
+  title: "Knowledge Base Growth",
+  subtitle: "Zikaron indexed chunks over time",
+  brand: defaultDark,
+  data: [
+    { label: "Mar", value: 10000 },
+    { label: "Apr", value: 45000 },
+    { label: "May", value: 80000 },
+    { label: "Jun", value: 120000 },
+    { label: "Jul", value: 150000 },
+    { label: "Aug", value: 170000 },
+    { label: "Sep", value: 190000 },
+    { label: "Oct", value: 200000 },
+    { label: "Nov", value: 215000 },
+    { label: "Dec", value: 230000 },
+    { label: "Jan", value: 240000 },
+    { label: "Feb", value: 247000 },
+  ],
+  yAxisLabel: "Chunks",
+};
+
 // --- Platform Sizes ---
 
 const YOUTUBE = { width: 1920, height: 1080, fps: 30 };
@@ -236,6 +292,54 @@ export const Root: React.FC = () => {
         durationInFrames={270}
         {...LINKEDIN}
         defaultProps={productHeroDefaults}
+      />
+
+      {/* ===== WeeklyJobs (Data Viz) ===== */}
+      <Composition
+        id="WeeklyJobs"
+        component={WeeklyJobs}
+        durationInFrames={150}
+        {...YOUTUBE}
+        defaultProps={weeklyJobsDefaults}
+      />
+      <Composition
+        id="WeeklyJobs-LinkedIn"
+        component={WeeklyJobs}
+        durationInFrames={150}
+        {...LINKEDIN}
+        defaultProps={weeklyJobsDefaults}
+      />
+
+      {/* ===== MonthlyFinance (Data Viz) ===== */}
+      <Composition
+        id="MonthlyFinance"
+        component={MonthlyFinance}
+        durationInFrames={150}
+        {...YOUTUBE}
+        defaultProps={monthlyFinanceDefaults}
+      />
+      <Composition
+        id="MonthlyFinance-LinkedIn"
+        component={MonthlyFinance}
+        durationInFrames={150}
+        {...LINKEDIN}
+        defaultProps={monthlyFinanceDefaults}
+      />
+
+      {/* ===== BrainGrowth (Data Viz) ===== */}
+      <Composition
+        id="BrainGrowth"
+        component={BrainGrowth}
+        durationInFrames={180}
+        {...YOUTUBE}
+        defaultProps={brainGrowthDefaults}
+      />
+      <Composition
+        id="BrainGrowth-LinkedIn"
+        component={BrainGrowth}
+        durationInFrames={180}
+        {...LINKEDIN}
+        defaultProps={brainGrowthDefaults}
       />
     </>
   );

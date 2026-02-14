@@ -11,7 +11,8 @@ packages/orchestrator/
 ├── workflows/                # n8n workflow JSON templates
 │   ├── image-generation.json # ComfyUI Flux generation pipeline
 │   ├── video-render.json     # Remotion render pipeline
-│   └── ai-routing.json       # AI classifier → pipeline router
+│   ├── ai-routing.json       # AI classifier → pipeline router
+│   └── data-viz-schedule.json # Weekly data viz generation
 ├── scripts/
 │   ├── backup-workflows.sh   # Export workflows from n8n
 │   └── restore-workflows.sh  # Import workflows into n8n
@@ -38,6 +39,7 @@ bun run dev    # or: bun run packages/orchestrator/src/render-service.ts
 | `GET` | `/api/comfyui/status` | Check ComfyUI server status |
 | `POST` | `/api/remotion/render` | Render Remotion composition to video |
 | `POST` | `/api/remotion/still` | Capture single frame |
+| `POST` | `/api/dataviz/render` | Generate branded data visualization |
 | `GET` | `/api/health` | Health check |
 | `GET` | `/api/pipelines` | List available pipelines |
 
@@ -87,8 +89,9 @@ bash scripts/backup-workflows.sh http://localhost:5678
 | **AI Router** | Telegram message | Classifies intent → routes to pipeline |
 | **Image Generation** | Sub-workflow | ComfyUI Flux → quality gate → Telegram |
 | **Video Render** | Sub-workflow | Remotion render → Telegram |
+| **Data Viz Schedule** | Every Monday 9am | Fetch data → render infographics → Telegram |
 
 ## Dependencies
 
-- `@golems/content` — ComfyUI client, Remotion renderer, quality scoring
+- `@golems/content` — ComfyUI client, Remotion renderer, quality scoring, data viz
 - `@golems/shared` — Supabase, notifications

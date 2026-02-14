@@ -25,6 +25,12 @@ packages/content/
 │   ├── quality/                 # Image quality scoring pipeline
 │   │   ├── scoring.ts           # CLIP Score, LAION Aesthetic, BRISQUE — Python bridge
 │   │   └── index.ts             # Barrel export
+│   ├── dataviz/                 # Data visualization pipeline
+│   │   ├── fetchers/            # Supabase + Zikaron data fetchers (jobs, finance, brain, activity)
+│   │   ├── charts/              # SVG chart generators (bar, donut, line, stat-card)
+│   │   ├── templates/           # Infographic layouts (linkedin-card, instagram-square, story-format)
+│   │   ├── renderer.ts          # SVG → PNG via sharp
+│   │   └── index.ts             # Barrel export
 │   └── render/                  # Programmatic render service
 │       ├── render-service.ts    # renderVideo(), renderThumbnail(), job tracking
 │       └── index.ts             # Barrel export
@@ -81,6 +87,9 @@ Validate all configs: `bun run validate-brand` (runs from packages/content/).
 | `ArchDiagram` | Animated architecture diagram (boxes + arrows) | 1920x1080 |
 | `MetricsDashboard` | Animated stats with count-up, trends, sparklines | 1920x1080 |
 | `ProductHero` | Scene sequencer (title → screenshots → metrics) | 1920x1080 |
+| `WeeklyJobs` | Animated bar chart of top job tags/skills | 1920x1080 |
+| `MonthlyFinance` | Animated donut chart of LLM costs by model | 1920x1080 |
+| `BrainGrowth` | Animated line chart of knowledge base growth | 1920x1080 |
 
 All compositions (except DomicaHero) have `-LinkedIn` (1080x1080) variants.
 MetricsDashboard also has a `-GIF` (800x450) variant.
@@ -202,6 +211,85 @@ const result = await generate({
 
 console.log(result.imagePath);
 console.log(result.scoreSummary);
+```
+
+## Data Visualization Pipeline
+
+### Data Sources
+
+| Fetcher | Source | Key Metrics |
+|---------|--------|-------------|
+| `jobs` | `golem_jobs`, `scrape_activity` | Top tags, status distribution, weekly trends, scrape stats |
+| `finance` | `llm_usage`, `subscriptions` | LLM costs by model, daily costs, subscription totals |
+| `brain` | Zikaron SQLite DB | Chunk growth, project coverage, content types, enrichment % |
+| `activity` | `golem_events`, `service_runs` | Golem activity, event types, service health |
+
+### Static Infographics (SVG → PNG)
+
+```bash
+# Generate a specific data viz
+bun run dataviz jobs --format linkedin
+bun run dataviz finance --format instagram
+bun run dataviz brain --format story
+
+# Generate all types
+bun run dataviz all
+
+# SVG only (no PNG conversion)
+bun run dataviz jobs --svg-only
+```
+
+### Infographic Templates
+
+| Template | Size | Use Case |
+|----------|------|----------|
+| `linkedin-card` | 1200x627 | LinkedIn posts, articles |
+| `instagram-square` | 1080x1080 | Instagram feed posts |
+| `story-format` | 1080x1920 | Instagram/LinkedIn Stories |
+
+### Chart Types
+
+| Chart | Function | Use Case |
+|-------|----------|----------|
+| Bar | `renderBarChart()` | Rankings, comparisons (horizontal/vertical) |
+| Donut | `renderDonutChart()` | Proportions, distributions |
+| Line | `renderLineChart()` | Time series, growth trends |
+| Stat Card | `renderStatCards()` | Key metrics with delta indicators |
+
+### Animated Versions (Remotion)
+
+```bash
+# Render animated data viz video
+bun run render WeeklyJobs --project golems-showcase
+bun run render MonthlyFinance --project golems-showcase --platform linkedin
+bun run render BrainGrowth --project golems-showcase
+```
+
+### Programmatic API
+
+```typescript
+import { fetchJobMarketData, renderBarChart, renderLinkedInCard, renderSvgToPng } from "@golems/content/dataviz";
+
+const data = await fetchJobMarketData();
+const chart = renderBarChart({
+  data: data.topTags.map(t => ({ label: t.tag, value: t.count })),
+  horizontal: true,
+});
+const infographic = renderLinkedInCard({ title: "Job Market", chartSvg: chart });
+await renderSvgToPng({ svg: infographic, outputPath: "out/jobs.png" });
+```
+
+### Brand-Aware Theming
+
+Charts automatically use brand colors when a BrandConfig is provided:
+
+```typescript
+import { themeFromBrand, renderBarChart } from "@golems/content/dataviz";
+import { loadBrandConfig } from "@golems/content/brand";
+
+const { config } = await loadBrandConfig("projects/golems-showcase");
+const theme = themeFromBrand(config);
+const chart = renderBarChart({ data: [...], theme });
 ```
 
 ## Current State

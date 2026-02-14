@@ -149,9 +149,107 @@ function handlePipelines(): Response {
         compositions: [
           "CodeShowcase", "ArchDiagram", "MetricsDashboard",
           "ProductHero", "DomicaHero",
+          "WeeklyJobs", "MonthlyFinance", "BrainGrowth",
         ],
       },
+      {
+        id: "dataviz",
+        name: "Data Visualization",
+        description: "Generate branded infographics from golem data",
+        endpoint: "/api/dataviz/render",
+        types: ["jobs", "finance", "brain", "activity"],
+        formats: ["linkedin", "instagram", "story"],
+      },
     ],
+  });
+}
+
+async function handleDataVizRender(body: Record<string, unknown>): Promise<Response> {
+  const type = body.type as string ?? "jobs";
+  const format = body.format as string ?? "linkedin";
+
+  // Dynamic import to avoid loading dataviz deps at startup
+  const { fetchJobMarketData } = await import("@golems/content/dataviz/fetchers/jobs");
+  const { fetchFinanceData } = await import("@golems/content/dataviz/fetchers/finance");
+  const { fetchBrainData } = await import("@golems/content/dataviz/fetchers/brain");
+  const { fetchActivityData } = await import("@golems/content/dataviz/fetchers/activity");
+  const { renderBarChart } = await import("@golems/content/dataviz/charts/bar");
+  const { renderDonutChart } = await import("@golems/content/dataviz/charts/donut");
+  const { renderLineChart } = await import("@golems/content/dataviz/charts/line");
+  const { renderStatCards } = await import("@golems/content/dataviz/charts/stat-card");
+  const { renderLinkedInCard } = await import("@golems/content/dataviz/templates/linkedin-card");
+  const { renderSvgToBuffer } = await import("@golems/content/dataviz/renderer");
+
+  let chartSvg: string;
+  let title: string;
+  let statsSvg: string | undefined;
+
+  switch (type) {
+    case "jobs": {
+      const data = await fetchJobMarketData();
+      title = "Job Market Overview";
+      chartSvg = renderBarChart({
+        title: "Top Tags", data: data.topTags.map((t) => ({ label: t.tag, value: t.count })),
+        horizontal: true, maxBars: 8,
+      });
+      statsSvg = renderStatCards({
+        stats: [
+          { label: "Total Jobs", value: data.totalJobs },
+          { label: "Sources", value: data.scrapeStats.length },
+        ],
+        columns: 2, width: 600,
+      });
+      break;
+    }
+    case "finance": {
+      const data = await fetchFinanceData();
+      title = "Monthly Finance";
+      chartSvg = renderDonutChart({
+        data: data.llmCostsByModel.filter((m) => m.totalCost > 0)
+          .map((m) => ({ label: m.model, value: m.totalCost })),
+        centerValue: `$${data.totalLLMCost.toFixed(2)}`, centerLabel: "Total",
+      });
+      break;
+    }
+    case "brain": {
+      const data = await fetchBrainData();
+      title = "Brain Growth";
+      chartSvg = renderLineChart({
+        data: data.monthlyGrowth.map((g) => ({ date: g.month, value: g.chunks })),
+        showArea: true,
+      });
+      statsSvg = renderStatCards({
+        stats: [
+          { label: "Chunks", value: data.totalChunks },
+          { label: "Enriched", value: `${data.enrichmentPercent}%` },
+        ],
+        columns: 2, width: 600,
+      });
+      break;
+    }
+    case "activity": {
+      const data = await fetchActivityData();
+      title = "Golem Activity";
+      chartSvg = renderBarChart({
+        data: data.golemActivity.slice(0, 6).map((g) => ({ label: g.actor, value: g.eventCount })),
+        horizontal: true,
+      });
+      break;
+    }
+    default:
+      return Response.json({ error: `Unknown type: ${type}` }, { status: 400 });
+  }
+
+  const svg = renderLinkedInCard({ title, chartSvg, statsSvg });
+  const imageBuffer = await renderSvgToBuffer(svg, "png");
+  const imageBase64 = imageBuffer.toString("base64");
+
+  return Response.json({
+    success: true,
+    type,
+    format,
+    imageBase64,
+    mimeType: "image/png",
   });
 }
 
@@ -200,6 +298,11 @@ const server = Bun.serve({
         case method === "GET" && path === "/api/health":
           response = handleHealth();
           break;
+        case method === "POST" && path === "/api/dataviz/render": {
+          const body = await req.json() as Record<string, unknown>;
+          response = await handleDataVizRender(body);
+          break;
+        }
         case method === "GET" && path === "/api/pipelines":
           response = handlePipelines();
           break;
@@ -232,4 +335,5 @@ console.log("  GET  /api/comfyui/status    — ComfyUI server status");
 console.log("  POST /api/remotion/render   — Video rendering");
 console.log("  POST /api/remotion/still    — Single frame capture");
 console.log("  GET  /api/health            — Health check");
+console.log("  POST /api/dataviz/render    — Data visualization");
 console.log("  GET  /api/pipelines         — List pipelines");
