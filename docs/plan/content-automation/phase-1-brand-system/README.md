@@ -27,9 +27,9 @@ Create the centralized brand schema and per-project config system that all conte
 
 ## Status
 
-- [ ] Design schema.json TypeScript interface
-- [ ] Create golems-showcase brand.json
-- [ ] Build brand config validator
-- [ ] Set up project directory structure
-- [ ] Wire into ContentGolem context
-- [ ] Create example project configs
+- [x] Design schema.json TypeScript interface
+- [x] Create golems-showcase brand.json
+- [x] Build brand config validator
+- [x] Set up project directory structure
+- [x] Wire into ContentGolem context
+- [x] Create example project configs
