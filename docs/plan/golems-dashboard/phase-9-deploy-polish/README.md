@@ -31,11 +31,12 @@ Deploy to Vercel at etanheyman.com/dashboard (or dashboard.etanheyman.com). Mobi
 
 ## Status
 
-- [ ] Vercel deployment
-- [ ] Domain setup
-- [ ] Mobile responsive
-- [ ] Presentation mode
-- [ ] Export capabilities
-- [ ] Performance optimization
-- [ ] Documentation for others
-- [ ] Announcement
+- [x] Vercel deployment — vercel.json, next.config.ts with configurable daemon URL, standalone output
+- [x] Mobile responsive — bottom nav for mobile, safe-area insets, responsive padding
+- [x] Presentation mode — fullscreen brain view, hide all UI chrome, Escape to exit
+- [x] Export capabilities — PNG export of brain view canvas
+- [x] Performance — ForceGraph3D already dynamic import, Three.js tree-shaken
+- [x] SEO/OG tags — metadata + viewport exports in root layout
+- [ ] Domain setup — needs Vercel project creation + DNS config (user action)
+- [ ] Documentation for others — deferred to post-deploy
+- [ ] Announcement — deferred (user decides when)

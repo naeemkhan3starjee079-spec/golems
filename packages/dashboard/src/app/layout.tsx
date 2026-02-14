@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -12,9 +12,21 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
 export const metadata: Metadata = {
   title: "Golems Dashboard",
-  description: "Brain view, ops dashboard, and project manager",
+  description: "Brain view, ops dashboard, and project manager for the Golems AI agent ecosystem",
+  openGraph: {
+    title: "Golems Dashboard",
+    description: "Brain view, ops dashboard, and project manager for autonomous AI agents",
+    type: "website",
+  },
+  icons: { icon: "/favicon.ico" },
 };
 
 export default function RootLayout({

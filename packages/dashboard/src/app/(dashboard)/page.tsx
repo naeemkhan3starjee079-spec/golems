@@ -10,15 +10,46 @@ import { BrainSearch } from "@/components/brain-search";
 import { BrainStats } from "@/components/brain-stats";
 import { PageSkeleton } from "@/components/skeleton";
 import { downloadGraph } from "@/lib/supabase/graph";
+import { Camera, Maximize2, Minimize2 } from "lucide-react";
 
 function BrainViewContent() {
   const [graph, setGraph] = useState<BrainGraphType | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [presenting, setPresenting] = useState(false);
   const graphRef = useRef<any>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const searchParams = useSearchParams();
   const nodeParam = searchParams.get("node");
+
+  // Toggle fullscreen presentation mode
+  const togglePresentation = useCallback(() => {
+    if (!document.fullscreenElement && containerRef.current) {
+      containerRef.current.requestFullscreen().then(() => setPresenting(true));
+    } else if (document.fullscreenElement) {
+      document.exitFullscreen().then(() => setPresenting(false));
+    }
+  }, []);
+
+  // Export brain view as PNG
+  const exportPng = useCallback(() => {
+    const canvas = containerRef.current?.querySelector("canvas");
+    if (!canvas) return;
+    const link = document.createElement("a");
+    link.download = `brain-view-${new Date().toISOString().slice(0, 10)}.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  }, []);
+
+  // Sync state when user exits fullscreen via Escape
+  useEffect(() => {
+    function onFsChange() {
+      setPresenting(!!document.fullscreenElement);
+    }
+    document.addEventListener("fullscreenchange", onFsChange);
+    return () => document.removeEventListener("fullscreenchange", onFsChange);
+  }, []);
 
   // Fetch graph data: try Supabase Storage first, fall back to daemon API
   useEffect(() => {
@@ -85,32 +116,57 @@ function BrainViewContent() {
   if (!graph) return <PageSkeleton />;
 
   return (
-    <div className="relative w-full h-full -m-6 overflow-hidden">
-      {/* Search overlay */}
-      <BrainSearch
-        value={searchQuery}
-        onChange={setSearchQuery}
-        matchCount={matchCount}
-        totalNodes={graph.nodes.length}
-      />
+    <div
+      ref={containerRef}
+      className={`relative w-full h-full overflow-hidden ${presenting ? "bg-background" : "-m-4 md:-m-6"}`}
+    >
+      {/* Controls: export + presentation */}
+      <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5">
+        <button
+          type="button"
+          onClick={exportPng}
+          className="p-2 bg-surface/80 backdrop-blur-sm border border-border/50 rounded-lg text-muted hover:text-foreground transition-colors"
+          title="Export as PNG"
+        >
+          <Camera className="w-4 h-4" />
+        </button>
+        <button
+          type="button"
+          onClick={togglePresentation}
+          className="p-2 bg-surface/80 backdrop-blur-sm border border-border/50 rounded-lg text-muted hover:text-foreground transition-colors"
+          title={presenting ? "Exit presentation" : "Presentation mode"}
+        >
+          {presenting ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+        </button>
+      </div>
 
-      {/* Stats overlay */}
-      <BrainStats graph={graph} />
+      {/* Search overlay — hidden in presentation mode */}
+      {!presenting && (
+        <BrainSearch
+          value={searchQuery}
+          onChange={setSearchQuery}
+          matchCount={matchCount}
+          totalNodes={graph.nodes.length}
+        />
+      )}
+
+      {/* Stats overlay — hidden in presentation mode */}
+      {!presenting && <BrainStats graph={graph} />}
 
       {/* 3D Graph */}
       <BrainGraph3D
         ref={graphRef}
         graph={graph}
-        searchQuery={searchQuery}
+        searchQuery={presenting ? "" : searchQuery}
         onNodeClick={handleNodeClick}
         selectedNodeId={selectedNode?.id ?? null}
       />
 
-      {/* Minimap */}
-      <BrainMinimap graph={graph} graphRef={graphRef} />
+      {/* Minimap — hidden in presentation mode */}
+      {!presenting && <BrainMinimap graph={graph} graphRef={graphRef} />}
 
-      {/* Side panel */}
-      {selectedNode && (
+      {/* Side panel — hidden in presentation mode */}
+      {!presenting && selectedNode && (
         <NodePanel
           node={selectedNode}
           edges={graph.edges}

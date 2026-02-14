@@ -1,5 +1,6 @@
 import { Sidebar } from "@/components/sidebar";
 import { TopBar } from "@/components/top-bar";
+import { MobileNav } from "@/components/mobile-nav";
 import { SearchOverlay } from "@/components/search-overlay";
 
 export default function DashboardLayout({
@@ -12,8 +13,11 @@ export default function DashboardLayout({
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
         <TopBar />
-        <main className="flex-1 overflow-auto p-6">{children}</main>
+        <main className="flex-1 overflow-auto p-4 md:p-6 pb-20 md:pb-6">
+          {children}
+        </main>
       </div>
+      <MobileNav />
       <SearchOverlay />
     </div>
   );
