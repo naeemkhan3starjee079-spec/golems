@@ -85,11 +85,11 @@ You → cd packages/content && claude
 - Phase 3 (service monitoring for render service status)
 
 ## Status
-- [ ] Content creation CC skill
-- [ ] n8n CC skill
-- [ ] Start render microservice
-- [ ] Content creator dashboard page (`/frontend-design`)
-- [ ] Interactive pipeline flow diagrams (`/frontend-design`)
-- [ ] Pipeline execution log
-- [ ] Playwright pipeline (`@playwright/mcp` + skill)
-- [ ] End-to-end test
+- [x] Content creation CC skill (7 skill files: SKILL.md + 6 workflows)
+- [ ] n8n CC skill (skipped — CC is the brain, no workflow engine needed)
+- [x] Start render microservice (launchd plist created + installed)
+- [x] Content creator dashboard page (updated pipeline catalog with all 5 pipelines)
+- [x] Interactive pipeline flow diagrams (expandable cards with animated SVG flow)
+- [x] Pipeline execution log (already built in existing page)
+- [x] Playwright pipeline (MCP added to .mcp.json, skill workflow created)
+- [ ] End-to-end test (Task #90)

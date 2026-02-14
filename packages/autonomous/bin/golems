@@ -42,7 +42,7 @@ COMMANDS:
   sessions      Claude sessions (active, registry, spawn <repo>)
   logs [name]   Show logs (telegram, nightshift, job-golem, etc.)
 
-  start [svc]   Start a service (telegram, nightshift, ollama)
+  start [svc]   Start a service (telegram, nightshift, ollama, comfyui, render-service)
   stop [svc]    Stop a service
   restart [svc] Restart a service
 
@@ -112,6 +112,20 @@ cmd_status() {
     echo -e "$(status_icon 1) Ollama           not running"
   fi
 
+  # ComfyUI (local, on-demand)
+  if curl -s --max-time 2 http://127.0.0.1:8188/system_stats &>/dev/null; then
+    echo -e "$(status_icon 0) ComfyUI          running (port 8188)"
+  else
+    echo -e "$(status_icon 1) ComfyUI          not running"
+  fi
+
+  # Render Service (local, on-demand)
+  if curl -s --max-time 2 http://127.0.0.1:3001/api/health &>/dev/null; then
+    echo -e "$(status_icon 0) Render Service   running (port 3001)"
+  else
+    echo -e "$(status_icon 1) Render Service   not running"
+  fi
+
   # LaunchAgents summary
   echo
   echo -e "${BLUE}LaunchAgents:${NC}"
@@ -138,24 +152,109 @@ cmd_status() {
   fi
 }
 
-cmd_services() {
-  echo -e "${BLUE}=== LAUNCHD SERVICES ===${NC}"
-  echo
-  printf "%-25s %-8s %s\n" "SERVICE" "STATUS" "NOTES"
-  printf "%-25s %-8s %s\n" "-------" "------" "-----"
+SERVICE_STATE_FILE="$HOME/.golems/service-state.json"
 
-  launchctl list 2>/dev/null | grep -E "golem|zikaron" | while read pid exitcode label; do
-    if [ "$pid" = "-" ]; then
-      if [ "$exitcode" = "0" ]; then
-        status="idle"
+cmd_services() {
+  case "${1:-list}" in
+    list|"")
+      echo -e "${BLUE}=== LAUNCHD SERVICES ===${NC}"
+      echo
+      printf "%-25s %-8s %s\n" "SERVICE" "STATUS" "NOTES"
+      printf "%-25s %-8s %s\n" "-------" "------" "-----"
+
+      launchctl list 2>/dev/null | grep -E "golem|zikaron" | while read pid exitcode label; do
+        if [ "$pid" = "-" ]; then
+          if [ "$exitcode" = "0" ]; then
+            status="idle"
+          else
+            status="err:$exitcode"
+          fi
+        else
+          status="running"
+        fi
+        printf "%-25s %-8s %s\n" "$label" "$status" ""
+      done
+
+      # Also check on-demand services by port
+      echo
+      echo -e "${BLUE}On-Demand Services:${NC}"
+      if curl -s --max-time 2 http://127.0.0.1:8188/system_stats &>/dev/null; then
+        echo -e "  $(status_icon 0) ComfyUI (port 8188)"
       else
-        status="err:$exitcode"
+        echo -e "  $(status_icon 1) ComfyUI (not running)"
       fi
-    else
-      status="running"
-    fi
-    printf "%-25s %-8s %s\n" "$label" "$status" ""
-  done
+      if curl -s --max-time 2 http://127.0.0.1:3001/api/health &>/dev/null; then
+        echo -e "  $(status_icon 0) Render Service (port 3001)"
+      else
+        echo -e "  $(status_icon 1) Render Service (not running)"
+      fi
+      ;;
+
+    snapshot)
+      echo -e "${BLUE}=== SNAPSHOT SERVICE STATE ===${NC}"
+      mkdir -p "$(dirname "$SERVICE_STATE_FILE")"
+      local running=()
+      # Check each known service
+      for svc in telegram ollama comfyui render-service; do
+        case "$svc" in
+          comfyui)
+            curl -s --max-time 2 http://127.0.0.1:8188/system_stats &>/dev/null && running+=("$svc")
+            ;;
+          render-service)
+            curl -s --max-time 2 http://127.0.0.1:3001/api/health &>/dev/null && running+=("$svc")
+            ;;
+          telegram)
+            lsof -i :3847 &>/dev/null && running+=("$svc")
+            ;;
+          ollama)
+            pgrep -q ollama 2>/dev/null && running+=("$svc")
+            ;;
+        esac
+      done
+      # Also check launchd services (include loaded/idle — they're scheduled)
+      for svc in nightshift briefing job-golem email-golem session-archiver storage-cleanup; do
+        local label="$(_svc_label "$svc")"
+        if launchctl list 2>/dev/null | grep -q "$label"; then
+          running+=("$svc")
+        fi
+      done
+      # Write state (handle empty array correctly)
+      local json_arr=""
+      if [ ${#running[@]} -gt 0 ]; then
+        json_arr="$(printf '"%s",' "${running[@]}" | sed 's/,$//')"
+      fi
+      printf '{"timestamp":"%s","running":[%s]}\n' \
+        "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+        "$json_arr" \
+        > "$SERVICE_STATE_FILE"
+      echo "Saved state: ${running[*]:-none}"
+      echo "File: $SERVICE_STATE_FILE"
+      ;;
+
+    restore)
+      echo -e "${BLUE}=== RESTORE SERVICE STATE ===${NC}"
+      if [ ! -f "$SERVICE_STATE_FILE" ]; then
+        echo "No snapshot found. Run: golems services snapshot"
+        return 1
+      fi
+      local saved=$(cat "$SERVICE_STATE_FILE")
+      local timestamp=$(echo "$saved" | jq -r '.timestamp')
+      echo "Restoring from: $timestamp"
+      echo "$saved" | jq -r '.running[]' 2>/dev/null | while read svc; do
+        echo -n "  Starting $svc... "
+        cmd_start "$svc" 2>/dev/null
+        echo -e "${GREEN}done${NC}"
+      done
+      echo -e "${GREEN}Restore complete${NC}"
+      ;;
+
+    *)
+      echo "Usage: golems services [list|snapshot|restore]"
+      echo "  list       Show all service status (default)"
+      echo "  snapshot   Save current running services state"
+      echo "  restore    Restart services from last snapshot"
+      ;;
+  esac
 }
 
 cmd_docker() {
@@ -248,6 +347,8 @@ _svc_name() {
     session-archiver|archiver) echo "session-archiver" ;;
     storage-cleanup|cleanup)   echo "storage-cleanup" ;;
     bedtime-guardian|bedtime)   echo "bedtime-guardian" ;;
+    comfyui|comfy)         echo "comfyui" ;;
+    render-service|render) echo "render-service" ;;
     *) echo "" ;;
   esac
 }
@@ -258,6 +359,8 @@ _svc_label() {
     session-archiver)  echo "com.golems.session-archiver" ;;
     bedtime-guardian)   echo "com.golems.bedtime-guardian" ;;
     storage-cleanup)   echo "com.golems.storage-cleanup" ;;
+    comfyui)           echo "com.golems.comfyui" ;;
+    render-service)    echo "com.golems.render-service" ;;
     *)                 echo "com.golemszikaron.$1" ;;
   esac
 }
@@ -608,7 +711,7 @@ case "${1:-status}" in
     cd "$GOLEMS_HOME" && bun run packages/services/src/doctor.ts
     ;;
   services|svc)
-    cmd_services
+    cmd_services "$2"
     ;;
   scrape)
     cmd_scrape

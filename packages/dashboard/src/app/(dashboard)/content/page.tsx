@@ -11,6 +11,7 @@ import {
   BarChart3,
   Send,
   Loader2,
+  ChevronDown,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { PageSkeleton } from "@/components/skeleton";
@@ -62,6 +63,7 @@ const PIPELINE_COLORS: Record<string, string> = {
   comfyui: "text-sky-400",
   dataviz: "text-emerald-400",
   satori: "text-amber-400",
+  playwright: "text-green-400",
   "figma-remotion": "text-pink-400",
 };
 
@@ -70,6 +72,7 @@ const PIPELINE_LABELS: Record<string, string> = {
   comfyui: "Flux Image Gen",
   dataviz: "Data Viz",
   satori: "Template Fill",
+  playwright: "Playwright Screenshots",
   "figma-remotion": "Figma to Video",
 };
 
@@ -87,6 +90,153 @@ function formatDuration(ms: number): string {
   if (ms < 1000) return `${ms}ms`;
   if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
   return `${(ms / 60000).toFixed(1)}m`;
+}
+
+// --- Flow Diagram ---
+
+type FlowStep = {
+  label: string;
+  detail: string;
+  type: "input" | "brain" | "tool" | "gate" | "output";
+};
+
+const PIPELINE_FLOWS: Record<string, FlowStep[]> = {
+  remotion: [
+    { label: "Idea", detail: "Video concept", type: "input" },
+    { label: "CC (Opus)", detail: "Picks React composition", type: "brain" },
+    { label: "React", detail: "Renders frames", type: "tool" },
+    { label: "Remotion", detail: "Encodes MP4/GIF", type: "tool" },
+    { label: "Video", detail: "Final output", type: "output" },
+  ],
+  comfyui: [
+    { label: "Idea", detail: "Image concept", type: "input" },
+    { label: "CC (Opus)", detail: "Crafts Flux prompt", type: "brain" },
+    { label: "ComfyUI", detail: "Flux on Apple Silicon", type: "tool" },
+    { label: "Vision Gate", detail: "Quality review", type: "gate" },
+    { label: "Image", detail: "PNG + brand overlay", type: "output" },
+  ],
+  dataviz: [
+    { label: "Data", detail: "Supabase / API", type: "input" },
+    { label: "CC (Opus)", detail: "Designs chart", type: "brain" },
+    { label: "SVG Builder", detail: "Vector markup", type: "tool" },
+    { label: "Sharp", detail: "Rasterize", type: "tool" },
+    { label: "Chart", detail: "PNG / SVG", type: "output" },
+  ],
+  playwright: [
+    { label: "URL", detail: "Target page", type: "input" },
+    { label: "CC (Opus)", detail: "Plans capture", type: "brain" },
+    { label: "Playwright", detail: "Browser control", type: "tool" },
+    { label: "Screenshot", detail: "PNG output", type: "output" },
+  ],
+  satori: [
+    { label: "Data", detail: "Content + template", type: "input" },
+    { label: "CC (Opus)", detail: "Fills template", type: "brain" },
+    { label: "Satori", detail: "JSX to SVG", type: "tool" },
+    { label: "Card", detail: "Social PNG", type: "output" },
+  ],
+};
+
+const FLOW_BRAIN_STYLES: Record<string, string> = {
+  remotion: "border-violet-400/50 shadow-[0_0_12px_-3px] shadow-violet-500/25",
+  comfyui: "border-sky-400/50 shadow-[0_0_12px_-3px] shadow-sky-500/25",
+  dataviz: "border-emerald-400/50 shadow-[0_0_12px_-3px] shadow-emerald-500/25",
+  satori: "border-amber-400/50 shadow-[0_0_12px_-3px] shadow-amber-500/25",
+  playwright: "border-green-400/50 shadow-[0_0_12px_-3px] shadow-green-500/25",
+};
+
+function FlowNode({
+  step,
+  pipelineId,
+}: {
+  step: FlowStep;
+  pipelineId: string;
+}) {
+  const typeStyles: Record<FlowStep["type"], string> = {
+    input: "border-dashed border-zinc-500/50 bg-zinc-800/30",
+    brain: `border-solid bg-zinc-800/80 ${FLOW_BRAIN_STYLES[pipelineId] ?? "border-zinc-400/50"}`,
+    tool: "border-solid border-zinc-600/50 bg-zinc-800/50",
+    gate: "border-dotted border-emerald-500/40 bg-emerald-950/20",
+    output: "border-solid border-zinc-500/50 bg-zinc-800/30",
+  };
+
+  return (
+    <div
+      className={`flex flex-col items-center gap-0.5 px-4 py-2.5 rounded-md border min-w-[88px] ${typeStyles[step.type]}`}
+    >
+      <span className="text-[9px] uppercase tracking-widest text-zinc-500 font-mono">
+        {step.type}
+      </span>
+      <span className="text-xs font-semibold text-zinc-100">{step.label}</span>
+      <span className="text-[10px] text-zinc-400 text-center leading-tight">
+        {step.detail}
+      </span>
+    </div>
+  );
+}
+
+function FlowConnector() {
+  return (
+    <svg
+      width="36"
+      height="16"
+      viewBox="0 0 36 16"
+      className="shrink-0 mx-0.5"
+      aria-hidden="true"
+    >
+      <line
+        x1="0"
+        y1="8"
+        x2="26"
+        y2="8"
+        stroke="rgb(113 113 122)"
+        strokeWidth="1.5"
+        strokeDasharray="4 3"
+      >
+        <animate
+          attributeName="stroke-dashoffset"
+          values="7;0"
+          dur="0.8s"
+          repeatCount="indefinite"
+        />
+      </line>
+      <polygon points="26,4 34,8 26,12" fill="rgb(113 113 122)" />
+    </svg>
+  );
+}
+
+function FlowDiagram({
+  steps,
+  pipelineId,
+}: {
+  steps: FlowStep[];
+  pipelineId: string;
+}) {
+  return (
+    <div
+      className="relative rounded-lg p-6 overflow-x-auto"
+      style={{
+        backgroundImage:
+          "radial-gradient(circle, rgb(63 63 70 / 0.25) 1px, transparent 1px)",
+        backgroundSize: "16px 16px",
+      }}
+    >
+      <div className="flex items-center justify-center gap-0 min-w-max">
+        {steps.flatMap((step, i) => [
+          <FlowNode
+            key={`node-${i}`}
+            step={step}
+            pipelineId={pipelineId}
+          />,
+          ...(i < steps.length - 1
+            ? [<FlowConnector key={`conn-${i}`} />]
+            : []),
+        ])}
+      </div>
+      <p className="text-[10px] text-zinc-500 text-center mt-4 font-mono tracking-wider">
+        CC (Opus) is always the orchestrator — tools execute, CC decides
+      </p>
+    </div>
+  );
 }
 
 // --- Components ---
@@ -272,17 +422,27 @@ const AVAILABLE_PIPELINES = [
   {
     id: "remotion",
     name: "Remotion Video",
-    description: "Animations, code demos, data stories",
+    description: "Animations, code demos, data stories. CC writes React compositions.",
   },
   {
     id: "comfyui",
     name: "Flux Image Gen",
-    description: "AI images, social visuals, merch",
+    description: "AI images, social visuals, merch. Local Flux model via ComfyUI.",
   },
   {
     id: "dataviz",
     name: "Data Viz",
-    description: "Charts, infographics, reports",
+    description: "Charts, infographics, reports. SVG builders + sharp.",
+  },
+  {
+    id: "playwright",
+    name: "Playwright Screenshots",
+    description: "Screenshots, OG images, web scraping. Browser automation via MCP.",
+  },
+  {
+    id: "satori",
+    name: "Template Fill",
+    description: "Social cards, OG images from templates. Fast SVG rendering.",
   },
 ];
 
@@ -293,6 +453,7 @@ export default function ContentPage() {
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [expandedPipeline, setExpandedPipeline] = useState<string | null>(null);
 
   const fetchAll = useCallback(async () => {
     setRefreshing(true);
@@ -349,21 +510,40 @@ export default function ContentPage() {
       <div>
         <h3 className="text-xs font-medium text-muted uppercase tracking-wider mb-3">
           Available Pipelines
+          <span className="text-[10px] font-normal ml-2 text-zinc-500">
+            click to see flow
+          </span>
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {AVAILABLE_PIPELINES.map((p) => {
             const stat = stats.find((s) => s.pipeline_id === p.id);
             const color = PIPELINE_COLORS[p.id] ?? "text-muted";
+            const isSelected = expandedPipeline === p.id;
             return (
-              <div
+              <button
+                type="button"
                 key={p.id}
-                className="rounded-lg border border-border bg-surface p-4"
+                onClick={() =>
+                  setExpandedPipeline(isSelected ? null : p.id)
+                }
+                className={`rounded-lg border p-4 text-left transition-all ${
+                  isSelected
+                    ? "border-accent/50 bg-surface ring-1 ring-accent/20"
+                    : "border-border bg-surface hover:border-zinc-600"
+                }`}
               >
                 <div className="flex items-center justify-between mb-1">
                   <span className={`text-sm font-semibold ${color}`}>
                     {p.name}
                   </span>
-                  <Circle className="w-2.5 h-2.5 fill-emerald text-emerald" />
+                  <div className="flex items-center gap-1.5">
+                    <Circle className="w-2 h-2 fill-emerald text-emerald" />
+                    <ChevronDown
+                      className={`w-3.5 h-3.5 text-muted transition-transform duration-200 ${
+                        isSelected ? "rotate-180" : ""
+                      }`}
+                    />
+                  </div>
                 </div>
                 <p className="text-xs text-muted mb-3">{p.description}</p>
                 {stat ? (
@@ -390,10 +570,18 @@ export default function ContentPage() {
                 ) : (
                   <p className="text-xs text-muted">No runs yet</p>
                 )}
-              </div>
+              </button>
             );
           })}
         </div>
+        {expandedPipeline && PIPELINE_FLOWS[expandedPipeline] && (
+          <div className="mt-3 border border-border/50 rounded-lg bg-zinc-950/50">
+            <FlowDiagram
+              steps={PIPELINE_FLOWS[expandedPipeline]}
+              pipelineId={expandedPipeline}
+            />
+          </div>
+        )}
       </div>
 
       {/* Pipeline Stats (only show if we have data) */}
