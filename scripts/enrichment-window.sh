@@ -47,12 +47,13 @@ cd "$ZIKARON_DIR" || exit 1
 source .venv/bin/activate
 
 # Load Supabase env vars for GLM usage logging
-ENV_FILE="$HOME/Gits/golems/.env.local"
-if [ -f "$ENV_FILE" ]; then
-    set -a
-    source "$ENV_FILE"
-    set +a
-fi
+for ENV_FILE in "$HOME/Gits/golems/.env" "$HOME/Gits/golems/.env.local"; do
+    if [ -f "$ENV_FILE" ]; then
+        set -a
+        source "$ENV_FILE"
+        set +a
+    fi
+done
 
 PYTHONUNBUFFERED=1 python3 -m zikaron.pipeline.enrichment --batch-size 50 >> "$LOG_DIR/enrichment.log" 2>&1 &
 PID=$!

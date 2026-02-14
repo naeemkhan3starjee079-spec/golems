@@ -23,9 +23,9 @@ Make enrichment progress visible on the dashboard without requiring the local da
 - Nothing (standalone)
 
 ## Status
-- [ ] Create enrichment_stats table
-- [ ] Add stats sync to enrichment service
-- [ ] Add stats sync to zikaron index
-- [ ] Update dashboard enrichment page
-- [ ] Restart enrichment service
-- [ ] Add enrichment card to ops page
+- [x] Create enrichment_stats table
+- [x] Add stats sync to enrichment service
+- [x] Add stats sync to zikaron index
+- [x] Update dashboard enrichment page
+- [x] Restart enrichment service (Night Shift fixed in task #76)
+- [x] Add enrichment card to ops page

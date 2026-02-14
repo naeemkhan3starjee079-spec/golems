@@ -1,9 +1,9 @@
 "use client";
 
-import { Activity, Circle, Clock, RefreshCw, Zap } from "lucide-react";
+import { Activity, Circle, Clock, Database, RefreshCw, Zap } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { PageSkeleton } from "@/components/skeleton";
-import { fetchRecentEvents, fetchServiceRuns } from "@/lib/supabase/queries";
+import { fetchRecentEvents, fetchServiceRuns, fetchEnrichmentStats } from "@/lib/supabase/queries";
 
 type GolemEvent = {
   actor: string;
@@ -34,6 +34,7 @@ function timeAgo(iso: string): string {
 export default function OpsPage() {
   const [events, setEvents] = useState<GolemEvent[]>([]);
   const [runs, setRuns] = useState<ServiceRun[]>([]);
+  const [enrichment, setEnrichment] = useState<{ total: number; enriched: number; pct: number; updatedAt: string | null } | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -41,12 +42,23 @@ export default function OpsPage() {
   const fetchAll = useCallback(async () => {
     setRefreshing(true);
     try {
-      const [evts, svcRuns] = await Promise.all([
+      const [evtsResult, runsResult, enrichResult] = await Promise.allSettled([
         fetchRecentEvents(30),
         fetchServiceRuns(15),
+        fetchEnrichmentStats(),
       ]);
-      setEvents(evts as GolemEvent[]);
-      setRuns(svcRuns as ServiceRun[]);
+      if (evtsResult.status === "fulfilled") setEvents(evtsResult.value as GolemEvent[]);
+      if (runsResult.status === "fulfilled") setRuns(runsResult.value as ServiceRun[]);
+      if (enrichResult.status === "fulfilled") {
+        const e = enrichResult.value;
+        const enrichedCount = Math.min(e.summaries.count, e.importance.count, e.intent.count);
+        setEnrichment({
+          total: e.total_chunks,
+          enriched: enrichedCount,
+          pct: e.total_chunks > 0 ? Math.round(enrichedCount * 100 / e.total_chunks * 10) / 10 : 0,
+          updatedAt: e.updated_at ?? null,
+        });
+      }
       setLastRefresh(new Date());
     } catch {
       // silent
@@ -102,6 +114,31 @@ export default function OpsPage() {
                 <p className="text-xs text-muted">{timeAgo(info.lastRun)}</p>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Enrichment summary */}
+      {enrichment && (
+        <div className="rounded-lg border border-border bg-surface p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Database className="w-4 h-4 text-accent" />
+              <span className="text-sm font-medium">Zikaron Enrichment</span>
+            </div>
+            <span className={`text-sm font-bold ${enrichment.pct >= 50 ? "text-emerald" : enrichment.pct >= 10 ? "text-amber" : "text-rose"}`}>
+              {enrichment.pct}%
+            </span>
+          </div>
+          <div className="mt-2 h-1.5 rounded-full bg-border overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all ${enrichment.pct >= 50 ? "bg-emerald" : enrichment.pct >= 10 ? "bg-amber" : "bg-rose"}`}
+              style={{ width: `${Math.min(enrichment.pct, 100)}%` }}
+            />
+          </div>
+          <div className="flex justify-between mt-1.5 text-[10px] text-muted">
+            <span>{enrichment.enriched.toLocaleString()} / {enrichment.total.toLocaleString()} chunks</span>
+            {enrichment.updatedAt && <span>Synced {timeAgo(enrichment.updatedAt)}</span>}
           </div>
         </div>
       )}

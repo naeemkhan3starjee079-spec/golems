@@ -125,6 +125,32 @@ export async function fetchTokenStats(days: number) {
   };
 }
 
+// --- Enrichment ---
+
+export async function fetchEnrichmentStats() {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("enrichment_stats")
+    .select("total_chunks, embedded, tagged, summarized, importance_scored, intent_classified, projects, by_intent, updated_at")
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .single();
+  if (error) throw error;
+
+  const total = data.total_chunks || 1;
+  return {
+    total_chunks: data.total_chunks,
+    embeddings: { count: data.embedded, pct: Math.round(data.embedded * 100 / total * 10) / 10 },
+    tags: { count: data.tagged, pct: Math.round(data.tagged * 100 / total * 10) / 10 },
+    summaries: { count: data.summarized, pct: Math.round(data.summarized * 100 / total * 10) / 10 },
+    importance: { count: data.importance_scored, pct: Math.round(data.importance_scored * 100 / total * 10) / 10 },
+    intent: { count: data.intent_classified, pct: Math.round(data.intent_classified * 100 / total * 10) / 10 },
+    projects: (data.projects as { project: string; chunks: number }[]) ?? [],
+    by_intent: data.by_intent as Record<string, number>,
+    updated_at: data.updated_at,
+  };
+}
+
 // --- Backlog ---
 
 export async function fetchBacklogItems(project?: string) {

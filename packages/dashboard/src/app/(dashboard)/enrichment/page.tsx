@@ -1,8 +1,9 @@
 "use client";
 
-import { Database, RefreshCw, Sparkles } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { Database, RefreshCw, Sparkles, Clock } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { PageSkeleton } from "@/components/skeleton";
+import { fetchEnrichmentStats } from "@/lib/supabase/queries";
 
 type FieldStats = { count: number; pct: number };
 
@@ -14,6 +15,8 @@ type EnrichmentStats = {
   importance: FieldStats;
   intent: FieldStats;
   projects: { project: string; chunks: number }[];
+  by_intent?: Record<string, number>;
+  updated_at?: string;
 };
 
 function ProgressBar({ label, pct, count, total }: { label: string; pct: number; count: number; total: number }) {
@@ -44,38 +47,60 @@ function ProgressBar({ label, pct, count, total }: { label: string; pct: number;
   );
 }
 
+function timeAgo(iso: string): string {
+  const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
+
 export default function EnrichmentPage() {
   const [data, setData] = useState<EnrichmentStats | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-
   const [failed, setFailed] = useState(false);
+  const [, setTick] = useState(0);
+  const fetchIdRef = useRef(0);
 
-  const fetchData = useCallback(() => {
+  const fetchData = useCallback(async () => {
+    const id = ++fetchIdRef.current;
     setRefreshing(true);
-    fetch("/api/stats/enrichment")
-      .then((r) => { if (r.ok) return r.json(); throw new Error("not available"); })
-      .then((d) => { if (d) { setData(d); setFailed(false); } })
-      .catch(() => setFailed(true))
-      .finally(() => setRefreshing(false));
+    try {
+      const result = await fetchEnrichmentStats();
+      if (id !== fetchIdRef.current) return;
+      setData(result);
+      setFailed(false);
+    } catch {
+      if (id !== fetchIdRef.current) return;
+      setFailed(true);
+    } finally {
+      if (id === fetchIdRef.current) setRefreshing(false);
+    }
   }, []);
 
+  useEffect(() => { fetchData(); }, [fetchData]);
   useEffect(() => {
-    fetchData();
     const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
   }, [fetchData]);
+  useEffect(() => {
+    const t = setInterval(() => setTick((n) => n + 1), 10000);
+    return () => clearInterval(t);
+  }, []);
 
   if (failed && !data) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-4 text-muted">
         <Database className="w-10 h-10 text-muted/30" />
         <div className="text-center space-y-2">
-          <p className="text-sm font-medium">Enrichment data requires the Zikaron daemon</p>
+          <p className="text-sm font-medium">No enrichment data yet</p>
           <p className="text-xs text-muted/60">
-            Run <code className="bg-surface px-1.5 py-0.5 rounded">zikaron serve --http 8787</code> locally to see enrichment progress.
+            Run enrichment locally to sync stats: <code className="bg-surface px-1.5 py-0.5 rounded">zikaron enrich</code>
           </p>
           <p className="text-xs text-muted/40">
-            This page queries the local SQLite database and cannot be served from Supabase.
+            Stats are synced to Supabase after each enrichment batch.
           </p>
           <button type="button" onClick={() => { setFailed(false); fetchData(); }} className="text-xs text-accent hover:underline mt-2">
             Retry
@@ -116,9 +141,17 @@ export default function EnrichmentPage() {
           <Database className="w-5 h-5 text-accent" />
           Enrichment Progress
         </h2>
-        <button type="button" onClick={fetchData} className="text-muted hover:text-foreground transition-colors">
-          <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
-        </button>
+        <div className="flex items-center gap-3">
+          {data.updated_at && (
+            <span className="text-[10px] text-muted/50 flex items-center gap-1">
+              <Clock className="w-3 h-3" />
+              Synced {timeAgo(data.updated_at)}
+            </span>
+          )}
+          <button type="button" onClick={fetchData} className="text-muted hover:text-foreground transition-colors">
+            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
+          </button>
+        </div>
       </div>
 
       {/* Overview cards */}
@@ -196,6 +229,25 @@ export default function EnrichmentPage() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Intent distribution */}
+      {data.by_intent && Object.keys(data.by_intent).length > 0 && (
+        <div>
+          <h3 className="text-xs font-medium text-muted uppercase tracking-wider mb-3">
+            Intent Distribution
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+            {Object.entries(data.by_intent)
+              .sort(([, a], [, b]) => b - a)
+              .map(([intent, count]) => (
+                <div key={intent} className="rounded-lg border border-border bg-surface p-3">
+                  <p className="text-[10px] text-muted capitalize">{intent}</p>
+                  <p className="text-sm font-semibold">{count.toLocaleString()}</p>
+                </div>
+              ))}
           </div>
         </div>
       )}
