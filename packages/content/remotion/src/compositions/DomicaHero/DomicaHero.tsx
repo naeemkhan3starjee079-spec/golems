@@ -331,7 +331,7 @@ export const DomicaHero: React.FC = () => {
       </AnimateIn>
 
       {/* Magnifying glass — large, overlapping card bottom-right */}
-      <MagnifyingGlass x={500} y={280} delay={22} size={400} />
+      <MagnifyingGlass x={590} y={310} delay={22} size={220} />
 
       {/* Glass bubbles scattered */}
       <DecorativeBubble x={250} y={15} delay={33} size={10} amplitude={6} speed={0.016} />

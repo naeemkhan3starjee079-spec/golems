@@ -22,10 +22,13 @@ const MagnifyingGlassScene: React.FC<{ frame: number; fps: number; delay: number
   delay,
 }) => {
   const entranceFactor = clampedInterpolate(frame - delay, [0, 30], [0, 1]);
+  // Decay: big movement on entrance, settles to gentle idle
+  const t = Math.max(0, frame - delay);
+  const entranceSwing = Math.exp(-t * 0.04); // decays from 1 → ~0 over 60 frames
 
-  // Gentle floating rotation
-  const rotY = Math.sin(frame * 0.015) * 0.08 * entranceFactor;
-  const rotX = Math.cos(frame * 0.012) * 0.05 * entranceFactor;
+  // Big rotation on entrance that relaxes to subtle idle
+  const rotY = Math.sin(t * 0.06) * (0.4 * entranceSwing + 0.06) * entranceFactor;
+  const rotX = Math.cos(t * 0.05) * (0.3 * entranceSwing + 0.04) * entranceFactor;
 
   return (
     <>
@@ -38,11 +41,11 @@ const MagnifyingGlassScene: React.FC<{ frame: number; fps: number; delay: number
       <group rotation={[rotX - 0.15, rotY + 0.3, -0.45]} position={[0, 0.1, 0]}>
         {/* Ring — torus (thick blue glass rim) */}
         <mesh>
-          <torusGeometry args={[1.0, 0.15, 32, 64]} />
+          <torusGeometry args={[1.0, 0.19, 32, 64]} />
           <meshPhysicalMaterial
-            color="#93C5FD"
-            metalness={0.15}
-            roughness={0.1}
+            color="#7CB8F8"
+            metalness={0.18}
+            roughness={0.08}
             clearcoat={1.0}
             clearcoatRoughness={0.03}
             envMapIntensity={2.0}
@@ -51,40 +54,37 @@ const MagnifyingGlassScene: React.FC<{ frame: number; fps: number; delay: number
 
         {/* Outer ring highlight */}
         <mesh>
-          <torusGeometry args={[1.0, 0.16, 32, 64]} />
+          <torusGeometry args={[1.0, 0.20, 32, 64]} />
           <meshPhysicalMaterial
             color="#DBEAFE"
             metalness={0.05}
             roughness={0.2}
             transparent
-            opacity={0.35}
+            opacity={0.3}
           />
         </mesh>
 
-        {/* Lens — transparent glass disc */}
-        <mesh>
-          <circleGeometry args={[0.88, 64]} />
+        {/* Lens — visible glass disc */}
+        <mesh position={[0, 0, -0.02]}>
+          <circleGeometry args={[0.82, 64]} />
           <meshPhysicalMaterial
-            color="#EFF6FF"
+            color="#DBEAFE"
             metalness={0.0}
-            roughness={0.0}
+            roughness={0.05}
             transparent
-            opacity={0.15}
-            transmission={0.9}
-            thickness={0.15}
-            ior={1.5}
+            opacity={0.25}
           />
         </mesh>
 
-        {/* Lens highlight — subtle bright spot */}
-        <mesh position={[-0.25, 0.2, 0.02]}>
-          <circleGeometry args={[0.35, 32]} />
-          <meshBasicMaterial color="#ffffff" transparent opacity={0.18} />
+        {/* Lens highlight — bright reflection spot */}
+        <mesh position={[-0.2, 0.22, 0.01]}>
+          <circleGeometry args={[0.3, 32]} />
+          <meshBasicMaterial color="#ffffff" transparent opacity={0.25} />
         </mesh>
 
-        {/* Handle — cylinder from ring down-right */}
-        <mesh position={[0.85, -0.85, 0]} rotation={[0, 0, Math.PI / 4]}>
-          <cylinderGeometry args={[0.14, 0.16, 1.2, 16]} />
+        {/* Handle — cylinder flush with ring edge */}
+        <mesh position={[1.16, -1.16, 0]} rotation={[0, 0, Math.PI / 4]}>
+          <cylinderGeometry args={[0.13, 0.15, 0.9, 16]} />
           <meshPhysicalMaterial
             color="#60A5FA"
             metalness={0.2}
@@ -95,8 +95,8 @@ const MagnifyingGlassScene: React.FC<{ frame: number; fps: number; delay: number
         </mesh>
 
         {/* Handle cap — rounded end */}
-        <mesh position={[1.28, -1.28, 0]}>
-          <sphereGeometry args={[0.17, 16, 16]} />
+        <mesh position={[1.48, -1.48, 0]}>
+          <sphereGeometry args={[0.16, 16, 16]} />
           <meshPhysicalMaterial
             color="#3B82F6"
             metalness={0.3}
@@ -106,8 +106,8 @@ const MagnifyingGlassScene: React.FC<{ frame: number; fps: number; delay: number
         </mesh>
 
         {/* Handle highlight streak */}
-        <mesh position={[0.78, -0.78, 0.08]} rotation={[0, 0, Math.PI / 4]}>
-          <cylinderGeometry args={[0.035, 0.035, 1.0, 8]} />
+        <mesh position={[1.1, -1.1, 0.08]} rotation={[0, 0, Math.PI / 4]}>
+          <cylinderGeometry args={[0.03, 0.03, 0.7, 8]} />
           <meshBasicMaterial color="#93C5FD" transparent opacity={0.35} />
         </mesh>
       </group>
@@ -128,11 +128,15 @@ export const MagnifyingGlass: React.FC<Props> = ({
   const opacity = clampedInterpolate(frame - delay, [0, 10], [0, 1]);
   const entranceFactor = clampedInterpolate(frame - delay, [0, 30], [0, 1]);
 
-  const floatX = Math.cos(frame * 0.018) * 14 * entranceFactor;
-  const floatY = Math.sin(frame * 0.022) * 10 * entranceFactor;
+  const t = Math.max(0, frame - delay);
+  const swing = Math.exp(-t * 0.04); // decays over ~60 frames
+
+  // Big float on entrance, settles to gentle idle
+  const floatX = Math.cos(t * 0.05) * (40 * swing + 8) * entranceFactor;
+  const floatY = Math.sin(t * 0.04) * (30 * swing + 6) * entranceFactor;
 
   const entranceScale = 0.3 + 0.7 * entrance;
-  const entranceY = -60 * (1 - entrance);
+  const entranceY = -80 * (1 - entrance);
 
   return (
     <div
@@ -152,7 +156,7 @@ export const MagnifyingGlass: React.FC<Props> = ({
       <ThreeCanvas
         width={size}
         height={size}
-        camera={{ position: [0, 0, 3.5], fov: 40 }}
+        camera={{ position: [0.4, -0.4, 6], fov: 40 }}
         style={{ width: size, height: size }}
       >
         <MagnifyingGlassScene frame={frame} fps={fps} delay={delay} />
