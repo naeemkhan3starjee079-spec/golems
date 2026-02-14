@@ -11,6 +11,9 @@
  *   POST /api/remotion/still       → Render single frame
  *   GET  /api/health               → Health check
  *   GET  /api/pipelines            → List available pipelines
+ *   POST /api/pipeline/route       → AI-route an idea to best pipeline
+ *   POST /api/pipeline/execute     → Route + execute in one call
+ *   GET  /api/pipeline/stats       → Pipeline performance stats
  */
 
 import { readFile } from "fs/promises";
@@ -127,41 +130,79 @@ function handleHealth(): Response {
     service: "golems-render-service",
     port: PORT,
     timestamp: new Date().toISOString(),
-    pipelines: ["comfyui", "remotion"],
+    pipelines: ["comfyui", "remotion", "dataviz"],
+    features: ["pipeline-routing", "pipeline-tracking"],
   });
 }
 
-function handlePipelines(): Response {
+async function handlePipelines(): Promise<Response> {
+  const { getRegistry } = await import("@golems/content/pipeline");
+  const registry = getRegistry();
   return Response.json({
-    pipelines: [
-      {
-        id: "comfyui",
-        name: "Flux Image Generation",
-        description: "AI image generation via ComfyUI + Flux.1 Dev Q6_K GGUF",
-        endpoint: "/api/comfyui/generate",
-        styles: ["base", "social", "merch", "meme"],
-      },
-      {
-        id: "remotion",
-        name: "Video Rendering",
-        description: "Programmatic video rendering via Remotion",
-        endpoint: "/api/remotion/render",
-        compositions: [
-          "CodeShowcase", "ArchDiagram", "MetricsDashboard",
-          "ProductHero", "DomicaHero",
-          "WeeklyJobs", "MonthlyFinance", "BrainGrowth",
-        ],
-      },
-      {
-        id: "dataviz",
-        name: "Data Visualization",
-        description: "Generate branded infographics from golem data",
-        endpoint: "/api/dataviz/render",
-        types: ["jobs", "finance", "brain", "activity"],
-        formats: ["linkedin", "instagram", "story"],
-      },
-    ],
+    pipelines: registry.pipelines.map((p) => ({
+      id: p.id,
+      name: p.name,
+      description: p.description,
+      endpoint: p.endpoint,
+      inputs: p.inputs,
+      outputs: p.outputs,
+      bestFor: p.bestFor,
+      speed: p.speed,
+      quality: p.quality,
+      config: p.config,
+    })),
   });
+}
+
+async function handlePipelineRoute(body: Record<string, unknown>): Promise<Response> {
+  const { routeIdea } = await import("@golems/content/pipeline");
+
+  const idea = body.idea as string;
+  if (!idea) {
+    return Response.json({ error: "idea is required" }, { status: 400 });
+  }
+
+  const result = await routeIdea({
+    idea,
+    preferredFormat: body.preferredFormat as undefined,
+    project: body.project as string | undefined,
+    allowMulti: body.allowMulti as boolean | undefined,
+  });
+
+  return Response.json(result);
+}
+
+async function handlePipelineExecute(body: Record<string, unknown>): Promise<Response> {
+  const { routeIdea, executePlan } = await import("@golems/content/pipeline");
+
+  const idea = body.idea as string;
+  if (!idea) {
+    return Response.json({ error: "idea is required" }, { status: 400 });
+  }
+
+  const plan = await routeIdea({
+    idea,
+    preferredFormat: body.preferredFormat as undefined,
+    project: body.project as string | undefined,
+    allowMulti: body.allowMulti as boolean | undefined,
+  });
+
+  const result = await executePlan(plan, {
+    project: body.project as string | undefined,
+    serviceUrl: `http://localhost:${PORT}`,
+    trackRun: true,
+  });
+
+  return Response.json({
+    routing: plan,
+    execution: result,
+  });
+}
+
+async function handlePipelineStats(): Promise<Response> {
+  const { getPerformanceStats } = await import("@golems/content/pipeline");
+  const stats = await getPerformanceStats();
+  return Response.json({ stats });
 }
 
 async function handleDataVizRender(body: Record<string, unknown>): Promise<Response> {
@@ -304,7 +345,20 @@ const server = Bun.serve({
           break;
         }
         case method === "GET" && path === "/api/pipelines":
-          response = handlePipelines();
+          response = await handlePipelines();
+          break;
+        case method === "POST" && path === "/api/pipeline/route": {
+          const body = await req.json() as Record<string, unknown>;
+          response = await handlePipelineRoute(body);
+          break;
+        }
+        case method === "POST" && path === "/api/pipeline/execute": {
+          const body = await req.json() as Record<string, unknown>;
+          response = await handlePipelineExecute(body);
+          break;
+        }
+        case method === "GET" && path === "/api/pipeline/stats":
+          response = await handlePipelineStats();
           break;
         default:
           response = Response.json(
@@ -330,10 +384,13 @@ const server = Bun.serve({
 
 console.log(`Render service running on http://localhost:${PORT}`);
 console.log("Routes:");
-console.log("  POST /api/comfyui/generate  — Flux image generation");
-console.log("  GET  /api/comfyui/status    — ComfyUI server status");
-console.log("  POST /api/remotion/render   — Video rendering");
-console.log("  POST /api/remotion/still    — Single frame capture");
-console.log("  GET  /api/health            — Health check");
-console.log("  POST /api/dataviz/render    — Data visualization");
-console.log("  GET  /api/pipelines         — List pipelines");
+console.log("  POST /api/comfyui/generate   — Flux image generation");
+console.log("  GET  /api/comfyui/status     — ComfyUI server status");
+console.log("  POST /api/remotion/render    — Video rendering");
+console.log("  POST /api/remotion/still     — Single frame capture");
+console.log("  POST /api/dataviz/render     — Data visualization");
+console.log("  POST /api/pipeline/route     — AI-route idea to pipeline");
+console.log("  POST /api/pipeline/execute   — Route + execute in one call");
+console.log("  GET  /api/pipeline/stats     — Pipeline performance stats");
+console.log("  GET  /api/pipelines          — List pipelines");
+console.log("  GET  /api/health             — Health check");

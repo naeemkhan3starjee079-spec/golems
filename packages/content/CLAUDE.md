@@ -31,6 +31,12 @@ packages/content/
 │   │   ├── templates/           # Infographic layouts (linkedin-card, instagram-square, story-format)
 │   │   ├── renderer.ts          # SVG → PNG via sharp
 │   │   └── index.ts             # Barrel export
+│   ├── pipeline/                # Pipeline intelligence (Phase 6)
+│   │   ├── registry.ts          # Pipeline capabilities registry
+│   │   ├── router.ts            # AI routing: idea → best pipeline(s)
+│   │   ├── executor.ts          # Pipeline execution engine
+│   │   ├── tracker.ts           # Performance tracking (Supabase)
+│   │   └── index.ts             # Barrel export
 │   └── render/                  # Programmatic render service
 │       ├── render-service.ts    # renderVideo(), renderThumbnail(), job tracking
 │       └── index.ts             # Barrel export
@@ -291,6 +297,74 @@ const { config } = await loadBrandConfig("projects/golems-showcase");
 const theme = themeFromBrand(config);
 const chart = renderBarChart({ data: [...], theme });
 ```
+
+## Pipeline Intelligence
+
+AI-powered routing: describe an idea, get the best pipeline(s) to produce it.
+
+### CLI
+
+```bash
+# Route an idea to the best pipeline
+bun run pipeline route "Weekly job market bar chart"
+
+# Route + execute in one command
+bun run pipeline route "Animated code demo" --execute
+
+# Show pipeline performance stats
+bun run pipeline stats
+
+# List all available pipelines
+bun run pipeline list
+```
+
+### Available Pipelines
+
+| ID | Name | Inputs | Outputs | Best For |
+|----|------|--------|---------|----------|
+| `remotion` | Remotion Video | text, code, data | mp4, gif, png | Animations, code demos, data stories |
+| `comfyui` | Flux Image Gen | prompt, image | png, jpg, webp | Social visuals, merch, memes |
+| `dataviz` | Data Visualization | data_source | png, svg | Charts, infographics, reports |
+| `satori` | Template Fill | text, json | png, svg, pdf | Branded cards, quotes (planned) |
+| `figma-remotion` | Figma to Remotion | url, json | mp4, gif | Design animations (planned) |
+
+### Programmatic API
+
+```typescript
+import { routeIdea, executePlan } from "@golems/content/pipeline";
+
+// Route an idea
+const plan = await routeIdea({
+  idea: "Create a weekly job market infographic",
+  project: "golems-showcase",
+});
+
+console.log(plan.steps[0].pipelineId); // "dataviz"
+console.log(plan.reasoning); // "Job market data → dataviz pipeline..."
+
+// Execute the plan
+const result = await executePlan(plan, {
+  project: "golems-showcase",
+  trackRun: true,
+});
+```
+
+### Multi-Pipeline Combinations
+
+For complex ideas, the router can chain pipelines:
+- ComfyUI background → Remotion text animation overlay
+- Dataviz chart → Remotion animated version
+- Multiple chart types → infographic template
+
+### Performance Tracking
+
+Pipeline runs are logged to `pipeline_runs` Supabase table:
+- Pipeline ID, idea text, idea type classification
+- Success/failure, duration, quality score
+- User feedback (1-5 via Telegram reactions)
+- Used by the learning loop to improve routing over time
+
+---
 
 ## Current State
 

@@ -39,10 +39,12 @@ Claude automatically routes creative ideas to the best pipeline (or combination 
 
 ## Status
 
-- [ ] Pipeline registry JSON
-- [ ] Routing prompt / logic
-- [ ] Multi-pipeline combination support
-- [ ] Dynamic pipeline scaffolding
-- [ ] Quality scoring system
-- [ ] Learning loop (pipeline performance tracking)
-- [ ] Telegram UX for idea → pipeline → preview
+- [x] Pipeline registry JSON — `registry.ts` with 5 pipelines (3 active, 2 planned)
+- [x] Routing prompt / logic — `router.ts` with AI routing + keyword fallback
+- [x] Multi-pipeline combination support — `executor.ts` chains steps sequentially
+- [x] Dynamic pipeline scaffolding — registry extensible, new pipelines just add to array
+- [x] Quality scoring system — integrated into executor + tracker
+- [x] Learning loop (pipeline performance tracking) — `tracker.ts` + `pipeline_runs` Supabase table
+- [x] Render service routes — POST /api/pipeline/route, /execute, GET /stats
+- [x] CLI — `bun run pipeline route|stats|list`
+- [ ] Telegram UX for idea → pipeline → preview — deferred to ClaudeGolem integration

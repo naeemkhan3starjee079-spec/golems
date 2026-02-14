@@ -31,7 +31,11 @@
     "generate:status": "bun run scripts/generate.ts --status",
     "generate:models": "bun run scripts/generate.ts --models",
     "dataviz": "bun run scripts/dataviz.ts",
-    "dataviz:all": "bun run scripts/dataviz.ts all"
+    "dataviz:all": "bun run scripts/dataviz.ts all",
+    "pipeline": "bun run scripts/pipeline.ts",
+    "pipeline:route": "bun run scripts/pipeline.ts route",
+    "pipeline:stats": "bun run scripts/pipeline.ts stats",
+    "pipeline:list": "bun run scripts/pipeline.ts list"
   },
   "exports": {
     "./*": "./src/*.ts",
@@ -47,7 +51,9 @@
     "./dataviz/*": "./src/dataviz/*.ts",
     "./dataviz/fetchers/*": "./src/dataviz/fetchers/*.ts",
     "./dataviz/charts/*": "./src/dataviz/charts/*.ts",
-    "./dataviz/templates/*": "./src/dataviz/templates/*.ts"
+    "./dataviz/templates/*": "./src/dataviz/templates/*.ts",
+    "./pipeline": "./src/pipeline/index.ts",
+    "./pipeline/*": "./src/pipeline/*.ts"
   },
   "dependencies": {
     "@golems/shared": "workspace:*",

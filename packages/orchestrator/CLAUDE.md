@@ -40,8 +40,11 @@ bun run dev    # or: bun run packages/orchestrator/src/render-service.ts
 | `POST` | `/api/remotion/render` | Render Remotion composition to video |
 | `POST` | `/api/remotion/still` | Capture single frame |
 | `POST` | `/api/dataviz/render` | Generate branded data visualization |
+| `POST` | `/api/pipeline/route` | AI-route idea to best pipeline |
+| `POST` | `/api/pipeline/execute` | Route + execute in one call |
+| `GET` | `/api/pipeline/stats` | Pipeline performance statistics |
 | `GET` | `/api/health` | Health check |
-| `GET` | `/api/pipelines` | List available pipelines |
+| `GET` | `/api/pipelines` | List available pipelines (from registry) |
 
 ### ComfyUI Generate Request
 
