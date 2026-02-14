@@ -123,7 +123,7 @@ const HeroPropertyCard: React.FC<{ style?: React.CSSProperties }> = ({ style }) 
     >
       {/* Real apartment interior photo */}
       <Img
-        src={staticFile("images/apartment-interior.jpg")}
+        src={staticFile("images/apartment-interior.png")}
         style={{
           width: "100%",
           height: "100%",
@@ -226,7 +226,7 @@ export const DomicaHero: React.FC = () => {
         <div
           style={{
             position: "absolute",
-            left: 60,
+            left: 160,
             top: 80,
             transform: `rotate(-6deg) translateY(${floatY}px) rotate(${floatR}deg)`,
             transformOrigin: "center center",
@@ -236,12 +236,48 @@ export const DomicaHero: React.FC = () => {
         </div>
       </AnimateIn>
 
-      {/* Location pins — large pin top-left, small pin near card */}
-      <LocationPin x={50} y={10} delay={16} size={65} />
-      <LocationPin x={240} y={480} delay={24} size={36} />
+      {/* Map snippet — 40% screen height, centered between card and text */}
+      <AnimateIn delay={18} from="bottom" distance={60}>
+        <div
+          style={{
+            position: "absolute",
+            left: 940,
+            top: 100,
+            width: 220,
+            height: 220,
+            borderRadius: 16,
+            overflow: "hidden",
+            boxShadow:
+              "0 4px 20px rgba(0,0,0,0.1), 0 8px 40px rgba(37,99,235,0.08)",
+            border: "2px solid rgba(255,255,255,0.8)",
+          }}
+        >
+          <Img
+            src={staticFile("images/map-telaviv.png")}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              objectPosition: "center",
+            }}
+          />
+          {/* Pin on the map */}
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+            }}
+          >
+            <LocationPin x={100} y={120} delay={22} size={44} />
+          </div>
+        </div>
+      </AnimateIn>
 
       {/* Magnifying glass — large, overlapping card bottom-right */}
-      <MagnifyingGlass x={480} y={280} delay={22} size={300} />
+      <MagnifyingGlass x={580} y={280} delay={22} size={300} />
 
       {/* Glass bubbles scattered */}
       <DecorativeBubble x={250} y={15} delay={33} size={10} amplitude={6} speed={0.016} />
@@ -257,9 +293,9 @@ export const DomicaHero: React.FC = () => {
       <div
         style={{
           position: "absolute",
-          right: 60,
+          right: 80,
           top: 186,
-          width: 620,
+          width: 580,
           display: "flex",
           flexDirection: "column",
           alignItems: "flex-end",
