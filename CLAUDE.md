@@ -16,6 +16,7 @@
 | **@golems/content** | [`packages/content/`](packages/content/CLAUDE.md) | LinkedIn, Soltome, ghostwriting |
 | **@golems/coach** | [`packages/coach/`](packages/coach/CLAUDE.md) | Calendar, schedule, life planning |
 | **@golems/services** | [`packages/services/`](packages/services/CLAUDE.md) | Night Shift, Briefing, Cloud Worker, Doctor, Wizard |
+| **@golems/orchestrator** | [`packages/orchestrator/`](packages/orchestrator/CLAUDE.md) | n8n orchestration, render microservice |
 | **ralph** | [`packages/ralph/`](packages/ralph/CLAUDE.md) | Autonomous coding loop (PRD execution) |
 | **zikaron** | [`packages/zikaron/`](packages/zikaron/CLAUDE.md) | Memory layer (Python + sqlite-vec) |
 
@@ -32,7 +33,8 @@ golems/                              # Bun workspace monorepo
 ├── packages/recruiter/              # RecruiterGolem — outreach, practice
 ├── packages/teller/                 # TellerGolem — finances, categorization
 ├── packages/jobs/                   # JobGolem — scraping, ATS, matching
-├── packages/content/                # ContentGolem — LinkedIn, Soltome
+├── packages/content/                # ContentGolem — LinkedIn, Soltome, visual content
+├── packages/orchestrator/           # n8n orchestration + Bun render microservice
 ├── packages/coach/                  # CoachGolem — schedule, calendar
 ├── packages/services/               # Night Shift, Briefing, Cloud Worker
 ├── packages/autonomous/             # Legacy stranglers (1-line re-exports)

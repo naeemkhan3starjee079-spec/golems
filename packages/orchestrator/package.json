@@ -1,0 +1,22 @@
+{
+  "name": "@golems/orchestrator",
+  "version": "1.0.0",
+  "description": "n8n orchestration layer — Docker Compose, Bun render microservice, workflow templates.",
+  "author": "Etan Heyman <etan@heyman.net>",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun run src/render-service.ts",
+    "start": "bun run src/render-service.ts",
+    "backup": "bash scripts/backup-workflows.sh",
+    "restore": "bash scripts/restore-workflows.sh"
+  },
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "dependencies": {
+    "@golems/shared": "workspace:*",
+    "@golems/content": "workspace:*"
+  }
+}

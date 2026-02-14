@@ -25,8 +25,8 @@
 |---|-------|--------|--------|-------|
 | 1 | Brand System + Project Schema | [phase-1-brand-system](phase-1-brand-system/) | done | Schema, validator, 3 project configs |
 | 2 | Remotion Animation Pipeline | [phase-2-remotion-pipeline](phase-2-remotion-pipeline/) | done | 4 templates, render service, CLI, multi-platform (PR #159) |
-| 3 | Flux/ComfyUI Image Generation | [phase-3-flux-comfyui](phase-3-flux-comfyui/) | in PR | ComfyUI + models + TS client + quality pipeline + CLI |
-| 4 | n8n Orchestration Layer | [phase-4-n8n-orchestration](phase-4-n8n-orchestration/) | pending | Research DONE — n8n confirmed, Docker + Bun microservice |
+| 3 | Flux/ComfyUI Image Generation | [phase-3-flux-comfyui](phase-3-flux-comfyui/) | done | ComfyUI + models + TS client + quality pipeline + CLI (PR #160) |
+| 4 | n8n Orchestration Layer | [phase-4-n8n-orchestration](phase-4-n8n-orchestration/) | in PR | Orchestrator pkg, render service, workflow templates, Docker Compose |
 | 5 | Data Visualization Pipeline | [phase-5-data-viz](phase-5-data-viz/) | pending | Charts/graphs from golem data |
 | 6 | Pipeline Intelligence | [phase-6-pipeline-intelligence](phase-6-pipeline-intelligence/) | pending | Claude auto-routes ideas |
 | 7 | Dashboard Integration | [phase-7-dashboard-integration](phase-7-dashboard-integration/) | pending | Content tab in Ops Dashboard |
