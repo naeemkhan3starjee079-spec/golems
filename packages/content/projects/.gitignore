@@ -1,0 +1,9 @@
+# Generated content outputs — never commit
+**/outputs/
+**/assets/*.png
+**/assets/*.jpg
+**/assets/*.mp4
+**/assets/*.gif
+
+# Keep directory structure
+!**/.gitkeep

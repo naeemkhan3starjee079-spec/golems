@@ -20,8 +20,13 @@
     "remotion",
     "video"
   ],
+  "scripts": {
+    "validate-brand": "bun run scripts/validate-brand.ts"
+  },
   "exports": {
     "./*": "./src/*.ts",
+    "./brand": "./src/brand/index.ts",
+    "./brand/*": "./src/brand/*.ts",
     "./remotion": "./src/remotion/index.ts",
     "./remotion/*": "./src/remotion/*.ts"
   },

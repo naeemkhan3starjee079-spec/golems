@@ -1,17 +1,26 @@
 # ContentGolem
 
-> Content creation — LinkedIn posts, Soltome publishing, ghostwriting, and content strategy.
+> Content creation — visual content factory + text publishing. Brand-aware, multi-pipeline.
 
 ## Role
 
-ContentGolem handles **all content creation and publishing**: drafting LinkedIn posts, publishing to Soltome, ghostwriting in the owner's voice, and managing a content calendar.
+ContentGolem handles **all content creation and publishing**: visual content (animations, images, data viz), LinkedIn posts, Soltome publishing, ghostwriting, and content strategy. All visual output is brand-aware via per-project `brand.json` configs.
 
 ## Architecture
 
 ```text
 packages/content/
-├── src/                         # (empty — content logic lives in skills for now)
-├── .claude-plugin/plugin.json
+├── src/
+│   ├── brand/                   # Brand config schema + validation
+│   │   ├── schema.ts            # BrandConfig interface + validator
+│   │   └── index.ts             # Barrel export
+│   └── remotion/                # Remotion animation components
+├── projects/                    # Per-project brand configs (outputs gitignored)
+│   ├── golems-showcase/         # brand.json + templates/ + outputs/
+│   ├── techgym-posts/           # brand.json + templates/ + outputs/
+│   └── political-merch/         # brand.json + templates/ + outputs/
+├── scripts/
+│   └── validate-brand.ts        # CLI: bun run validate-brand [project]
 ├── CLAUDE.md                    # This file
 └── package.json                 # @golems/content
 ```
@@ -19,6 +28,27 @@ packages/content/
 ## Dependencies
 
 - `@golems/shared` — Supabase factory, event log, LLM
+
+## Brand System
+
+**ALWAYS read the project's `brand.json` before generating any visual content.**
+
+```typescript
+import { loadBrandConfig } from "@golems/content/brand";
+
+const { config, errors } = await loadBrandConfig("projects/golems-showcase");
+if (errors.length > 0) throw new Error(`Invalid brand config: ${errors.map(e => e.message).join(", ")}`);
+
+// Use config.colors, config.typography, config.tone, etc.
+```
+
+| Project | Use Case | Brand File |
+|---------|----------|------------|
+| `golems-showcase` | Product demos, architecture viz, feature showcases | `projects/golems-showcase/brand.json` |
+| `techgym-posts` | Israeli tech community content (Hebrew-first) | `projects/techgym-posts/brand.json` |
+| `political-merch` | Bold merch designs (t-shirts, stickers) | `projects/political-merch/brand.json` |
+
+Validate all configs: `bun run validate-brand` (runs from packages/content/).
 
 ## Current State
 
