@@ -254,7 +254,7 @@ def recursive_leiden(
 
     if n < 3:
         # Too small to cluster further
-        cluster_id = str(uuid.uuid4())[:8]
+        cluster_id = str(uuid.uuid4())[:12]
         path = f"{parent_path}/{cluster_id}" if parent_path else cluster_id
         centroid = embeddings[node_indices].mean(axis=0) if len(node_indices) > 0 else np.zeros(EMBEDDING_DIM)
         return [{
@@ -298,7 +298,7 @@ def recursive_leiden(
         local_indices = communities[comm_id]
         global_indices = np.array([node_indices[i] for i in local_indices])
 
-        cluster_id = str(uuid.uuid4())[:8]
+        cluster_id = str(uuid.uuid4())[:12]
         path = f"{parent_path}/{cluster_id}" if parent_path else cluster_id
         centroid = embeddings[global_indices].mean(axis=0)
 
@@ -402,45 +402,56 @@ def write_clusters(
     embeddings: np.ndarray,
     run_id: str,
 ):
-    """Write cluster hierarchy and chunk assignments to SQLite."""
+    """Write cluster hierarchy and chunk assignments to SQLite.
+
+    Wrapped in a single transaction — either all clusters are written or none
+    (prevents partial state if an insert fails after clearing old data).
+    """
     cursor = conn.cursor()
     cursor.execute("PRAGMA busy_timeout = 5000")
     now = datetime.now(timezone.utc).isoformat()
 
-    # Clear previous data
-    cursor.execute("DELETE FROM clusters")
-    cursor.execute("DELETE FROM chunk_clusters")
-    cursor.execute("DELETE FROM vec_cluster_centroids")
+    cursor.execute("BEGIN")
+    try:
+        # Clear previous data
+        cursor.execute("DELETE FROM clusters")
+        cursor.execute("DELETE FROM chunk_clusters")
+        cursor.execute("DELETE FROM vec_cluster_centroids")
 
-    logger.info(f"Writing {len(clusters)} clusters...")
+        logger.info(f"Writing {len(clusters)} clusters...")
 
-    for cluster in clusters:
-        # Write cluster
-        cursor.execute(
-            "INSERT INTO clusters (id, level, parent_id, path, chunk_count, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (cluster["id"], cluster["level"], cluster["parent_id"], cluster["path"], cluster["chunk_count"], now, now),
-        )
-
-        # Write centroid (L2-normalize for cosine similarity via sqlite-vec match)
-        centroid = cluster["centroid"].copy()
-        norm = np.linalg.norm(centroid)
-        if norm > 0:
-            centroid /= norm
-        cursor.execute(
-            "INSERT INTO vec_cluster_centroids (cluster_id, centroid) VALUES (?, ?)",
-            (cluster["id"], serialize_f32(centroid.tolist())),
-        )
-
-        # Write chunk assignments
-        for global_idx in cluster["node_indices"]:
-            cid = chunk_ids[global_idx]
-            dist = float(np.linalg.norm(embeddings[global_idx] - cluster["centroid"]))
+        for cluster in clusters:
+            # Write cluster
             cursor.execute(
-                "INSERT OR REPLACE INTO chunk_clusters (chunk_id, cluster_id, level, dist_to_centroid, assignment_method, assigned_at) VALUES (?, ?, ?, ?, 'initial', ?)",
-                (cid, cluster["id"], cluster["level"], dist, now),
+                "INSERT INTO clusters (id, level, parent_id, path, chunk_count, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (cluster["id"], cluster["level"], cluster["parent_id"], cluster["path"], cluster["chunk_count"], now, now),
             )
 
-    logger.info(f"Written {len(clusters)} clusters to DB")
+            # Write centroid (L2-normalize for cosine similarity via sqlite-vec match)
+            centroid = cluster["centroid"].copy()
+            norm = np.linalg.norm(centroid)
+            if norm > 0:
+                centroid /= norm
+            cursor.execute(
+                "INSERT INTO vec_cluster_centroids (cluster_id, centroid) VALUES (?, ?)",
+                (cluster["id"], serialize_f32(centroid.tolist())),
+            )
+
+            # Write chunk assignments
+            for global_idx in cluster["node_indices"]:
+                cid = chunk_ids[global_idx]
+                dist = float(np.linalg.norm(embeddings[global_idx] - cluster["centroid"]))
+                cursor.execute(
+                    "INSERT OR REPLACE INTO chunk_clusters (chunk_id, cluster_id, level, dist_to_centroid, assignment_method, assigned_at) VALUES (?, ?, ?, ?, 'initial', ?)",
+                    (cid, cluster["id"], cluster["level"], dist, now),
+                )
+
+        cursor.execute("COMMIT")
+        logger.info(f"Written {len(clusters)} clusters to DB")
+    except Exception:
+        cursor.execute("ROLLBACK")
+        logger.error("Failed to write clusters — rolled back")
+        raise
 
 
 # ─── Step 7: c-TF-IDF Labeling ──────────────────────────────────
