@@ -12,6 +12,18 @@ import {
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { DocNavItem, TocItem } from "@/lib/docs";
 
+/** Walk up the DOM to find the nearest scrollable ancestor */
+function getScrollParent(el: HTMLElement | null): HTMLElement {
+  if (!el) return document.documentElement;
+  let parent = el.parentElement;
+  while (parent) {
+    const { overflowY } = getComputedStyle(parent);
+    if (overflowY === "auto" || overflowY === "scroll") return parent;
+    parent = parent.parentElement;
+  }
+  return document.documentElement;
+}
+
 type Props = {
   html: string;
   title: string;
@@ -222,38 +234,38 @@ export function DocsClient({
 }: Props) {
   const [activeId, setActiveId] = useState("");
   const contentRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLElement | null>(null);
 
   // Scroll spy — track which heading is currently visible
   const handleScroll = useCallback(() => {
     if (toc.length === 0) return;
+    const container = scrollRef.current;
+    if (!container) return;
 
-    const headings = toc
-      .map((item) => ({
-        id: item.id,
-        el: document.getElementById(item.id),
-      }))
-      .filter((h) => h.el !== null);
+    const containerRect = container.getBoundingClientRect();
+    const offset = 100; // px from top of scroll container
+    let current = toc[0].id;
 
-    if (headings.length === 0) return;
-
-    // Find the heading closest to top of viewport (with offset)
-    const scrollTop = window.scrollY;
-    const offset = 100;
-    let current = headings[0].id;
-
-    for (const heading of headings) {
-      if (heading.el!.offsetTop <= scrollTop + offset) {
-        current = heading.id;
+    for (const item of toc) {
+      const el = document.getElementById(item.id);
+      if (!el) continue;
+      const rect = el.getBoundingClientRect();
+      // Heading is above the offset threshold → it's the active one
+      if (rect.top - containerRect.top <= offset) {
+        current = item.id;
       }
     }
 
     setActiveId(current);
   }, [toc]);
 
+  // Attach scroll listener to the real scroll container (<main>), not window
   useEffect(() => {
+    const container = getScrollParent(contentRef.current);
+    scrollRef.current = container;
     handleScroll();
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    return () => container.removeEventListener("scroll", handleScroll);
   }, [handleScroll]);
 
   // Set active from URL hash on mount
@@ -261,13 +273,59 @@ export function DocsClient({
     const hash = window.location.hash.slice(1);
     if (hash) {
       setActiveId(hash);
-      // Scroll to hash after a brief delay for render
       setTimeout(() => {
         const el = document.getElementById(hash);
         if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 100);
     }
   }, []);
+
+  // Render mermaid diagrams client-side
+  useEffect(() => {
+    const blocks = contentRef.current?.querySelectorAll(".mermaid-block");
+    if (!blocks || blocks.length === 0) return;
+
+    let cancelled = false;
+    (async () => {
+      const mermaid = (await import("mermaid")).default;
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: "dark",
+        themeVariables: {
+          darkMode: true,
+          background: "transparent",
+          primaryColor: "#3b82f6",
+          primaryTextColor: "#e4e4e7",
+          primaryBorderColor: "#52525b",
+          lineColor: "#71717a",
+          secondaryColor: "#27272a",
+          tertiaryColor: "#18181b",
+          fontFamily: "ui-monospace, monospace",
+          fontSize: "13px",
+        },
+      });
+      if (cancelled) return;
+
+      for (let i = 0; i < blocks.length; i++) {
+        const block = blocks[i] as HTMLElement;
+        const source = decodeURIComponent(block.dataset.mermaid ?? "");
+        if (!source) continue;
+        try {
+          const id = `mermaid-${currentSlug.replace(/\//g, "-")}-${i}`;
+          const { svg } = await mermaid.render(id, source);
+          if (!cancelled) {
+            block.innerHTML = svg;
+            block.classList.add("mermaid-rendered");
+          }
+        } catch {
+          // Leave raw text visible on render failure
+          block.classList.add("mermaid-error");
+        }
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [html, currentSlug]);
 
   return (
     <div className="flex gap-0 -mx-2">
@@ -303,7 +361,11 @@ export function DocsClient({
               prose-a:text-accent prose-a:no-underline hover:prose-a:underline
               prose-code:text-accent prose-code:bg-accent/5 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-[13px]
               prose-pre:bg-transparent prose-pre:border-0 prose-pre:p-0 prose-pre:rounded-lg prose-pre:text-[13px]
+              [&_pre>code]:bg-transparent [&_pre>code]:p-0 [&_pre>code]:rounded-none [&_pre>code]:text-inherit [&_pre>code]:before:content-none [&_pre>code]:after:content-none
               [&_.shiki]:rounded-lg [&_.shiki]:border [&_.shiki]:border-border/40 [&_.shiki]:p-4 [&_.shiki]:overflow-x-auto [&_.shiki]:text-[13px] [&_.shiki]:leading-relaxed
+              [&_.mermaid-block]:my-6 [&_.mermaid-block]:rounded-lg [&_.mermaid-block]:border [&_.mermaid-block]:border-border/40 [&_.mermaid-block]:p-4 [&_.mermaid-block]:overflow-x-auto [&_.mermaid-block]:bg-zinc-900/50
+              [&_.mermaid-rendered]:text-center [&_.mermaid-rendered_svg]:mx-auto [&_.mermaid-rendered_svg]:max-w-full
+              [&_.mermaid-error]:text-[13px] [&_.mermaid-error]:font-mono [&_.mermaid-error]:text-muted [&_.mermaid-error]:whitespace-pre-wrap
               prose-table:text-sm prose-th:text-foreground prose-th:font-medium prose-td:text-muted
               prose-li:text-muted prose-strong:text-foreground
               prose-blockquote:border-accent/30 prose-blockquote:text-muted/80"

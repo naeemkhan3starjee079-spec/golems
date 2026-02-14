@@ -140,6 +140,7 @@ export async function renderMarkdown(content: string): Promise<{ html: string; t
   const rawHtml = await marked.parse(content);
 
   // Post-process: replace <code> blocks inside <pre> with shiki-highlighted versions
+  // Mermaid blocks get a special wrapper for client-side rendering
   let html = rawHtml.replace(
     /<pre><code class="language-(\w+)">([\s\S]*?)<\/code><\/pre>/g,
     (_match, lang: string, code: string) => {
@@ -149,6 +150,10 @@ export async function renderMarkdown(content: string): Promise<{ html: string; t
         .replace(/&gt;/g, ">")
         .replace(/&quot;/g, '"')
         .replace(/&#39;/g, "'");
+
+      if (lang === "mermaid") {
+        return `<div class="mermaid-block" data-mermaid="${encodeURIComponent(raw.trim())}">${raw.trim()}</div>`;
+      }
 
       if (loadedLangs.has(lang)) {
         return hl.codeToHtml(raw, { lang, theme: "github-dark" });
