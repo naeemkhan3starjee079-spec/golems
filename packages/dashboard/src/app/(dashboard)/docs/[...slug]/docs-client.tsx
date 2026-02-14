@@ -71,7 +71,7 @@ function NavItem({
         <button
           type="button"
           onClick={() => setOpen(!open)}
-          className={`flex items-center gap-2 w-full px-3 py-1.5 text-[12px] font-medium transition-colors ${
+          className={`flex items-center gap-2 w-full px-3 py-1.5 text-[13px] font-medium transition-colors ${
             isChildActive
               ? "text-foreground"
               : "text-muted hover:text-foreground"
@@ -108,7 +108,7 @@ function NavItem({
   return (
     <Link
       href={`/docs/${item.slug}`}
-      className={`flex items-center gap-2 px-3 py-1.5 text-[12px] rounded-r-md transition-colors ${
+      className={`flex items-center gap-2 px-3 py-1.5 text-[13px] rounded-r-md transition-colors ${
         isActive
           ? "text-accent bg-accent/10 font-medium border-l-2 border-accent"
           : "text-muted hover:text-foreground hover:bg-surface-hover"
@@ -134,7 +134,7 @@ function TableOfContents({
 
   return (
     <nav className="space-y-0.5">
-      <div className="flex items-center gap-2 px-2 py-2 text-[11px] font-semibold text-muted uppercase tracking-wider">
+      <div className="flex items-center gap-2 px-2 py-2 text-[11px] font-semibold text-accent uppercase tracking-wider">
         <List className="w-3.5 h-3.5" />
         On this page
       </div>
@@ -149,7 +149,6 @@ function TableOfContents({
               const el = document.getElementById(item.id);
               if (el) {
                 el.scrollIntoView({ behavior: "smooth", block: "start" });
-                // Update URL hash without jump
                 window.history.replaceState(null, "", `#${item.id}`);
               }
             }}
@@ -221,6 +220,70 @@ function PrevNextNav({
   );
 }
 
+// --- Mermaid CDN loader ---
+
+let mermaidLoaded = false;
+let mermaidPromise: Promise<void> | null = null;
+
+function loadMermaid(): Promise<void> {
+  if (mermaidLoaded) return Promise.resolve();
+  if (mermaidPromise) return mermaidPromise;
+
+  mermaidPromise = new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.type = "module";
+    // Use an inline module that imports from CDN and exposes on window
+    const blob = new Blob(
+      [
+        `import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+         mermaid.initialize({
+           startOnLoad: false,
+           theme: "dark",
+           themeVariables: {
+             darkMode: true,
+             background: "transparent",
+             primaryColor: "#3b82f6",
+             primaryTextColor: "#e4e4e7",
+             primaryBorderColor: "#52525b",
+             lineColor: "#71717a",
+             secondaryColor: "#27272a",
+             tertiaryColor: "#18181b",
+             fontFamily: "ui-monospace, monospace",
+             fontSize: "13px",
+           },
+         });
+         window.__mermaid = mermaid;
+         window.dispatchEvent(new Event("mermaid-ready"));`,
+      ],
+      { type: "text/javascript" },
+    );
+    script.src = URL.createObjectURL(blob);
+    script.onload = () => {
+      // Wait for the module to execute and dispatch the event
+      const onReady = () => {
+        mermaidLoaded = true;
+        resolve();
+      };
+      if (window.__mermaid) {
+        onReady();
+      } else {
+        window.addEventListener("mermaid-ready", onReady, { once: true });
+      }
+    };
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+
+  return mermaidPromise;
+}
+
+// Extend window for mermaid
+declare global {
+  interface Window {
+    __mermaid?: { render: (id: string, source: string) => Promise<{ svg: string }> };
+  }
+}
+
 // --- Main Layout ---
 
 export function DocsClient({
@@ -243,17 +306,23 @@ export function DocsClient({
     if (!container) return;
 
     const containerRect = container.getBoundingClientRect();
-    const offset = 100; // px from top of scroll container
+    const offset = 100;
     let current = toc[0].id;
 
     for (const item of toc) {
       const el = document.getElementById(item.id);
       if (!el) continue;
       const rect = el.getBoundingClientRect();
-      // Heading is above the offset threshold → it's the active one
       if (rect.top - containerRect.top <= offset) {
         current = item.id;
       }
+    }
+
+    // Edge case: if scrolled near bottom, activate the last heading
+    const scrollBottom = container.scrollTop + container.clientHeight;
+    const scrollMax = container.scrollHeight;
+    if (scrollMax - scrollBottom < 60) {
+      current = toc[toc.length - 1].id;
     }
 
     setActiveId(current);
@@ -280,31 +349,21 @@ export function DocsClient({
     }
   }, []);
 
-  // Render mermaid diagrams client-side
+  // Render mermaid diagrams via CDN
   useEffect(() => {
     const blocks = contentRef.current?.querySelectorAll(".mermaid-block");
     if (!blocks || blocks.length === 0) return;
 
     let cancelled = false;
     (async () => {
-      const mermaid = (await import("mermaid")).default;
-      mermaid.initialize({
-        startOnLoad: false,
-        theme: "dark",
-        themeVariables: {
-          darkMode: true,
-          background: "transparent",
-          primaryColor: "#3b82f6",
-          primaryTextColor: "#e4e4e7",
-          primaryBorderColor: "#52525b",
-          lineColor: "#71717a",
-          secondaryColor: "#27272a",
-          tertiaryColor: "#18181b",
-          fontFamily: "ui-monospace, monospace",
-          fontSize: "13px",
-        },
-      });
-      if (cancelled) return;
+      try {
+        await loadMermaid();
+      } catch {
+        // CDN failed — mark all blocks as errors
+        blocks.forEach((b) => b.classList.add("mermaid-error"));
+        return;
+      }
+      if (cancelled || !window.__mermaid) return;
 
       for (let i = 0; i < blocks.length; i++) {
         const block = blocks[i] as HTMLElement;
@@ -312,13 +371,12 @@ export function DocsClient({
         if (!source) continue;
         try {
           const id = `mermaid-${currentSlug.replace(/\//g, "-")}-${i}`;
-          const { svg } = await mermaid.render(id, source);
+          const { svg } = await window.__mermaid!.render(id, source);
           if (!cancelled) {
             block.innerHTML = svg;
             block.classList.add("mermaid-rendered");
           }
         } catch {
-          // Leave raw text visible on render failure
           block.classList.add("mermaid-error");
         }
       }
@@ -332,7 +390,7 @@ export function DocsClient({
       {/* Left sidebar nav */}
       <aside className="hidden lg:block w-56 shrink-0 border-r border-border/40 pr-2">
         <div className="sticky top-4 py-2 space-y-0.5 max-h-[calc(100vh-80px)] overflow-y-auto scrollbar-thin">
-          <div className="flex items-center gap-2 px-3 py-2 text-[11px] font-semibold text-muted uppercase tracking-wider">
+          <div className="flex items-center gap-2 px-3 py-2 text-[11px] font-semibold text-accent uppercase tracking-wider">
             <BookOpen className="w-3.5 h-3.5" />
             Documentation
           </div>
@@ -349,37 +407,44 @@ export function DocsClient({
       {/* Content area */}
       <div className="flex-1 min-w-0 px-6 lg:px-10">
         <article ref={contentRef} className="max-w-3xl mx-auto">
-          <h1 className="text-2xl font-bold mb-6 text-foreground">
+          <h1 className="text-3xl font-bold mb-8 text-foreground tracking-tight">
             {title}
           </h1>
           <div
-            className="prose prose-invert prose-sm max-w-none
-              prose-headings:text-foreground prose-headings:font-semibold prose-headings:scroll-mt-20
-              prose-h2:text-lg prose-h2:mt-8 prose-h2:mb-3 prose-h2:border-b prose-h2:border-border/30 prose-h2:pb-2
-              prose-h3:text-base prose-h3:mt-6 prose-h3:mb-2
-              prose-p:text-muted prose-p:leading-relaxed
+            className="prose prose-invert max-w-none
+              prose-headings:text-foreground prose-headings:font-bold prose-headings:scroll-mt-20
+              prose-h2:text-xl prose-h2:mt-10 prose-h2:mb-4 prose-h2:border-b prose-h2:border-border/30 prose-h2:pb-2
+              prose-h3:text-lg prose-h3:mt-8 prose-h3:mb-3
+              prose-h4:text-base prose-h4:mt-6 prose-h4:mb-2
+              prose-p:text-zinc-300 prose-p:leading-relaxed prose-p:text-[15px]
               prose-a:text-accent prose-a:no-underline hover:prose-a:underline
-              prose-code:text-accent prose-code:bg-accent/5 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-[13px]
+              prose-code:text-accent prose-code:bg-accent/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-[13px] prose-code:font-medium
               prose-pre:bg-transparent prose-pre:border-0 prose-pre:p-0 prose-pre:rounded-lg prose-pre:text-[13px]
-              [&_pre>code]:bg-transparent [&_pre>code]:p-0 [&_pre>code]:rounded-none [&_pre>code]:text-inherit [&_pre>code]:before:content-none [&_pre>code]:after:content-none
+              [&_pre>code]:bg-transparent [&_pre>code]:p-0 [&_pre>code]:rounded-none [&_pre>code]:text-inherit [&_pre>code]:before:content-none [&_pre>code]:after:content-none [&_pre>code]:font-normal
               [&_.shiki]:rounded-lg [&_.shiki]:border [&_.shiki]:border-border/40 [&_.shiki]:p-4 [&_.shiki]:overflow-x-auto [&_.shiki]:text-[13px] [&_.shiki]:leading-relaxed
-              [&_.mermaid-block]:my-6 [&_.mermaid-block]:rounded-lg [&_.mermaid-block]:border [&_.mermaid-block]:border-border/40 [&_.mermaid-block]:p-4 [&_.mermaid-block]:overflow-x-auto [&_.mermaid-block]:bg-zinc-900/50
+              [&_.mermaid-block]:my-8 [&_.mermaid-block]:rounded-lg [&_.mermaid-block]:border [&_.mermaid-block]:border-border/40 [&_.mermaid-block]:p-6 [&_.mermaid-block]:overflow-x-auto [&_.mermaid-block]:bg-zinc-900/50
               [&_.mermaid-rendered]:text-center [&_.mermaid-rendered_svg]:mx-auto [&_.mermaid-rendered_svg]:max-w-full
               [&_.mermaid-error]:text-[13px] [&_.mermaid-error]:font-mono [&_.mermaid-error]:text-muted [&_.mermaid-error]:whitespace-pre-wrap
-              prose-table:text-sm prose-th:text-foreground prose-th:font-medium prose-td:text-muted
-              prose-li:text-muted prose-strong:text-foreground
-              prose-blockquote:border-accent/30 prose-blockquote:text-muted/80"
+              prose-table:text-[14px] prose-table:border-collapse
+              [&_table]:w-full [&_table]:my-6
+              [&_thead]:border-b-2 [&_thead]:border-border/50
+              [&_th]:text-accent [&_th]:uppercase [&_th]:text-[12px] [&_th]:tracking-wider [&_th]:font-semibold [&_th]:py-2.5 [&_th]:px-3 [&_th]:text-left
+              [&_td]:py-2 [&_td]:px-3 [&_td]:text-zinc-300 [&_td]:border-b [&_td]:border-border/20
+              [&_td_code]:text-accent [&_td_code]:bg-accent/10 [&_td_code]:px-1.5 [&_td_code]:py-0.5 [&_td_code]:rounded [&_td_code]:text-[13px]
+              [&_tbody_tr:hover]:bg-zinc-800/30
+              prose-li:text-zinc-300 prose-li:text-[15px] prose-strong:text-foreground
+              prose-blockquote:border-accent/30 prose-blockquote:text-zinc-400 prose-blockquote:text-[15px]
+              prose-hr:border-border/30 prose-hr:my-8"
             dangerouslySetInnerHTML={{ __html: html }}
           />
 
-          {/* Prev/Next footer */}
           <PrevNextNav prev={prev} next={next} />
         </article>
       </div>
 
       {/* Right-side TOC */}
       {toc.length > 0 && (
-        <aside className="hidden xl:block w-48 shrink-0 pl-2">
+        <aside className="hidden xl:block w-52 shrink-0 pl-4">
           <div className="sticky top-4 max-h-[calc(100vh-80px)] overflow-y-auto scrollbar-thin">
             <TableOfContents toc={toc} activeId={activeId} />
           </div>
