@@ -49,20 +49,20 @@ Update architecture documentation. Centralize dashboard types. Build unified doc
 ## Status
 
 ### Part A: Code Quality
-- [ ] Centralize dashboard types
-- [ ] Centralize shared helpers
+- [x] Centralize dashboard types (13 type files in types/, barrel index, 31 types extracted from 11 pages)
+- [x] Centralize shared helpers (timeAgo x4, formatDuration x2 → format.ts)
 
 ### Part B: Docs Rendering Parity
-- [ ] Audit portfolio docs rendering
-- [ ] Choose rendering strategy
-- [ ] Implement unified rendering
-- [ ] Add syntax highlighting
+- [x] Audit portfolio docs rendering (dashboard uses marked + prose, no highlighting)
+- [x] Choose rendering strategy (D: Tailwind prose + shiki for code blocks)
+- [x] Implement unified rendering (renderMarkdown() with shiki post-processing)
+- [x] Add syntax highlighting (shiki github-dark theme, 17 languages)
 - [ ] Verify parity (side-by-side)
 
 ### Part C: Architecture Docs
-- [ ] architecture.md
-- [ ] cloud-worker.md
-- [ ] llm.md
-- [ ] mcp-tools.md
-- [ ] dashboard.md (new)
-- [ ] content-pipelines.md (new)
+- [x] architecture.md (14 packages, Gemini backend, Vercel in diagrams, 18 Supabase tables)
+- [x] cloud-worker.md (Gemini Flash-Lite, removed Learner, updated env vars)
+- [x] llm.md (regenerated from all 26 individual docs — "For LLMs" concatenated page)
+- [x] mcp-tools.md (7 servers summary table, all 8 Zikaron tools, GLM tools added)
+- [x] dashboard.md (new — pages table, architecture, tech stack, auth flow, docs rendering)
+- [x] content-pipelines.md (new — 5 visual pipelines with flow diagrams, routing, pipeline_runs)

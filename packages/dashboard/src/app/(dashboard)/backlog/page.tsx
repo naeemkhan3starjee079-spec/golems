@@ -21,21 +21,8 @@ import {
   updateBacklogItem,
   deleteBacklogItem as removeBacklogItem,
 } from "@/lib/supabase/queries";
-
-type BacklogItem = {
-  id: string;
-  project: string;
-  title: string;
-  description: string | null;
-  status: string;
-  priority: string;
-  tags: string[];
-  created_by: string;
-  created_at: string;
-  updated_at: string;
-  plan_name: string | null;
-  phase: string | null;
-};
+import type { BacklogItem } from "@/lib/types";
+import { timeAgo } from "@/lib/format";
 
 const COLUMNS = [
   { key: "ideas", label: "Ideas", icon: Lightbulb, color: "text-yellow-400" },
@@ -58,16 +45,6 @@ const NEXT_STATUS: Record<string, string> = {
   in_progress: "done",
   done: "archived",
 };
-
-function timeAgo(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "now";
-  if (mins < 60) return `${mins}m`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h`;
-  return `${Math.floor(hrs / 24)}d`;
-}
 
 export default function BacklogPage() {
   const [items, setItems] = useState<BacklogItem[] | null>(null);

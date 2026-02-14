@@ -7,29 +7,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { PageSkeleton } from "@/components/skeleton";
 import { fetchSubscriptions, fetchPayments } from "@/lib/supabase/queries";
 import { timeAgo } from "@/lib/format";
-
-// --- Types ---
-
-type Subscription = {
-  id: string;
-  service_name: string;
-  amount: number | null;
-  currency: string | null;
-  frequency: string | null;
-  status: string | null;
-  last_payment: string | null;
-  created_at: string;
-};
-
-type Payment = {
-  id: string;
-  amount: number | null;
-  currency: string | null;
-  paid_at: string | null;
-  subscription_id: string | null;
-};
-
-// --- Page ---
+import type { Subscription, Payment } from "@/lib/types";
 
 export default function TellerPage() {
   const [subs, setSubs] = useState<Subscription[]>([]);

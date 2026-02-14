@@ -17,46 +17,8 @@ import { useCallback, useEffect, useState } from "react";
 import { PageSkeleton } from "@/components/skeleton";
 import { fetchPipelineRuns, fetchPipelineStats } from "@/lib/supabase/queries";
 
-// --- Types ---
-
-type PipelineRun = {
-  id: string;
-  pipeline_id: string;
-  idea: string;
-  idea_type: string;
-  success: boolean;
-  duration_ms: number;
-  quality_score: number | null;
-  user_feedback: number | null;
-  output_format: string | null;
-  error: string | null;
-  created_at: string;
-};
-
-type PipelineStat = {
-  pipeline_id: string;
-  total_runs: number;
-  successful_runs: number;
-  success_rate: number;
-  avg_quality: number | null;
-  avg_duration_ms: number;
-  top_idea_types: string[];
-};
-
-type RoutingResult = {
-  success: boolean;
-  steps: {
-    pipelineId: string;
-    reason: string;
-    outputFormat: string;
-    params: Record<string, unknown>;
-  }[];
-  reasoning: string;
-  confidence: number;
-  isMultiPipeline: boolean;
-};
-
-// --- Helpers ---
+import type { PipelineRun, PipelineStat, RoutingResult, FlowStep } from "@/lib/types";
+import { formatDuration, timeAgo } from "@/lib/format";
 
 const PIPELINE_COLORS: Record<string, string> = {
   remotion: "text-violet-400",
@@ -74,30 +36,6 @@ const PIPELINE_LABELS: Record<string, string> = {
   satori: "Template Fill",
   playwright: "Playwright Screenshots",
   "figma-remotion": "Figma to Video",
-};
-
-function timeAgo(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
-}
-
-function formatDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`;
-  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
-  return `${(ms / 60000).toFixed(1)}m`;
-}
-
-// --- Flow Diagram ---
-
-type FlowStep = {
-  label: string;
-  detail: string;
-  type: "input" | "brain" | "tool" | "gate" | "output";
 };
 
 const PIPELINE_FLOWS: Record<string, FlowStep[]> = {

@@ -20,6 +20,10 @@ Add to `.mcp.json` in your Claude Code project:
     "command": "bun",
     "args": ["run", "packages/jobs/src/mcp-server.ts"]
   },
+  "golems-glm": {
+    "command": "bun",
+    "args": ["run", "packages/shared/src/glm/mcp-server.ts"]
+  },
   "zikaron": {
     "command": "zikaron-mcp"
   }
@@ -29,6 +33,18 @@ Add to `.mcp.json` in your Claude Code project:
 Additional MCP servers (supabase, exa, sophtron) are configured globally in `~/.claude/.mcp.json`.
 
 Then in Claude Code: `/tools` or use `@golems-email` in any prompt.
+
+## All MCP Servers
+
+| Server | Command | Tools | Purpose |
+|--------|---------|-------|---------|
+| **zikaron** | `zikaron-mcp` | 8 | Memory layer — search 226K+ indexed conversation chunks |
+| **golems-email** | `bun run packages/shared/src/email/mcp-server.ts` | 9 | Email triage + TellerGolem financial tools |
+| **golems-jobs** | `bun run packages/jobs/src/mcp-server.ts` | 5 | Job discovery, search, and stats |
+| **golems-glm** | `bun run packages/shared/src/glm/mcp-server.ts` | 2 | Local GLM-4.7-Flash — summarize, score/classify |
+| **supabase** | `@supabase/mcp-server-supabase` | 20+ | Database access, SQL, migrations, types |
+| **exa** | `exa-mcp-server` | 3 | Web search, code context, company research |
+| **sophtron** | `@sophtron/sophtron-mcp-server` | 6 | Bank accounts, transactions, identity |
 
 ---
 
@@ -235,23 +251,23 @@ Quick job statistics.
 
 ## Memory Tools (zikaron)
 
-Zikaron provides persistent memory across Claude Code sessions — semantic search over 238K+ indexed conversation chunks.
+Zikaron provides persistent memory across Claude Code sessions — semantic search over 226K+ indexed conversation chunks using bge-large-en-v1.5 embeddings (1024 dims) and sqlite-vec.
 
 ### zikaron_search
 
-Semantic search across all past Claude Code sessions.
+Semantic + keyword hybrid search across all past Claude Code sessions.
 
 **Parameters:**
 - `query` (string, required) — Natural language search query
 - `project` (string, optional) — Filter by project path (e.g., `-Users-etanheyman-Gits-golems`)
-- `limit` (number, default: 10) — Max results
+- `content_type` (enum, optional) — Filter by type: `ai_code`, `stack_trace`, `user_message`, `assistant_text`, `file_read`, `git_diff`
+- `source` (enum, optional) — Filter by source: `claude_code`, `whatsapp`, `youtube`, `all`
+- `tag` (string, optional) — Filter by enrichment tag (e.g., `bug-fix`, `authentication`)
+- `intent` (enum, optional) — Filter by intent: `debugging`, `designing`, `configuring`, `discussing`, `deciding`, `implementing`, `reviewing`
+- `importance_min` (number, optional) — Minimum importance score (1-10)
+- `num_results` (number, default: 5) — Max results
 
 **Returns:** Matching chunks with content, score, project, and timestamp
-
-**Example:**
-```
-How did I implement the email scoring system?
-```
 
 ### zikaron_context
 
@@ -259,20 +275,90 @@ Get surrounding conversation context for a search result.
 
 **Parameters:**
 - `chunk_id` (string, required) — Chunk ID from a search result
+- `before` (number, default: 3) — Chunks before target
+- `after` (number, default: 3) — Chunks after target
 
 **Returns:** The chunk plus surrounding conversation turns for full context
 
 ### zikaron_stats
 
-Index statistics.
+Knowledge base statistics.
 
-**Returns:** Total chunks, projects indexed, database size, last index time
+**Returns:** Total chunks, projects indexed, database size, content type breakdown
 
 ### zikaron_list_projects
 
 List all indexed projects.
 
 **Returns:** Project paths with chunk counts
+
+### zikaron_file_timeline
+
+Get the interaction timeline for a specific file across sessions.
+
+**Parameters:**
+- `file_path` (string, required) — File path or partial path (e.g., `telegram-bot.ts`)
+- `project` (string, optional) — Filter by project
+- `limit` (number, default: 50) — Max interactions
+
+**Returns:** Chronological list of all sessions that read, edited, or wrote to the file
+
+### zikaron_operations
+
+Get logical operation groups for a session (read-edit-test cycles, research chains, debug sequences).
+
+**Parameters:**
+- `session_id` (string, required) — Session ID to query
+
+**Returns:** Grouped operations with types and file lists
+
+### zikaron_regression
+
+Analyze a file for regressions — shows the last successful operation and all changes after it.
+
+**Parameters:**
+- `file_path` (string, required) — File path to analyze
+- `project` (string, optional) — Filter by project
+
+**Returns:** Last success point and subsequent changes
+
+### zikaron_plan_links
+
+Query plan-linked sessions — which plan/phase a session belongs to, or all sessions for a plan.
+
+**Parameters:**
+- `session_id` (string, optional) — Session ID to look up
+- `plan_name` (string, optional) — Plan name to query
+- `project` (string, optional) — Filter by project
+
+**Returns:** Plan/phase associations for sessions
+
+---
+
+## Local LLM Tools (golems-glm)
+
+GLM-4.7-Flash running locally via Ollama. Used for context reduction — summarize content before loading into Opus context.
+
+### glm_summarize
+
+Summarize text to key points using local GLM model.
+
+**Parameters:**
+- `text` (string, required) — Text to summarize
+- `maxSentences` (number, default: 3) — Maximum sentences in summary
+
+**Returns:** Condensed summary of the input text
+
+### glm_score
+
+Structured JSON classification/scoring using local GLM model.
+
+**Parameters:**
+- `text` (string, required) — Text to classify
+- `prompt` (string, required) — Classification instructions
+- `schema` (object, required) — JSON schema for output
+
+**Returns:** Structured JSON matching the provided schema
 
 ---
 
@@ -342,9 +428,10 @@ Key capabilities: account listing, transaction history, identity verification.
 
 ## Integration Notes
 
-- **Email tools** use Supabase with offline queue (no SQLite)
-- **Job MCP tools** read local JSON files. Jobs can be synced to Supabase via `sync-to-supabase.ts` for cloud access
-- **All tools handle offline gracefully** — email tools queue locally, sync on reconnect
+- **Email tools** use Supabase directly (cloud-first architecture)
+- **Job tools** query Supabase `golem_jobs` and `scrape_activity` tables
+- **Zikaron tools** query local sqlite-vec database (~1.4GB, 226K+ chunks)
+- **GLM tools** run locally via Ollama (no network, ~3-8s per call on M1 Pro)
 - **Scoring:** Email scores 1-10 (10=urgent), Job scores 1-10 (8+=hot match)
 - **Categories:** Email categories are semantic (job, interview, subscription, tech-update, newsletter, promo, social, other)
 

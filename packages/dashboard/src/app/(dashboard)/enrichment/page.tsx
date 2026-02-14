@@ -4,20 +4,8 @@ import { Database, RefreshCw, Sparkles, Clock } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PageSkeleton } from "@/components/skeleton";
 import { fetchEnrichmentStats } from "@/lib/supabase/queries";
-
-type FieldStats = { count: number; pct: number };
-
-type EnrichmentStats = {
-  total_chunks: number;
-  embeddings: FieldStats;
-  tags: FieldStats;
-  summaries: FieldStats;
-  importance: FieldStats;
-  intent: FieldStats;
-  projects: { project: string; chunks: number }[];
-  by_intent?: Record<string, number>;
-  updated_at?: string;
-};
+import { timeAgo } from "@/lib/format";
+import type { FieldStats, EnrichmentStats } from "@/lib/types";
 
 function ProgressBar({ label, pct, count, total }: { label: string; pct: number; count: number; total: number }) {
   const remaining = total - count;
@@ -45,16 +33,6 @@ function ProgressBar({ label, pct, count, total }: { label: string; pct: number;
       )}
     </div>
   );
-}
-
-function timeAgo(iso: string): string {
-  const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-  if (seconds < 60) return "just now";
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
 }
 
 export default function EnrichmentPage() {

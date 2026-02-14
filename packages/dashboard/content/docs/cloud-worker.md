@@ -8,14 +8,13 @@ Railway entry point running all cloud golems on timezone-aware schedules.
 
 ## Schedule (Israel/Asia/Jerusalem)
 
-| Service | Times | Frequency |
-|---------|-------|-----------|
-| Email | 6am–7pm hourly (skip noon), 10pm | ~12/day |
-| Jobs | 6am, 9am, 1pm Sun–Thu | ~15/week |
-| Briefing | 8am daily | 1/day |
-| Learner | 2am daily | 1/day |
+| Service | Times | Frequency | Model |
+|---------|-------|-----------|-------|
+| Email Poller | 6am–7pm hourly (skip noon), 10pm | ~12/day | Gemini Flash-Lite |
+| Job Scraper | 6am, 9am, 1pm Sun–Thu | ~15/week | Gemini Flash-Lite |
+| Briefing | 8am daily | 1/day | Gemini Flash-Lite |
 
-Cost: 92% savings (email), 95% (jobs) vs always-on.
+Cloud jobs use **Gemini 2.5 Flash-Lite** (free tier) for cost efficiency. Each job publishes events to Supabase that trigger Mac-side Golems.
 
 ## Running
 
@@ -38,11 +37,11 @@ Railway auto-runs on startup.
 ## Required Environment Variables
 
 ```
-LLM_BACKEND=haiku
+LLM_BACKEND=gemini
 STATE_BACKEND=supabase
 TELEGRAM_MODE=direct
 TZ=Asia/Jerusalem
-ANTHROPIC_API_KEY=sk-ant-...
+GOOGLE_GENERATIVE_AI_API_KEY=...
 SUPABASE_URL=https://YOUR_PROJECT.supabase.co
 SUPABASE_SERVICE_KEY=eyJ...
 TELEGRAM_BOT_TOKEN=...
@@ -61,11 +60,12 @@ railway logs -f
 
 ## Architecture
 
-Single Node process with independent schedules per golem:
+Single Bun process with independent schedules per golem:
 - Timezone conversion UTC → Israel (auto DST)
 - Check conditions every 1–10 minutes
-- Errors notify Telegram, logged to stdout
+- Errors notify Telegram, logged to stdout + Axiom telemetry
 - Stateless → easy to scale, auto-restart on Railway
+- Health endpoint at `/health` with uptime, config, and Israel time
 
 ## See Also
 

@@ -4,9 +4,9 @@ sidebar_position: 2
 
 # Architecture
 
-## 6 Golems + Infrastructure, 2 Environments
+## 7 Golems + Infrastructure, 3 Environments
 
-Golems is a **Bun workspace monorepo with 10 packages** — 6 golems (1 orchestrator + 5 domain experts) plus shared infrastructure. Work splits between your local Mac (cognitive tasks) and Railway cloud (data collection and polling).
+Golems is a **Bun workspace monorepo with 14 packages** — 7 golems (1 orchestrator + 6 domain experts) plus shared infrastructure. Work splits between your local Mac (cognitive tasks), Railway cloud (data collection), and Vercel (web dashboard).
 
 | Package | Role |
 |---------|------|
@@ -15,11 +15,15 @@ Golems is a **Bun workspace monorepo with 10 packages** — 6 golems (1 orchestr
 | `@golems/recruiter` | Outreach, contacts, interview practice (Elo) |
 | `@golems/teller` | Finance, tax categorization, spending reports |
 | `@golems/jobs` | Job scraping, matching, MCP tools |
-| `@golems/content` | LinkedIn, Soltome, ghostwriting |
+| `@golems/content` | Visual content factory (Remotion, ComfyUI, dataviz) + text publishing |
 | `@golems/coach` | Calendar, daily planning, ecosystem status |
 | `@golems/services` | Night Shift, Briefing, Cloud Worker, Wizard, Doctor |
+| `@golems/orchestrator` | n8n orchestration, render microservice |
+| `dashboard` | Next.js web dashboard (brain view, ops, backlog, content, tokens) |
+| `golems-tui` | React Ink terminal dashboard |
+| `tax-helper` | Schedule C transaction categorization (Sophtron MCP) |
 | `ralph` | Autonomous coding loop (PRD execution) |
-| `zikaron` | Memory layer (Python, 238K+ chunks, sqlite-vec) |
+| `zikaron` | Memory layer (Python, 226K+ chunks, sqlite-vec) |
 
 ## Mac = Brain, Railway = Body
 
@@ -29,15 +33,21 @@ flowchart TB
         direction LR
         T[Telegram Bot] ~~~ N[Night Shift]
         NS[Notification Server] ~~~ Z[Zikaron Memory]
+        RS[Render Service] ~~~ EN[Enrichment]
     end
     subgraph rail["Railway (Body)"]
         direction LR
         EP[Email Poller] ~~~ JS[Job Scraper]
         BG[Briefing Generator]
     end
+    subgraph vercel["Vercel (Face)"]
+        DASH[Dashboard]
+    end
     mac <-->|"HTTPS API + State Sync"| rail
     rail --> DB[(Supabase)]
     mac --> DB
+    vercel --> DB
+    DASH --> mac
 ```
 
 ## Cloud Worker Schedule
@@ -46,11 +56,11 @@ The Railway cloud worker runs these jobs on a timer:
 
 | Job | Interval | What | Model |
 |-----|----------|------|-------|
-| Email Poller | Hourly (6am-7pm, skip noon, +10pm) | Fetch Gmail, route to Golems | Ollama/Haiku |
-| Job Scraper | 6am, 9am, 1pm Sun-Thu | Find relevant jobs, score | Ollama/Haiku |
-| Briefing | 8:00 AM | Daily Telegram summary | Ollama/Haiku |
+| Email Poller | Hourly (6am-7pm, skip noon, +10pm) | Fetch Gmail, route to Golems | Gemini Flash-Lite |
+| Job Scraper | 6am, 9am, 1pm Sun-Thu | Find relevant jobs, score | Gemini Flash-Lite |
+| Briefing | 8:00 AM | Daily Telegram summary | Gemini Flash-Lite |
 
-Cloud jobs use **Ollama by default** (local models) or **Haiku when `LLM_BACKEND=haiku`** for cost efficiency. Each job publishes events to Supabase that trigger Mac-side Golems.
+Cloud jobs use **Gemini 2.5 Flash-Lite** (free tier) for cost efficiency. Each job publishes events to Supabase that trigger Mac-side Golems.
 
 ## Local Services (Mac)
 
@@ -62,8 +72,10 @@ Your Mac runs these always-on services:
 | **Night Shift** | Scan repos for improvements, auto-commit | Claude + Ralph |
 | **Notification Server** | Queue and send Telegram messages | HTTP server |
 | **Zikaron Memory** | Semantic search over past conversations | FastAPI + sqlite-vec |
+| **Render Service** | Remotion video rendering microservice | Bun + Remotion |
+| **Enrichment** | Process Zikaron chunks (tags, summaries) | GLM-4.7-Flash via Ollama |
 
-The local services have **direct compute access** — they run Ollama or Haiku queries when needed for decisions.
+The local services have **direct compute access** — they run local GLM-4.7-Flash (via Ollama) or cloud models when needed.
 
 ## Event Flow
 
@@ -90,7 +102,8 @@ Golems supports **dual mode** — run cloud or local via three env vars:
 
 ```bash
 # LLM Backend: where LLM calls happen
-export LLM_BACKEND=haiku      # Cloud: Haiku via Railway
+export LLM_BACKEND=gemini     # Cloud: Gemini Flash-Lite (free, default)
+export LLM_BACKEND=haiku      # Cloud: Haiku (paid fallback)
 export LLM_BACKEND=ollama     # Local: Ollama on Mac (for testing)
 
 # State Storage: where data lives
@@ -106,7 +119,7 @@ export TELEGRAM_MODE=local    # Mac notifier (HTTP) sends
 
 ### Full Cloud Mode (Production)
 ```bash
-export LLM_BACKEND=haiku
+export LLM_BACKEND=gemini
 export STATE_BACKEND=supabase
 export TELEGRAM_MODE=direct
 # Deploy to Railway, monitor /api/usage for token counts
@@ -164,9 +177,10 @@ curl https://your-service.up.railway.app/usage
 {"timestamp": "2026-02-06T10:30:45Z", "model": "claude-haiku-4-5-20251001", "source": "email-poller", "input_tokens": 1240, "output_tokens": 340, "cost_usd": 0.002352}
 ```
 
-**Haiku 4.5 Pricing:**
-- Input: $0.80 / 1M tokens
-- Output: $4.00 / 1M tokens
+**Model Pricing:**
+- Gemini Flash-Lite: Free tier (current cloud default)
+- GLM-4.7-Flash: Free (local via Ollama)
+- Haiku 4.5: $0.80 / $4.00 per 1M tokens (paid fallback)
 
 ## Database Schema
 
@@ -175,16 +189,23 @@ curl https://your-service.up.railway.app/usage
 | Table | Purpose |
 |-------|---------|
 | `emails` | Routed emails, drafts, follow-ups |
+| `email_senders` | Sender profiles with category and action |
 | `subscriptions` | Email subscription tracking |
 | `payments` | Payment/transaction tracking |
 | `golem_state` | State storage for golems |
 | `golem_events` | Audit log of all system events |
-| `golem_seen_jobs` | Job scraper seen jobs tracking |
+| `golem_jobs` | Job listings from scraper |
+| `scrape_activity` | Scraping run logs |
 | `outreach_contacts` | Recruiter targets, score, last contacted |
 | `outreach_messages` | Generated outreach messages |
-| `outreach_companies` | Company research data |
+| `linkedin_connections` | LinkedIn network data |
 | `practice_sessions` | Interview practice recordings |
 | `practice_questions` | Interview practice questions |
+| `backlog_items` | Kanban board items |
+| `pipeline_runs` | Content pipeline execution logs |
+| `llm_usage` | Token usage and cost tracking |
+| `service_heartbeats` | Service health pings |
+| `service_runs` | Cron job execution logs |
 
 ### Local File Storage (~/.golems-zikaron/)
 
@@ -202,9 +223,11 @@ curl https://your-service.up.railway.app/usage
 
 ```mermaid
 flowchart TD
-    GH["GitHub<br/><small>Source repo</small>"] --> RW["Railway<br/><small>Docker build, cloud worker, health check</small>"]
-    RW <--> SB[("Supabase<br/><small>Postgres + RLS + migrations</small>")]
-    SB <--> MAC["Your Mac<br/><small>Telegram API, Gmail API, Claude API</small>"]
+    GH["GitHub<br/><small>Source repo</small>"] --> RW["Railway<br/><small>Docker build, cloud worker</small>"]
+    GH --> VC["Vercel<br/><small>Next.js dashboard</small>"]
+    RW <--> SB[("Supabase<br/><small>Postgres + RLS + Storage</small>")]
+    VC --> SB
+    SB <--> MAC["Your Mac<br/><small>Telegram, Gmail, Claude, Ollama</small>"]
 ```
 
 ## Security

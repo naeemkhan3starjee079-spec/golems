@@ -7,25 +7,8 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PageSkeleton } from "@/components/skeleton";
 import { fetchRecentEvents, fetchServiceRuns, fetchEnrichmentStats, fetchGolemState, fetchNightShiftEvents } from "@/lib/supabase/queries";
-import { timeAgo } from "@/lib/format";
-
-// --- Types ---
-
-type GolemEvent = {
-  actor: string;
-  type: string;
-  data: Record<string, unknown>;
-  created_at: string;
-};
-
-type ServiceRun = {
-  service: string;
-  started_at: string;
-  ended_at: string | null;
-  duration_ms: number | null;
-  status: string;
-  error: string | null;
-};
+import { timeAgo, formatDuration } from "@/lib/format";
+import type { GolemEvent, ServiceRun } from "@/lib/types";
 
 // --- Service Config ---
 
@@ -43,13 +26,6 @@ function getServiceConfig(name: string) {
   return SERVICE_CONFIG[name] ?? { label: name.replace(/_/g, " "), schedule: "Unknown", env: "cloud" as const };
 }
 
-// --- Helpers ---
-
-function formatDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`;
-  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
-  return `${(ms / 60000).toFixed(1)}m`;
-}
 
 // Consolidate email variants into a single "Email Golem" entry
 function consolidateServices(runs: ServiceRun[]) {

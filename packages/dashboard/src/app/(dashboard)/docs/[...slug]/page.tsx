@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
-import { marked } from "marked";
-import { getAllDocSlugs, getDoc, getDocsNav } from "@/lib/docs";
+import { getAllDocSlugs, getDoc, getDocsNav, renderMarkdown } from "@/lib/docs";
 import { DocsClient } from "./docs-client";
 
 export const dynamicParams = false;
@@ -18,7 +17,7 @@ export default async function DocPage({ params }: Props) {
   const doc = getDoc(slug);
   if (!doc) notFound();
 
-  const html = await marked(doc.content);
+  const html = await renderMarkdown(doc.content);
   const nav = getDocsNav();
 
   return <DocsClient html={html} title={doc.title} nav={nav} currentSlug={slug.join("/")} />;

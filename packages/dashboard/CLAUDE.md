@@ -47,9 +47,23 @@ packages/dashboard/
 │   │   ├── mobile-nav.tsx          # Bottom tab bar (mobile)
 │   │   └── skeleton.tsx            # Loading skeletons
 │   ├── lib/
-│   │   ├── types.ts                # BrainGraph, GraphNode, GraphEdge interfaces
+│   │   ├── types.ts                # Barrel re-export from types/
+│   │   ├── types/                  # Centralized domain types (one file per page)
+│   │   │   ├── index.ts            # Barrel export
+│   │   │   ├── graph.ts            # BrainGraph, GraphNode, GraphEdge
+│   │   │   ├── ops.ts              # GolemEvent, ServiceRun
+│   │   │   ├── tokens.ts           # TokenStats, DayStats, ModelStats
+│   │   │   ├── jobs.ts             # Job, ScrapeRun, JobStats
+│   │   │   ├── emails.ts           # Email, EmailSender, EmailStats
+│   │   │   ├── recruiter.ts        # Contact, Message, LinkedInStats
+│   │   │   ├── teller.ts           # Subscription, Payment
+│   │   │   ├── backlog.ts          # BacklogItem
+│   │   │   ├── notifications.ts    # NotifEvent, Severity
+│   │   │   ├── content.ts          # PipelineRun, PipelineStat, FlowStep
+│   │   │   ├── session.ts          # SessionChunk, SessionContext, SessionData
+│   │   │   └── enrichment.ts       # FieldStats, EnrichmentStats
 │   │   ├── docs/index.ts            # Doc loading (getAllDocSlugs, getDoc, getDocsNav)
-│   │   ├── format.ts               # Number/date formatting utilities
+│   │   ├── format.ts               # Formatting: timeAgo, formatDuration, cleanProject
 │   │   ├── graph-colors.ts         # Color palette for graph nodes
 │   │   └── supabase/
 │   │       ├── client.ts           # Browser-side Supabase client

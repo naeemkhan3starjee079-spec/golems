@@ -84,7 +84,8 @@ export function DocsClient({ html, title, nav, currentSlug }: Props) {
             prose-p:text-muted prose-p:leading-relaxed
             prose-a:text-accent prose-a:no-underline hover:prose-a:underline
             prose-code:text-accent prose-code:bg-accent/5 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-[13px]
-            prose-pre:bg-background/80 prose-pre:border prose-pre:border-border/40 prose-pre:rounded-lg prose-pre:text-[13px]
+            prose-pre:bg-transparent prose-pre:border-0 prose-pre:p-0 prose-pre:rounded-lg prose-pre:text-[13px]
+            [&_.shiki]:rounded-lg [&_.shiki]:border [&_.shiki]:border-border/40 [&_.shiki]:p-4 [&_.shiki]:overflow-x-auto [&_.shiki]:text-[13px] [&_.shiki]:leading-relaxed
             prose-table:text-sm prose-th:text-foreground prose-th:font-medium prose-td:text-muted
             prose-li:text-muted prose-strong:text-foreground
             prose-blockquote:border-accent/30 prose-blockquote:text-muted/80"

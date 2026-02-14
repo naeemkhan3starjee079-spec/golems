@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import matter from "gray-matter";
 import { marked } from "marked";
+import { createHighlighter, type Highlighter } from "shiki";
 
 const DOCS_DIR = path.join(process.cwd(), "content/docs");
 
@@ -98,6 +99,50 @@ renderer.link = ({ href, text }) => {
 };
 
 marked.use({ renderer });
+
+let highlighter: Highlighter | null = null;
+
+const SHIKI_LANGS = [
+  "typescript", "javascript", "bash", "json", "python",
+  "tsx", "jsx", "sql", "yaml", "markdown", "html", "css",
+  "shell", "diff", "toml", "ini", "zsh",
+] as const;
+
+async function getHighlighter(): Promise<Highlighter> {
+  if (!highlighter) {
+    highlighter = await createHighlighter({
+      themes: ["github-dark"],
+      langs: [...SHIKI_LANGS],
+    });
+  }
+  return highlighter;
+}
+
+export async function renderMarkdown(content: string): Promise<string> {
+  const hl = await getHighlighter();
+  const loadedLangs = new Set(hl.getLoadedLanguages());
+
+  const html = await marked.parse(content);
+
+  // Post-process: replace <code> blocks inside <pre> with shiki-highlighted versions
+  return html.replace(
+    /<pre><code class="language-(\w+)">([\s\S]*?)<\/code><\/pre>/g,
+    (_match, lang: string, code: string) => {
+      // Unescape HTML entities that marked produces inside code blocks
+      const raw = code
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'");
+
+      if (loadedLangs.has(lang)) {
+        return hl.codeToHtml(raw, { lang, theme: "github-dark" });
+      }
+      return `<pre class="shiki github-dark"><code>${code}</code></pre>`;
+    },
+  );
+}
 
 /**
  * Read _category_.json for a directory if it exists.

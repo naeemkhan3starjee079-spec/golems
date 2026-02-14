@@ -8,18 +8,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { PageSkeleton } from "@/components/skeleton";
 import { fetchNotificationEvents } from "@/lib/supabase/queries";
 import { timeAgo } from "@/lib/format";
+import type { NotifEvent, Severity } from "@/lib/types";
 
-// --- Types ---
-
-type NotifEvent = {
-  id: string;
-  actor: string;
-  type: string;
-  data: Record<string, unknown>;
-  created_at: string;
-};
-
-type Severity = "urgent" | "success" | "info";
 
 // --- Config ---
 

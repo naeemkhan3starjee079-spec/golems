@@ -4,41 +4,8 @@ import { Coins, RefreshCw, TrendingUp, Clock, Zap } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PageSkeleton } from "@/components/skeleton";
 import { fetchTokenStats } from "@/lib/supabase/queries";
-
-type DayStats = {
-  calls: number;
-  input_tokens: number;
-  output_tokens: number;
-  cost_usd: number;
-};
-
-type ModelStats = {
-  calls: number;
-  input_tokens: number;
-  output_tokens: number;
-  cost_usd: number;
-  sources: string[];
-};
-
-type SourceStats = {
-  calls: number;
-  input_tokens: number;
-  output_tokens: number;
-  cost_usd: number;
-};
-
-type TokenStats = {
-  days: number;
-  total_cost_usd: number;
-  total_input_tokens: number;
-  total_output_tokens: number;
-  total_calls: number;
-  unique_sources: number;
-  entry_count: number;
-  by_model?: Record<string, ModelStats>;
-  by_source?: Record<string, SourceStats>;
-  by_day?: Record<string, DayStats>;
-};
+import { timeAgo } from "@/lib/format";
+import type { DayStats, ModelStats, SourceStats, TokenStats } from "@/lib/types";
 
 const PERIODS = [7, 14, 30] as const;
 
@@ -86,14 +53,6 @@ function formatDate(iso: string): string {
   return d.toLocaleDateString("en-IL", { month: "short", day: "numeric" });
 }
 
-function timeAgo(date: Date): string {
-  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-  if (seconds < 10) return "just now";
-  if (seconds < 60) return `${seconds}s ago`;
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  return `${Math.floor(minutes / 60)}h ago`;
-}
 
 /** Fill missing days with zero values so chart shows gaps.
  * Uses local date to match the query boundary (which uses setDate(-days) at current time). */
@@ -194,7 +153,7 @@ export default function TokensPage() {
           {lastUpdated && (
             <span className="text-[10px] text-muted/50 flex items-center gap-1">
               <Clock className="w-2.5 h-2.5" />
-              {timeAgo(lastUpdated)}
+              {timeAgo(lastUpdated.toISOString())}
             </span>
           )}
           <div className="flex rounded-md border border-border overflow-hidden text-xs">
