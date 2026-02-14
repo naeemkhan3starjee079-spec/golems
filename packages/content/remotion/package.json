@@ -1,0 +1,21 @@
+{
+  "name": "@golems/content-remotion",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "render": "remotion render src/index.ts DomicaHero out/domica-hero.mp4",
+    "still": "remotion still src/index.ts DomicaHero out/domica-hero.png"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "remotion": "^4.0.0"
+  },
+  "devDependencies": {
+    "style-loader": "^3.3.0",
+    "css-loader": "^6.8.0",
+    "typescript": "^5.0.0"
+  }
+}
