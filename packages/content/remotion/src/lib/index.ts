@@ -8,6 +8,6 @@ export {
   SPRING_PRESETS,
   springProgress,
   staggerDelay,
-} from "../../src/remotion/lib/motion";
+} from "../../../src/remotion/lib/motion";
 
-export type { SpringPresetName, SpringConfig } from "../../src/remotion/lib/types";
+export type { SpringPresetName, SpringConfig } from "../../../src/remotion/lib/types";

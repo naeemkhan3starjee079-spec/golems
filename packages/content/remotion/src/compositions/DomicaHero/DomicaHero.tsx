@@ -8,7 +8,7 @@
  * - Floating: DomicaMarker location pins, glass bubbles scattered
  */
 
-import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
+import { AbsoluteFill, Img, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { DomicaWatermark } from "@domica/ui-web";
 import { springProgress, clampedInterpolate } from "../../lib";
 import { MagnifyingGlass } from "./elements/MagnifyingGlass";
@@ -111,48 +111,26 @@ const HeroPropertyCard: React.FC<{ style?: React.CSSProperties }> = ({ style }) 
       ...style,
     }}
   >
-    {/* Image Section — ~60% height, aspect 27:16 like real card */}
+    {/* Image Section — ~60% height, real apartment photo */}
     <div
       style={{
         width: "100%",
         height: "62%",
-        background: "linear-gradient(145deg, #D6E6F9 0%, #BDD4F1 30%, #A3C2EA 60%, #8EB3E0 100%)",
         position: "relative",
         overflow: "hidden",
         borderRadius: "16px 16px 0 0",
       }}
     >
-      {/* Apartment interior scene */}
-      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "35%", background: "linear-gradient(180deg, #C8D9EC 0%, #B8CCDF 50%, #A8BDD3 100%)" }} />
-      <div style={{ position: "absolute", bottom: "35%", left: 0, right: 0, height: 2, background: "rgba(255,255,255,0.3)" }} />
-      {/* Window */}
-      <div style={{ position: "absolute", top: 14, left: 40, width: 200, height: 110, borderRadius: 6, background: "linear-gradient(180deg, #C2DFFF 0%, #E5F2FF 100%)", border: "3px solid rgba(255,255,255,0.6)", overflow: "hidden" }}>
-        <div style={{ height: "30%", background: "linear-gradient(180deg, #93C5FD 0%, #B3D9FF 100%)" }} />
-        <div style={{ position: "absolute", top: 10, left: 20, width: 50, height: 12, borderRadius: 8, background: "rgba(255,255,255,0.7)" }} />
-        <div style={{ position: "absolute", top: 0, bottom: 0, left: "50%", width: 2, background: "rgba(255,255,255,0.5)" }} />
-        <div style={{ position: "absolute", left: 0, right: 0, top: "50%", height: 2, background: "rgba(255,255,255,0.5)" }} />
-      </div>
-      {/* Sofa */}
-      <div style={{ position: "absolute", bottom: "18%", left: 30, width: 280, height: 45, borderRadius: "12px 12px 4px 4px", background: "linear-gradient(180deg, #8FBAE0 0%, #7CADD6 100%)" }} />
-      <div style={{ position: "absolute", bottom: "30%", left: 30, width: 280, height: 24, borderRadius: "8px 8px 0 0", background: "linear-gradient(180deg, #7CADD6 0%, #6DA0CC 100%)" }} />
-      {/* Pillows */}
-      <div style={{ position: "absolute", bottom: "24%", left: 50, width: 40, height: 30, borderRadius: 8, background: "#9EC5E8", transform: "rotate(-8deg)" }} />
-      <div style={{ position: "absolute", bottom: "24%", left: 250, width: 40, height: 30, borderRadius: 8, background: "#A8CEF0", transform: "rotate(6deg)" }} />
-      {/* Coffee table */}
-      <div style={{ position: "absolute", bottom: "10%", left: 100, width: 140, height: 7, borderRadius: 4, background: "rgba(120,170,210,0.5)" }} />
-      {/* Rug */}
-      <div style={{ position: "absolute", bottom: "3%", left: 70, width: 200, height: 30, borderRadius: 8, background: "rgba(180,210,240,0.25)" }} />
-      {/* Floor lamp */}
-      <div style={{ position: "absolute", top: 25, right: 40 }}>
-        <div style={{ width: 35, height: 22, borderRadius: "16px 16px 2px 2px", background: "rgba(255,245,220,0.5)" }} />
-        <div style={{ width: 3, height: 120, background: "rgba(150,180,210,0.4)", margin: "0 auto" }} />
-      </div>
-      {/* Plant */}
-      <div style={{ position: "absolute", top: 30, right: 100 }}>
-        <div style={{ width: 35, height: 45, borderRadius: "50%", background: "rgba(70,140,90,0.3)", transform: "rotate(-10deg)" }} />
-        <div style={{ width: 30, height: 35, borderRadius: "50%", background: "rgba(80,155,100,0.25)", transform: "translate(8px, -28px) rotate(15deg)" }} />
-        <div style={{ width: 18, height: 24, borderRadius: "2px 2px 6px 6px", background: "rgba(180,150,120,0.4)", margin: "-20px auto 0" }} />
-      </div>
+      {/* Real apartment interior photo */}
+      <Img
+        src={staticFile("images/apartment-interior.jpg")}
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          objectPosition: "center",
+        }}
+      />
 
       {/* Glass-style tags — bottom start, matching real PropertyCard */}
       <div style={{ position: "absolute", bottom: 16, left: 16, display: "flex", gap: 10 }} dir="rtl">

@@ -1,5 +1,10 @@
 import { Config } from "@remotion/cli/config";
 import path from "path";
+import os from "os";
+
+// Resolve domica repo relative to home directory (works regardless of CWD)
+const homeDir = os.homedir();
+const domicaUiWeb = path.join(homeDir, "Gits/domica/packages/ui-web/src");
 
 Config.overrideWebpackConfig((currentConfiguration) => {
   return {
@@ -9,21 +14,9 @@ Config.overrideWebpackConfig((currentConfiguration) => {
       alias: {
         ...currentConfiguration.resolve?.alias,
         // Live-link Domica UI components
-        "@domica/ui-web": path.resolve(
-          __dirname,
-          "../../../domica/packages/ui-web/src"
-        ),
+        "@domica/ui-web": domicaUiWeb,
       },
     },
-    module: {
-      ...currentConfiguration.module,
-      rules: [
-        ...(currentConfiguration.module?.rules ?? []),
-        {
-          test: /\.css$/,
-          use: ["style-loader", "css-loader"],
-        },
-      ],
-    },
+    // Remotion handles CSS natively — no custom loaders needed
   };
 });
