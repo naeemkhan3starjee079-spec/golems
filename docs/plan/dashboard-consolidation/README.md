@@ -33,7 +33,7 @@ Three separate web properties exist:
 | 4 | Admin Migration | [phase-4-admin-migration](phase-4-admin-migration/) | done | #171 |
 | 5 | Per-Golem Detail Pages | [phase-5-golem-pages](phase-5-golem-pages/) | done | #172 |
 | 6 | Docs Integration | [phase-6-docs-integration](phase-6-docs-integration/) | done | #173 |
-| 7 | Backlog + PRD Integration | [phase-7-backlog-prd](phase-7-backlog-prd/) | pending | |
+| 7 | Backlog + PRD Integration | [phase-7-backlog-prd](phase-7-backlog-prd/) | done | #174 |
 | 8 | Content Pipeline Skills + Viz | [phase-8-n8n-pipeline-hookup](phase-8-n8n-pipeline-hookup/) | pending | |
 | 9 | Docs Refresh: Architecture | [phase-9-docs-refresh-architecture](phase-9-docs-refresh-architecture/) | pending | |
 | 10 | Docs Refresh: Packages | [phase-10-docs-refresh-packages](phase-10-docs-refresh-packages/) | pending | |

@@ -5,7 +5,9 @@ import {
   Archive,
   CheckCircle2,
   Circle,
+  FileText,
   KanbanSquare,
+  Lightbulb,
   Loader2,
   Plus,
   RefreshCw,
@@ -31,9 +33,12 @@ type BacklogItem = {
   created_by: string;
   created_at: string;
   updated_at: string;
+  plan_name: string | null;
+  phase: string | null;
 };
 
 const COLUMNS = [
+  { key: "ideas", label: "Ideas", icon: Lightbulb, color: "text-yellow-400" },
   { key: "backlog", label: "Backlog", icon: Circle, color: "text-muted" },
   { key: "in_progress", label: "In Progress", icon: Loader2, color: "text-accent" },
   { key: "done", label: "Done", icon: CheckCircle2, color: "text-emerald" },
@@ -48,6 +53,7 @@ const PRIORITY_COLORS: Record<string, string> = {
 };
 
 const NEXT_STATUS: Record<string, string> = {
+  ideas: "backlog",
   backlog: "in_progress",
   in_progress: "done",
   done: "archived",
@@ -71,19 +77,23 @@ export default function BacklogPage() {
   const [newProject, setNewProject] = useState("golems");
   const [newPriority, setNewPriority] = useState("medium");
   const [filterProject, setFilterProject] = useState("");
+  const [filterPlan, setFilterPlan] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const fetchItems = useCallback(async () => {
     setRefreshing(true);
     try {
-      const data = await fetchBacklogItems(filterProject || undefined);
+      const data = await fetchBacklogItems(
+        filterProject || undefined,
+        filterPlan || undefined,
+      );
       setItems(data as BacklogItem[]);
     } catch {
       setItems((prev) => prev ?? []);
     } finally {
       setRefreshing(false);
     }
-  }, [filterProject]);
+  }, [filterProject, filterPlan]);
 
   useEffect(() => {
     fetchItems();
@@ -97,8 +107,9 @@ export default function BacklogPage() {
         title: newTitle.trim(),
         project: newProject,
         priority: newPriority,
+        status: "ideas",
       });
-      if (!filterProject || item.project === filterProject) {
+      if ((!filterProject || item.project === filterProject) && !filterPlan) {
         setItems((prev) => (prev ? [item as BacklogItem, ...prev] : [item as BacklogItem]));
       }
       setNewTitle("");
@@ -108,7 +119,7 @@ export default function BacklogPage() {
     } finally {
       setAdding(false);
     }
-  }, [newTitle, newProject, newPriority, filterProject]);
+  }, [newTitle, newProject, newPriority, filterProject, filterPlan]);
 
   const updateStatus = useCallback(async (id: string, status: string) => {
     setItems((prev) =>
@@ -132,8 +143,9 @@ export default function BacklogPage() {
 
   if (!items) return <PageSkeleton />;
 
-  // Get unique projects for filter
+  // Get unique projects and plans for filters
   const projects = [...new Set(items.map((i) => i.project))].sort();
+  const plans = [...new Set(items.map((i) => i.plan_name).filter(Boolean))].sort() as string[];
 
   // Group items by status
   const grouped = COLUMNS.map((col) => ({
@@ -153,6 +165,21 @@ export default function BacklogPage() {
           </span>
         </h2>
         <div className="flex items-center gap-3">
+          {/* Plan filter */}
+          {plans.length > 0 && (
+            <select
+              value={filterPlan}
+              onChange={(e) => setFilterPlan(e.target.value)}
+              className="text-xs bg-surface border border-border rounded-md px-2 py-1.5 text-muted focus:text-foreground outline-none"
+            >
+              <option value="">All plans</option>
+              {plans.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
+          )}
           {/* Project filter */}
           <select
             value={filterProject}
@@ -178,7 +205,7 @@ export default function BacklogPage() {
         </div>
       </div>
 
-      {/* Quick add */}
+      {/* Quick add — defaults to Ideas column */}
       <div className="flex gap-2 shrink-0">
         <input
           ref={inputRef}
@@ -188,7 +215,7 @@ export default function BacklogPage() {
           onKeyDown={(e) => {
             if (e.key === "Enter") addItem();
           }}
-          placeholder="Add item... (Enter to submit)"
+          placeholder="Add idea... (Enter to submit)"
           className="flex-1 bg-surface border border-border rounded-md px-3 py-2 text-sm placeholder:text-muted/50 focus:border-accent outline-none"
         />
         <select
@@ -227,7 +254,7 @@ export default function BacklogPage() {
       </div>
 
       {/* Kanban columns */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 flex-1 min-h-0">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3 flex-1 min-h-0">
         {grouped.map((col) => {
           const Icon = col.icon;
           return (
@@ -294,6 +321,13 @@ export default function BacklogPage() {
                       <span className="text-[9px] text-muted/50 font-mono">
                         {item.project}
                       </span>
+                      {item.plan_name && (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-accent/10 text-accent border border-accent/20 flex items-center gap-0.5">
+                          <FileText className="w-2.5 h-2.5" />
+                          {item.plan_name}
+                          {item.phase && <span className="text-muted/60">/{item.phase}</span>}
+                        </span>
+                      )}
                       <span className="text-[9px] text-muted/30 ml-auto">
                         {timeAgo(item.updated_at)}
                       </span>

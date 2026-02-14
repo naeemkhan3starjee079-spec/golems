@@ -201,15 +201,18 @@ export async function fetchEnrichmentStats() {
 
 // --- Backlog ---
 
-export async function fetchBacklogItems(project?: string) {
+export async function fetchBacklogItems(project?: string, planName?: string) {
   const supabase = createClient();
   let query = supabase
     .from("backlog_items")
-    .select("id, project, title, description, status, priority, tags, created_by, created_at, updated_at")
+    .select("id, project, title, description, status, priority, tags, created_by, created_at, updated_at, plan_name, phase")
     .order("updated_at", { ascending: false });
 
   if (project) {
     query = query.eq("project", project);
+  }
+  if (planName) {
+    query = query.eq("plan_name", planName);
   }
 
   const { data, error } = await query;
@@ -217,7 +220,14 @@ export async function fetchBacklogItems(project?: string) {
   return data ?? [];
 }
 
-export async function createBacklogItem(item: { title: string; project: string; priority: string }) {
+export async function createBacklogItem(item: {
+  title: string;
+  project: string;
+  priority: string;
+  status?: string;
+  plan_name?: string;
+  phase?: string;
+}) {
   const supabase = createClient();
   const { data: { user }, error: authErr } = await supabase.auth.getUser();
   if (authErr || !user) throw new Error("Not authenticated");

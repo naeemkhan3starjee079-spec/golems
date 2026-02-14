@@ -24,9 +24,9 @@ Connect the backlog Kanban to PRDs and large-plans so items are created/updated 
 - Nothing (standalone, backlog page already exists)
 
 ## Status
-- [ ] Ideas column
-- [ ] Auto-create from /large-plan
-- [ ] Auto-update on PR merge
-- [ ] Link items to plans
-- [ ] Quick-add UI
-- [ ] Plan filter
+- [x] Ideas column
+- [ ] Auto-create from /large-plan (future: CLI hook)
+- [ ] Auto-update on PR merge (future: GitHub webhook)
+- [x] Link items to plans
+- [x] Quick-add UI
+- [x] Plan filter
