@@ -16,7 +16,8 @@ flowchart LR
     R --> P3["DataViz<br/><small>Charts</small>"]
     R --> P4["Satori<br/><small>Social Cards</small>"]
     R --> P5["Playwright<br/><small>Screenshots</small>"]
-    P1 & P2 & P3 & P4 & P5 --> O["Output<br/><small>PNG/MP4/GIF/SVG</small>"]
+    R --> P6["Figma→Video<br/><small>Design-validated</small>"]
+    P1 & P2 & P3 & P4 & P5 & P6 --> O["Output<br/><small>PNG/MP4/GIF/SVG</small>"]
 ```
 
 ## Pipelines
@@ -75,6 +76,23 @@ Fills JSX templates with dynamic data and renders to social card PNGs via Satori
 | 4 | Output | Social card PNG |
 
 **Use cases:** LinkedIn post cards, OG images, quote cards.
+
+### Figma to Video
+
+Design-validated video pipeline. CC extracts the target design from Figma, builds a Remotion composition, then iterates until the rendered output matches the Figma design 1:1. Includes a visual comparison gate that rejects renders that don't match.
+
+| Step | Component | What |
+|------|-----------|------|
+| 1 | Figma | Source design file (exported or API) |
+| 2 | CC (Opus) | Extracts layout, colors, typography, props |
+| 3 | React | Renders Remotion composition |
+| 4 | Figma Gate | Compares render to original design |
+| 5 | Remotion | Encodes MP4/GIF once gate passes |
+| 6 | Output | Design-faithful video |
+
+**Use cases:** Product demos matching brand designs, Figma-to-animation, pixel-perfect animated previews.
+
+**Example:** DomicaHero composition — went through 21 iterations comparing renders against the Figma design to achieve 1:1 element fidelity.
 
 ### Playwright Screenshots
 

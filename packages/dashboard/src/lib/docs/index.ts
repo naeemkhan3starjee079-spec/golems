@@ -118,17 +118,31 @@ async function getHighlighter(): Promise<Highlighter> {
   return highlighter;
 }
 
-export async function renderMarkdown(content: string): Promise<string> {
+export type TocItem = {
+  id: string;
+  text: string;
+  level: number;
+};
+
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/<[^>]+>/g, "")
+    .replace(/[^\w\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .trim();
+}
+
+export async function renderMarkdown(content: string): Promise<{ html: string; toc: TocItem[] }> {
   const hl = await getHighlighter();
   const loadedLangs = new Set(hl.getLoadedLanguages());
 
-  const html = await marked.parse(content);
+  const rawHtml = await marked.parse(content);
 
   // Post-process: replace <code> blocks inside <pre> with shiki-highlighted versions
-  return html.replace(
+  let html = rawHtml.replace(
     /<pre><code class="language-(\w+)">([\s\S]*?)<\/code><\/pre>/g,
     (_match, lang: string, code: string) => {
-      // Unescape HTML entities that marked produces inside code blocks
       const raw = code
         .replace(/&amp;/g, "&")
         .replace(/&lt;/g, "<")
@@ -142,6 +156,29 @@ export async function renderMarkdown(content: string): Promise<string> {
       return `<pre class="shiki github-dark"><code>${code}</code></pre>`;
     },
   );
+
+  // Post-process: add IDs to h2/h3 headings and extract TOC
+  const toc: TocItem[] = [];
+  const usedIds = new Set<string>();
+
+  html = html.replace(
+    /<h([23])>([\s\S]*?)<\/h\1>/g,
+    (_match, level: string, text: string) => {
+      const plainText = text.replace(/<[^>]+>/g, "").trim();
+      let id = slugify(plainText);
+      // Deduplicate IDs
+      if (usedIds.has(id)) {
+        let i = 1;
+        while (usedIds.has(`${id}-${i}`)) i++;
+        id = `${id}-${i}`;
+      }
+      usedIds.add(id);
+      toc.push({ id, text: plainText, level: parseInt(level) });
+      return `<h${level} id="${id}">${text}</h${level}>`;
+    },
+  );
+
+  return { html, toc };
 }
 
 /**
@@ -166,6 +203,21 @@ export type DocNavItem = {
   position?: number;
   children?: DocNavItem[];
 };
+
+/**
+ * Flatten nav items into ordered list of leaf pages (for prev/next).
+ */
+export function flattenNav(items: DocNavItem[]): { slug: string; title: string }[] {
+  const result: { slug: string; title: string }[] = [];
+  for (const item of items) {
+    if (item.children) {
+      result.push(...flattenNav(item.children));
+    } else {
+      result.push({ slug: item.slug, title: item.title });
+    }
+  }
+  return result;
+}
 
 export function getDocsNav(): DocNavItem[] {
   const topLevel: DocNavItem[] = [];

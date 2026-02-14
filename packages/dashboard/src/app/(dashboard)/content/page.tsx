@@ -72,6 +72,14 @@ const PIPELINE_FLOWS: Record<string, FlowStep[]> = {
     { label: "Satori", detail: "JSX to SVG", type: "tool" },
     { label: "Card", detail: "Social PNG", type: "output" },
   ],
+  "figma-remotion": [
+    { label: "Figma", detail: "Design source", type: "input" },
+    { label: "CC (Opus)", detail: "Extracts layout + props", type: "brain" },
+    { label: "React", detail: "Renders composition", type: "tool" },
+    { label: "Figma Gate", detail: "Compare to design", type: "gate" },
+    { label: "Remotion", detail: "Encodes MP4/GIF", type: "tool" },
+    { label: "Video", detail: "1:1 fidelity output", type: "output" },
+  ],
 };
 
 const FLOW_BRAIN_STYLES: Record<string, string> = {
@@ -80,6 +88,7 @@ const FLOW_BRAIN_STYLES: Record<string, string> = {
   dataviz: "border-emerald-400/50 shadow-[0_0_12px_-3px] shadow-emerald-500/25",
   satori: "border-amber-400/50 shadow-[0_0_12px_-3px] shadow-amber-500/25",
   playwright: "border-green-400/50 shadow-[0_0_12px_-3px] shadow-green-500/25",
+  "figma-remotion": "border-pink-400/50 shadow-[0_0_12px_-3px] shadow-pink-500/25",
 };
 
 function FlowNode({
@@ -381,6 +390,11 @@ const AVAILABLE_PIPELINES = [
     id: "satori",
     name: "Template Fill",
     description: "Social cards, OG images from templates. Fast SVG rendering.",
+  },
+  {
+    id: "figma-remotion",
+    name: "Figma to Video",
+    description: "Design-validated video. Iterates until render matches Figma 1:1.",
   },
 ];
 
