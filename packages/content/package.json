@@ -21,14 +21,20 @@
     "video"
   ],
   "scripts": {
-    "validate-brand": "bun run scripts/validate-brand.ts"
+    "validate-brand": "bun run scripts/validate-brand.ts",
+    "render": "bun run scripts/render.ts render",
+    "render:list": "bun run scripts/render.ts list",
+    "render:still": "bun run scripts/render.ts still",
+    "render:preview": "bun run scripts/render.ts preview",
+    "studio": "cd remotion && bunx remotion studio src/index.ts"
   },
   "exports": {
     "./*": "./src/*.ts",
     "./brand": "./src/brand/index.ts",
     "./brand/*": "./src/brand/*.ts",
     "./remotion": "./src/remotion/index.ts",
-    "./remotion/*": "./src/remotion/*.ts"
+    "./remotion/*": "./src/remotion/*.ts",
+    "./render": "./src/render/index.ts"
   },
   "dependencies": {
     "@golems/shared": "workspace:*",
