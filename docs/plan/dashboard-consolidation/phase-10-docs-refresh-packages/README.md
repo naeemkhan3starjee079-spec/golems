@@ -29,15 +29,15 @@ Update all per-package documentation pages to reflect current code, capabilities
 - Phase 9 (architecture docs set the context)
 
 ## Status
-- [ ] shared.md
-- [ ] claude.md
-- [ ] recruiter.md
-- [ ] email.md
-- [ ] job-golem.md
-- [ ] teller.md
-- [ ] coach.md
-- [ ] content.md
-- [ ] services.md
-- [ ] zikaron.md
-- [ ] orchestrator.md (new)
-- [ ] dashboard.md (new)
+- [x] shared.md — Added Whoop client, Vercel LLM, GLM modules
+- [x] claude.md — Fixed file paths (services vs claude), added frontmatter
+- [x] recruiter.md — Fixed file paths, added frontmatter
+- [x] email.md — Added frontmatter with title/description
+- [x] job-golem.md — Added frontmatter with title/description
+- [x] teller.md — Added frontmatter with title/description
+- [x] coach.md — Full rewrite: Whoop, Huberman, coaching engine, /schedule, dashboard section
+- [x] content.md — Full rewrite: visual factory, Remotion, ComfyUI, dataviz, pipeline router
+- [x] services.md — Added WhoopSync cron (7am + 2pm)
+- [x] zikaron.md — Updated to 257K+ chunks, all 8 MCP tools, enrichment pipeline
+- [x] orchestrator.md (new) — n8n workflows + render microservice
+- [x] dashboard.md — Added /coach page, TOC, scroll spy, mermaid, prev/next nav

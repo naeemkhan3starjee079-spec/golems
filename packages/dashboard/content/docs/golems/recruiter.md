@@ -1,5 +1,6 @@
 ---
-sidebar_position: 2
+title: "RecruiterGolem — Outreach & Practice"
+description: "Contact discovery, anti-AI outreach, 7 interview practice modes with Elo tracking, and pipeline management."
 ---
 
 # RecruiterGolem
@@ -119,17 +120,19 @@ Telegram commands routed to RecruiterGolem:
 
 ## Files
 
-- `src/recruiter-golem/contact-finder.ts` — Contact discovery and parsing
-- `src/recruiter-golem/outreach-db.ts` — SQLite adapter for local dev
-- `src/recruiter-golem/outreach-db-cloud.ts` — Supabase adapter (Phase 2+)
-- `src/recruiter-golem/style-adapter.ts` — Anti-AI message generation
-- `src/recruiter-golem/auto-outreach.ts` — Batch sending with rate limits
-- `src/recruiter-golem/practice-db.ts` — Interview practice sessions (local)
-- `src/recruiter-golem/practice-db-cloud.ts` — Interview practice sessions (Supabase)
-- `src/recruiter-golem/outreach.ts` — Outreach message generation
-- `src/recruiter-golem/company-research.ts` — Company research (GitHub, tech stack)
-- `src/recruiter-golem/elo.ts` — ELO ranking for contacts
-- `src/recruiter-golem/obsidian-export.ts` — Export contacts to Obsidian
+All source in `packages/recruiter/src/`:
+
+- `contact-finder.ts` — Contact discovery and parsing
+- `outreach-db.ts` — SQLite adapter for local dev
+- `outreach-db-cloud.ts` — Supabase adapter
+- `style-adapter.ts` — Anti-AI message generation
+- `auto-outreach.ts` — Batch sending with rate limits
+- `practice-db.ts` — Interview practice sessions (local)
+- `practice-db-cloud.ts` — Interview practice sessions (Supabase)
+- `outreach.ts` — Outreach message generation
+- `company-research.ts` — Company research (GitHub, tech stack)
+- `elo.ts` — Elo ranking for contacts
+- `obsidian-export.ts` — Export contacts to Obsidian
 
 ## Database Schema
 

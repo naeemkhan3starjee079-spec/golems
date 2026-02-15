@@ -1,8 +1,11 @@
 ---
-sidebar_position: 3
+title: "ClaudeGolem — Orchestrator"
+description: "Telegram bot, persistent Claude Code sessions, autonomous night-shift improvements, and ecosystem orchestration."
 ---
 
 # ClaudeGolem
+
+> Orchestrator — Telegram bot, persistent Claude Code sessions, autonomous night-shift improvements, and ecosystem coordination.
 
 ClaudeGolem is the external-facing personality of the Golems ecosystem. It runs persistent Claude Code sessions and performs autonomous night-shift code improvements.
 
@@ -94,12 +97,17 @@ This comes from `event-log.json` maintained by infrastructure (last 24 hours via
 
 ## Files
 
-**Core Engine:**
-- `src/telegram-bot.ts` — Telegram bot + notification server (port 3847)
-- `src/night-shift.ts` — Autonomous runner (4am)
-- `src/event-log.ts` — Event log for ClaudeGolem memory
-- `src/briefing.ts` — Morning briefing (8am)
-- `src/cloud-worker.ts` — Railway entry point for all cloud golems
+**Core Engine** (`packages/claude/src/`):
+- `telegram-bot.ts` — Telegram bot + notification server (port 3847)
+- `SOUL.md` — ClaudeGolem personality definition
+
+**Infrastructure** (`packages/services/src/`):
+- `night-shift.ts` — Autonomous runner (4am)
+- `briefing.ts` — Morning briefing (8am)
+- `cloud-worker.ts` — Railway entry point for all cloud golems
+
+**Shared** (`packages/shared/src/lib/`):
+- `event-log.ts` — Event log for ClaudeGolem memory
 
 **State:**
 - `~/.golems-zikaron/state.json` — Night Shift target, session state
@@ -212,4 +220,4 @@ export NODE_OPTIONS="--max-old-space-size=8192"
 claude --continue
 ```
 
-See `docs/configuration/env-vars.md` for full setup, and `packages/autonomous/CLAUDE.md` for development notes.
+See `docs/configuration/env-vars.md` for full setup.

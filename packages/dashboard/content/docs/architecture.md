@@ -4,6 +4,8 @@ sidebar_position: 2
 
 # Architecture
 
+<img src="/docs/architecture-flow.svg" alt="Golems Architecture — Data flow between local Mac and Railway cloud" style="width:100%;border-radius:12px;margin:1.5rem 0" />
+
 ## 7 Golems + Infrastructure, 3 Environments
 
 Golems is a **Bun workspace monorepo with 14 packages** — 7 golems (1 orchestrator + 6 domain experts) plus shared infrastructure. Work splits between your local Mac (cognitive tasks), Railway cloud (data collection), and Vercel (web dashboard).
@@ -16,7 +18,7 @@ Golems is a **Bun workspace monorepo with 14 packages** — 7 golems (1 orchestr
 | `@golems/teller` | Finance, tax categorization, spending reports |
 | `@golems/jobs` | Job scraping, matching, MCP tools |
 | `@golems/content` | Visual content factory (Remotion, ComfyUI, dataviz) + text publishing |
-| `@golems/coach` | Calendar, daily planning, ecosystem status |
+| `@golems/coach` | Whoop biometrics, Huberman protocols, daily planning |
 | `@golems/services` | Night Shift, Briefing, Cloud Worker, Wizard, Doctor |
 | `@golems/orchestrator` | n8n orchestration, render microservice |
 | `dashboard` | Next.js web dashboard (brain view, ops, backlog, content, tokens) |
@@ -58,6 +60,7 @@ The Railway cloud worker runs these jobs on a timer:
 |-----|----------|------|-------|
 | Email Poller | Hourly (6am-7pm, skip noon, +10pm) | Fetch Gmail, route to Golems | Gemini Flash-Lite |
 | Job Scraper | 6am, 9am, 1pm Sun-Thu | Find relevant jobs, score | Gemini Flash-Lite |
+| Whoop Sync | 7am + 2pm daily | Sync biometrics to Supabase | — |
 | Briefing | 8:00 AM | Daily Telegram summary | Gemini Flash-Lite |
 
 Cloud jobs use **Gemini 2.5 Flash-Lite** (free tier) for cost efficiency. Each job publishes events to Supabase that trigger Mac-side Golems.

@@ -1,6 +1,6 @@
 ---
 title: "Zikaron — Memory Layer"
-description: "Persistent memory for Claude Code. 238K+ indexed conversation chunks with semantic search in under 2 seconds."
+description: "Persistent memory for Claude Code. 257K+ indexed conversation chunks with semantic search in under 2 seconds."
 ---
 
 # Zikaron (Memory)
@@ -9,7 +9,7 @@ description: "Persistent memory for Claude Code. 238K+ indexed conversation chun
 
 ## What It Does
 
-Zikaron (Hebrew for "memory") is a **knowledge pipeline** that indexes every Claude Code conversation into a searchable database. It uses semantic embeddings to find past solutions, decisions, and patterns across all your projects. 238K+ chunks indexed, searchable in under 2 seconds.
+Zikaron (Hebrew for "memory") is a **knowledge pipeline** that indexes every Claude Code conversation into a searchable database. It uses semantic embeddings to find past solutions, decisions, and patterns across all your projects. 257K+ chunks indexed, searchable in under 2 seconds.
 
 ## Architecture
 
@@ -55,7 +55,7 @@ AST-aware chunking with tree-sitter for code (~500 tokens). Never splits stack t
 Uses `bge-large-en-v1.5` model (1024 dimensions). Runs locally via sentence-transformers.
 
 ### 5. Index
-sqlite-vec for vector similarity search. Sub-2-second queries across 238K+ chunks.
+sqlite-vec for vector similarity search. Sub-2-second queries across 257K+ chunks.
 
 ## Interfaces
 
@@ -67,16 +67,31 @@ zikaron index                                  # Re-index conversations
 ```
 
 ### MCP Server
-Exposed to Claude Code as `zikaron-mcp`:
+Exposed to Claude Code as `zikaron-mcp` (8 tools):
 
 | Tool | Description |
 |------|-------------|
-| `zikaron_search` | Semantic search across all sessions |
-| `zikaron_context` | Get surrounding conversation for a chunk |
-| `zikaron_stats` | Index statistics (chunk count, projects) |
+| `zikaron_search` | Semantic search across all sessions (with project, content_type, tag, intent filters) |
+| `zikaron_context` | Get surrounding conversation chunks for a search result |
+| `zikaron_stats` | Index statistics (chunk count, projects, content types) |
+| `zikaron_list_projects` | List all indexed projects |
+| `zikaron_file_timeline` | File interaction history across sessions |
+| `zikaron_operations` | Logical operation groups (read/edit/test cycles) |
+| `zikaron_regression` | What changed since a file last worked |
+| `zikaron_plan_links` | Session to plan/phase linkage |
 
 ### FastAPI Daemon
 Unix socket server at `/tmp/zikaron.sock` for sub-2-second queries from any local process.
+
+## Enrichment Pipeline
+
+GLM-4.7-Flash (local, via Ollama) enriches indexed chunks with:
+- **Summaries** — concise description of what each chunk contains
+- **Tags** — topic classification (e.g., `bug-fix`, `authentication`, `typescript`)
+- **Importance scores** — 1-10 rating for retrieval prioritization
+- **Intent classification** — debugging, implementing, configuring, etc.
+
+Runs in background with `PYTHONUNBUFFERED=1`, `PRAGMA busy_timeout = 5000` for concurrent DB access. Progress tracked on the dashboard's `/enrichment` page.
 
 ## Stack
 

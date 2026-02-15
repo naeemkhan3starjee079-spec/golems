@@ -1,5 +1,6 @@
 ---
-sidebar_position: 4
+title: "TellerGolem — Finance"
+description: "Subscription tracking, expense categorization (IRS Schedule C), payment failure detection, and financial reports."
 ---
 
 # TellerGolem
