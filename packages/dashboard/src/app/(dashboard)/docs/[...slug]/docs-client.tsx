@@ -220,54 +220,38 @@ function PrevNextNav({
   );
 }
 
-// --- Mermaid CDN loader ---
+// --- Mermaid CDN loader (UMD build — more reliable than blob URL + ESM) ---
 
-let mermaidLoaded = false;
 let mermaidPromise: Promise<void> | null = null;
 
 function loadMermaid(): Promise<void> {
-  if (mermaidLoaded) return Promise.resolve();
+  if (window.mermaid) return Promise.resolve();
   if (mermaidPromise) return mermaidPromise;
 
   mermaidPromise = new Promise((resolve, reject) => {
     const script = document.createElement("script");
-    script.type = "module";
-    // Use an inline module that imports from CDN and exposes on window
-    const blob = new Blob(
-      [
-        `import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
-         mermaid.initialize({
-           startOnLoad: false,
-           theme: "dark",
-           themeVariables: {
-             darkMode: true,
-             background: "transparent",
-             primaryColor: "#3b82f6",
-             primaryTextColor: "#e4e4e7",
-             primaryBorderColor: "#52525b",
-             lineColor: "#71717a",
-             secondaryColor: "#27272a",
-             tertiaryColor: "#18181b",
-             fontFamily: "ui-monospace, monospace",
-             fontSize: "13px",
-           },
-         });
-         window.__mermaid = mermaid;
-         window.dispatchEvent(new Event("mermaid-ready"));`,
-      ],
-      { type: "text/javascript" },
-    );
-    script.src = URL.createObjectURL(blob);
+    script.src = "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js";
     script.onload = () => {
-      // Wait for the module to execute and dispatch the event
-      const onReady = () => {
-        mermaidLoaded = true;
+      if (window.mermaid) {
+        window.mermaid.initialize({
+          startOnLoad: false,
+          theme: "dark",
+          themeVariables: {
+            darkMode: true,
+            background: "transparent",
+            primaryColor: "#3b82f6",
+            primaryTextColor: "#e4e4e7",
+            primaryBorderColor: "#52525b",
+            lineColor: "#71717a",
+            secondaryColor: "#27272a",
+            tertiaryColor: "#18181b",
+            fontFamily: "ui-monospace, monospace",
+            fontSize: "13px",
+          },
+        });
         resolve();
-      };
-      if (window.__mermaid) {
-        onReady();
       } else {
-        window.addEventListener("mermaid-ready", onReady, { once: true });
+        reject(new Error("mermaid not found on window after script load"));
       }
     };
     script.onerror = reject;
@@ -277,10 +261,13 @@ function loadMermaid(): Promise<void> {
   return mermaidPromise;
 }
 
-// Extend window for mermaid
+// Extend window for mermaid UMD global
 declare global {
   interface Window {
-    __mermaid?: { render: (id: string, source: string) => Promise<{ svg: string }> };
+    mermaid?: {
+      initialize: (config: Record<string, unknown>) => void;
+      render: (id: string, source: string) => Promise<{ svg: string }>;
+    };
   }
 }
 
@@ -363,7 +350,7 @@ export function DocsClient({
         blocks.forEach((b) => b.classList.add("mermaid-error"));
         return;
       }
-      if (cancelled || !window.__mermaid) return;
+      if (cancelled || !window.mermaid) return;
 
       for (let i = 0; i < blocks.length; i++) {
         const block = blocks[i] as HTMLElement;
@@ -371,7 +358,7 @@ export function DocsClient({
         if (!source) continue;
         try {
           const id = `mermaid-${currentSlug.replace(/\//g, "-")}-${i}`;
-          const { svg } = await window.__mermaid!.render(id, source);
+          const { svg } = await window.mermaid!.render(id, source);
           if (!cancelled) {
             block.innerHTML = svg;
             block.classList.add("mermaid-rendered");
