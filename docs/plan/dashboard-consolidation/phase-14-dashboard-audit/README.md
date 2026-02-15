@@ -69,11 +69,13 @@ The coach page exists and is in the sidebar nav, but /ops doesn't show coach/who
 - Phase 10 (docs refresh provides context for what each page should show)
 
 ## Status
-- [ ] Fix RLS policies (migration)
-- [ ] Fix notification event types
-- [ ] Remove notification cap / add pagination
-- [ ] Deploy WhoopSync to Railway
-- [ ] Restart enrichment
-- [ ] Add WhoopSync to ops monitoring
-- [ ] Verify all pages show data
-- [ ] Check sidebar nav completeness
+- [x] Fix RLS policies (migration) — Added authenticated SELECT to 4 tables
+- [x] Fix notification event types — Added email_routed, telegram_*, golem_telegram_chat, draft_approved, soltome_post, pipeline_draft_*
+- [x] Remove notification cap / add pagination — Increased to 200, added Load More button
+- [ ] Deploy WhoopSync to Railway — needs merge to master first, then `railway up -d`
+- [x] Restart enrichment — launchd service restarted, running (PID 21015)
+- [x] Add WhoopSync to ops monitoring — Added whoopsync to SERVICE_CONFIG
+- [x] Fix Railway "Inactive" status — Extended check window from 3h to 12h (covers overnight gap)
+- [x] Fix tokens view — Added source environment badges (Local/Cloud/CLI), improved labels, added "not tracked" note
+- [ ] Verify all pages show data — needs Vercel deploy
+- [ ] Check sidebar nav completeness — needs Vercel deploy

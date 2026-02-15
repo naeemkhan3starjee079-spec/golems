@@ -3,6 +3,7 @@
 import {
   AlertTriangle, Bell, BellRing, Briefcase, CheckCircle, ChevronDown,
   ChevronRight, Mail, Moon, Newspaper, Send, GitPullRequest,
+  MessageSquare, MessageCircle, FileCheck, FileX,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PageSkeleton } from "@/components/skeleton";
@@ -14,17 +15,28 @@ import type { NotifEvent, Severity } from "@/lib/types";
 // --- Config ---
 
 const NOTIF_CONFIG: Record<string, { label: string; icon: typeof Bell; severity: Severity; color: string }> = {
+  // Urgent
   email_urgent: { label: "Urgent Email", icon: Mail, severity: "urgent", color: "text-rose" },
   service_error: { label: "Service Error", icon: AlertTriangle, severity: "urgent", color: "text-rose" },
   alert: { label: "Alert", icon: BellRing, severity: "urgent", color: "text-rose" },
+  // Success
   service_recovered: { label: "Service Recovered", icon: CheckCircle, severity: "success", color: "text-emerald" },
   job_match: { label: "Job Match", icon: Briefcase, severity: "success", color: "text-emerald" },
   job_applied: { label: "Application Sent", icon: Send, severity: "success", color: "text-emerald" },
+  draft_approved: { label: "Draft Approved", icon: FileCheck, severity: "success", color: "text-emerald" },
+  // Info
+  email_routed: { label: "Email Routed", icon: Mail, severity: "info", color: "text-accent" },
+  email_triaged: { label: "Email Triaged", icon: Mail, severity: "info", color: "text-muted" },
+  telegram_message_in: { label: "Telegram In", icon: MessageSquare, severity: "info", color: "text-sky-400" },
+  telegram_message_out: { label: "Telegram Out", icon: MessageCircle, severity: "info", color: "text-sky-400" },
+  golem_telegram_chat: { label: "Golem Chat", icon: MessageSquare, severity: "info", color: "text-sky-400" },
   nightshift_started: { label: "Night Shift Started", icon: Moon, severity: "info", color: "text-indigo-400" },
   nightshift_completed: { label: "Night Shift Done", icon: Moon, severity: "info", color: "text-indigo-400" },
   nightshift_pr: { label: "Night Shift PR", icon: GitPullRequest, severity: "info", color: "text-indigo-400" },
   briefing_sent: { label: "Briefing Sent", icon: Newspaper, severity: "info", color: "text-accent" },
-  email_triaged: { label: "Email Triaged", icon: Mail, severity: "info", color: "text-muted" },
+  soltome_post: { label: "Soltome Post", icon: Newspaper, severity: "info", color: "text-accent" },
+  pipeline_draft_ready: { label: "Draft Ready", icon: FileCheck, severity: "info", color: "text-accent" },
+  pipeline_draft_rejected: { label: "Draft Rejected", icon: FileX, severity: "info", color: "text-muted" },
 };
 
 function getConfig(type: string) {
@@ -52,9 +64,13 @@ function getDetail(ev: NotifEvent): string {
 
 // --- Page ---
 
+const PAGE_SIZE = 200;
+
 export default function NotificationsPage() {
   const [events, setEvents] = useState<NotifEvent[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [severityFilter, setSeverityFilter] = useState<Severity | null>(null);
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -63,15 +79,30 @@ export default function NotificationsPage() {
   const fetchAll = useCallback(async () => {
     const id = ++fetchIdRef.current;
     try {
-      const data = await fetchNotificationEvents(100);
+      const data = await fetchNotificationEvents(PAGE_SIZE);
       if (id !== fetchIdRef.current) return;
       setEvents(data as NotifEvent[]);
+      setHasMore(data.length >= PAGE_SIZE);
     } catch {
       // silent
     } finally {
       if (id === fetchIdRef.current) setLoaded(true);
     }
   }, []);
+
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const data = await fetchNotificationEvents(PAGE_SIZE + events.length);
+      setEvents(data as NotifEvent[]);
+      setHasMore(data.length > events.length);
+    } catch {
+      // silent
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [events.length, hasMore, loadingMore]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
@@ -191,7 +222,7 @@ export default function NotificationsPage() {
               <div className="flex items-center gap-3 mb-3">
                 <span className="text-[10px] font-bold text-muted uppercase tracking-widest">{day}</span>
                 <div className="flex-1 h-px bg-border" />
-                <span className="text-[10px] text-muted">{dayEvents.length}</span>
+                <span className="text-[10px] text-muted tabular-nums">{dayEvents.length}</span>
               </div>
 
               {/* Timeline items */}
@@ -254,6 +285,20 @@ export default function NotificationsPage() {
               </div>
             </div>
           ))}
+
+          {/* Load More */}
+          {hasMore && (
+            <div className="text-center pt-2">
+              <button
+                type="button"
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="text-xs text-muted hover:text-foreground transition-colors disabled:opacity-40"
+              >
+                {loadingMore ? "Loading..." : `Load more (showing ${filtered.length})`}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
