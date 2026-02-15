@@ -92,7 +92,7 @@ const SERVICES: ServiceOption[] = [
     description:
       "Deploy cloud worker to Railway. Runs email/job/briefing/soltome on a schedule remotely.",
     envVars: [
-      "ANTHROPIC_API_KEY",
+      "GOOGLE_GENERATIVE_AI_API_KEY",
       "SUPABASE_URL",
       "SUPABASE_ANON_KEY",
       "TELEGRAM_CHAT_ID",
@@ -106,7 +106,7 @@ const SERVICES: ServiceOption[] = [
 // You can name items anything you want, these are just examples
 const OP_SECRET_MAP: Record<string, string> = {
   TELEGRAM_BOT_TOKEN: "op://YOUR_VAULT/YOUR_TELEGRAM_ITEM/credential",
-  ANTHROPIC_API_KEY: "op://YOUR_VAULT/YOUR_ANTHROPIC_ITEM/credential",
+  GOOGLE_GENERATIVE_AI_API_KEY: "op://YOUR_VAULT/YOUR_GOOGLE_AI_ITEM/credential",
   GMAIL_CLIENT_ID: "op://YOUR_VAULT/YOUR_GMAIL_ITEM/client_id",
   GMAIL_CLIENT_SECRET: "op://YOUR_VAULT/YOUR_GMAIL_ITEM/client_secret",
   GMAIL_REFRESH_TOKEN: "op://YOUR_VAULT/YOUR_GMAIL_ITEM/refresh_token",

@@ -59,10 +59,10 @@ Single Railway service running all cloud golems on schedules:
 ### Railway Env Vars
 
 ```bash
-LLM_BACKEND=haiku
+LLM_BACKEND=gemini
 STATE_BACKEND=supabase
 TELEGRAM_MODE=direct
-ANTHROPIC_API_KEY=<your-key>
+GOOGLE_GENERATIVE_AI_API_KEY=<your-key>
 SUPABASE_URL=...
 SUPABASE_SERVICE_KEY=...
 ```
