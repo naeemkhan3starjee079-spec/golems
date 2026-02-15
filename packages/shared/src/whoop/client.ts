@@ -2,7 +2,8 @@
  * Whoop API Client
  *
  * Handles OAuth2 token refresh and API calls.
- * Credentials from env vars. Token cache in /tmp/whoop-tokens.json (written by auth-server).
+ * Credentials from env vars. Refresh tokens persisted to Supabase (survives deploys).
+ * Whoop uses rotating refresh tokens — each use invalidates the old one.
  */
 
 import { readFileSync, existsSync, writeFileSync } from "fs";
@@ -40,7 +41,7 @@ function getCredentials(): {
   return { clientId, clientSecret, refreshToken };
 }
 
-/** Try loading cached tokens from /tmp/whoop-tokens.json (written by auth-server) */
+/** Try loading cached tokens from /tmp/whoop-tokens.json */
 function loadCachedTokensFromFile(): boolean {
   try {
     if (!existsSync(TOKEN_CACHE_PATH)) return false;
@@ -48,6 +49,10 @@ function loadCachedTokensFromFile(): boolean {
     if (data.access_token && data.expires_at > Date.now() + TOKEN_BUFFER_MS) {
       cachedTokens = data;
       return true;
+    }
+    // Even if access token expired, keep the refresh token
+    if (data.refresh_token && !cachedTokens?.refresh_token) {
+      cachedTokens = data;
     }
     return false;
   } catch {
@@ -64,18 +69,80 @@ function saveTokensToFile(tokens: WhoopTokens): void {
   }
 }
 
+/** Load the latest refresh token from Supabase (survives container restarts) */
+async function loadRefreshTokenFromSupabase(): Promise<string | null> {
+  try {
+    const { getSupabase } = await import("../lib/supabase-factory");
+    const sb = getSupabase();
+    const { data } = await sb
+      .from("golem_state")
+      .select("value")
+      .eq("key", "whoop_refresh_token")
+      .single();
+    if (data?.value) {
+      return typeof data.value === "string" ? data.value : String(data.value);
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/** Persist the new refresh token to Supabase (fire-and-forget) */
+function saveRefreshTokenToSupabase(refreshToken: string): void {
+  import("../lib/supabase-factory")
+    .then(({ getSupabase }) => {
+      const sb = getSupabase();
+      sb.from("golem_state")
+        .upsert(
+          {
+            key: "whoop_refresh_token",
+            value: JSON.stringify(refreshToken),
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "key" },
+        )
+        .then(({ error }) => {
+          if (error) console.error("[Whoop] Failed to save refresh token to Supabase:", error.message);
+          else console.log("[Whoop] Refresh token persisted to Supabase");
+        });
+    })
+    .catch(() => {});
+}
+
+/** Get the best available refresh token: memory > Supabase > env var */
+async function getBestRefreshToken(): Promise<string> {
+  // 1. In-memory (current session, most recent)
+  if (cachedTokens?.refresh_token) {
+    return cachedTokens.refresh_token;
+  }
+
+  // 2. Supabase (survives deploys/restarts)
+  const supabaseToken = await loadRefreshTokenFromSupabase();
+  if (supabaseToken) {
+    console.log("[Whoop] Using refresh token from Supabase");
+    return supabaseToken;
+  }
+
+  // 3. Env var (initial setup only — will be stale after first refresh)
+  const { refreshToken } = getCredentials();
+  console.log("[Whoop] Using refresh token from env var (first use)");
+  return refreshToken;
+}
+
 /** Get a valid access token, refreshing if needed */
 async function getAccessToken(): Promise<string> {
   if (cachedTokens && cachedTokens.expires_at > Date.now() + TOKEN_BUFFER_MS) {
     return cachedTokens.access_token;
   }
 
-  // Try loading from auth-server's temp file
+  // Try loading from local temp file
   if (loadCachedTokensFromFile()) {
     return cachedTokens!.access_token;
   }
 
-  const { clientId, clientSecret, refreshToken } = getCredentials();
+  const { clientId, clientSecret } = getCredentials();
+  const refreshToken = await getBestRefreshToken();
 
   const response = await fetch(TOKEN_URL, {
     method: "POST",
@@ -85,7 +152,7 @@ async function getAccessToken(): Promise<string> {
       client_id: clientId,
       client_secret: clientSecret,
       scope: "offline",
-      refresh_token: cachedTokens?.refresh_token ?? refreshToken,
+      refresh_token: refreshToken,
     }),
   });
 
@@ -109,6 +176,7 @@ async function getAccessToken(): Promise<string> {
   };
 
   saveTokensToFile(cachedTokens);
+  saveRefreshTokenToSupabase(data.refresh_token);
   return cachedTokens.access_token;
 }
 
