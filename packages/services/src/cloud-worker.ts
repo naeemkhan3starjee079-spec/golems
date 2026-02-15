@@ -74,6 +74,11 @@ async function getBriefing() {
   return mod.sendBriefing;
 }
 
+async function getWhoopSync() {
+  const mod = await import("@golems/shared/whoop/sync");
+  return mod.syncWhoopToSupabase;
+}
+
 // ═══════════════════════════════════════════════════════
 // Safe execution wrapper
 // ═══════════════════════════════════════════════════════
@@ -420,10 +425,16 @@ try {
     const sendBriefing = await getBriefing();
     scheduleDaily("Briefing", 8, sendBriefing);
 
+    // Whoop health sync: 7am + 2pm Israel (after sleep scored + mid-day strain update)
+    const syncWhoop = await getWhoopSync();
+    scheduleDaily("WhoopSync", 7, syncWhoop);
+    scheduleDaily("WhoopSync-Afternoon", 14, syncWhoop);
+
     console.log("[CloudWorker] All services scheduled:");
     console.log("  - EmailGolem: hourly 6am-7pm (skip lunch), 10pm final, OFF overnight");
     console.log("  - JobGolem: 6am + 9am + 1pm Sun-Thu (Israeli work week)");
     console.log("  - Briefing: 8am Israel");
+    console.log("  - WhoopSync: 7am + 2pm Israel");
   } else if (emailOnly) {
     const processEmails = await getEmailGolem();
     scheduleEmail(processEmails);

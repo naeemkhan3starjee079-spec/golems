@@ -10,6 +10,7 @@ import {
   Activity,
   Coins,
   Database,
+  Heart,
   KanbanSquare,
   Mail,
   Palette,
@@ -40,6 +41,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/emails", label: "Emails", icon: Mail },
       { href: "/recruiter", label: "Recruiter", icon: Users },
       { href: "/teller", label: "Teller", icon: Wallet },
+      { href: "/coach", label: "Coach", icon: Heart },
     ],
   },
   {
