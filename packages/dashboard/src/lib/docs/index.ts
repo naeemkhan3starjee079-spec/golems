@@ -70,7 +70,8 @@ export function getDoc(slugParts: string[]): DocPage | null {
   }
 
   // Strip first H1 from content to avoid duplicate title rendering
-  const strippedContent = content.replace(/^#\s+.+\n?/, "");
+  // Use /m flag since content after frontmatter often starts with \n
+  const strippedContent = content.replace(/^#\s+.+\n?/m, "");
 
   return {
     slug: slugParts.join("/"),

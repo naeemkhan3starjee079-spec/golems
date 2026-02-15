@@ -1,12 +1,13 @@
 "use client";
 
 import {
-  Activity, Battery, BedDouble, Clock, Flame,
+  Activity, AlertTriangle, Battery, BedDouble, Calendar, Clock, Flame,
   Heart, HeartPulse, Moon, RefreshCw, Sun, Target, TrendingUp, Wind,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PageSkeleton } from "@/components/skeleton";
 import { fetchWhoopSnapshots, fetchLatestWhoopSnapshot, fetchTodayActivity } from "@/lib/supabase/queries";
+import { timeAgo } from "@/lib/format";
 import type { WhoopSnapshot } from "@/lib/types";
 import { getRecoveryColor } from "@/lib/types/coach";
 
@@ -207,6 +208,15 @@ export default function CoachPage() {
   const recoveryColor = getRecoveryColor(latest.recovery_score);
   const rc = RECOVERY_COLORS[recoveryColor];
 
+  // Data freshness: how old is the latest scored snapshot?
+  const dataAgeMs = Date.now() - new Date(latest.created_at).getTime();
+  const dataAgeHours = dataAgeMs / 3600000;
+  const isStale = dataAgeHours > 24;
+
+  // Whoop sync health: check if any whoopsync runs happened today
+  const whoopRuns = todayRuns.filter((r) => r.service.includes("whoop"));
+  const lastSyncOk = whoopRuns.length > 0 && whoopRuns[0].status === "success";
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -216,12 +226,35 @@ export default function CoachPage() {
           Coach
         </h2>
         <div className="flex items-center gap-3">
-          <span className="text-[10px] text-muted">{latest.snapshot_date}</span>
+          <span className="text-[10px] text-muted flex items-center gap-1">
+            <Clock className="w-3 h-3" />
+            {latest.snapshot_date} &middot; {timeAgo(latest.created_at)}
+          </span>
+          {whoopRuns.length > 0 && (
+            <span className={`text-[9px] px-1.5 py-0.5 rounded-full flex items-center gap-1 ${
+              lastSyncOk ? "bg-emerald/10 text-emerald" : "bg-amber/10 text-amber"
+            }`}>
+              <div className={`w-1.5 h-1.5 rounded-full ${lastSyncOk ? "bg-emerald" : "bg-amber"}`} />
+              Sync {lastSyncOk ? "OK" : "issue"}
+            </span>
+          )}
           <button type="button" onClick={fetchAll} className="text-xs text-muted hover:text-foreground transition-colors">
             <RefreshCw className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
+
+      {/* Stale data warning */}
+      {isStale && (
+        <div className="flex items-start gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+          <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
+          <div className="text-xs text-muted">
+            <span className="font-medium text-amber-400">Data may be stale</span>
+            {" \u2014 "}last Whoop snapshot is from {timeAgo(latest.created_at)}.
+            {whoopRuns.length === 0 && " No Whoop sync ran today \u2014 check the cloud worker."}
+          </div>
+        </div>
+      )}
 
       {/* Top Section: Recovery Ring + Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -396,6 +429,21 @@ export default function CoachPage() {
           </div>
         );
       })()}
+
+      {/* Calendar Events */}
+      <div className="rounded-xl border border-border/60 bg-surface/30 p-5 space-y-3">
+        <div className="flex items-center gap-2">
+          <Calendar className="w-4 h-4 text-accent" />
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted">Calendar Events</span>
+        </div>
+        <div className="text-center py-6 text-muted">
+          <Calendar className="w-8 h-8 mx-auto mb-2 opacity-20" />
+          <p className="text-xs">Calendar sync is available locally but not yet wired to the cloud dashboard.</p>
+          <p className="text-[10px] text-muted/50 mt-1">
+            The coach golem reads Google Calendar via <code className="bg-surface px-1 py-0.5 rounded">calendar-client.ts</code>
+          </p>
+        </div>
+      </div>
 
       {/* Protocol Reminders */}
       <div className="rounded-xl border border-border bg-surface p-5 space-y-3">

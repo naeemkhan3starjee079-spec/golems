@@ -534,9 +534,11 @@ export async function fetchTodayActivity() {
 
 export async function fetchLatestWhoopSnapshot() {
   const supabase = createClient();
+  // Prefer snapshots with actual recovery data (skip partial syncs with null values)
   const { data, error } = await supabase
     .from("whoop_snapshots")
     .select("id, snapshot_date, recovery_score, recovery_state, hrv_rmssd, resting_heart_rate, spo2, skin_temp, sleep_duration_ms, sleep_quality_ms, rem_ms, deep_ms, light_ms, awake_ms, sleep_performance, sleep_consistency, sleep_efficiency, sleep_start, sleep_end, strain, kilojoule, avg_heart_rate, max_heart_rate, created_at")
+    .not("recovery_score", "is", null)
     .order("snapshot_date", { ascending: false })
     .limit(1)
     .maybeSingle();

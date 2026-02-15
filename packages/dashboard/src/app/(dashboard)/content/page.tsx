@@ -27,6 +27,7 @@ const PIPELINE_COLORS: Record<string, string> = {
   satori: "text-amber-400",
   playwright: "text-green-400",
   "figma-remotion": "text-pink-400",
+  text: "text-orange-400",
 };
 
 const PIPELINE_LABELS: Record<string, string> = {
@@ -36,49 +37,57 @@ const PIPELINE_LABELS: Record<string, string> = {
   satori: "Template Fill",
   playwright: "Playwright Screenshots",
   "figma-remotion": "Figma to Video",
+  text: "Text Publishing",
 };
 
 const PIPELINE_FLOWS: Record<string, FlowStep[]> = {
   remotion: [
-    { label: "Idea", detail: "Video concept", type: "input" },
-    { label: "CC (Opus)", detail: "Picks React composition", type: "brain" },
-    { label: "React", detail: "Renders frames", type: "tool" },
-    { label: "Remotion", detail: "Encodes MP4/GIF", type: "tool" },
-    { label: "Video", detail: "Final output", type: "output" },
+    { label: "Idea", detail: "Topic, style, duration", type: "input" },
+    { label: "CC (Opus)", detail: "Selects composition, maps props from brand.json", type: "brain" },
+    { label: "React", detail: "Renders composition frames via Remotion bundle", type: "tool" },
+    { label: "Remotion", detail: "FFmpeg encode → MP4 (1080p) or GIF (800x450)", type: "tool" },
+    { label: "Video", detail: "YouTube / LinkedIn / GIF output", type: "output" },
   ],
   comfyui: [
-    { label: "Idea", detail: "Image concept", type: "input" },
-    { label: "CC (Opus)", detail: "Crafts Flux prompt", type: "brain" },
-    { label: "ComfyUI", detail: "Flux on Apple Silicon", type: "tool" },
-    { label: "Vision Gate", detail: "Quality review", type: "gate" },
-    { label: "Image", detail: "PNG + brand overlay", type: "output" },
+    { label: "Idea", detail: "Prompt + style (social/merch/meme)", type: "input" },
+    { label: "CC (Opus)", detail: "Crafts Flux prompt with brand tone + negative prompts", type: "brain" },
+    { label: "ComfyUI", detail: "Flux.1 Dev GGUF on Apple Silicon (25-30 steps)", type: "tool" },
+    { label: "Quality Gate", detail: "CLIP >=0.25, Aesthetic >=5.5, BRISQUE <=40", type: "gate", loopTo: 2, loopLabel: "Retry (max 3x)" },
+    { label: "Image", detail: "PNG + brand watermark", type: "output" },
   ],
   dataviz: [
-    { label: "Data", detail: "Supabase / API", type: "input" },
-    { label: "CC (Opus)", detail: "Designs chart", type: "brain" },
-    { label: "SVG Builder", detail: "Vector markup", type: "tool" },
-    { label: "Sharp", detail: "Rasterize", type: "tool" },
-    { label: "Chart", detail: "PNG / SVG", type: "output" },
+    { label: "Data", detail: "Supabase queries or Zikaron SQLite", type: "input" },
+    { label: "CC (Opus)", detail: "Picks chart type + maps data to axes", type: "brain" },
+    { label: "SVG Builder", detail: "Bar / donut / line / stat-card generators", type: "tool" },
+    { label: "Sharp", detail: "SVG → PNG rasterization", type: "tool" },
+    { label: "Chart", detail: "LinkedIn 1200x627 or Instagram 1080x1080", type: "output" },
   ],
   playwright: [
-    { label: "URL", detail: "Target page", type: "input" },
-    { label: "CC (Opus)", detail: "Plans capture", type: "brain" },
-    { label: "Playwright", detail: "Browser control", type: "tool" },
-    { label: "Screenshot", detail: "PNG output", type: "output" },
+    { label: "URL", detail: "Target page or localhost app", type: "input" },
+    { label: "CC (Opus)", detail: "Plans viewport, waits, selects elements", type: "brain" },
+    { label: "Playwright", detail: "Headless Chromium capture", type: "tool" },
+    { label: "Screenshot", detail: "Full page or element PNG", type: "output" },
   ],
   satori: [
-    { label: "Data", detail: "Content + template", type: "input" },
-    { label: "CC (Opus)", detail: "Fills template", type: "brain" },
-    { label: "Satori", detail: "JSX to SVG", type: "tool" },
-    { label: "Card", detail: "Social PNG", type: "output" },
+    { label: "Data", detail: "Title, stats, or quote text", type: "input" },
+    { label: "CC (Opus)", detail: "Selects template + fills slots", type: "brain" },
+    { label: "Satori", detail: "JSX → SVG (no browser needed)", type: "tool" },
+    { label: "Card", detail: "Branded social card PNG", type: "output" },
   ],
   "figma-remotion": [
-    { label: "Figma", detail: "Design source", type: "input" },
-    { label: "CC (Opus)", detail: "Extracts layout + props", type: "brain" },
-    { label: "React", detail: "Renders composition", type: "tool" },
-    { label: "Figma Gate", detail: "Compare to design", type: "gate" },
-    { label: "Remotion", detail: "Encodes MP4/GIF", type: "tool" },
-    { label: "Video", detail: "1:1 fidelity output", type: "output" },
+    { label: "Figma", detail: "Design file URL or node ID", type: "input" },
+    { label: "CC (Opus)", detail: "Extracts layers, maps to React props", type: "brain" },
+    { label: "React", detail: "Renders animated composition", type: "tool" },
+    { label: "Figma Gate", detail: "Pixel-diff against original design", type: "gate", loopTo: 2, loopLabel: "Adjust until match" },
+    { label: "Remotion", detail: "Encode final animation", type: "tool" },
+    { label: "Video", detail: "1:1 fidelity animation", type: "output" },
+  ],
+  text: [
+    { label: "Topic", detail: "Code commit, research, insight", type: "input" },
+    { label: "CC (Opus)", detail: "Generates draft in owner's voice", type: "brain" },
+    { label: "Critique Wave", detail: "Parallel agents review for quality", type: "gate", loopTo: 1, loopLabel: "Refine draft" },
+    { label: "Approval", detail: "Human reviews via Telegram /drafts", type: "gate" },
+    { label: "Published", detail: "Soltome (2 credits) or LinkedIn", type: "output" },
   ],
 };
 
@@ -89,29 +98,48 @@ const FLOW_BRAIN_STYLES: Record<string, string> = {
   satori: "border-amber-400/50 shadow-[0_0_12px_-3px] shadow-amber-500/25",
   playwright: "border-green-400/50 shadow-[0_0_12px_-3px] shadow-green-500/25",
   "figma-remotion": "border-pink-400/50 shadow-[0_0_12px_-3px] shadow-pink-500/25",
+  text: "border-orange-400/50 shadow-[0_0_12px_-3px] shadow-orange-500/25",
+};
+
+const TYPE_ICONS: Record<FlowStep["type"], string> = {
+  input: "IN",
+  brain: "AI",
+  tool: "FN",
+  gate: "QA",
+  output: "OUT",
 };
 
 function FlowNode({
   step,
   pipelineId,
+  index,
 }: {
   step: FlowStep;
   pipelineId: string;
+  index: number;
 }) {
   const typeStyles: Record<FlowStep["type"], string> = {
     input: "border-dashed border-zinc-500/50 bg-zinc-800/30",
     brain: `border-solid bg-zinc-800/80 ${FLOW_BRAIN_STYLES[pipelineId] ?? "border-zinc-400/50"}`,
     tool: "border-solid border-zinc-600/50 bg-zinc-800/50",
-    gate: "border-dotted border-emerald-500/40 bg-emerald-950/20",
-    output: "border-solid border-zinc-500/50 bg-zinc-800/30",
+    gate: step.loopTo != null
+      ? "border-2 border-amber-500/50 bg-amber-950/20"
+      : "border-dotted border-emerald-500/40 bg-emerald-950/20",
+    output: "border-double border-2 border-emerald-500/40 bg-emerald-950/10",
   };
 
   return (
     <div
-      className={`flex flex-col items-center gap-0.5 px-4 py-2.5 rounded-md border min-w-[88px] ${typeStyles[step.type]}`}
+      data-flow-index={index}
+      className={`flex flex-col items-center gap-1 px-4 py-3 rounded-lg border min-w-[100px] max-w-[140px] transition-all hover:scale-105 ${typeStyles[step.type]}`}
     >
-      <span className="text-[9px] uppercase tracking-widest text-zinc-500 font-mono">
-        {step.type}
+      <span className={`text-[9px] font-bold tracking-widest font-mono px-1.5 py-0.5 rounded ${
+        step.type === "brain" ? "text-violet-300 bg-violet-500/10" :
+        step.type === "gate" ? (step.loopTo != null ? "text-amber-300 bg-amber-500/10" : "text-emerald-300 bg-emerald-500/10") :
+        step.type === "output" ? "text-emerald-300 bg-emerald-500/10" :
+        "text-zinc-400 bg-zinc-700/30"
+      }`}>
+        {TYPE_ICONS[step.type]}
       </span>
       <span className="text-xs font-semibold text-zinc-100">{step.label}</span>
       <span className="text-[10px] text-zinc-400 text-center leading-tight">
@@ -121,33 +149,65 @@ function FlowNode({
   );
 }
 
-function FlowConnector() {
+function FlowConnector({ label }: { label?: string }) {
   return (
-    <svg
-      width="36"
-      height="16"
-      viewBox="0 0 36 16"
-      className="shrink-0 mx-0.5"
-      aria-hidden="true"
-    >
-      <line
-        x1="0"
-        y1="8"
-        x2="26"
-        y2="8"
-        stroke="rgb(113 113 122)"
-        strokeWidth="1.5"
-        strokeDasharray="4 3"
+    <div className="flex flex-col items-center shrink-0 mx-0.5">
+      <svg width="40" height="16" viewBox="0 0 40 16" aria-hidden="true">
+        <line x1="0" y1="8" x2="30" y2="8" stroke="rgb(113 113 122)" strokeWidth="1.5" strokeDasharray="4 3">
+          <animate attributeName="stroke-dashoffset" values="7;0" dur="0.8s" repeatCount="indefinite" />
+        </line>
+        <polygon points="30,4 38,8 30,12" fill="rgb(113 113 122)" />
+      </svg>
+      {label && <span className="text-[8px] text-zinc-500 mt-0.5">{label}</span>}
+    </div>
+  );
+}
+
+function FlowLoop({ steps, gateIndex }: { steps: FlowStep[]; gateIndex: number }) {
+  const gate = steps[gateIndex];
+  if (gate.loopTo == null) return null;
+
+  // Calculate the visual span: from loopTo node to gate node
+  // Each node is ~120px wide, each connector ~40px
+  const span = gateIndex - gate.loopTo;
+  const width = span * 160; // approximate width of spanned nodes+connectors
+
+  return (
+    <div className="flex justify-center mt-1">
+      <svg
+        width={width}
+        height="32"
+        viewBox={`0 0 ${width} 32`}
+        className="overflow-visible"
+        aria-hidden="true"
       >
-        <animate
-          attributeName="stroke-dashoffset"
-          values="7;0"
-          dur="0.8s"
-          repeatCount="indefinite"
-        />
-      </line>
-      <polygon points="26,4 34,8 26,12" fill="rgb(113 113 122)" />
-    </svg>
+        {/* Curved loop-back arrow */}
+        <path
+          d={`M ${width - 10} 0 C ${width - 10} 24, 10 24, 10 0`}
+          fill="none"
+          stroke="rgb(245 158 11)"
+          strokeWidth="1.5"
+          strokeDasharray="4 3"
+          opacity="0.6"
+        >
+          <animate attributeName="stroke-dashoffset" values="0;-7" dur="0.8s" repeatCount="indefinite" />
+        </path>
+        {/* Arrow tip at target */}
+        <polygon points="6,4 14,0 10,8" fill="rgb(245 158 11)" opacity="0.6" />
+        {/* Label */}
+        <text
+          x={width / 2}
+          y="20"
+          textAnchor="middle"
+          fill="rgb(245 158 11)"
+          fontSize="9"
+          fontFamily="ui-monospace, monospace"
+          opacity="0.8"
+        >
+          {gate.loopLabel ?? "Retry"}
+        </text>
+      </svg>
+    </div>
   );
 }
 
@@ -158,6 +218,11 @@ function FlowDiagram({
   steps: FlowStep[];
   pipelineId: string;
 }) {
+  // Find gates with loops
+  const loopGates = steps
+    .map((step, i) => ({ step, index: i }))
+    .filter(({ step }) => step.loopTo != null);
+
   return (
     <div
       className="relative rounded-lg p-6 overflow-x-auto"
@@ -173,14 +238,24 @@ function FlowDiagram({
             key={`node-${i}`}
             step={step}
             pipelineId={pipelineId}
+            index={i}
           />,
           ...(i < steps.length - 1
-            ? [<FlowConnector key={`conn-${i}`} />]
+            ? [<FlowConnector key={`conn-${i}`} label={step.type === "gate" && !step.loopTo ? "pass" : undefined} />]
             : []),
         ])}
       </div>
+      {/* Loop arrows for gate nodes */}
+      {loopGates.map(({ index }) => (
+        <FlowLoop key={`loop-${index}`} steps={steps} gateIndex={index} />
+      ))}
       <p className="text-[10px] text-zinc-500 text-center mt-4 font-mono tracking-wider">
-        CC (Opus) is always the orchestrator — tools execute, CC decides
+        <span className="inline-flex items-center gap-3">
+          <span><span className="text-violet-400">AI</span> = Claude decides</span>
+          <span><span className="text-zinc-300">FN</span> = Tool executes</span>
+          <span><span className="text-amber-400">QA</span> = Quality gate</span>
+          {loopGates.length > 0 && <span><span className="text-amber-400">↩</span> = Retry loop</span>}
+        </span>
       </p>
     </div>
   );
@@ -395,6 +470,11 @@ const AVAILABLE_PIPELINES = [
     id: "figma-remotion",
     name: "Figma to Video",
     description: "Design-validated video. Iterates until render matches Figma 1:1.",
+  },
+  {
+    id: "text",
+    name: "Text Publishing",
+    description: "LinkedIn posts, blog articles, ghostwriting. CC drafts with critique waves.",
   },
 ];
 

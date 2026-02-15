@@ -39,4 +39,6 @@ export type FlowStep = {
   label: string;
   detail: string;
   type: "input" | "brain" | "tool" | "gate" | "output";
+  loopTo?: number;
+  loopLabel?: string;
 };

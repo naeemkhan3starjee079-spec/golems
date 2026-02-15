@@ -239,14 +239,34 @@ function loadMermaid(): Promise<void> {
           themeVariables: {
             darkMode: true,
             background: "transparent",
-            primaryColor: "#3b82f6",
-            primaryTextColor: "#e4e4e7",
-            primaryBorderColor: "#52525b",
-            lineColor: "#71717a",
-            secondaryColor: "#27272a",
+            primaryColor: "#7c3aed",
+            primaryTextColor: "#f4f4f5",
+            primaryBorderColor: "#7c3aed",
+            lineColor: "#a78bfa",
+            secondaryColor: "#1e1b4b",
             tertiaryColor: "#18181b",
-            fontFamily: "ui-monospace, monospace",
-            fontSize: "13px",
+            fontFamily: "ui-sans-serif, system-ui, sans-serif",
+            fontSize: "14px",
+            // Node styling
+            nodeBorder: "#7c3aed",
+            mainBkg: "#1e1b4b",
+            nodeTextColor: "#f4f4f5",
+            // Subgraph styling
+            clusterBkg: "#18181b",
+            clusterBorder: "#3f3f46",
+            titleColor: "#a78bfa",
+            // Edge styling
+            edgeLabelBackground: "#18181b",
+            // Flowchart specific
+            htmlLabels: true,
+          },
+          flowchart: {
+            htmlLabels: true,
+            curve: "basis",
+            padding: 16,
+            nodeSpacing: 40,
+            rankSpacing: 50,
+            useMaxWidth: true,
           },
         });
         resolve();
@@ -409,9 +429,10 @@ export function DocsClient({
               prose-pre:bg-transparent prose-pre:border-0 prose-pre:p-0 prose-pre:rounded-lg prose-pre:text-[13px]
               [&_pre>code]:bg-transparent [&_pre>code]:p-0 [&_pre>code]:rounded-none [&_pre>code]:text-inherit [&_pre>code]:before:content-none [&_pre>code]:after:content-none [&_pre>code]:font-normal
               [&_.shiki]:rounded-lg [&_.shiki]:border [&_.shiki]:border-border/40 [&_.shiki]:p-4 [&_.shiki]:overflow-x-auto [&_.shiki]:text-[13px] [&_.shiki]:leading-relaxed
-              [&_.mermaid-block]:my-8 [&_.mermaid-block]:rounded-lg [&_.mermaid-block]:border [&_.mermaid-block]:border-border/40 [&_.mermaid-block]:p-6 [&_.mermaid-block]:overflow-x-auto [&_.mermaid-block]:bg-zinc-900/50
-              [&_.mermaid-rendered]:text-center [&_.mermaid-rendered_svg]:mx-auto [&_.mermaid-rendered_svg]:max-w-full
-              [&_.mermaid-error]:text-[13px] [&_.mermaid-error]:font-mono [&_.mermaid-error]:text-muted [&_.mermaid-error]:whitespace-pre-wrap
+              [&_.mermaid-block]:my-8 [&_.mermaid-block]:rounded-xl [&_.mermaid-block]:border [&_.mermaid-block]:border-violet-500/20 [&_.mermaid-block]:p-8 [&_.mermaid-block]:overflow-x-auto [&_.mermaid-block]:bg-zinc-950/80
+              [&_.mermaid-rendered]:text-center [&_.mermaid-rendered_svg]:mx-auto [&_.mermaid-rendered_svg]:max-w-full [&_.mermaid-rendered_svg]:min-h-[150px]
+              [&_.mermaid-rendered_.node_rect]:rx-[8px] [&_.mermaid-rendered_.cluster_rect]:rx-[12px]
+              [&_.mermaid-error]:text-[13px] [&_.mermaid-error]:font-mono [&_.mermaid-error]:text-amber [&_.mermaid-error]:whitespace-pre-wrap [&_.mermaid-error]:bg-amber/5 [&_.mermaid-error]:rounded-lg [&_.mermaid-error]:p-4 [&_.mermaid-error]:border [&_.mermaid-error]:border-amber/20
               prose-table:text-[14px] prose-table:border-collapse
               [&_table]:w-full [&_table]:my-6
               [&_thead]:border-b-2 [&_thead]:border-border/50

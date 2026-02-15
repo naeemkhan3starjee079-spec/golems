@@ -47,18 +47,35 @@ function daysUntil(date: Date): number {
 }
 
 function getFrequencyLabel(freq: string | null) {
-  if (!freq) return "unknown";
+  if (!freq) return "";
   return freq === "yearly" ? "/yr" : freq === "weekly" ? "/wk" : "/mo";
 }
 
-const CATEGORY_MAP: Record<string, { label: string; color: string }> = {
-  "Spotify": { label: "Entertainment", color: "text-emerald" },
-  "Railway.app": { label: "Infrastructure", color: "text-cyan-400" },
-  "Bugbot Pro": { label: "Dev Tools", color: "text-violet-400" },
-};
+// Smart categorization by service name pattern matching
+const CATEGORY_RULES: { pattern: RegExp; label: string; color: string }[] = [
+  // Entertainment
+  { pattern: /spotify|netflix|youtube|disney|hulu|apple\s*music|hbo|paramount|peacock|crunchyroll|deezer|tidal/i, label: "Entertainment", color: "text-emerald" },
+  // Infrastructure / Cloud
+  { pattern: /railway|vercel|aws|azure|gcp|google\s*cloud|heroku|render|fly\.io|supabase|planetscale|neon|cloudflare|digitalocean|linode/i, label: "Infrastructure", color: "text-cyan-400" },
+  // Dev Tools
+  { pattern: /github|gitlab|bitbucket|jetbrains|cursor|copilot|linear|jira|bugbot|sentry|datadog|axiom|sourcegraph|codeclimate|deepsource|coderabbit/i, label: "Dev Tools", color: "text-violet-400" },
+  // AI / ML
+  { pattern: /anthropic|openai|claude|replicate|hugging\s*face|cohere|mistral|together\.ai|fireworks|groq/i, label: "AI / ML", color: "text-amber" },
+  // Communication
+  { pattern: /slack|zoom|discord|teams/i, label: "Communication", color: "text-blue-400" },
+  // Productivity
+  { pattern: /1password|lastpass|bitwarden|grammarly|todoist|asana|monday|trello|airtable|zapier|make\.com|notion|obsidian|roam|craft/i, label: "Productivity", color: "text-rose-400" },
+  // Design
+  { pattern: /figma|canva|adobe|sketch|framer|webflow/i, label: "Design", color: "text-pink-400" },
+];
 
-function getCategory(name: string) {
-  return CATEGORY_MAP[name] ?? { label: "Other", color: "text-muted" };
+function getCategory(name: string): { label: string; color: string } {
+  for (const rule of CATEGORY_RULES) {
+    if (rule.pattern.test(name)) {
+      return { label: rule.label, color: rule.color };
+    }
+  }
+  return { label: "Other", color: "text-muted" };
 }
 
 // --- Page ---

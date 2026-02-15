@@ -90,21 +90,19 @@ export default function EnrichmentPage() {
 
   if (!data) return <PageSkeleton />;
 
-  // Overall enrichment score (weighted average, embeddings worth less since it's at 100%)
-  const fields = [
-    { ...data.embeddings, weight: 1, label: "Embeddings" },
-    { ...data.tags, weight: 2, label: "Tags" },
-    { ...data.summaries, weight: 2, label: "Summaries" },
-    { ...data.importance, weight: 2, label: "Importance" },
-    { ...data.intent, weight: 2, label: "Intent" },
+  // Overall enrichment: average of text fields only (skip embeddings — always 100%)
+  const textFields = [
+    { ...data.tags, label: "Tags" },
+    { ...data.summaries, label: "Summaries" },
+    { ...data.importance, label: "Importance" },
+    { ...data.intent, label: "Intent" },
   ];
-  const totalWeight = fields.reduce((s, f) => s + f.weight, 0);
-  const overallPct = fields.reduce((s, f) => s + f.pct * f.weight, 0) / totalWeight;
+  const overallPct = textFields.reduce((s, f) => s + f.pct, 0) / textFields.length;
 
-  // Estimate: enrichment rate is ~50 chunks/batch, ~3s/batch
+  // Estimate: ~2s/chunk average (GLM with thinking disabled: 1s simple, 13s complex)
   const needsEnrichment = data.total_chunks - Math.min(data.summaries.count, data.importance.count, data.intent.count);
-  const estBatches = Math.ceil(needsEnrichment / 50);
-  const estHours = (estBatches * 3) / 3600;
+  const estSeconds = needsEnrichment * 2;
+  const estHours = estSeconds / 3600;
 
   // Sort projects by chunk count, group small ones
   const topProjects = data.projects.slice(0, 8);
