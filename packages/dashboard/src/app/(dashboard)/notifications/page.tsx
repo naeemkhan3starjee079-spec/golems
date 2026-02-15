@@ -94,8 +94,8 @@ export default function NotificationsPage() {
     if (loadingMore || !hasMore || events.length === 0) return;
     setLoadingMore(true);
     try {
-      const cursor = events[events.length - 1].created_at;
-      const data = await fetchNotificationEvents(PAGE_SIZE, cursor);
+      const last = events[events.length - 1];
+      const data = await fetchNotificationEvents(PAGE_SIZE, { created_at: last.created_at, id: last.id });
       setEvents((prev) => [...prev, ...(data as NotifEvent[])]);
       setHasMore(data.length >= PAGE_SIZE);
     } catch {

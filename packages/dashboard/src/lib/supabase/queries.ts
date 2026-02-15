@@ -168,16 +168,23 @@ const NOTIFICATION_TYPES = [
   "pipeline_draft_ready", "pipeline_draft_rejected",
 ];
 
-export async function fetchNotificationEvents(limit = 200, cursor?: string) {
+export async function fetchNotificationEvents(
+  limit = 200,
+  cursor?: { created_at: string; id: string },
+) {
   const supabase = createClient();
   let query = supabase
     .from("golem_events")
     .select("id, actor, type, data, created_at")
     .in("type", NOTIFICATION_TYPES)
     .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
     .limit(limit);
   if (cursor) {
-    query = query.lt("created_at", cursor);
+    // Compound cursor: events older than cursor, OR same timestamp but earlier id
+    query = query.or(
+      `created_at.lt.${cursor.created_at},and(created_at.eq.${cursor.created_at},id.lt.${cursor.id})`,
+    );
   }
   const { data, error } = await query;
   if (error) throw error;

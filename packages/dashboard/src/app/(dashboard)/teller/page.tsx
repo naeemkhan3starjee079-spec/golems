@@ -26,11 +26,20 @@ function getMonthlyAmount(sub: Subscription): number | null {
 function getNextPaymentDate(sub: Subscription): Date | null {
   if (!sub.last_payment) return null;
   const last = new Date(sub.last_payment);
-  const next = new Date(last);
-  if (sub.frequency === "yearly") next.setFullYear(next.getFullYear() + 1);
-  else if (sub.frequency === "weekly") next.setDate(next.getDate() + 7);
-  else next.setMonth(next.getMonth() + 1); // monthly default
-  return next;
+  if (sub.frequency === "yearly") {
+    return new Date(last.getFullYear() + 1, last.getMonth(), last.getDate());
+  }
+  if (sub.frequency === "weekly") {
+    const next = new Date(last);
+    next.setDate(next.getDate() + 7);
+    return next;
+  }
+  // Monthly: clamp to last day of next month to avoid overflow (Jan 31 → Feb 28, not Mar 3)
+  const nextMonth = last.getMonth() + 1;
+  const nextYear = last.getFullYear() + (nextMonth > 11 ? 1 : 0);
+  const daysInNextMonth = new Date(nextYear, (nextMonth % 12) + 1, 0).getDate();
+  const day = Math.min(last.getDate(), daysInNextMonth);
+  return new Date(nextYear, nextMonth % 12, day);
 }
 
 function daysUntil(date: Date): number {
