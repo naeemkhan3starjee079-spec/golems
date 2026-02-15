@@ -7,6 +7,8 @@
 import type { CalendarEvent } from "./calendar-client";
 import type { EcosystemStatus } from "./status-aggregator";
 import { getPendingWork } from "./status-aggregator";
+import type { CoachingOutput } from "./coaching-engine";
+import type { HealthAwarePlan } from "./index";
 
 export interface TimeBlock {
   start: string;
@@ -113,6 +115,73 @@ export function formatPlanForTelegram(plan: DailyPlan): string {
     lines.push("Pending:");
     for (const item of plan.pendingItems) {
       lines.push(`  ${item}`);
+    }
+  }
+
+  return lines.join("\n");
+}
+
+/**
+ * Format a health-aware plan for Telegram.
+ * Includes Whoop data, coaching advice, workout, Huberman reminders.
+ */
+export function formatHealthPlanForTelegram(
+  healthPlan: HealthAwarePlan,
+): string {
+  const { plan, coaching } = healthPlan;
+  const h = coaching.healthSnapshot;
+  const lines: string[] = [];
+
+  // Health snapshot
+  const colorEmoji =
+    h.recoveryColor === "green"
+      ? "🟢"
+      : h.recoveryColor === "yellow"
+        ? "🟡"
+        : "🔴";
+  lines.push(`${plan.greeting}!`);
+  lines.push("");
+  lines.push(
+    `${colorEmoji} Recovery: ${h.recovery}% | Sleep: ${h.sleepHours}h (${h.sleepPerformance}%) | HRV: ${h.hrvRmssd.toFixed(0)}ms`,
+  );
+
+  // Coaching advice
+  lines.push("");
+  lines.push(coaching.advice);
+
+  // Workout
+  lines.push("");
+  lines.push(
+    `Workout: ${coaching.workout.type} (${coaching.workout.duration})`,
+  );
+  if (coaching.workout.notes) {
+    lines.push(`   ${coaching.workout.notes}`);
+  }
+
+  // Schedule
+  if (plan.blocks.length > 0) {
+    lines.push("");
+    lines.push("Schedule:");
+    for (const block of plan.blocks) {
+      lines.push(`  ${block.start}–${block.end}  ${block.title}`);
+    }
+  }
+
+  // Pending items
+  if (plan.pendingItems.length > 0) {
+    lines.push("");
+    lines.push("Pending:");
+    for (const item of plan.pendingItems.slice(0, 5)) {
+      lines.push(`  ${item}`);
+    }
+  }
+
+  // Huberman reminders
+  if (coaching.hubermanReminders.length > 0) {
+    lines.push("");
+    lines.push("Reminders:");
+    for (const r of coaching.hubermanReminders) {
+      lines.push(`  ${r}`);
     }
   }
 
