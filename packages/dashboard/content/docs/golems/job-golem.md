@@ -1,5 +1,6 @@
 ---
-sidebar_position: 5
+title: "JobGolem — Job Discovery"
+description: "Israeli job board scraping, LLM scoring, profile matching, and auto-outreach via RecruiterGolem."
 ---
 
 # JobGolem

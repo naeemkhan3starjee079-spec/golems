@@ -1,5 +1,6 @@
 ---
-sidebar_position: 1
+title: "Email System — Infrastructure"
+description: "Gmail polling, LLM scoring, domain routing, reply drafting, and follow-up tracking."
 ---
 
 # Email System (Infrastructure)
