@@ -6,8 +6,8 @@
  */
 
 import { Composer } from "grammy";
-import { planToday } from "./index";
-import { formatPlanForTelegram } from "./schedule-engine";
+import { planToday, planTodayWithHealth } from "./index";
+import { formatPlanForTelegram, formatHealthPlanForTelegram } from "./schedule-engine";
 import { getEcosystemStatus } from "./status-aggregator";
 
 export const coachComposer = new Composer();
@@ -21,6 +21,30 @@ coachComposer.command("plan", async (ctx) => {
     await ctx.reply(`📋 *Today's Plan*\n\n${text}`, { parse_mode: "Markdown" });
   } catch (err) {
     await ctx.reply(`❌ Plan failed: ${err instanceof Error ? err.message : String(err)}`);
+  }
+});
+
+// /schedule command - health-aware daily plan (Whoop + Huberman + LLM coaching)
+coachComposer.command("schedule", async (ctx) => {
+  try {
+    await ctx.replyWithChatAction("typing");
+
+    let text: string;
+    try {
+      const healthPlan = await planTodayWithHealth();
+      text = formatHealthPlanForTelegram(healthPlan);
+    } catch (whoopErr) {
+      // Fallback to basic plan if Whoop unavailable
+      const plan = await planToday();
+      text = formatPlanForTelegram(plan);
+      text += "\n\nWhoop data unavailable -- basic plan shown.";
+    }
+
+    await ctx.reply(text);
+  } catch (err) {
+    await ctx.reply(
+      `Plan failed: ${err instanceof Error ? err.message : String(err)}`,
+    );
   }
 });
 

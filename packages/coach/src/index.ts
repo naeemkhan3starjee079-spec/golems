@@ -6,11 +6,14 @@
  */
 
 import type { GolemStatus } from "@golems/shared/lib/shared-types";
+import { getLatestRecovery, getLatestSleep } from "@golems/shared/whoop/client";
 import { getTodayEvents } from "./calendar-client";
 import { generateDailyPlan } from "./schedule-engine";
 import { getEcosystemStatus, registerAllGolems, getPendingWork } from "./status-aggregator";
 import { sendMorningNudge } from "./nudger";
 import { recordDay, getWeeklySummary } from "./tracker";
+import { loadProtocol } from "./protocol";
+import { generateCoaching, type CoachingOutput } from "./coaching-engine";
 import type { DailyPlan } from "./schedule-engine";
 
 /** Initialize CoachGolem — register all golem status fetchers */
@@ -53,11 +56,49 @@ export async function getStatus(): Promise<GolemStatus> {
   };
 }
 
+export interface HealthAwarePlan {
+  plan: DailyPlan;
+  coaching: CoachingOutput;
+}
+
+/** Generate today's plan with Whoop health data + LLM coaching */
+export async function planTodayWithHealth(): Promise<HealthAwarePlan> {
+  const [events, status, recovery, sleep] = await Promise.all([
+    getTodayEvents().catch(() => []),
+    getEcosystemStatus(),
+    getLatestRecovery().catch(() => null),
+    getLatestSleep().catch(() => null),
+  ]);
+
+  const protocol = loadProtocol();
+  const pending = getPendingWork(status);
+  const dayOfWeek = new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+  });
+
+  const coaching = await generateCoaching({
+    recovery,
+    sleep,
+    protocol,
+    calendar: events,
+    pending,
+    dayOfWeek,
+  });
+
+  const plan = generateDailyPlan(events, status);
+
+  return { plan, coaching };
+}
+
 // Re-export types and submodules
 export type { DailyPlan, TimeBlock } from "./schedule-engine";
 export type { EcosystemStatus, PendingWorkItem } from "./status-aggregator";
 export type { CalendarEvent } from "./calendar-client";
+export type { CoachingOutput } from "./coaching-engine";
+export type { CoachProtocol } from "./protocol";
 export { getEcosystemStatus } from "./status-aggregator";
 export { getTodayEvents } from "./calendar-client";
-export { generateDailyPlan, formatPlanForTelegram } from "./schedule-engine";
+export { generateDailyPlan, formatPlanForTelegram, formatHealthPlanForTelegram } from "./schedule-engine";
 export { getWeeklySummary } from "./tracker";
+export { generateCoaching } from "./coaching-engine";
+export { loadProtocol, saveProtocol } from "./protocol";
