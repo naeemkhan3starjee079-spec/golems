@@ -64,7 +64,7 @@ function getDetail(ev: NotifEvent): string {
 
 // --- Page ---
 
-const PAGE_SIZE = 200;
+const PAGE_SIZE = 500;
 
 export default function NotificationsPage() {
   const [events, setEvents] = useState<NotifEvent[]>([]);
@@ -91,18 +91,19 @@ export default function NotificationsPage() {
   }, []);
 
   const loadMore = useCallback(async () => {
-    if (loadingMore || !hasMore) return;
+    if (loadingMore || !hasMore || events.length === 0) return;
     setLoadingMore(true);
     try {
-      const data = await fetchNotificationEvents(PAGE_SIZE + events.length);
-      setEvents(data as NotifEvent[]);
-      setHasMore(data.length > events.length);
+      const last = events[events.length - 1];
+      const data = await fetchNotificationEvents(PAGE_SIZE, { created_at: last.created_at, id: last.id });
+      setEvents((prev) => [...prev, ...(data as NotifEvent[])]);
+      setHasMore(data.length >= PAGE_SIZE);
     } catch {
       // silent
     } finally {
       setLoadingMore(false);
     }
-  }, [events.length, hasMore, loadingMore]);
+  }, [events, hasMore, loadingMore]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 

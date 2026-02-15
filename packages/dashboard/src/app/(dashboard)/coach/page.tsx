@@ -1,12 +1,12 @@
 "use client";
 
 import {
-  Activity, Battery, BedDouble, Clock, Flame,
-  Heart, HeartPulse, Moon, RefreshCw, Sun, TrendingUp, Wind,
+  Activity, Battery, BedDouble, Briefcase, Calendar, Clock, Flame,
+  Heart, HeartPulse, Mail, Moon, RefreshCw, Sun, Target, TrendingUp, Wind, Zap,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PageSkeleton } from "@/components/skeleton";
-import { fetchWhoopSnapshots, fetchLatestWhoopSnapshot } from "@/lib/supabase/queries";
+import { fetchWhoopSnapshots, fetchLatestWhoopSnapshot, fetchTodayActivity } from "@/lib/supabase/queries";
 import type { WhoopSnapshot } from "@/lib/types";
 import { getRecoveryColor } from "@/lib/types/coach";
 
@@ -145,22 +145,30 @@ function recoveryBarColor(val: number): string {
 
 // --- Page ---
 
+type ActivityEvent = { type: string; actor: string; data: Record<string, unknown>; created_at: string };
+type ServiceRun = { service: string; started_at: string; ended_at: string | null; duration_ms: number | null; status: string };
+
 export default function CoachPage() {
   const [latest, setLatest] = useState<WhoopSnapshot | null>(null);
   const [history, setHistory] = useState<WhoopSnapshot[]>([]);
+  const [todayEvents, setTodayEvents] = useState<ActivityEvent[]>([]);
+  const [todayRuns, setTodayRuns] = useState<ServiceRun[]>([]);
   const [loaded, setLoaded] = useState(false);
   const fetchIdRef = useRef(0);
 
   const fetchAll = useCallback(async () => {
     const id = ++fetchIdRef.current;
     try {
-      const [snap, hist] = await Promise.all([
+      const [snap, hist, activity] = await Promise.all([
         fetchLatestWhoopSnapshot(),
         fetchWhoopSnapshots(7),
+        fetchTodayActivity(),
       ]);
       if (id !== fetchIdRef.current) return;
       setLatest(snap);
       setHistory(hist);
+      setTodayEvents(activity.events as ActivityEvent[]);
+      setTodayRuns(activity.runs as ServiceRun[]);
     } catch {
       // silent
     } finally {
@@ -358,6 +366,66 @@ export default function CoachPage() {
         </div>
       )}
 
+      {/* Tomorrow's Blueprint */}
+      {latest && (() => {
+        const score = latest.recovery_score ?? 50;
+        const isGreen = score >= 67;
+        const isYellow = score >= 34 && score < 67;
+        const strainTarget = isGreen ? "14-18 (High)" : isYellow ? "8-14 (Moderate)" : "4-8 (Light)";
+        const recommendation = isGreen
+          ? "Recovery is strong \u2014 push for a hard workout and tackle complex problems."
+          : isYellow
+            ? "Moderate recovery \u2014 steady-state cardio, focused deep work."
+            : "Low recovery \u2014 prioritize rest, NSDR, light movement only.";
+        const c = RECOVERY_COLORS[getRecoveryColor(score)];
+
+        return (
+          <div className={`rounded-xl border ${c.border} ${c.bg} p-5 space-y-4`}>
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-accent" />
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted">Tomorrow&apos;s Blueprint</span>
+              <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${c.bg} ${c.text} ring-1 ${c.ring}`}>
+                {isGreen ? "Go Hard" : isYellow ? "Stay Steady" : "Recover"}
+              </span>
+            </div>
+
+            <p className="text-xs text-muted">{recommendation}</p>
+
+            <div className="space-y-1.5">
+              {[
+                { time: "7:00", label: "Wake + Morning Sunlight", icon: Sun, color: "text-amber-400" },
+                { time: "7:30", label: "Morning Briefing arrives", icon: Mail, color: "text-accent" },
+                { time: "9:00", label: "First coffee (caffeine delay)", icon: Wind, color: "text-emerald" },
+                { time: "9:30", label: "Deep work block 1 (90min)", icon: Zap, color: "text-cyan-400" },
+                { time: "11:00", label: "Break + movement", icon: Activity, color: "text-orange-400" },
+                { time: "11:30", label: "Deep work block 2 (90min)", icon: Zap, color: "text-cyan-400" },
+                { time: "13:00", label: "Job scrape results + lunch", icon: Briefcase, color: "text-emerald" },
+                { time: "14:00", label: "NSDR / Yoga Nidra (20min)", icon: Battery, color: "text-violet-400" },
+                { time: "14:30", label: "Creative work / meetings", icon: Target, color: "text-accent" },
+                { time: "17:00", label: isGreen ? "Workout (high strain)" : isYellow ? "Moderate exercise" : "Light walk or stretch", icon: Flame, color: isGreen ? "text-red-400" : isYellow ? "text-orange-400" : "text-blue-400" },
+                { time: "22:00", label: "Wind down + supplements", icon: BedDouble, color: "text-blue-400" },
+                { time: "00:30", label: "Screen cutoff \u2192 sleep", icon: Moon, color: "text-violet-400" },
+              ].map(({ time, label, icon: Icon, color }) => (
+                <div key={time} className="flex items-center gap-3 py-1">
+                  <span className="text-[10px] text-muted/60 tabular-nums w-10 shrink-0 text-right">{time}</span>
+                  <div className="w-px h-4 bg-border/40" />
+                  <Icon className={`w-3.5 h-3.5 ${color} shrink-0`} />
+                  <span className="text-xs">{label}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/30">
+              <Target className={`w-4 h-4 ${c.text}`} />
+              <span className="text-xs">
+                <span className="text-muted">Strain target: </span>
+                <span className={`font-bold ${c.text}`}>{strainTarget}</span>
+              </span>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Protocol Reminders */}
       <div className="rounded-xl border border-border bg-surface p-5 space-y-3">
         <div className="flex items-center gap-2">
@@ -383,6 +451,64 @@ export default function CoachPage() {
           ))}
         </div>
       </div>
+
+      {/* Today's Activity Feed */}
+      {(todayEvents.length > 0 || todayRuns.length > 0) && (
+        <div className="rounded-xl border border-border bg-surface p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Activity className="w-4 h-4 text-accent" />
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted">Today&apos;s Activity</span>
+            </div>
+            <span className="text-[10px] text-muted tabular-nums">
+              {todayEvents.length} events &middot; {todayRuns.length} runs
+            </span>
+          </div>
+
+          {/* Service runs summary */}
+          {todayRuns.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {(() => {
+                const byService: Record<string, { count: number; ok: number }> = {};
+                for (const r of todayRuns) {
+                  const svc = r.service.replace(/--.*/, "");
+                  if (!byService[svc]) byService[svc] = { count: 0, ok: 0 };
+                  byService[svc].count++;
+                  if (r.status === "success") byService[svc].ok++;
+                }
+                return Object.entries(byService).map(([svc, { count, ok }]) => (
+                  <div key={svc} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-background/60 text-[10px]">
+                    <div className={`w-1.5 h-1.5 rounded-full ${ok === count ? "bg-emerald" : "bg-amber"}`} />
+                    <span className="font-medium">{svc}</span>
+                    <span className="text-muted">{ok}/{count}</span>
+                  </div>
+                ));
+              })()}
+            </div>
+          )}
+
+          {/* Events by type summary */}
+          {todayEvents.length > 0 && (
+            <div className="space-y-1">
+              {(() => {
+                const byType: Record<string, number> = {};
+                for (const e of todayEvents) {
+                  byType[e.type] = (byType[e.type] || 0) + 1;
+                }
+                return Object.entries(byType)
+                  .sort(([, a], [, b]) => b - a)
+                  .slice(0, 6)
+                  .map(([type, count]) => (
+                    <div key={type} className="flex items-center justify-between py-1">
+                      <span className="text-xs text-muted">{type.replace(/_/g, " ")}</span>
+                      <span className="text-xs tabular-nums font-medium">{count}</span>
+                    </div>
+                  ));
+              })()}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

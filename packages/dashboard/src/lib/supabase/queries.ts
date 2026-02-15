@@ -157,23 +157,36 @@ export async function fetchNightShiftEvents(limit = 50) {
 
 // --- Notifications ---
 
-export async function fetchNotificationEvents(limit = 50) {
+const NOTIFICATION_TYPES = [
+  "job_match", "job_applied",
+  "email_routed", "email_urgent", "email_triaged",
+  "telegram_message_in", "telegram_message_out", "golem_telegram_chat",
+  "nightshift_started", "nightshift_completed", "nightshift_pr",
+  "briefing_sent", "alert",
+  "service_error", "service_recovered",
+  "draft_approved", "soltome_post",
+  "pipeline_draft_ready", "pipeline_draft_rejected",
+];
+
+export async function fetchNotificationEvents(
+  limit = 200,
+  cursor?: { created_at: string; id: string },
+) {
   const supabase = createClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("golem_events")
     .select("id, actor, type, data, created_at")
-    .in("type", [
-      "job_match", "job_applied",
-      "email_routed", "email_urgent", "email_triaged",
-      "telegram_message_in", "telegram_message_out", "golem_telegram_chat",
-      "nightshift_started", "nightshift_completed", "nightshift_pr",
-      "briefing_sent", "alert",
-      "service_error", "service_recovered",
-      "draft_approved", "soltome_post",
-      "pipeline_draft_ready", "pipeline_draft_rejected",
-    ])
+    .in("type", NOTIFICATION_TYPES)
     .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
     .limit(limit);
+  if (cursor) {
+    // Compound cursor: events older than cursor, OR same timestamp but earlier id
+    query = query.or(
+      `created_at.lt.${cursor.created_at},and(created_at.eq.${cursor.created_at},id.lt.${cursor.id})`,
+    );
+  }
+  const { data, error } = await query;
   if (error) throw error;
   return data ?? [];
 }
@@ -464,7 +477,7 @@ export async function fetchSubscriptions() {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("subscriptions")
-    .select("id, service_name, amount, currency, frequency, status, last_payment, created_at")
+    .select("id, service_name, amount, currency, frequency, status, first_seen, last_payment, created_at")
     .order("service_name");
   if (error) throw error;
   return data ?? [];
@@ -495,6 +508,28 @@ export async function fetchWhoopSnapshots(days = 7) {
     .order("snapshot_date", { ascending: false });
   if (error) throw error;
   return data ?? [];
+}
+
+export async function fetchTodayActivity() {
+  const supabase = createClient();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const [{ data: events }, { data: runs }] = await Promise.all([
+    supabase
+      .from("golem_events")
+      .select("type, actor, data, created_at")
+      .gte("created_at", today.toISOString())
+      .order("created_at", { ascending: false })
+      .limit(50),
+    supabase
+      .from("service_runs")
+      .select("service, started_at, ended_at, duration_ms, status")
+      .gte("started_at", today.toISOString())
+      .order("started_at", { ascending: false })
+      .limit(20),
+  ]);
+  return { events: events ?? [], runs: runs ?? [] };
 }
 
 export async function fetchLatestWhoopSnapshot() {
