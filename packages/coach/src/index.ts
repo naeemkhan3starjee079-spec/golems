@@ -74,6 +74,7 @@ export async function planTodayWithHealth(): Promise<HealthAwarePlan> {
   const pending = getPendingWork(status);
   const dayOfWeek = new Date().toLocaleDateString("en-US", {
     weekday: "long",
+    timeZone: "Asia/Jerusalem",
   });
 
   const coaching = await generateCoaching({
