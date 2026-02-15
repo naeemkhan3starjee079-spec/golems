@@ -6,6 +6,7 @@ import {
   Brain,
   Activity,
   Briefcase,
+  Heart,
   KanbanSquare,
   Settings,
 } from "lucide-react";
@@ -13,6 +14,7 @@ import {
 const MOBILE_NAV = [
   { href: "/", label: "Brain", icon: Brain },
   { href: "/ops", label: "Ops", icon: Activity },
+  { href: "/coach", label: "Coach", icon: Heart },
   { href: "/jobs", label: "Jobs", icon: Briefcase },
   { href: "/backlog", label: "Board", icon: KanbanSquare },
   { href: "/settings", label: "Settings", icon: Settings },

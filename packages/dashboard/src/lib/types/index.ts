@@ -11,3 +11,4 @@ export * from "./backlog";
 export * from "./notifications";
 export * from "./session";
 export * from "./enrichment";
+export * from "./coach";

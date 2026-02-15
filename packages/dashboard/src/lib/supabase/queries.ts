@@ -475,3 +475,31 @@ export async function fetchPayments(limit = 20) {
   if (error) throw error;
   return data ?? [];
 }
+
+// --- Coach / Whoop ---
+
+export async function fetchWhoopSnapshots(days = 7) {
+  const supabase = createClient();
+  const since = new Date();
+  since.setDate(since.getDate() - days);
+
+  const { data, error } = await supabase
+    .from("whoop_snapshots")
+    .select("id, snapshot_date, recovery_score, recovery_state, hrv_rmssd, resting_heart_rate, spo2, skin_temp, sleep_duration_ms, sleep_quality_ms, rem_ms, deep_ms, light_ms, awake_ms, sleep_performance, sleep_consistency, sleep_efficiency, sleep_start, sleep_end, strain, kilojoule, avg_heart_rate, max_heart_rate, created_at")
+    .gte("snapshot_date", since.toISOString().slice(0, 10))
+    .order("snapshot_date", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function fetchLatestWhoopSnapshot() {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("whoop_snapshots")
+    .select("id, snapshot_date, recovery_score, recovery_state, hrv_rmssd, resting_heart_rate, spo2, skin_temp, sleep_duration_ms, sleep_quality_ms, rem_ms, deep_ms, light_ms, awake_ms, sleep_performance, sleep_consistency, sleep_efficiency, sleep_start, sleep_end, strain, kilojoule, avg_heart_rate, max_heart_rate, created_at")
+    .order("snapshot_date", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
