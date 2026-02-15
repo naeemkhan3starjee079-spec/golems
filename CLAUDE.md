@@ -21,7 +21,7 @@
 | **golems-tui** | `packages/golems-tui/` | React Ink terminal dashboard |
 | **tax-helper** | [`packages/tax-helper/`](packages/tax-helper/CLAUDE.md) | Schedule C transaction categorization (Sophtron MCP) |
 | **ralph** | [`packages/ralph/`](packages/ralph/CLAUDE.md) | Autonomous coding loop (PRD execution) |
-| **zikaron** | [`packages/zikaron/`](packages/zikaron/CLAUDE.md) | Memory layer (Python + sqlite-vec, 226K+ chunks) |
+| **zikaron** | [`packages/zikaron/`](packages/zikaron/CLAUDE.md) | Memory layer (Python + sqlite-vec, 238K+ chunks) |
 
 **Always read the package-specific CLAUDE.md when working in that package.**
 

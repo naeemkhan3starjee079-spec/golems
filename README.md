@@ -95,6 +95,10 @@ golems/
 │   ├── shared/         # Supabase, LLM, email, state, notifications
 │   ├── services/       # Night Shift, Briefing, Cloud Worker, Doctor, Wizard
 │   ├── content/        # Content creation skills (LinkedIn, ghostwriting)
+│   ├── dashboard/      # Next.js web dashboard (Vercel)
+│   ├── orchestrator/   # n8n orchestration + Bun render microservice
+│   ├── tax-helper/     # Schedule C transaction categorization (Sophtron MCP)
+│   ├── golems-tui/     # React Ink terminal dashboard
 │   ├── autonomous/     # Legacy test host (test files only)
 │   ├── ralph/          # Autonomous coding loop (PRD → stories → code → review)
 │   └── zikaron/        # Memory layer (238K+ chunks, semantic search)
@@ -120,7 +124,7 @@ golems/
 | **Cloud** | Railway (Docker) |
 | **Local** | macOS launchd services |
 | **Bot** | grammY (Telegram) |
-| **Testing** | Bun test (1,179 tests, 4,056 assertions) |
+| **Testing** | Bun test (1,148 tests, 3,990 assertions) |
 | **CI/CD** | GitHub Actions + CodeRabbit + DeepSource |
 
 ---
@@ -130,7 +134,7 @@ golems/
 | Environment | What Runs |
 |-------------|-----------|
 | **Mac (brain)** | Telegram bot, Night Shift, Zikaron, notification server |
-| **Railway (body)** | Email poller, job scraper, briefing, cloud LLM (Haiku) |
+| **Railway (body)** | Email poller, job scraper, briefing, cloud LLM (Gemini) |
 | **Supabase** | Database, auth, storage |
 
 ```
@@ -227,7 +231,7 @@ The plugin brings its CLAUDE.md, skills, MCP tools, and rules automatically.
 
 ## Links
 
-- **[Documentation](https://etanheyman.com/golems/)** — interactive docs
+- **[Documentation](https://etanheyman.com/golems/docs/getting-started)** — interactive docs
 - **[@GolemZikaronBot](https://t.me/GolemZikaronBot)** — Telegram bot
 - **[etanheyman.com](https://etanheyman.com)** — portfolio
 
