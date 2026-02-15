@@ -69,13 +69,18 @@ The coach page exists and is in the sidebar nav, but /ops doesn't show coach/who
 - Phase 10 (docs refresh provides context for what each page should show)
 
 ## Status
-- [x] Fix RLS policies (migration) — Added authenticated SELECT to 4 tables
+- [x] Fix RLS policies (migration) — Added authenticated SELECT to 4 tables + emails + email_senders (PR #183 + #184)
 - [x] Fix notification event types — Added email_routed, telegram_*, golem_telegram_chat, draft_approved, soltome_post, pipeline_draft_*
-- [x] Remove notification cap / add pagination — Increased to 200, added Load More button
-- [ ] Deploy WhoopSync to Railway — needs merge to master first, then `railway up -d`
+- [x] Remove notification cap / add pagination — Cursor-based pagination (500/page), "Load More" button
+- [x] Deploy WhoopSync to Railway — deployed via `railway up -d` after PR #183 merge
 - [x] Restart enrichment — launchd service restarted, running (PID 21015)
 - [x] Add WhoopSync to ops monitoring — Added whoopsync to SERVICE_CONFIG
 - [x] Fix Railway "Inactive" status — Extended check window from 3h to 12h (covers overnight gap)
 - [x] Fix tokens view — Added source environment badges (Local/Cloud/CLI), improved labels, added "not tracked" note
+- [x] Fix emails page (0 rows) — Added authenticated SELECT to emails + email_senders tables (PR #184)
+- [x] Improve teller page — Yearly projection, upcoming payments, data completeness %, categories (PR #184)
+- [x] Add coach timeline — Tomorrow's Blueprint (recovery-based), Today's Activity feed (PR #184)
+- [x] Fix docs heading sizes — Installed @tailwindcss/typography, h2-h6 now render correctly (PR #184)
+- [x] Fix mermaid rendering — Replaced blob URL ESM loader with UMD script from CDN (PR #184)
 - [ ] Verify all pages show data — needs Vercel deploy
 - [ ] Check sidebar nav completeness — needs Vercel deploy
