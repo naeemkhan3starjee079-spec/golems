@@ -1,0 +1,1 @@
+"use strict";(globalThis.webpackChunk_golems_docsite=globalThis.webpackChunk_golems_docsite||[]).push([[617],{617(e,s,c){c.d(s,{createPieServices:()=>i.f});var i=c(9150);c(7960)}}]);

@@ -113,100 +113,60 @@ function FlowNode({
   step,
   pipelineId,
   index,
+  isLast,
 }: {
   step: FlowStep;
   pipelineId: string;
   index: number;
+  isLast: boolean;
 }) {
+  const baseColor = PIPELINE_COLORS[pipelineId]?.replace("text-", "") ?? "zinc-400";
+
   const typeStyles: Record<FlowStep["type"], string> = {
-    input: "border-dashed border-zinc-500/50 bg-zinc-800/30",
-    brain: `border-solid bg-zinc-800/80 ${FLOW_BRAIN_STYLES[pipelineId] ?? "border-zinc-400/50"}`,
-    tool: "border-solid border-zinc-600/50 bg-zinc-800/50",
+    input: "border-zinc-500/40 bg-gradient-to-b from-zinc-800/60 to-zinc-900/60",
+    brain: `border-${baseColor}/50 bg-gradient-to-b from-zinc-800/80 to-zinc-900/90 ${FLOW_BRAIN_STYLES[pipelineId] ?? ""}`,
+    tool: "border-zinc-500/30 bg-gradient-to-b from-zinc-800/50 to-zinc-900/50",
     gate: step.loopTo != null
-      ? "border-2 border-amber-500/50 bg-amber-950/20"
-      : "border-dotted border-emerald-500/40 bg-emerald-950/20",
-    output: "border-double border-2 border-emerald-500/40 bg-emerald-950/10",
+      ? "border-amber-500/50 bg-gradient-to-b from-amber-950/30 to-zinc-900/60 shadow-[0_0_20px_-5px] shadow-amber-500/15"
+      : "border-emerald-500/40 bg-gradient-to-b from-emerald-950/20 to-zinc-900/60",
+    output: "border-emerald-500/50 bg-gradient-to-b from-emerald-950/20 to-zinc-900/60 shadow-[0_0_20px_-5px] shadow-emerald-500/15",
+  };
+
+  const iconBg: Record<FlowStep["type"], string> = {
+    input: "bg-zinc-700/50 text-zinc-300",
+    brain: "bg-violet-500/20 text-violet-300",
+    tool: "bg-zinc-600/40 text-zinc-300",
+    gate: step.loopTo != null ? "bg-amber-500/20 text-amber-300" : "bg-emerald-500/20 text-emerald-300",
+    output: "bg-emerald-500/20 text-emerald-300",
   };
 
   return (
-    <div
-      data-flow-index={index}
-      className={`flex flex-col items-center gap-1 px-4 py-3 rounded-lg border min-w-[100px] max-w-[140px] transition-all hover:scale-105 ${typeStyles[step.type]}`}
-    >
-      <span className={`text-[9px] font-bold tracking-widest font-mono px-1.5 py-0.5 rounded ${
-        step.type === "brain" ? "text-violet-300 bg-violet-500/10" :
-        step.type === "gate" ? (step.loopTo != null ? "text-amber-300 bg-amber-500/10" : "text-emerald-300 bg-emerald-500/10") :
-        step.type === "output" ? "text-emerald-300 bg-emerald-500/10" :
-        "text-zinc-400 bg-zinc-700/30"
-      }`}>
-        {TYPE_ICONS[step.type]}
-      </span>
-      <span className="text-xs font-semibold text-zinc-100">{step.label}</span>
-      <span className="text-[10px] text-zinc-400 text-center leading-tight">
-        {step.detail}
-      </span>
-    </div>
-  );
-}
-
-function FlowConnector({ label }: { label?: string }) {
-  return (
-    <div className="flex flex-col items-center shrink-0 mx-0.5">
-      <svg width="40" height="16" viewBox="0 0 40 16" aria-hidden="true">
-        <line x1="0" y1="8" x2="30" y2="8" stroke="rgb(113 113 122)" strokeWidth="1.5" strokeDasharray="4 3">
-          <animate attributeName="stroke-dashoffset" values="7;0" dur="0.8s" repeatCount="indefinite" />
-        </line>
-        <polygon points="30,4 38,8 30,12" fill="rgb(113 113 122)" />
-      </svg>
-      {label && <span className="text-[8px] text-zinc-500 mt-0.5">{label}</span>}
-    </div>
-  );
-}
-
-function FlowLoop({ steps, gateIndex }: { steps: FlowStep[]; gateIndex: number }) {
-  const gate = steps[gateIndex];
-  if (gate.loopTo == null) return null;
-
-  // Calculate the visual span: from loopTo node to gate node
-  // Each node is ~120px wide, each connector ~40px
-  const span = gateIndex - gate.loopTo;
-  const width = span * 160; // approximate width of spanned nodes+connectors
-
-  return (
-    <div className="flex justify-center mt-1">
-      <svg
-        width={width}
-        height="32"
-        viewBox={`0 0 ${width} 32`}
-        className="overflow-visible"
-        aria-hidden="true"
+    <div className="flex flex-col items-center">
+      <div
+        data-flow-index={index}
+        className={`relative flex items-start gap-3 w-full px-5 py-4 rounded-xl border backdrop-blur-sm transition-all hover:scale-[1.02] ${typeStyles[step.type]}`}
       >
-        {/* Curved loop-back arrow */}
-        <path
-          d={`M ${width - 10} 0 C ${width - 10} 24, 10 24, 10 0`}
-          fill="none"
-          stroke="rgb(245 158 11)"
-          strokeWidth="1.5"
-          strokeDasharray="4 3"
-          opacity="0.6"
-        >
-          <animate attributeName="stroke-dashoffset" values="0;-7" dur="0.8s" repeatCount="indefinite" />
-        </path>
-        {/* Arrow tip at target */}
-        <polygon points="6,4 14,0 10,8" fill="rgb(245 158 11)" opacity="0.6" />
-        {/* Label */}
-        <text
-          x={width / 2}
-          y="20"
-          textAnchor="middle"
-          fill="rgb(245 158 11)"
-          fontSize="9"
-          fontFamily="ui-monospace, monospace"
-          opacity="0.8"
-        >
-          {gate.loopLabel ?? "Retry"}
-        </text>
-      </svg>
+        <div className={`shrink-0 w-9 h-9 rounded-lg flex items-center justify-center text-[10px] font-bold tracking-widest font-mono ${iconBg[step.type]}`}>
+          {TYPE_ICONS[step.type]}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-semibold text-zinc-100">{step.label}</div>
+          <div className="text-xs text-zinc-400 leading-relaxed mt-0.5">{step.detail}</div>
+        </div>
+        <div className="absolute -top-2 -right-2 text-[9px] font-mono text-zinc-600 bg-zinc-900 px-1.5 py-0.5 rounded-full border border-zinc-800">
+          {index + 1}
+        </div>
+      </div>
+      {!isLast && (
+        <div className="flex flex-col items-center py-1">
+          <svg width="2" height="24" aria-hidden="true">
+            <line x1="1" y1="0" x2="1" y2="18" stroke="rgb(113 113 122)" strokeWidth="1.5" strokeDasharray="3 3">
+              <animate attributeName="stroke-dashoffset" values="6;0" dur="0.6s" repeatCount="indefinite" />
+            </line>
+            <polygon points="-2,18 1,24 4,18" fill="rgb(113 113 122)" />
+          </svg>
+        </div>
+      )}
     </div>
   );
 }
@@ -218,45 +178,98 @@ function FlowDiagram({
   steps: FlowStep[];
   pipelineId: string;
 }) {
-  // Find gates with loops
   const loopGates = steps
     .map((step, i) => ({ step, index: i }))
     .filter(({ step }) => step.loopTo != null);
 
   return (
     <div
-      className="relative rounded-lg p-6 overflow-x-auto"
+      className="relative rounded-xl p-6"
       style={{
         backgroundImage:
-          "radial-gradient(circle, rgb(63 63 70 / 0.25) 1px, transparent 1px)",
-        backgroundSize: "16px 16px",
+          "radial-gradient(circle, rgb(63 63 70 / 0.15) 1px, transparent 1px)",
+        backgroundSize: "20px 20px",
       }}
     >
-      <div className="flex items-center justify-center gap-0 min-w-max">
-        {steps.flatMap((step, i) => [
-          <FlowNode
-            key={`node-${i}`}
-            step={step}
-            pipelineId={pipelineId}
-            index={i}
-          />,
-          ...(i < steps.length - 1
-            ? [<FlowConnector key={`conn-${i}`} label={step.type === "gate" && !step.loopTo ? "pass" : undefined} />]
-            : []),
-        ])}
+      <div className="relative flex">
+        {/* Main vertical flow */}
+        <div className="flex-1 flex flex-col items-center max-w-sm mx-auto">
+          {steps.map((step, i) => (
+            <FlowNode
+              key={`node-${i}`}
+              step={step}
+              pipelineId={pipelineId}
+              index={i}
+              isLast={i === steps.length - 1}
+            />
+          ))}
+        </div>
+
+        {/* Loop-back arrows on the right side */}
+        {loopGates.length > 0 && (
+          <div className="absolute right-0 top-0 bottom-0 w-24">
+            {loopGates.map(({ step: gate, index: gateIdx }) => {
+              if (gate.loopTo == null) return null;
+              // Each step is roughly 90px tall (node + connector)
+              const topOffset = gate.loopTo * 90 + 20;
+              const height = (gateIdx - gate.loopTo) * 90;
+              return (
+                <svg
+                  key={`loop-${gateIdx}`}
+                  className="absolute overflow-visible"
+                  style={{ top: topOffset, right: 8 }}
+                  width="60"
+                  height={height}
+                  viewBox={`0 0 60 ${height}`}
+                >
+                  <path
+                    d={`M 0 ${height} C 40 ${height}, 40 0, 0 0`}
+                    fill="none"
+                    stroke="rgb(245 158 11)"
+                    strokeWidth="1.5"
+                    strokeDasharray="5 4"
+                    opacity="0.5"
+                  >
+                    <animate attributeName="stroke-dashoffset" values="0;-9" dur="1s" repeatCount="indefinite" />
+                  </path>
+                  <polygon
+                    points="-4,-3 0,5 4,-3"
+                    fill="rgb(245 158 11)"
+                    opacity="0.6"
+                    transform="translate(0, 0)"
+                  />
+                  <foreignObject x="2" y={height / 2 - 16} width="56" height="32">
+                    <div className="text-[10px] text-amber-400/80 font-mono leading-tight text-center bg-zinc-950/80 rounded px-1 py-0.5">
+                      {gate.loopLabel ?? "Retry"}
+                    </div>
+                  </foreignObject>
+                </svg>
+              );
+            })}
+          </div>
+        )}
       </div>
-      {/* Loop arrows for gate nodes */}
-      {loopGates.map(({ index }) => (
-        <FlowLoop key={`loop-${index}`} steps={steps} gateIndex={index} />
-      ))}
-      <p className="text-[10px] text-zinc-500 text-center mt-4 font-mono tracking-wider">
-        <span className="inline-flex items-center gap-3">
-          <span><span className="text-violet-400">AI</span> = Claude decides</span>
-          <span><span className="text-zinc-300">FN</span> = Tool executes</span>
-          <span><span className="text-amber-400">QA</span> = Quality gate</span>
-          {loopGates.length > 0 && <span><span className="text-amber-400">↩</span> = Retry loop</span>}
+
+      {/* Legend */}
+      <div className="flex items-center justify-center gap-4 mt-5 pt-4 border-t border-zinc-800/50">
+        <span className="text-[10px] text-zinc-500 font-mono flex items-center gap-1.5">
+          <span className="w-5 h-5 rounded bg-violet-500/20 text-violet-300 flex items-center justify-center text-[8px] font-bold">AI</span>
+          Claude decides
         </span>
-      </p>
+        <span className="text-[10px] text-zinc-500 font-mono flex items-center gap-1.5">
+          <span className="w-5 h-5 rounded bg-zinc-600/40 text-zinc-300 flex items-center justify-center text-[8px] font-bold">FN</span>
+          Tool runs
+        </span>
+        <span className="text-[10px] text-zinc-500 font-mono flex items-center gap-1.5">
+          <span className="w-5 h-5 rounded bg-amber-500/20 text-amber-300 flex items-center justify-center text-[8px] font-bold">QA</span>
+          Quality check
+        </span>
+        {loopGates.length > 0 && (
+          <span className="text-[10px] text-amber-400/60 font-mono flex items-center gap-1.5">
+            <span className="text-amber-400">↩</span> Feedback loop
+          </span>
+        )}
+      </div>
     </div>
   );
 }

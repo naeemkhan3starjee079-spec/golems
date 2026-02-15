@@ -9,7 +9,7 @@ import {
   FileText,
   List,
 } from "lucide-react";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, memo } from "react";
 import type { DocNavItem, TocItem } from "@/lib/docs";
 
 /** Walk up the DOM to find the nearest scrollable ancestor */
@@ -220,76 +220,138 @@ function PrevNextNav({
   );
 }
 
-// --- Mermaid CDN loader (UMD build — more reliable than blob URL + ESM) ---
+// --- Mermaid: dynamic import from bundled package ---
 
-let mermaidPromise: Promise<void> | null = null;
+let mermaidMod: typeof import("mermaid") | null = null;
 
-function loadMermaid(): Promise<void> {
-  if (window.mermaid) return Promise.resolve();
-  if (mermaidPromise) return mermaidPromise;
-
-  mermaidPromise = new Promise((resolve, reject) => {
-    const script = document.createElement("script");
-    script.src = "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js";
-    script.onload = () => {
-      if (window.mermaid) {
-        window.mermaid.initialize({
-          startOnLoad: false,
-          theme: "dark",
-          themeVariables: {
-            darkMode: true,
-            background: "transparent",
-            primaryColor: "#7c3aed",
-            primaryTextColor: "#f4f4f5",
-            primaryBorderColor: "#7c3aed",
-            lineColor: "#a78bfa",
-            secondaryColor: "#1e1b4b",
-            tertiaryColor: "#18181b",
-            fontFamily: "ui-sans-serif, system-ui, sans-serif",
-            fontSize: "14px",
-            // Node styling
-            nodeBorder: "#7c3aed",
-            mainBkg: "#1e1b4b",
-            nodeTextColor: "#f4f4f5",
-            // Subgraph styling
-            clusterBkg: "#18181b",
-            clusterBorder: "#3f3f46",
-            titleColor: "#a78bfa",
-            // Edge styling
-            edgeLabelBackground: "#18181b",
-            // Flowchart specific
-            htmlLabels: true,
-          },
-          flowchart: {
-            htmlLabels: true,
-            curve: "basis",
-            padding: 16,
-            nodeSpacing: 40,
-            rankSpacing: 50,
-            useMaxWidth: true,
-          },
-        });
-        resolve();
-      } else {
-        reject(new Error("mermaid not found on window after script load"));
-      }
-    };
-    script.onerror = reject;
-    document.head.appendChild(script);
+async function getMermaid() {
+  if (mermaidMod) return mermaidMod.default;
+  mermaidMod = await import("mermaid");
+  mermaidMod.default.initialize({
+    startOnLoad: false,
+    theme: "dark",
+    themeVariables: {
+      darkMode: true,
+      background: "transparent",
+      primaryColor: "#7c3aed",
+      primaryTextColor: "#f4f4f5",
+      primaryBorderColor: "#7c3aed",
+      lineColor: "#a78bfa",
+      secondaryColor: "#1e1b4b",
+      tertiaryColor: "#18181b",
+      fontFamily: "ui-sans-serif, system-ui, sans-serif",
+      fontSize: "14px",
+      nodeBorder: "#7c3aed",
+      mainBkg: "#1e1b4b",
+      nodeTextColor: "#f4f4f5",
+      clusterBkg: "#18181b",
+      clusterBorder: "#3f3f46",
+      titleColor: "#a78bfa",
+      edgeLabelBackground: "#18181b",
+    },
+    flowchart: {
+      htmlLabels: true,
+      curve: "basis",
+      padding: 16,
+      nodeSpacing: 40,
+      rankSpacing: 50,
+      useMaxWidth: true,
+    },
   });
-
-  return mermaidPromise;
+  return mermaidMod.default;
 }
 
-// Extend window for mermaid UMD global
-declare global {
-  interface Window {
-    mermaid?: {
-      initialize: (config: Record<string, unknown>) => void;
-      render: (id: string, source: string) => Promise<{ svg: string }>;
-    };
-  }
-}
+// --- Memoized content body (isolates mermaid DOM from scroll-spy re-renders) ---
+
+const PROSE_CLASSES = `prose prose-invert max-w-none
+  prose-headings:text-foreground prose-headings:font-bold prose-headings:scroll-mt-20
+  prose-h2:text-xl prose-h2:mt-10 prose-h2:mb-4 prose-h2:border-b prose-h2:border-border/30 prose-h2:pb-2
+  prose-h3:text-lg prose-h3:mt-8 prose-h3:mb-3
+  prose-h4:text-base prose-h4:mt-6 prose-h4:mb-2
+  prose-p:text-zinc-300 prose-p:leading-relaxed prose-p:text-[15px]
+  prose-a:text-accent prose-a:no-underline hover:prose-a:underline
+  prose-code:text-accent prose-code:bg-accent/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-[13px] prose-code:font-medium
+  prose-pre:bg-transparent prose-pre:border-0 prose-pre:p-0 prose-pre:rounded-lg prose-pre:text-[13px]
+  [&_pre>code]:bg-transparent [&_pre>code]:p-0 [&_pre>code]:rounded-none [&_pre>code]:text-inherit [&_pre>code]:before:content-none [&_pre>code]:after:content-none [&_pre>code]:font-normal
+  [&_.shiki]:rounded-lg [&_.shiki]:border [&_.shiki]:border-border/40 [&_.shiki]:p-4 [&_.shiki]:overflow-x-auto [&_.shiki]:text-[13px] [&_.shiki]:leading-relaxed
+  [&_.mermaid-block]:my-8 [&_.mermaid-block]:rounded-xl [&_.mermaid-block]:border [&_.mermaid-block]:border-violet-500/20 [&_.mermaid-block]:p-8 [&_.mermaid-block]:overflow-x-auto [&_.mermaid-block]:bg-zinc-950/80
+  [&_.mermaid-rendered]:text-center [&_.mermaid-rendered_svg]:mx-auto [&_.mermaid-rendered_svg]:max-w-full [&_.mermaid-rendered_svg]:min-h-[150px]
+  [&_.mermaid-rendered_.node_rect]:rx-[8px] [&_.mermaid-rendered_.cluster_rect]:rx-[12px]
+  [&_.mermaid-error]:text-[13px] [&_.mermaid-error]:font-mono [&_.mermaid-error]:text-amber [&_.mermaid-error]:whitespace-pre-wrap [&_.mermaid-error]:bg-amber/5 [&_.mermaid-error]:rounded-lg [&_.mermaid-error]:p-4 [&_.mermaid-error]:border [&_.mermaid-error]:border-amber/20
+  prose-table:text-[14px] prose-table:border-collapse
+  [&_table]:w-full [&_table]:my-6
+  [&_thead]:border-b-2 [&_thead]:border-border/50
+  [&_th]:text-accent [&_th]:uppercase [&_th]:text-[12px] [&_th]:tracking-wider [&_th]:font-semibold [&_th]:py-2.5 [&_th]:px-3 [&_th]:text-left
+  [&_td]:py-2 [&_td]:px-3 [&_td]:text-zinc-300 [&_td]:border-b [&_td]:border-border/20
+  [&_td_code]:text-accent [&_td_code]:bg-accent/10 [&_td_code]:px-1.5 [&_td_code]:py-0.5 [&_td_code]:rounded [&_td_code]:text-[13px]
+  [&_tbody_tr:hover]:bg-zinc-800/30
+  prose-li:text-zinc-300 prose-li:text-[15px] prose-strong:text-foreground
+  prose-blockquote:border-accent/30 prose-blockquote:text-zinc-400 prose-blockquote:text-[15px]
+  prose-hr:border-border/30 prose-hr:my-8`;
+
+const DocContent = memo(function DocContent({
+  html,
+  currentSlug,
+  contentRef,
+}: {
+  html: string;
+  currentSlug: string;
+  contentRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  const innerRef = useRef<HTMLDivElement>(null);
+
+  // Render mermaid diagrams from bundled package
+  useEffect(() => {
+    const el = innerRef.current;
+    if (!el) return;
+
+    const blocks = el.querySelectorAll(".mermaid-block:not(.mermaid-rendered):not(.mermaid-error)");
+    if (blocks.length === 0) return;
+
+    let cancelled = false;
+    (async () => {
+      let mermaid;
+      try {
+        mermaid = await getMermaid();
+      } catch (err) {
+        console.error("Failed to load mermaid:", err);
+        blocks.forEach((b) => b.classList.add("mermaid-error"));
+        return;
+      }
+      if (cancelled) return;
+
+      for (let i = 0; i < blocks.length; i++) {
+        const block = blocks[i] as HTMLElement;
+        const source = decodeURIComponent(block.dataset.mermaid ?? "");
+        if (!source) continue;
+        try {
+          const id = `mmd-${currentSlug.replace(/\//g, "-")}-${i}-${Date.now()}`;
+          const { svg } = await mermaid.render(id, source);
+          if (!cancelled) {
+            block.innerHTML = svg;
+            block.classList.add("mermaid-rendered");
+          }
+        } catch (err) {
+          console.error("Mermaid render error:", err);
+          block.classList.add("mermaid-error");
+        }
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [html, currentSlug]);
+
+  return (
+    <div
+      ref={(node) => {
+        (innerRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+        (contentRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+      }}
+      className={PROSE_CLASSES}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  );
+});
 
 // --- Main Layout ---
 
@@ -356,42 +418,6 @@ export function DocsClient({
     }
   }, []);
 
-  // Render mermaid diagrams via CDN
-  useEffect(() => {
-    const blocks = contentRef.current?.querySelectorAll(".mermaid-block");
-    if (!blocks || blocks.length === 0) return;
-
-    let cancelled = false;
-    (async () => {
-      try {
-        await loadMermaid();
-      } catch {
-        // CDN failed — mark all blocks as errors
-        blocks.forEach((b) => b.classList.add("mermaid-error"));
-        return;
-      }
-      if (cancelled || !window.mermaid) return;
-
-      for (let i = 0; i < blocks.length; i++) {
-        const block = blocks[i] as HTMLElement;
-        const source = decodeURIComponent(block.dataset.mermaid ?? "");
-        if (!source) continue;
-        try {
-          const id = `mermaid-${currentSlug.replace(/\//g, "-")}-${i}`;
-          const { svg } = await window.mermaid!.render(id, source);
-          if (!cancelled) {
-            block.innerHTML = svg;
-            block.classList.add("mermaid-rendered");
-          }
-        } catch {
-          block.classList.add("mermaid-error");
-        }
-      }
-    })();
-
-    return () => { cancelled = true; };
-  }, [html, currentSlug]);
-
   return (
     <div className="flex gap-0 -mx-2">
       {/* Left sidebar nav */}
@@ -413,39 +439,11 @@ export function DocsClient({
 
       {/* Content area */}
       <div className="flex-1 min-w-0 px-6 lg:px-10">
-        <article ref={contentRef} className="max-w-3xl mx-auto">
+        <article className="max-w-3xl mx-auto">
           <h1 className="text-3xl font-bold mb-8 text-foreground tracking-tight">
             {title}
           </h1>
-          <div
-            className="prose prose-invert max-w-none
-              prose-headings:text-foreground prose-headings:font-bold prose-headings:scroll-mt-20
-              prose-h2:text-xl prose-h2:mt-10 prose-h2:mb-4 prose-h2:border-b prose-h2:border-border/30 prose-h2:pb-2
-              prose-h3:text-lg prose-h3:mt-8 prose-h3:mb-3
-              prose-h4:text-base prose-h4:mt-6 prose-h4:mb-2
-              prose-p:text-zinc-300 prose-p:leading-relaxed prose-p:text-[15px]
-              prose-a:text-accent prose-a:no-underline hover:prose-a:underline
-              prose-code:text-accent prose-code:bg-accent/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-[13px] prose-code:font-medium
-              prose-pre:bg-transparent prose-pre:border-0 prose-pre:p-0 prose-pre:rounded-lg prose-pre:text-[13px]
-              [&_pre>code]:bg-transparent [&_pre>code]:p-0 [&_pre>code]:rounded-none [&_pre>code]:text-inherit [&_pre>code]:before:content-none [&_pre>code]:after:content-none [&_pre>code]:font-normal
-              [&_.shiki]:rounded-lg [&_.shiki]:border [&_.shiki]:border-border/40 [&_.shiki]:p-4 [&_.shiki]:overflow-x-auto [&_.shiki]:text-[13px] [&_.shiki]:leading-relaxed
-              [&_.mermaid-block]:my-8 [&_.mermaid-block]:rounded-xl [&_.mermaid-block]:border [&_.mermaid-block]:border-violet-500/20 [&_.mermaid-block]:p-8 [&_.mermaid-block]:overflow-x-auto [&_.mermaid-block]:bg-zinc-950/80
-              [&_.mermaid-rendered]:text-center [&_.mermaid-rendered_svg]:mx-auto [&_.mermaid-rendered_svg]:max-w-full [&_.mermaid-rendered_svg]:min-h-[150px]
-              [&_.mermaid-rendered_.node_rect]:rx-[8px] [&_.mermaid-rendered_.cluster_rect]:rx-[12px]
-              [&_.mermaid-error]:text-[13px] [&_.mermaid-error]:font-mono [&_.mermaid-error]:text-amber [&_.mermaid-error]:whitespace-pre-wrap [&_.mermaid-error]:bg-amber/5 [&_.mermaid-error]:rounded-lg [&_.mermaid-error]:p-4 [&_.mermaid-error]:border [&_.mermaid-error]:border-amber/20
-              prose-table:text-[14px] prose-table:border-collapse
-              [&_table]:w-full [&_table]:my-6
-              [&_thead]:border-b-2 [&_thead]:border-border/50
-              [&_th]:text-accent [&_th]:uppercase [&_th]:text-[12px] [&_th]:tracking-wider [&_th]:font-semibold [&_th]:py-2.5 [&_th]:px-3 [&_th]:text-left
-              [&_td]:py-2 [&_td]:px-3 [&_td]:text-zinc-300 [&_td]:border-b [&_td]:border-border/20
-              [&_td_code]:text-accent [&_td_code]:bg-accent/10 [&_td_code]:px-1.5 [&_td_code]:py-0.5 [&_td_code]:rounded [&_td_code]:text-[13px]
-              [&_tbody_tr:hover]:bg-zinc-800/30
-              prose-li:text-zinc-300 prose-li:text-[15px] prose-strong:text-foreground
-              prose-blockquote:border-accent/30 prose-blockquote:text-zinc-400 prose-blockquote:text-[15px]
-              prose-hr:border-border/30 prose-hr:my-8"
-            dangerouslySetInnerHTML={{ __html: html }}
-          />
-
+          <DocContent html={html} currentSlug={currentSlug} contentRef={contentRef} />
           <PrevNextNav prev={prev} next={next} />
         </article>
       </div>

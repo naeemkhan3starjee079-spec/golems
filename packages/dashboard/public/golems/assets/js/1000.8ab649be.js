@@ -1,0 +1,1 @@
+"use strict";(globalThis.webpackChunk_golems_docsite=globalThis.webpackChunk_golems_docsite||[]).push([[1e3],{1e3(e,s,a){a.d(s,{createRadarServices:()=>c.f});var c=a(7846);a(7960)}}]);

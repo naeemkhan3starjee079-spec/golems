@@ -1,0 +1,931 @@
+/* ═══════════════════════════════════════════════════════════════
+   Hero — wide terminal grid layout
+   Grid: [terminal area (wide)] [telegram (sidebar)]
+         [buttons (bottom)]
+   ═══════════════════════════════════════════════════════════════ */
+
+.heroBanner {
+  position: relative;
+  overflow: hidden;
+  background: #0c0b0a;
+  padding: 0;
+  min-height: 600px;
+}
+
+/* Ambient glow */
+.heroBanner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 700px 500px at 15% 50%, rgba(229, 149, 0, 0.10) 0%, transparent 70%),
+    radial-gradient(ellipse 500px 400px at 85% 30%, rgba(196, 109, 60, 0.07) 0%, transparent 70%),
+    radial-gradient(ellipse 300px 300px at 50% 80%, rgba(45, 212, 168, 0.04) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Grain overlay */
+.heroBanner::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+  background-size: 256px 256px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Main hero grid: terminal+buttons left (wide), telegram right (sidebar) */
+.heroGrid {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 1rem;
+  padding: 1.5rem 2rem 2rem;
+  position: relative;
+  z-index: 2;
+  max-width: 1400px;
+  align-items: start;
+}
+
+/* ── Terminal area (left column) ── */
+.terminalArea {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Compact header: logo + title inline */
+.heroHeader {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.25rem 0;
+}
+
+.heroLogoSmall {
+  width: 56px;
+  height: 56px;
+  min-width: 56px;
+  min-height: 56px;
+  max-width: 56px;
+  max-height: 56px;
+  flex-shrink: 0;
+  overflow: hidden;
+  filter: drop-shadow(0 0 20px rgba(229, 149, 0, 0.4));
+  aspect-ratio: 1 / 1;
+}
+
+.heroLogoSmall svg {
+  width: 56px;
+  height: 56px;
+  display: block;
+}
+
+.heroTitleGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.heroTitle {
+  font-size: 1.8rem;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+  color: #f0ebe0;
+  margin: 0;
+  background: linear-gradient(135deg, #f0ebe0 0%, #e59500 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.heroTagline {
+  font-family: 'IBM Plex Mono', 'Fira Code', Monaco, monospace;
+  font-size: 0.78rem;
+  color: #7c6f5e;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.heroTagline span { color: #a09080; }
+.arrow { color: #c46d3c; opacity: 0.7; }
+.highlight {
+  color: #2dd4a8 !important;
+  text-shadow: 0 0 16px rgba(45, 212, 168, 0.35);
+}
+
+/* ── Terminal window ── */
+.terminal {
+  border: 1px solid rgba(229, 149, 0, 0.15);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #0d0d0d;
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(229, 149, 0, 0.05);
+}
+
+.titleBar {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  background: #1a1816;
+  border-bottom: 1px solid rgba(229, 149, 0, 0.08);
+  gap: 0.5rem;
+}
+
+.trafficLights {
+  display: flex;
+  gap: 6px;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: block;
+}
+
+.dot[data-color='red'] { background: #ff5f57; }
+.dot[data-color='yellow'] { background: #ffbd2e; }
+.dot[data-color='green'] { background: #28c840; }
+
+.titleText {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  color: #666;
+  flex: 1;
+  text-align: center;
+}
+
+.titleSpacer { width: 48px; }
+
+/* Tab bar */
+.tabBar {
+  display: flex;
+  background: #141210;
+  border-bottom: 1px solid rgba(229, 149, 0, 0.06);
+  overflow-x: auto;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.9rem;
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 0.72rem;
+  font-family: 'IBM Plex Mono', monospace;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.2s, background 0.2s;
+  border-bottom: 2px solid transparent;
+}
+
+.tab:hover { color: #a09080; background: rgba(229, 149, 0, 0.04); }
+
+.tabActive {
+  color: #e59500 !important;
+  border-bottom-color: #e59500;
+  background: rgba(229, 149, 0, 0.06);
+}
+
+.tabEmoji { font-size: 0.8rem; }
+.tabName { font-size: 0.72rem; }
+
+/* Terminal content area — fixed height prevents layout shift between tabs */
+.content {
+  padding: 1rem 1.25rem;
+  font-family: 'JetBrains Mono', 'Fira Code', 'IBM Plex Mono', Monaco, monospace;
+  font-size: 0.76rem;
+  line-height: 1.55;
+  color: #c0b8a8;
+  height: 420px;
+  overflow-y: auto;
+}
+
+/* Wizard tab layout: mascot left + output right */
+.wizardLayout {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.wizardMascot {
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
+.wizardOutput {
+  overflow: hidden;
+}
+
+.terminalOutput {
+  overflow: hidden;
+}
+
+/* Terminal lines — staggered reveal */
+.line {
+  opacity: 0;
+  animation: lineReveal 0.3s ease forwards;
+  white-space: pre;
+}
+
+@keyframes lineReveal {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Blinking cursor */
+.cursor {
+  color: #e59500;
+  animation: blink 1s step-end infinite;
+  display: inline-block;
+  margin-top: 0.3rem;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+/* ── Action buttons (below terminal) ── */
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.primaryButton {
+  background: linear-gradient(135deg, #e59500, #c46d3c);
+  color: #0c0b0a !important;
+  border: none;
+  padding: 0.65rem 1.6rem;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  transition: all 0.25s ease;
+  text-decoration: none !important;
+}
+
+.primaryButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(229, 149, 0, 0.35);
+  color: #0c0b0a !important;
+}
+
+.primaryButton:focus-visible {
+  outline: 2px solid #2dd4a8;
+  outline-offset: 2px;
+}
+
+.secondaryButton {
+  background: transparent;
+  color: #2dd4a8 !important;
+  border: 1px solid rgba(45, 212, 168, 0.25);
+  padding: 0.65rem 1.6rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.25s ease;
+  text-decoration: none !important;
+}
+
+.secondaryButton:hover {
+  border-color: rgba(45, 212, 168, 0.6);
+  background: rgba(45, 212, 168, 0.06);
+  color: #2dd4a8 !important;
+}
+
+.secondaryButton:focus-visible {
+  outline: 2px solid #2dd4a8;
+  outline-offset: 2px;
+}
+
+.tertiaryButton {
+  background: transparent;
+  color: #908575 !important;
+  border: 1px solid rgba(144, 133, 117, 0.2);
+  padding: 0.65rem 1.4rem;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 0.85rem;
+  transition: all 0.25s ease;
+  text-decoration: none !important;
+}
+
+.tertiaryButton:hover {
+  color: #c0b8a8 !important;
+  border-color: rgba(144, 133, 117, 0.4);
+  background: rgba(144, 133, 117, 0.06);
+}
+
+/* ── Telegram area (right sidebar — iPhone frame) ── */
+.telegramArea {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+}
+
+/* iPhone 15 Pro frame */
+.phoneFrame {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #000;
+  border-radius: 44px;
+  border: 2px solid #3a3a3c;
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.6),
+    0 0 0 1px #1c1c1e,
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+  position: relative;
+  padding: 0;
+}
+
+/* Side button (right) */
+.phoneFrame::before {
+  content: '';
+  position: absolute;
+  right: -4px;
+  top: 100px;
+  width: 3px;
+  height: 44px;
+  background: #3a3a3c;
+  border-radius: 0 2px 2px 0;
+  z-index: 10;
+}
+
+/* Dynamic Island */
+.phoneDynamicIsland {
+  width: 92px;
+  height: 28px;
+  background: #000;
+  border-radius: 20px;
+  margin: 10px auto 0;
+  position: relative;
+  z-index: 5;
+  flex-shrink: 0;
+}
+
+/* Home indicator bar */
+.phoneHomeBar {
+  width: 100px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  margin: 6px auto 8px;
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Get Started Section
+   ═══════════════════════════════════════════════════════════════ */
+
+.getStartedSection {
+  padding: 5rem 0;
+  background: linear-gradient(180deg, #0c0b0a 0%, #0a0908 100%);
+  position: relative;
+}
+
+.getStartedSection::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(229, 149, 0, 0.2), transparent);
+}
+
+.installGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  max-width: 1000px;
+  margin: 0 auto 2rem;
+  padding: 0 1.5rem;
+}
+
+.installStep {
+  background: rgba(20, 18, 14, 0.9);
+  border: 1px solid rgba(229, 149, 0, 0.08);
+  border-radius: 12px;
+  padding: 1.25rem;
+  position: relative;
+  transition: border-color 0.3s ease;
+}
+
+.installStep:hover {
+  border-color: rgba(229, 149, 0, 0.25);
+}
+
+.installStepNumber {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #e59500, #c46d3c);
+  color: #0c0b0a;
+  font-weight: 800;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.75rem;
+}
+
+.installStepContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.installLabel {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #e59500;
+}
+
+.installCommand {
+  background: rgba(0, 0, 0, 0.4);
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  color: #2dd4a8;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  word-break: break-all;
+  border: 1px solid rgba(45, 212, 168, 0.1);
+}
+
+.installDesc {
+  color: #7c6f5e;
+  font-size: 0.8rem;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.installCta {
+  text-align: center;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Golems Section
+   ═══════════════════════════════════════════════════════════════ */
+
+.golemsSection {
+  padding: 5rem 0;
+  background: linear-gradient(180deg, #0c0b0a 0%, #080807 100%);
+  position: relative;
+}
+
+.golemsSection::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(229, 149, 0, 0.15), transparent);
+}
+
+.sectionTitle {
+  text-align: center;
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: #f0ebe0;
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.03em;
+}
+
+.sectionSubtitle {
+  text-align: center;
+  color: #7c6f5e;
+  margin-bottom: 3rem;
+  font-size: 1rem;
+  font-style: italic;
+}
+
+.golemGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.25rem;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+.golemCard {
+  background: rgba(20, 18, 14, 0.9);
+  border: 1px solid rgba(196, 109, 60, 0.1);
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+  text-decoration: none !important;
+  color: inherit !important;
+  display: block;
+  position: relative;
+  overflow: hidden;
+}
+
+.golemCard::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(229, 149, 0, 0.3), transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.golemCard:hover {
+  border-color: rgba(229, 149, 0, 0.3);
+  transform: translateY(-4px);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+}
+
+.golemCard:hover::before { opacity: 1; }
+
+.golemCard:focus-visible {
+  outline: 2px solid #2dd4a8;
+  outline-offset: 2px;
+}
+
+.golemCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.golemEmoji {
+  font-size: 1.6rem;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(229, 149, 0, 0.06);
+  border-radius: 10px;
+  border: 1px solid rgba(229, 149, 0, 0.08);
+}
+
+.golemName {
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: #e8e2d6;
+}
+
+.golemDesc {
+  color: #908575;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  margin: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Architecture Section
+   ═══════════════════════════════════════════════════════════════ */
+
+.archSection {
+  padding: 5rem 0;
+  background: #0c0b0a;
+  position: relative;
+}
+
+.archSection::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(45, 212, 168, 0.12), transparent);
+}
+
+.archDiagram {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.archBox {
+  flex: 1;
+  background: rgba(20, 18, 14, 0.9);
+  border: 1px solid rgba(196, 109, 60, 0.1);
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: border-color 0.3s ease;
+}
+
+.archBox:hover { border-color: rgba(229, 149, 0, 0.25); }
+
+.archBoxTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #e59500;
+  margin-bottom: 0.75rem;
+}
+
+.archList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.archList li {
+  color: #908575;
+  font-size: 0.85rem;
+  padding: 0.3rem 0;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.archList li::before {
+  content: '\2022 ';
+  color: #c46d3c;
+}
+
+.archArrow {
+  font-size: 1.5rem;
+  color: #2dd4a8;
+  flex-shrink: 0;
+  text-shadow: 0 0 12px rgba(45, 212, 168, 0.2);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Light mode
+   ═══════════════════════════════════════════════════════════════ */
+
+:global([data-theme='light']) .heroBanner { background: #f8f5ef; }
+
+:global([data-theme='light']) .heroBanner::before {
+  background:
+    radial-gradient(ellipse 600px 400px at 20% 50%, rgba(229, 149, 0, 0.05) 0%, transparent 70%),
+    radial-gradient(ellipse 400px 300px at 80% 30%, rgba(196, 109, 60, 0.03) 0%, transparent 70%);
+}
+
+:global([data-theme='light']) .heroBanner::after { opacity: 0.015; }
+
+:global([data-theme='light']) .heroTitle {
+  background: linear-gradient(135deg, #1a1510 0%, #b07400 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+:global([data-theme='light']) .heroTagline span { color: #5a5040; }
+:global([data-theme='light']) .highlight {
+  color: #1a8a6e !important;
+  text-shadow: none;
+}
+
+:global([data-theme='light']) .terminal {
+  border-color: rgba(180, 120, 0, 0.15);
+  background: #1a1816;
+}
+
+:global([data-theme='light']) .primaryButton {
+  background: linear-gradient(135deg, #c48000, #a85a30);
+  color: #fff !important;
+}
+
+:global([data-theme='light']) .secondaryButton {
+  color: #1a8a6e !important;
+  border-color: rgba(26, 138, 110, 0.3);
+}
+
+:global([data-theme='light']) .tertiaryButton {
+  color: #5a5040 !important;
+  border-color: rgba(90, 80, 64, 0.2);
+}
+
+:global([data-theme='light']) .golemsSection {
+  background: linear-gradient(180deg, #f8f5ef 0%, #f0ebe0 100%);
+}
+
+:global([data-theme='light']) .sectionTitle { color: #1a1510; }
+
+:global([data-theme='light']) .golemCard {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+:global([data-theme='light']) .golemCard:hover {
+  border-color: rgba(180, 120, 0, 0.3);
+  box-shadow: 0 12px 36px rgba(180, 120, 0, 0.06);
+}
+
+:global([data-theme='light']) .golemName { color: #1a1510; }
+:global([data-theme='light']) .golemDesc { color: #5a5040; }
+
+:global([data-theme='light']) .archSection { background: #f8f5ef; }
+:global([data-theme='light']) .archBox { background: rgba(255, 255, 255, 0.8); }
+:global([data-theme='light']) .archBoxTitle { color: #b07400; }
+:global([data-theme='light']) .archList li { color: #5a5040; }
+
+:global([data-theme='light']) .heroLogoSmall {
+  filter: drop-shadow(0 0 12px rgba(180, 120, 0, 0.15));
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Responsive
+   ═══════════════════════════════════════════════════════════════ */
+
+@media screen and (max-width: 1100px) {
+  .heroGrid {
+    grid-template-columns: 1fr 240px;
+    padding: 1.5rem 1.5rem;
+  }
+}
+
+@media screen and (max-width: 996px) {
+  .heroGrid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    padding: 1.5rem 1.5rem;
+  }
+
+  .telegramArea {
+    max-width: 100%;
+    margin: 0 auto;
+  }
+
+  /* Drop phone frame on tablet/mobile — show as a styled card instead */
+  .phoneFrame {
+    border-radius: 16px;
+    border: 1px solid rgba(229, 149, 0, 0.15);
+    background: #0e1621;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+    padding: 0;
+  }
+
+  .phoneDynamicIsland {
+    display: none;
+  }
+
+  .phoneHomeBar {
+    display: none;
+  }
+
+  /* Side button hidden on mobile */
+  .phoneFrame::before {
+    display: none;
+  }
+
+  .installGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .heroHeader {
+    justify-content: center;
+  }
+
+  .buttons {
+    justify-content: center;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .heroGrid {
+    padding: 1rem;
+  }
+
+  .heroTitle {
+    font-size: 1.5rem;
+  }
+
+  .heroLogoSmall {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    max-width: 40px;
+    min-height: 40px;
+    max-height: 40px;
+  }
+  .heroLogoSmall svg { width: 40px; height: 40px; }
+
+  .content {
+    height: 340px;
+    font-size: 0.75rem;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .line {
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .wizardLayout {
+    grid-template-columns: 1fr;
+  }
+
+  .wizardMascot {
+    display: none;
+  }
+
+  .getStartedSection { padding: 3rem 0; }
+  .installGrid { grid-template-columns: 1fr; }
+
+  .golemsSection { padding: 3rem 0; }
+  .golemGrid {
+    grid-template-columns: 1fr;
+    padding: 0 1rem;
+  }
+
+  .archSection { padding: 3rem 0; }
+  .archDiagram {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .archArrow { transform: rotate(90deg); }
+
+  .buttons {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .primaryButton,
+  .secondaryButton,
+  .tertiaryButton {
+    width: 100%;
+    text-align: center;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .heroTitle { font-size: 1.3rem; }
+  .heroLogoSmall { width: 36px; height: 36px; min-width: 36px; max-width: 36px; min-height: 36px; max-height: 36px; }
+  .heroLogoSmall svg { width: 36px; height: 36px; }
+  .heroTagline { font-size: 0.7rem; flex-wrap: wrap; }
+  .sectionTitle { font-size: 1.6rem; }
+  .content { font-size: 0.72rem; height: 260px; }
+
+  .buttons { gap: 0.5rem; }
+  .primaryButton,
+  .secondaryButton,
+  .tertiaryButton {
+    padding: 0.5rem 1.2rem;
+    font-size: 0.8rem;
+  }
+}
+
+@media screen and (max-width: 375px) {
+  .heroHeader { flex-direction: column; align-items: center; }
+  .heroTitle { font-size: 1.15rem; }
+  .heroLogoSmall { width: 48px; height: 48px; min-width: 48px; max-width: 48px; min-height: 48px; max-height: 48px; }
+  .heroLogoSmall svg { width: 48px; height: 48px; }
+  .heroTagline { font-size: 0.65rem; justify-content: center; }
+  .content { height: 220px; font-size: 0.68rem; }
+
+  .buttons {
+    flex-direction: column;
+    width: 100%;
+  }
+  .primaryButton,
+  .secondaryButton,
+  .tertiaryButton {
+    width: 100%;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 1rem;
+    font-size: 0.78rem;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .primaryButton,
+  .secondaryButton,
+  .tertiaryButton,
+  .golemCard {
+    transition: none;
+  }
+
+  .primaryButton:hover,
+  .secondaryButton:hover,
+  .tertiaryButton:hover,
+  .golemCard:hover {
+    transform: none;
+  }
+
+  .line {
+    animation: none;
+    opacity: 1;
+  }
+
+  .cursor {
+    animation: none;
+  }
+}

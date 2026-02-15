@@ -1,0 +1,67 @@
+.mascot {
+  margin: 0;
+  padding: 0;
+  font-family: 'IBM Plex Mono', 'Fira Code', Monaco, monospace;
+  line-height: 1.15;
+  white-space: pre;
+  overflow: hidden;
+  user-select: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.visible {
+  opacity: 1;
+}
+
+.line {
+  animation: slideIn 0.3s ease forwards;
+  opacity: 0;
+}
+
+.lineStatic {
+  opacity: 1;
+}
+
+.sm {
+  font-size: 0.45rem;
+}
+
+.md {
+  font-size: 0.55rem;
+}
+
+.lg {
+  font-size: 0.7rem;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Reduce motion */
+@media (prefers-reduced-motion: reduce) {
+  .line {
+    animation: none;
+    opacity: 1;
+  }
+
+  .mascot {
+    transition: none;
+    opacity: 1;
+  }
+}
+
+/* Responsive sizing */
+@media screen and (max-width: 768px) {
+  .sm { font-size: 0.35rem; }
+  .md { font-size: 0.45rem; }
+  .lg { font-size: 0.55rem; }
+}

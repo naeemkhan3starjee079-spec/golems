@@ -9,15 +9,28 @@ ContentGolem orchestrates 5 visual content pipelines and a text publishing pipel
 ## Pipeline Overview
 
 ```mermaid
-flowchart LR
-    I["Content Request"] --> R{"Router<br/><small>CC Opus</small>"}
-    R --> P1["Remotion<br/><small>Video/GIF</small>"]
-    R --> P2["ComfyUI/Flux<br/><small>AI Images</small>"]
-    R --> P3["DataViz<br/><small>Charts</small>"]
-    R --> P4["Satori<br/><small>Social Cards</small>"]
-    R --> P5["Playwright<br/><small>Screenshots</small>"]
-    R --> P6["Figma→Video<br/><small>Design-validated</small>"]
-    P1 & P2 & P3 & P4 & P5 & P6 --> O["Output<br/><small>PNG/MP4/GIF/SVG</small>"]
+flowchart TD
+    REQ["Content Request"]
+    REQ --> ANALYZE["CC Opus analyzes intent"]
+    ANALYZE --> ROUTER{"Pipeline Router"}
+
+    ROUTER -->|"video concept"| REM["Remotion"]
+    ROUTER -->|"image prompt"| FLUX["ComfyUI / Flux"]
+    ROUTER -->|"data query"| DVZ["DataViz"]
+    ROUTER -->|"card template"| SAT["Satori"]
+    ROUTER -->|"page URL"| PW["Playwright"]
+    ROUTER -->|"Figma file"| FIG["Figma to Video"]
+
+    REM --> QA{"Quality Gate"}
+    FLUX --> QA
+    DVZ --> QA
+    SAT --> QA
+    PW --> QA
+    FIG --> QA
+
+    QA -->|"pass"| OUT["Published Output"]
+    QA -->|"reject"| RETRY["Refine + Retry"]
+    RETRY --> ROUTER
 ```
 
 ## Pipelines
@@ -26,13 +39,15 @@ flowchart LR
 
 Renders React compositions into MP4/GIF videos using Remotion on the local Mac.
 
-| Step | Component | What |
-|------|-----------|------|
-| 1 | Idea | Video concept description |
-| 2 | CC (Opus) | Picks React composition, writes props |
-| 3 | React | Renders animation frames |
-| 4 | Remotion | Encodes MP4 or GIF |
-| 5 | Output | Final video file |
+```mermaid
+flowchart TD
+    IDEA["Video Concept"] --> OPUS["CC Opus"]
+    OPUS -->|"selects composition + writes props"| REACT["React Renderer"]
+    REACT -->|"renders frames"| REMOTION["Remotion Encoder"]
+    REMOTION -->|"MP4 or GIF"| PREVIEW["Preview"]
+    PREVIEW -->|"looks good"| DONE["Final Video"]
+    PREVIEW -->|"needs tweaks"| OPUS
+```
 
 **Use cases:** Product demos, feature showcases, social video content.
 
@@ -40,13 +55,17 @@ Renders React compositions into MP4/GIF videos using Remotion on the local Mac.
 
 Generates images using Flux on Apple Silicon via ComfyUI with a vision-based quality gate.
 
-| Step | Component | What |
-|------|-----------|------|
-| 1 | Idea | Image concept description |
-| 2 | CC (Opus) | Crafts Flux prompt |
-| 3 | ComfyUI | Flux inference on Apple Silicon |
-| 4 | Vision Gate | Quality review (auto-reject blurry/off-brand) |
-| 5 | Output | PNG with brand overlay |
+```mermaid
+flowchart TD
+    IDEA["Image Concept"] --> OPUS["CC Opus"]
+    OPUS -->|"crafts detailed prompt"| COMFY["ComfyUI Server"]
+    COMFY -->|"Flux inference on M1"| RAW["Raw Image"]
+    RAW --> VISION{"Vision Quality Gate"}
+    VISION -->|"CLIP + LAION + BRISQUE pass"| BRAND["Brand Overlay"]
+    VISION -->|"blurry or off-brand"| RETRY["New Seed"]
+    RETRY -->|"retry up to 3x"| COMFY
+    BRAND --> OUT["Final PNG"]
+```
 
 **Use cases:** Blog headers, social media images, product mockups.
 
@@ -54,13 +73,16 @@ Generates images using Flux on Apple Silicon via ComfyUI with a vision-based qua
 
 Creates data visualizations from Supabase queries or API data, rendered as SVG/PNG.
 
-| Step | Component | What |
-|------|-----------|------|
-| 1 | Data | Supabase query or API fetch |
-| 2 | CC (Opus) | Designs chart type and layout |
-| 3 | SVG Builder | Generates vector markup |
-| 4 | Sharp | Rasterizes to PNG |
-| 5 | Output | PNG or SVG chart |
+```mermaid
+flowchart TD
+    SRC["Data Source"] --> FETCH["Supabase Query or API"]
+    FETCH -->|"raw data"| OPUS["CC Opus"]
+    OPUS -->|"picks chart type + layout"| SVG["SVG Builder"]
+    SVG -->|"vector markup"| SHARP["Sharp Rasterizer"]
+    SHARP -->|"1200x627 or 1080x1080"| REVIEW{"Looks Right?"}
+    REVIEW -->|"yes"| OUT["PNG or SVG"]
+    REVIEW -->|"adjust colors or layout"| OPUS
+```
 
 **Use cases:** Token usage graphs, job match trends, ecosystem health dashboards.
 
@@ -68,42 +90,45 @@ Creates data visualizations from Supabase queries or API data, rendered as SVG/P
 
 Fills JSX templates with dynamic data and renders to social card PNGs via Satori.
 
-| Step | Component | What |
-|------|-----------|------|
-| 1 | Data | Content text + template selection |
-| 2 | CC (Opus) | Fills template variables |
-| 3 | Satori | JSX to SVG conversion |
-| 4 | Output | Social card PNG |
+```mermaid
+flowchart TD
+    DATA["Content + Template"] --> OPUS["CC Opus"]
+    OPUS -->|"fills template variables"| SATORI["Satori Engine"]
+    SATORI -->|"JSX to SVG"| PNG["PNG Export"]
+    PNG --> OUT["Social Card"]
+```
 
 **Use cases:** LinkedIn post cards, OG images, quote cards.
 
 ### Figma to Video
 
-Design-validated video pipeline. CC extracts the target design from Figma, builds a Remotion composition, then iterates until the rendered output matches the Figma design 1:1. Includes a visual comparison gate that rejects renders that don't match.
+Design-validated video pipeline. CC extracts the target design from Figma, builds a Remotion composition, then iterates until the rendered output matches the Figma design 1:1.
 
-| Step | Component | What |
-|------|-----------|------|
-| 1 | Figma | Source design file (exported or API) |
-| 2 | CC (Opus) | Extracts layout, colors, typography, props |
-| 3 | React | Renders Remotion composition |
-| 4 | Figma Gate | Compares render to original design |
-| 5 | Remotion | Encodes MP4/GIF once gate passes |
-| 6 | Output | Design-faithful video |
+```mermaid
+flowchart TD
+    FIGMA["Figma Design File"] --> EXTRACT["CC Opus extracts layout"]
+    EXTRACT -->|"colors, typography, spacing"| BUILD["Build React Composition"]
+    BUILD -->|"render frame"| COMPARE{"Figma Comparison Gate"}
+    COMPARE -->|"pixel match"| ENCODE["Remotion Encoder"]
+    COMPARE -->|"mismatch detected"| ADJUST["Adjust Props + CSS"]
+    ADJUST -->|"iteration N+1"| BUILD
+    ENCODE -->|"MP4 or GIF"| OUT["Design-Faithful Video"]
+```
 
-**Use cases:** Product demos matching brand designs, Figma-to-animation, pixel-perfect animated previews.
-
-**Example:** DomicaHero composition — went through 21 iterations comparing renders against the Figma design to achieve 1:1 element fidelity.
+**Example:** DomicaHero composition — went through 21 iterations to achieve 1:1 fidelity.
 
 ### Playwright Screenshots
 
 Captures web page screenshots using Playwright browser automation.
 
-| Step | Component | What |
-|------|-----------|------|
-| 1 | URL | Target page URL |
-| 2 | CC (Opus) | Plans viewport, selectors, timing |
-| 3 | Playwright | Browser renders and captures |
-| 4 | Output | PNG screenshot |
+```mermaid
+flowchart TD
+    URL["Target Page URL"] --> OPUS["CC Opus"]
+    OPUS -->|"plans viewport + selectors"| BROWSER["Playwright Browser"]
+    BROWSER -->|"waits for load + animations"| CAPTURE["Screenshot Capture"]
+    CAPTURE -->|"full page or element"| CROP["Crop + Optimize"]
+    CROP --> OUT["Final PNG"]
+```
 
 **Use cases:** Portfolio screenshots, competitor analysis, visual regression.
 
