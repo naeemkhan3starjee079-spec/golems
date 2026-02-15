@@ -54,7 +54,7 @@ golems status      # See what's running
 
 ## Architecture
 
-Five **domain golems** + an **orchestrator** + **infrastructure**.
+Four **domain golems** + an **orchestrator** + **tools** + **infrastructure**.
 
 ### Golems (Domain Agents)
 
@@ -63,8 +63,7 @@ Five **domain golems** + an **orchestrator** + **infrastructure**.
 | 👔 | **RecruiterGolem** | Recruitment | Finds contacts via GitHub + Exa + Hunter. Outreach campaigns. 7 interview practice modes with Elo tracking. |
 | 💰 | **TellerGolem** | Finance | Categorizes transactions for tax. Payment failure alerts. Monthly expense reports. |
 | 🗓️ | **CoachGolem** | Scheduling | Calendar management. Daily plans. Reads status from all other golems. |
-| 🔍 | **JobGolem** | Job Search | Scrapes boards (Indeed, SecretTLV, Drushim, Goozali). LLM scoring. Auto-outreach for 8+ matches. |
-| ✍️ | **ContentGolem** | Publishing | LinkedIn posts, Soltome content, Hebrew tech ghostwriting. Skills-based (no standalone process). |
+| ✍️ | **ContentGolem** | Publishing | Visual content factory (Remotion, ComfyUI, dataviz) + LinkedIn posts, Soltome, ghostwriting. |
 
 ### Orchestrator
 
@@ -72,11 +71,17 @@ Five **domain golems** + an **orchestrator** + **infrastructure**.
 |---|---|---|
 | 🤖 | **ClaudeGolem** | Persistent Telegram bot. Routes messages to golems. Manages Night Shift + briefings. |
 
+### Tools & Layers
+
+| Component | Role |
+|---|---|
+| **Job Scraping** | Scrapes boards (Indeed, SecretTLV, Drushim, Goozali). LLM scoring. Auto-outreach for 8+ matches. |
+| **Email** | Scores incoming email 0-10. Routes to domain golems. Drafts replies. Lives in @golems/shared. |
+
 ### Infrastructure
 
 | Component | Role |
 |---|---|
-| **Email** | Scores incoming email 0-10. Routes to domain golems. Drafts replies. Lives in @golems/shared. |
 | **Night Shift** | Runs at 4am. Scans repos for TODOs, creates PRs, sends morning briefing. |
 | **Shared** | Supabase, LLM abstraction, state store, notifications, event log. |
 
@@ -94,7 +99,7 @@ golems/
 │   ├── jobs/           # JobGolem — job scraping, LLM matching, auto-outreach
 │   ├── shared/         # Supabase, LLM, email, state, notifications
 │   ├── services/       # Night Shift, Briefing, Cloud Worker, Doctor, Wizard
-│   ├── content/        # Content creation skills (LinkedIn, ghostwriting)
+│   ├── content/        # Visual content factory (Remotion, ComfyUI, dataviz) + publishing
 │   ├── dashboard/      # Next.js web dashboard (Vercel)
 │   ├── orchestrator/   # n8n orchestration + Bun render microservice
 │   ├── tax-helper/     # Schedule C transaction categorization (Sophtron MCP)
@@ -143,16 +148,16 @@ golems/
      Cowork ────┼──→  Golem Plugins  ──→  Skills + MCP + Rules
       CLI ──────┤
   Any agent ────┘
-                     ┌─────────┐┌─────────┐┌─────────┐┌─────────┐┌─────────┐
-                     │Recruiter││ Teller  ││  Coach  ││   Job   ││ Content │
-                     │  Golem  ││  Golem  ││  Golem  ││  Golem  ││  Golem  │
-                     └────┬────┘└────┬────┘└────┬────┘└────┬────┘└────┬────┘
-                          └─────┬────┴─────┬────┘          │          │
-                                ▼          ▼               │          │
-                         ┌──────────┐┌──────────┐          │          │
-                         │ Services ││  Zikaron │◄─────────┴──────────┘
-                         │ (Railway)││ (memory) │
-                         └──────────┘└──────────┘
+                     ┌─────────┐┌─────────┐┌─────────┐┌─────────┐
+                     │Recruiter││ Teller  ││  Coach  ││ Content │
+                     │  Golem  ││  Golem  ││  Golem  ││  Golem  │
+                     └────┬────┘└────┬────┘└────┬────┘└────┬────┘
+                          └─────┬────┴─────┬────┘          │
+                                ▼          ▼               │
+                     ┌──────────┐┌──────────┐┌──────────┐  │
+                     │  Email + ││ Services ││  Zikaron │◄─┘
+                     │   Jobs   ││ (Railway)││ (memory) │
+                     └──────────┘└──────────┘└──────────┘
 ```
 
 ---
@@ -232,7 +237,7 @@ The plugin brings its CLAUDE.md, skills, MCP tools, and rules automatically.
 ## Links
 
 - **[Documentation](https://etanheyman.com/golems/docs/getting-started)** — interactive docs
-- **[@GolemZikaronBot](https://t.me/GolemZikaronBot)** — Telegram bot
+- **[ClaudeGolem](https://etanheyman.com/golems/docs/golems/claude)** — Telegram orchestrator bot docs
 - **[etanheyman.com](https://etanheyman.com)** — portfolio
 
 ---
