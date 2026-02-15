@@ -41,7 +41,7 @@ Instead of building golems first, we built **Zikaron** — a memory layer using 
 
 ### Jan 13: Architecture Crystallizes
 
-Chose monolithic Python daemon over microservices. One process, one database, instant queries. Zikaron now indexes 238K+ conversation chunks and returns results in under 2 seconds.
+Chose monolithic Python daemon over microservices. One process, one database, instant queries. Zikaron now indexes 226K+ conversation chunks and returns results in under 2 seconds.
 
 ### Jan 17: First Golem — Email Router
 
@@ -201,7 +201,7 @@ Built the full ecosystem in a concentrated sprint:
 
 **Phase 4 — Tooling:** Helpers layer (rate-limited API wrappers), DeepSource static analysis, skills catalog CLI, plugin architecture, session forking, Playwright E2E scaffold.
 
-**Sprint count:** 400+ tests at the time, 35 plan items completed, 3 MCP servers. (Post-Phase 8 componentization: 1,179 tests, 4,056 assertions across 10 packages.)
+**Sprint count:** 400+ tests at the time, 35 plan items completed, 3 MCP servers. (Post-Phase 8 componentization: 1,148 tests, 3,990 assertions across 14 packages.)
 
 ### Feb 7: Distribution Strategy
 
@@ -342,7 +342,7 @@ Planned and executed a 9-phase componentization with a strict policy: if anythin
 | **6. CoachGolem** | Brand new golem: Google Calendar sync, daily planning, ecosystem status aggregation. 15 tests. | +15 pass |
 | **7. Services** | Cloud Worker, Night Shift, Briefing moved to `@golems/services`. Root Dockerfile for Railway workspace. | — |
 | **8. Infrastructure** | Launchd plists updated. `load-env.ts` made workspace-aware. Pre-commit hook fixed. | — |
-| **9. Distribution** | npm metadata on all packages. READMEs per package. Root CLAUDE.md rewritten. | **1,179 pass** |
+| **9. Distribution** | npm metadata on all packages. READMEs per package. Root CLAUDE.md rewritten. | **1,148 pass** |
 
 ### Key Decisions
 
@@ -356,7 +356,7 @@ Planned and executed a 9-phase componentization with a strict policy: if anythin
 
 ```
 Before:  1 package, ~890 tests, tightly coupled
-After:   10 packages, 1,179 tests, each golem independently installable
+After:   14 packages, 1,148 tests, each golem independently installable
 ```
 
 6 golems (Claude orchestrator + Recruiter, Teller, Job, Coach, Content domain experts), plus @golems/shared (including the Email system), @golems/services, Ralph, and Zikaron.
@@ -365,22 +365,23 @@ After:   10 packages, 1,179 tests, each golem independently installable
 
 ## What's Next
 
-### Immediate
-- Deploy updated cloud worker to Railway
-- 24h smoke test of all launchd plists
-- Telegram command verification (all composers)
+### Active
+- Next.js dashboard at etanheyman.com — brain view, ops, tokens, docs, backlog
+- Whoop biometrics integration (CoachGolem health-aware planning)
+- Content pipeline with Remotion video generation
+- Token usage tracking across all LLM sources
 
 ### Medium-term
 - NightShift self-healing (retry strategies, hang detection)
-- ContentGolem migration (move logic from skills into `src/`)
-- Teaching mode — CLI that explains what it's doing and why
-- Axiom observability + cost tracking
+- ContentGolem visual factory (ComfyUI, dataviz, animations)
+- Service management dashboard (launchd + Railway controls)
+- Expanded token tracking (CLI sessions, embeddings, content pipeline)
 
 ### Long-term
 - Plugin marketplace for Claude Code extensions
 - MCP server distribution (works in Zed, Cursor, VS Code)
 - Mobile dashboard (Expo + React Native)
-- `/large-plan` skill — formalize async collab planning into a reusable pattern
+- Multi-tenant golems (serve multiple users from one deployment)
 
 ---
 

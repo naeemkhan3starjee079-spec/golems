@@ -10,7 +10,7 @@ All environment variables used by Golems v2. Store sensitive values in 1Password
 
 | Variable | Default | Description | Required For |
 |----------|---------|-------------|--------------|
-| `LLM_BACKEND` | `ollama` | Which LLM to use: `haiku` (cloud) or `ollama` (local); cloud-worker sets `haiku` explicitly | Agent execution |
+| `LLM_BACKEND` | `ollama` | Which LLM to use: `gemini` (cloud, free), `haiku` (cloud, paid), or `ollama` (local); cloud-worker uses `gemini` | Agent execution |
 | `STATE_BACKEND` | `file` | State storage: `supabase` (cloud) or `file` (local) | Persistent state |
 | `TELEGRAM_MODE` | `local` | Notification mode: `direct` (cloud) or `local` (launchd) | Telegram notifications |
 | `TZ` | `UTC` | Timezone (only used in helpers-status.ts); cloud-worker hardcodes `Asia/Jerusalem` | Status display |
@@ -18,12 +18,18 @@ All environment variables used by Golems v2. Store sensitive values in 1Password
 
 ## LLM Configuration
 
-### Cloud Backend (Haiku)
+### Cloud Backend (Gemini — Free)
 
 | Variable | Default | Description | Required For |
 |----------|---------|-------------|--------------|
-| `ANTHROPIC_API_KEY` | — | Anthropic API key from 1Password (any item name you choose) | Cloud LLM calls |
+| `GOOGLE_GENERATIVE_AI_API_KEY` | — | Google AI API key (free tier covers all golems usage) | Cloud LLM calls |
 | `RAILWAY_URL` | `https://your-service.up.railway.app` | Cloud worker endpoint for health checks | Health monitoring |
+
+### Cloud Backend (Haiku — Paid Fallback)
+
+| Variable | Default | Description | Required For |
+|----------|---------|-------------|--------------|
+| `ANTHROPIC_API_KEY` | — | Anthropic API key from 1Password | Cloud LLM calls (if `LLM_BACKEND=haiku`) |
 
 ### Local Backend (Ollama)
 
@@ -116,13 +122,13 @@ export TELEGRAM_CHAT_ID=-1001234567890
 ### Production (Railway)
 
 ```bash
-# Use cloud LLM and Supabase
-export LLM_BACKEND=haiku
+# Use free Gemini and Supabase
+export LLM_BACKEND=gemini
 export STATE_BACKEND=supabase
 export TELEGRAM_MODE=direct
 
 # All secrets from 1Password (handled by Railway)
-# ANTHROPIC_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY, etc.
+# GOOGLE_GENERATIVE_AI_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY, etc.
 ```
 
 ## Loading Variables
@@ -156,9 +162,9 @@ All LLM calls are logged to `~/.golems-zikaron/api_costs.jsonl` as JSONL:
 }
 ```
 
-Pricing (Haiku 4.5):
-- Input: $0.80/MTok
-- Output: $4.00/MTok
+Pricing:
+- Gemini 2.5 Flash-Lite: **Free** (production default)
+- Haiku 4.5 (fallback): Input $0.80/MTok, Output $4.00/MTok
 
 ## See Also
 
