@@ -21,6 +21,29 @@ const CHEAP_MODELS = new Set([
   "claude-3-5-haiku-20241022",
 ]);
 
+type SourceEnv = "local" | "cloud" | "cli";
+
+const SOURCE_ENV: Record<string, { env: SourceEnv; label: string }> = {
+  enrichment: { env: "local", label: "Enrichment" },
+  "email-golem": { env: "cloud", label: "Email Golem" },
+  "email-scorer": { env: "cloud", label: "Email Scorer" },
+  "job-golem": { env: "cloud", label: "Job Golem" },
+  briefing: { env: "cloud", label: "Briefing" },
+  whoopsync: { env: "cloud", label: "Whoop Sync" },
+  nightshift: { env: "local", label: "Night Shift" },
+  test: { env: "local", label: "Test" },
+};
+
+function getSourceEnv(source: string): { env: SourceEnv; label: string } {
+  return SOURCE_ENV[source] ?? { env: "cloud", label: source.replace(/-/g, " ") };
+}
+
+const ENV_BADGE: Record<SourceEnv, { classes: string; label: string }> = {
+  local: { classes: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20", label: "Local" },
+  cloud: { classes: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20", label: "Cloud" },
+  cli: { classes: "bg-purple-500/10 text-purple-400 border-purple-500/20", label: "CLI" },
+};
+
 function costTier(model: string): "free" | "cheap" | "expensive" {
   const lower = model.toLowerCase();
   for (const m of FREE_MODELS) {
@@ -286,14 +309,21 @@ export default function TokensPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {Object.entries(data.by_source)
               .sort(([, a], [, b]) => b.calls - a.calls)
-              .map(([source, stats]) => (
-                <div key={source} className="rounded-lg border border-border bg-surface p-3">
-                  <p className="text-xs text-muted truncate">{source}</p>
-                  <p className="text-lg font-bold">{stats.calls.toLocaleString()} <span className="text-xs font-normal text-muted">calls</span></p>
-                  <p className="text-xs text-amber">${stats.cost_usd.toFixed(3)}</p>
-                  <p className="text-[10px] text-muted">{(stats.input_tokens + stats.output_tokens).toLocaleString()} tokens</p>
-                </div>
-              ))}
+              .map(([source, stats]) => {
+                const srcInfo = getSourceEnv(source);
+                const envBadge = ENV_BADGE[srcInfo.env];
+                return (
+                  <div key={source} className="rounded-lg border border-border bg-surface p-3">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <p className="text-xs text-muted truncate">{srcInfo.label}</p>
+                      <span className={`text-[8px] px-1 py-0.5 rounded border ${envBadge.classes}`}>{envBadge.label}</span>
+                    </div>
+                    <p className="text-lg font-bold tabular-nums">{stats.calls.toLocaleString()} <span className="text-xs font-normal text-muted">calls</span></p>
+                    <p className="text-xs text-amber tabular-nums">${stats.cost_usd.toFixed(3)}</p>
+                    <p className="text-[10px] text-muted tabular-nums">{(stats.input_tokens + stats.output_tokens).toLocaleString()} tokens</p>
+                  </div>
+                );
+              })}
           </div>
         </div>
       )}
@@ -344,10 +374,15 @@ export default function TokensPage() {
       )}
 
       {/* Footer */}
-      <p className="text-[10px] text-muted/40 text-right">
-        {data.entry_count.toLocaleString()} entries across {data.unique_sources} source{data.unique_sources !== 1 ? "s" : ""} in last {days} days
-        {refreshing && " · refreshing..."}
-      </p>
+      <div className="text-[10px] text-muted/40 space-y-1">
+        <p className="text-right">
+          {data.entry_count.toLocaleString()} entries across {data.unique_sources} source{data.unique_sources !== 1 ? "s" : ""} in last {days} days
+          {refreshing && " · refreshing..."}
+        </p>
+        <p className="text-right">
+          Not tracked: Claude Code sessions (billed to Anthropic subscription) · CLI agents (Cursor, Codex, Gemini CLI)
+        </p>
+      </div>
     </div>
   );
 }

@@ -163,9 +163,14 @@ export async function fetchNotificationEvents(limit = 50) {
     .from("golem_events")
     .select("id, actor, type, data, created_at")
     .in("type", [
-      "email_urgent", "email_triaged", "service_error", "service_recovered",
+      "job_match", "job_applied",
+      "email_routed", "email_urgent", "email_triaged",
+      "telegram_message_in", "telegram_message_out", "golem_telegram_chat",
       "nightshift_started", "nightshift_completed", "nightshift_pr",
-      "job_match", "job_applied", "briefing_sent", "alert",
+      "briefing_sent", "alert",
+      "service_error", "service_recovered",
+      "draft_approved", "soltome_post",
+      "pipeline_draft_ready", "pipeline_draft_rejected",
     ])
     .order("created_at", { ascending: false })
     .limit(limit);
