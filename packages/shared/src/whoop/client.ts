@@ -80,7 +80,12 @@ async function loadRefreshTokenFromSupabase(): Promise<string | null> {
       .eq("key", "whoop_refresh_token")
       .single();
     if (data?.value) {
-      return typeof data.value === "string" ? data.value : String(data.value);
+      let token = typeof data.value === "string" ? data.value : String(data.value);
+      // Strip double-encoding quotes if present (bug in initial version)
+      if (token.startsWith('"') && token.endsWith('"')) {
+        token = token.slice(1, -1);
+      }
+      return token;
     }
     return null;
   } catch {
@@ -97,7 +102,7 @@ function saveRefreshTokenToSupabase(refreshToken: string): void {
         .upsert(
           {
             key: "whoop_refresh_token",
-            value: JSON.stringify(refreshToken),
+            value: refreshToken,
             updated_at: new Date().toISOString(),
           },
           { onConflict: "key" },
