@@ -87,6 +87,14 @@ const REGISTRY: RepoSession[] = [
     private: false,
   },
   {
+    repo: "etanheyman.com",
+    emoji: "🌐",
+    personality: "Portfolio site developer",
+    sessionName: "portfolio-claude",
+    mcpServers: [],
+    private: false,
+  },
+  {
     repo: "rudy",
     emoji: "📦",
     personality: "Rudy monorepo maintainer",

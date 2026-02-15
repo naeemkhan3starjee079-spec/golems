@@ -1,8 +1,8 @@
 "use client";
 
 import {
-  Activity, Battery, BedDouble, Briefcase, Calendar, Clock, Flame,
-  Heart, HeartPulse, Mail, Moon, RefreshCw, Sun, Target, TrendingUp, Wind, Zap,
+  Activity, Battery, BedDouble, Clock, Flame,
+  Heart, HeartPulse, Moon, RefreshCw, Sun, Target, TrendingUp, Wind,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PageSkeleton } from "@/components/skeleton";
@@ -366,7 +366,7 @@ export default function CoachPage() {
         </div>
       )}
 
-      {/* Tomorrow's Blueprint */}
+      {/* Recovery Recommendation */}
       {latest && (() => {
         const score = latest.recovery_score ?? 50;
         const isGreen = score >= 67;
@@ -380,47 +380,18 @@ export default function CoachPage() {
         const c = RECOVERY_COLORS[getRecoveryColor(score)];
 
         return (
-          <div className={`rounded-xl border ${c.border} ${c.bg} p-5 space-y-4`}>
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-accent" />
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted">Tomorrow&apos;s Blueprint</span>
-              <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${c.bg} ${c.text} ring-1 ${c.ring}`}>
-                {isGreen ? "Go Hard" : isYellow ? "Stay Steady" : "Recover"}
-              </span>
-            </div>
-
-            <p className="text-xs text-muted">{recommendation}</p>
-
-            <div className="space-y-1.5">
-              {[
-                { time: "7:00", label: "Wake + Morning Sunlight", icon: Sun, color: "text-amber-400" },
-                { time: "7:30", label: "Morning Briefing arrives", icon: Mail, color: "text-accent" },
-                { time: "9:00", label: "First coffee (caffeine delay)", icon: Wind, color: "text-emerald" },
-                { time: "9:30", label: "Deep work block 1 (90min)", icon: Zap, color: "text-cyan-400" },
-                { time: "11:00", label: "Break + movement", icon: Activity, color: "text-orange-400" },
-                { time: "11:30", label: "Deep work block 2 (90min)", icon: Zap, color: "text-cyan-400" },
-                { time: "13:00", label: "Job scrape results + lunch", icon: Briefcase, color: "text-emerald" },
-                { time: "14:00", label: "NSDR / Yoga Nidra (20min)", icon: Battery, color: "text-violet-400" },
-                { time: "14:30", label: "Creative work / meetings", icon: Target, color: "text-accent" },
-                { time: "17:00", label: isGreen ? "Workout (high strain)" : isYellow ? "Moderate exercise" : "Light walk or stretch", icon: Flame, color: isGreen ? "text-red-400" : isYellow ? "text-orange-400" : "text-blue-400" },
-                { time: "22:00", label: "Wind down + supplements", icon: BedDouble, color: "text-blue-400" },
-                { time: "00:30", label: "Screen cutoff \u2192 sleep", icon: Moon, color: "text-violet-400" },
-              ].map(({ time, label, icon: Icon, color }) => (
-                <div key={time} className="flex items-center gap-3 py-1">
-                  <span className="text-[10px] text-muted/60 tabular-nums w-10 shrink-0 text-right">{time}</span>
-                  <div className="w-px h-4 bg-border/40" />
-                  <Icon className={`w-3.5 h-3.5 ${color} shrink-0`} />
-                  <span className="text-xs">{label}</span>
+          <div className={`rounded-xl border ${c.border} ${c.bg} p-4 flex items-center justify-between gap-4`}>
+            <div className="flex items-center gap-3 min-w-0">
+              <Target className={`w-5 h-5 ${c.text} shrink-0`} />
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold">{isGreen ? "Go Hard" : isYellow ? "Stay Steady" : "Recover"}</span>
+                  <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${c.bg} ${c.text} ring-1 ${c.ring}`}>
+                    Strain {strainTarget}
+                  </span>
                 </div>
-              ))}
-            </div>
-
-            <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/30">
-              <Target className={`w-4 h-4 ${c.text}`} />
-              <span className="text-xs">
-                <span className="text-muted">Strain target: </span>
-                <span className={`font-bold ${c.text}`}>{strainTarget}</span>
-              </span>
+                <p className="text-xs text-muted mt-0.5">{recommendation}</p>
+              </div>
             </div>
           </div>
         );

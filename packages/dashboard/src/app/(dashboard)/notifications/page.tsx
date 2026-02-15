@@ -64,7 +64,7 @@ function getDetail(ev: NotifEvent): string {
 
 // --- Page ---
 
-const PAGE_SIZE = 500;
+const PAGE_SIZE = 2000;
 
 export default function NotificationsPage() {
   const [events, setEvents] = useState<NotifEvent[]>([]);

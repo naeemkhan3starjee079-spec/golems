@@ -93,6 +93,64 @@ export async function getUpcomingEvents(
   return getEvents(now, end);
 }
 
+export interface NewEvent {
+  summary: string;
+  date: string; // YYYY-MM-DD
+  startTime: string; // HH:MM
+  endTime: string; // HH:MM
+  description?: string;
+  location?: string;
+  colorId?: string;
+}
+
+export async function createEvent(event: NewEvent): Promise<CalendarEvent> {
+  const calendar = createCalendarClient();
+  const response = await calendar.events.insert({
+    calendarId: "primary",
+    requestBody: {
+      summary: event.summary,
+      description: event.description,
+      location: event.location,
+      start: { dateTime: `${event.date}T${event.startTime}:00`, timeZone: TIMEZONE },
+      end: { dateTime: `${event.date}T${event.endTime}:00`, timeZone: TIMEZONE },
+      colorId: event.colorId,
+    },
+  });
+  return parseEvent(response.data);
+}
+
+export async function createEvents(events: NewEvent[]): Promise<CalendarEvent[]> {
+  const results: CalendarEvent[] = [];
+  for (const event of events) {
+    results.push(await createEvent(event));
+  }
+  return results;
+}
+
+export async function deleteEvent(eventId: string): Promise<void> {
+  const calendar = createCalendarClient();
+  await calendar.events.delete({ calendarId: "primary", eventId });
+}
+
+export async function deleteEventsByPrefix(
+  date: Date,
+  prefixes: string[]
+): Promise<number> {
+  const startOfDay = new Date(date);
+  startOfDay.setHours(0, 0, 0, 0);
+  const endOfDay = new Date(startOfDay);
+  endOfDay.setDate(endOfDay.getDate() + 1);
+  const events = await getEvents(startOfDay, endOfDay);
+  let deleted = 0;
+  for (const event of events) {
+    if (prefixes.some((p) => event.summary.startsWith(p))) {
+      await deleteEvent(event.id);
+      deleted++;
+    }
+  }
+  return deleted;
+}
+
 function parseEvent(item: calendar_v3.Schema$Event): CalendarEvent {
   const allDay = !item.start?.dateTime;
   const start = allDay

@@ -43,9 +43,9 @@ export default function EmailsPage() {
     const id = ++fetchIdRef.current;
     try {
       const [emailData, statsData, senderData] = await Promise.all([
-        fetchEmails(100),
+        fetchEmails(500),
         fetchEmailStats(),
-        fetchEmailSenders(50),
+        fetchEmailSenders(200),
       ]);
       if (id !== fetchIdRef.current) return;
       setEmails(emailData as Email[]);
