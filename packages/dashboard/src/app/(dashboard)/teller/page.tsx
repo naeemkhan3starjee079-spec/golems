@@ -1,13 +1,58 @@
 "use client";
 
 import {
-  Calendar, CreditCard, DollarSign, Repeat, Wallet,
+  AlertCircle, Calendar, CreditCard, DollarSign, Repeat, TrendingUp, Wallet,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PageSkeleton } from "@/components/skeleton";
 import { fetchSubscriptions, fetchPayments } from "@/lib/supabase/queries";
 import { timeAgo } from "@/lib/format";
 import type { Subscription, Payment } from "@/lib/types";
+
+// --- Helpers ---
+
+function formatCurrency(amount: number, currency: string) {
+  const sym = currency === "USD" ? "$" : currency === "ILS" ? "\u20AA" : currency === "EUR" ? "\u20AC" : "";
+  return sym ? `${sym}${amount.toFixed(2)}` : `${amount.toFixed(2)} ${currency}`;
+}
+
+function getMonthlyAmount(sub: Subscription): number | null {
+  if (sub.amount == null) return null;
+  if (sub.frequency === "yearly") return sub.amount / 12;
+  if (sub.frequency === "weekly") return sub.amount * 4.33;
+  return sub.amount; // monthly or default
+}
+
+function getNextPaymentDate(sub: Subscription): Date | null {
+  if (!sub.last_payment) return null;
+  const last = new Date(sub.last_payment);
+  const next = new Date(last);
+  if (sub.frequency === "yearly") next.setFullYear(next.getFullYear() + 1);
+  else if (sub.frequency === "weekly") next.setDate(next.getDate() + 7);
+  else next.setMonth(next.getMonth() + 1); // monthly default
+  return next;
+}
+
+function daysUntil(date: Date): number {
+  return Math.ceil((date.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+}
+
+function getFrequencyLabel(freq: string | null) {
+  if (!freq) return "unknown";
+  return freq === "yearly" ? "/yr" : freq === "weekly" ? "/wk" : "/mo";
+}
+
+const CATEGORY_MAP: Record<string, { label: string; color: string }> = {
+  "Spotify": { label: "Entertainment", color: "text-emerald" },
+  "Railway.app": { label: "Infrastructure", color: "text-cyan-400" },
+  "Bugbot Pro": { label: "Dev Tools", color: "text-violet-400" },
+};
+
+function getCategory(name: string) {
+  return CATEGORY_MAP[name] ?? { label: "Other", color: "text-muted" };
+}
+
+// --- Page ---
 
 export default function TellerPage() {
   const [subs, setSubs] = useState<Subscription[]>([]);
@@ -20,7 +65,7 @@ export default function TellerPage() {
     try {
       const [subData, payData] = await Promise.all([
         fetchSubscriptions(),
-        fetchPayments(20),
+        fetchPayments(50),
       ]);
       if (id !== fetchIdRef.current) return;
       setSubs(subData as Subscription[]);
@@ -37,16 +82,28 @@ export default function TellerPage() {
   if (!loaded) return <PageSkeleton />;
 
   const activeSubs = subs.filter((s) => s.status === "active");
-  // Group by currency to avoid mixing different currencies
+  const incompleteSubs = activeSubs.filter((s) => s.amount == null || s.frequency == null);
+
+  // Monthly/yearly totals per currency
   const monthlyCosts: Record<string, number> = {};
   for (const s of activeSubs) {
-    if (!s.amount) continue;
+    const monthly = getMonthlyAmount(s);
+    if (monthly == null) continue;
     const cur = s.currency ?? "USD";
-    const monthly = s.frequency === "yearly" ? s.amount / 12 : s.amount;
     monthlyCosts[cur] = (monthlyCosts[cur] || 0) + monthly;
   }
   const primaryCurrency = Object.keys(monthlyCosts)[0] ?? "USD";
   const monthlyTotal = monthlyCosts[primaryCurrency] ?? 0;
+  const yearlyTotal = monthlyTotal * 12;
+  const trackedPct = activeSubs.length > 0
+    ? Math.round(((activeSubs.length - incompleteSubs.length) / activeSubs.length) * 100)
+    : 0;
+
+  // Upcoming payments sorted
+  const upcoming = activeSubs
+    .map((s) => ({ sub: s, next: getNextPaymentDate(s) }))
+    .filter((u): u is { sub: Subscription; next: Date } => u.next !== null)
+    .sort((a, b) => a.next.getTime() - b.next.getTime());
 
   return (
     <div className="space-y-6">
@@ -62,23 +119,80 @@ export default function TellerPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="rounded-lg border border-border bg-surface p-4">
           <div className="text-2xl font-bold tabular-nums">{activeSubs.length}</div>
           <div className="text-[10px] text-muted uppercase tracking-wider mt-1">Active Subs</div>
         </div>
         <div className="rounded-lg border border-accent/30 bg-accent/5 p-4">
           <div className="text-2xl font-bold tabular-nums text-accent">
-            {primaryCurrency === "USD" ? "$" : ""}{monthlyTotal.toFixed(0)}
-            {primaryCurrency !== "USD" && <span className="text-sm ml-1">{primaryCurrency}</span>}
+            {formatCurrency(monthlyTotal, primaryCurrency)}
           </div>
-          <div className="text-[10px] text-muted uppercase tracking-wider mt-1">Monthly Cost</div>
+          <div className="text-[10px] text-muted uppercase tracking-wider mt-1">Monthly</div>
         </div>
         <div className="rounded-lg border border-border bg-surface p-4">
-          <div className="text-2xl font-bold tabular-nums">{payments.length}</div>
-          <div className="text-[10px] text-muted uppercase tracking-wider mt-1">Payments</div>
+          <div className="flex items-center gap-1.5">
+            <TrendingUp className="w-4 h-4 text-muted" />
+            <span className="text-2xl font-bold tabular-nums">
+              {formatCurrency(yearlyTotal, primaryCurrency)}
+            </span>
+          </div>
+          <div className="text-[10px] text-muted uppercase tracking-wider mt-1">Yearly Projection</div>
+        </div>
+        <div className={`rounded-lg border p-4 ${trackedPct < 100 ? "border-amber-500/30 bg-amber-500/5" : "border-emerald/30 bg-emerald/5"}`}>
+          <div className={`text-2xl font-bold tabular-nums ${trackedPct < 100 ? "text-amber-400" : "text-emerald"}`}>
+            {trackedPct}%
+          </div>
+          <div className="text-[10px] text-muted uppercase tracking-wider mt-1">Data Complete</div>
         </div>
       </div>
+
+      {/* Incomplete data warning */}
+      {incompleteSubs.length > 0 && (
+        <div className="flex items-start gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+          <AlertCircle className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
+          <div className="text-xs text-muted">
+            <span className="font-medium text-amber-400">{incompleteSubs.length} subscription{incompleteSubs.length > 1 ? "s" : ""}</span>
+            {" "}missing amount or frequency:{" "}
+            {incompleteSubs.map((s) => s.service_name).join(", ")}.
+            {" "}Totals may be incomplete.
+          </div>
+        </div>
+      )}
+
+      {/* Upcoming Payments */}
+      {upcoming.length > 0 && (
+        <div>
+          <h3 className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Upcoming Payments</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {upcoming.map(({ sub, next }) => {
+              const days = daysUntil(next);
+              const isPast = days < 0;
+              const isSoon = days >= 0 && days <= 3;
+              return (
+                <div key={sub.id} className={`rounded-lg border px-3 py-2.5 flex items-center justify-between ${
+                  isPast ? "border-rose/30 bg-rose/5" : isSoon ? "border-amber-500/30 bg-amber-500/5" : "border-border/60 bg-surface/50"
+                }`}>
+                  <div className="flex items-center gap-2">
+                    <Calendar className={`w-3.5 h-3.5 ${isPast ? "text-rose" : isSoon ? "text-amber-400" : "text-muted"}`} />
+                    <span className="text-xs font-medium">{sub.service_name}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {sub.amount != null && (
+                      <span className="text-xs tabular-nums font-medium">
+                        {formatCurrency(sub.amount, sub.currency ?? "USD")}
+                      </span>
+                    )}
+                    <span className={`text-[10px] tabular-nums ${isPast ? "text-rose font-medium" : isSoon ? "text-amber-400" : "text-muted"}`}>
+                      {isPast ? `${Math.abs(days)}d overdue` : days === 0 ? "today" : `in ${days}d`}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Subscriptions */}
       <div>
@@ -90,46 +204,74 @@ export default function TellerPage() {
           </div>
         ) : (
           <div className="space-y-2">
-            {subs.map((sub) => (
-              <div key={sub.id} className="rounded-lg border border-border/60 bg-surface/50 p-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <Repeat className={`w-4 h-4 ${sub.status === "active" ? "text-emerald" : "text-muted/40"}`} />
-                    <div>
-                      <div className="text-sm font-medium">{sub.service_name}</div>
-                      <div className="text-[10px] text-muted flex items-center gap-2 mt-0.5">
-                        <span>{sub.frequency ?? "monthly"}</span>
-                        {sub.last_payment && (
-                          <span className="flex items-center gap-0.5">
-                            <Calendar className="w-2.5 h-2.5" />
-                            Last: {timeAgo(sub.last_payment)}
+            {subs.map((sub) => {
+              const monthly = getMonthlyAmount(sub);
+              const category = getCategory(sub.service_name);
+              return (
+                <div key={sub.id} className="rounded-lg border border-border/60 bg-surface/50 p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <Repeat className={`w-4 h-4 ${sub.status === "active" ? "text-emerald" : "text-muted/40"}`} />
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">{sub.service_name}</span>
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded-full bg-surface ${category.color}`}>
+                            {category.label}
                           </span>
-                        )}
+                        </div>
+                        <div className="text-[10px] text-muted flex items-center gap-2 mt-0.5">
+                          {sub.frequency ? (
+                            <span className="capitalize">{sub.frequency}</span>
+                          ) : (
+                            <span className="text-amber-400">Frequency unknown</span>
+                          )}
+                          {sub.last_payment && (
+                            <span className="flex items-center gap-0.5">
+                              <Calendar className="w-2.5 h-2.5" />
+                              Last: {timeAgo(sub.last_payment)}
+                            </span>
+                          )}
+                          {sub.first_seen && (
+                            <span>Tracked since {new Date(sub.first_seen).toLocaleDateString("en-US", { month: "short", year: "numeric" })}</span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="flex items-center gap-3 shrink-0">
-                    {sub.amount != null && (
-                      <span className="text-sm font-bold tabular-nums flex items-center gap-0.5">
-                        <DollarSign className="w-3.5 h-3.5 text-muted" />
-                        {sub.amount}
-                        <span className="text-[10px] text-muted font-normal">
-                          {sub.currency ?? "USD"}
+                    <div className="flex items-center gap-3 shrink-0">
+                      {sub.amount != null ? (
+                        <div className="text-right">
+                          <span className="text-sm font-bold tabular-nums flex items-center gap-0.5">
+                            <DollarSign className="w-3.5 h-3.5 text-muted" />
+                            {formatCurrency(sub.amount, sub.currency ?? "USD")}
+                            <span className="text-[10px] text-muted font-normal">
+                              {getFrequencyLabel(sub.frequency)}
+                            </span>
+                          </span>
+                          {monthly != null && sub.frequency !== "monthly" && (
+                            <div className="text-[9px] text-muted tabular-nums">
+                              ~{formatCurrency(monthly, sub.currency ?? "USD")}/mo
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-[10px] text-amber-400 flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" />
+                          No amount
                         </span>
+                      )}
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full ${
+                        sub.status === "active"
+                          ? "bg-emerald/10 text-emerald"
+                          : "bg-muted/10 text-muted"
+                      }`}>
+                        {sub.status ?? "unknown"}
                       </span>
-                    )}
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full ${
-                      sub.status === "active"
-                        ? "bg-emerald/10 text-emerald"
-                        : "bg-muted/10 text-muted"
-                    }`}>
-                      {sub.status ?? "unknown"}
-                    </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -137,18 +279,22 @@ export default function TellerPage() {
       {/* Recent Payments */}
       {payments.length > 0 && (
         <div>
-          <h3 className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Recent Payments</h3>
+          <h3 className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Payment History</h3>
           <div className="space-y-1">
             {payments.map((payment) => (
               <div key={payment.id} className="flex items-center justify-between rounded-lg border border-border/40 bg-surface/30 px-3 py-2 text-[11px]">
                 <div className="flex items-center gap-2 text-muted">
                   <DollarSign className="w-3 h-3" />
                   <span className="font-medium text-foreground tabular-nums">
-                    {payment.amount} {payment.currency ?? "USD"}
+                    {payment.amount != null ? formatCurrency(payment.amount, payment.currency ?? "USD") : "N/A"}
                   </span>
                 </div>
                 {payment.paid_at && (
-                  <span className="text-muted/60">{timeAgo(payment.paid_at)}</span>
+                  <span className="text-muted/60 tabular-nums">
+                    {new Date(payment.paid_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    {" \u00B7 "}
+                    {timeAgo(payment.paid_at)}
+                  </span>
                 )}
               </div>
             ))}

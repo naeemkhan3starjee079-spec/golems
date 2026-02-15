@@ -5,6 +5,7 @@ export type Subscription = {
   currency: string | null;
   frequency: string | null;
   status: string | null;
+  first_seen: string | null;
   last_payment: string | null;
   created_at: string;
 };
