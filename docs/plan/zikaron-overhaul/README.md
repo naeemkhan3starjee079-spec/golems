@@ -16,7 +16,8 @@
 | 3 | Gemini Batch Backfill | [phase-3](phase-3/) | ... | | Build + run cloud backfill (~$16) |
 | 4 | MLX Local Backend | [phase-4](phase-4/) | ... | | Add MLX alongside Ollama |
 | 5 | Ongoing Enrichment Tuning | [phase-5](phase-5/) | ... | | MLX parallelism, monitoring, defaults |
-| 6 | Documentation + Wizard + Doctor | [phase-6](phase-6/) | ... | | Update docs, health checks, wizard |
+| 6 | Audit + Wire-Up Verification | [phase-6](phase-6/) | ... | | Verify all wiring before documenting |
+| 7 | Human-Friendly Docs + Wizard + Doctor | [phase-7](phase-7/) | ... | | Write docs, update wizard/doctor, verify with Cursor |
 
 ---
 

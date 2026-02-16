@@ -163,14 +163,14 @@ Before full backfill, run 100-chunk sample:
 
 ## Status
 
-- [ ] Add 6 new columns to chunks table (migration)
-- [ ] Update enrichment prompt + parser for 10-field schema
-- [ ] Build backfill script architecture
-- [ ] Export unenriched chunks to JSONL
-- [ ] Implement Gemini Batch backend
-- [ ] Add checkpoint table for resume
-- [ ] Import results back to DB
-- [ ] Add usage logging
-- [ ] Quality validation (100-chunk sample)
-- [ ] Run full backfill
-- [ ] Verify enrichment stats + quality
+- [x] Add 6 new columns to chunks table (migration)
+- [x] Update enrichment prompt + parser for 10-field schema
+- [x] Build backfill script architecture
+- [x] Export unenriched chunks to JSONL
+- [x] Implement Gemini Batch backend (google.genai SDK)
+- [x] Add checkpoint table for resume
+- [x] Import results back to DB
+- [x] Add usage logging
+- [ ] Quality validation (100-chunk sample) — NEEDS API KEY + RUN
+- [ ] Run full backfill — NEEDS API KEY + RUN
+- [ ] Verify enrichment stats + quality — AFTER BACKFILL

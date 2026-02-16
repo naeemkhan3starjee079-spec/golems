@@ -1,72 +1,71 @@
-# Phase 6: Documentation + Wizard + Doctor
+# Phase 6: Audit + Wire-Up Verification
 
 > [Back to main plan](../README.md)
 
 ## Goal
 
-Update all documentation, CLAUDE.md files, wizard checks, and doctor health checks to reflect the Zikaron overhaul changes (new enrichment fields, project consolidation, MLX backend, Gemini backfill).
+Before writing documentation, audit all Phase 1-5 changes to confirm everything is wired up correctly and follows best practices. This catches integration issues before they get documented as "working."
 
 ## Tools
 
-- **Research:** Cursor (audit existing docs for stale references)
-- **Code:** Claude Opus (edits across multiple files)
+- **Research:** Cursor (audit code with GPT-5.2 for best practices)
+- **Code:** Claude Opus (fix any issues found)
 
 ## Steps
 
-### 1. Update Zikaron CLAUDE.md
-- Add 6 new enrichment fields to the enrichment table
-- Document `zikaron consolidate` CLI command
-- Update chunk counts (post-enrichment)
-- Add MLX backend info (if Phase 4 completed)
-- Document WhatsApp reindex status/limitations
+### 1. Audit enrichment pipeline end-to-end
+Run Cursor CLI to verify:
+- New 10-field prompt produces valid JSON from local GLM
+- `parse_enrichment()` handles all field types correctly (arrays, enums, nullables)
+- `update_enrichment()` writes all 6 new columns to DB
+- Existing 4-field enriched chunks are NOT overwritten by new 10-field runs
+- Cloud backfill results import correctly via `update_enrichment()`
 
-### 2. Update Golems root CLAUDE.md
-- Update Zikaron description (chunk count, enrichment %)
-- Add any new MCP tools or CLI commands
+### 2. Audit DB schema integrity
+- Verify all 6 new columns exist in `_init_db()` ALTER TABLE logic
+- Run `PRAGMA integrity_check` on actual DB
+- Verify index coverage for new columns (do we need indexes?)
+- Check `get_enrichment_stats()` counts new fields
 
-### 3. Update Doctor health checks
-File: `packages/services/src/doctor.ts`
-- Add check: enrichment progress (% enriched, stale check)
-- Add check: project name fragmentation (warn if >15 distinct projects)
-- Add check: Ollama/MLX availability for local enrichment
-- Add check: Zikaron DB size / integrity
+### 3. Audit project consolidation wiring
+- Verify `fix_projects` CLI command uses the same mapping as consolidation script
+- Check that `classify.py` normalizes project names at index time
+- Verify `extract_whatsapp.py` min_char_count is used correctly
+- Check for any stale project name references in code
 
-### 4. Update Wizard
-File: `packages/services/src/wizard.ts`
-- Add setup step for MLX backend (if Phase 4 done)
-- Add Ollama model check (glm4 pulled?)
-- Add enrichment config (batch size, schedule)
+### 4. Audit MLX backend integration (if Phase 4 done)
+- Verify MLX and Ollama can coexist without conflicts
+- Check environment variable switching works
+- Verify fallback behavior (MLX unavailable → Ollama)
 
-### 5. Update enrichment docs
-- Update enrichment prompt documentation with 10-field schema
-- Document Gemini Batch API usage and cost tracking
-- Add runbook for future backfill operations
+### 5. Audit backup coverage
+- Verify `backup-golem-system.sh` covers new DB size (~3.2GB)
+- Check that WAL checkpoint happens before backup
+- Verify iCloud sync for backup target directory
 
-### 6. Update backup script docs
-- Document WAL-safe backup process
-- Add recovery instructions
-- Update manifest with new backup targets
+### 6. Run full test suite
+```bash
+cd packages/zikaron && python -m pytest
+```
+Fix any failures before proceeding to documentation.
 
-### 7. Audit stale references
-Use Cursor to grep for stale references:
-- Old project names (claude-golem, ralph, etc.)
-- Old chunk counts
-- Old enrichment field lists (4 fields → 10)
-- References to ChatStorage.sqlite path
+### 7. Local CLI audit (Cursor)
+Run comprehensive Cursor audit across all changed files from Phases 1-5:
+- Security: SQL injection, path traversal
+- Logic: edge cases, error handling
+- Performance: N+1 queries, missing indexes
+- Consistency: naming patterns, code style
 
 ## Depends On
 
-- Phase 1 (project consolidation)
-- Phase 3 (enrichment schema changes)
-- Phase 4 (MLX backend — optional)
-- Phase 5 (tuning — optional)
+- Phases 1-5 (all implementation phases)
 
 ## Status
 
-- [ ] Update Zikaron CLAUDE.md
-- [ ] Update Golems root CLAUDE.md
-- [ ] Update Doctor health checks
-- [ ] Update Wizard setup
-- [ ] Update enrichment documentation
-- [ ] Update backup script docs
-- [ ] Audit stale references with Cursor
+- [ ] Audit enrichment pipeline end-to-end
+- [ ] Audit DB schema integrity
+- [ ] Audit project consolidation wiring
+- [ ] Audit MLX backend integration
+- [ ] Audit backup coverage
+- [ ] Run full test suite
+- [ ] Local CLI audit (Cursor)
