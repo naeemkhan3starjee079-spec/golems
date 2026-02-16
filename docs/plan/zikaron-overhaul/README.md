@@ -11,11 +11,12 @@
 
 | # | Phase | Folder | Status | PR | Notes |
 |---|-------|--------|--------|-----|-------|
-| 1 | Project Consolidation + Worktree Normalization | [phase-1](phase-1/) | ... | | Clean data before enriching |
-| 2 | WhatsApp Reindex | [phase-2](phase-2/) | ... | | Fix missing messages + NULL content_types |
+| 1 | Project Consolidation + Worktree Normalization | [phase-1](phase-1/) | DONE | #195 | 149K rows consolidated (34→9 projects) |
+| 2 | WhatsApp Reindex | [phase-2](phase-2/) | PARTIAL | #196 | ChatStorage.sqlite missing; fixed 11.7K chunks in-place |
 | 3 | Gemini Batch Backfill | [phase-3](phase-3/) | ... | | Build + run cloud backfill (~$16) |
 | 4 | MLX Local Backend | [phase-4](phase-4/) | ... | | Add MLX alongside Ollama |
 | 5 | Ongoing Enrichment Tuning | [phase-5](phase-5/) | ... | | MLX parallelism, monitoring, defaults |
+| 6 | Documentation + Wizard + Doctor | [phase-6](phase-6/) | ... | | Update docs, health checks, wizard |
 
 ---
 
