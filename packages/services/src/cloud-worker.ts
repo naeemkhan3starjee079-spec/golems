@@ -163,16 +163,19 @@ async function safeRun(name: string, fn: () => Promise<unknown>): Promise<void> 
         })
         .catch(() => {});
 
-      // Update golem_state timestamps for dashboard service status
+      // Update golem_state timestamps + status for dashboard service status
       const stateKeyPrefixes: [string, string][] = [
         ["EmailGolem", "lastEmailCheck"],
         ["JobGolem", "lastJobRun"],
         ["Briefing", "lastBriefing"],
+        ["WhoopSync", "lastWhoopSync"],
       ];
       const stateKey = stateKeyPrefixes.find(([prefix]) => name.startsWith(prefix))?.[1];
       if (stateKey) {
+        // Store both timestamp and status so dashboard can show real health
+        const stateValue = JSON.stringify({ time: endedAt, status, error: error?.slice(0, 200) ?? null });
         sb.from("golem_state")
-          .upsert({ key: stateKey, value: endedAt, updated_at: endedAt }, { onConflict: "key" })
+          .upsert({ key: stateKey, value: stateValue, updated_at: endedAt }, { onConflict: "key" })
           .then(({ error: stateErr }) => {
             if (stateErr) console.error(`[CloudWorker] golem_state ${stateKey} upsert failed:`, stateErr.message);
           })
@@ -425,16 +428,20 @@ try {
     const sendBriefing = await getBriefing();
     scheduleDaily("Briefing", 8, sendBriefing);
 
-    // Whoop health sync: 7am + 2pm Israel (after sleep scored + mid-day strain update)
+    // Whoop health sync: 5 times/day for better coverage
+    // 7am (after sleep scored), 10am, 2pm, 5pm (afternoon strain), 8pm (evening)
     const syncWhoop = await getWhoopSync();
     scheduleDaily("WhoopSync", 7, syncWhoop);
+    scheduleDaily("WhoopSync-10am", 10, syncWhoop);
     scheduleDaily("WhoopSync-Afternoon", 14, syncWhoop);
+    scheduleDaily("WhoopSync-5pm", 17, syncWhoop);
+    scheduleDaily("WhoopSync-Evening", 20, syncWhoop);
 
     console.log("[CloudWorker] All services scheduled:");
     console.log("  - EmailGolem: hourly 6am-7pm (skip lunch), 10pm final, OFF overnight");
     console.log("  - JobGolem: 6am + 9am + 1pm Sun-Thu (Israeli work week)");
     console.log("  - Briefing: 8am Israel");
-    console.log("  - WhoopSync: 7am + 2pm Israel");
+    console.log("  - WhoopSync: 7am, 10am, 2pm, 5pm, 8pm Israel");
   } else if (emailOnly) {
     const processEmails = await getEmailGolem();
     scheduleEmail(processEmails);
