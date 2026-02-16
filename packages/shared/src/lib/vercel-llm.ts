@@ -145,12 +145,14 @@ export async function runCloudFree(prompt: string, source = "unknown"): Promise<
 
       return result.text.trim();
     } catch (err: any) {
-      consecutiveErrors++;
       const isRateLimit = err?.statusCode === 429 || err?.message?.includes("429") || err?.message?.includes("rate limit");
-      if (isRateLimit && providers.indexOf(p) < providers.length - 1) {
+      const isLastProvider = providers.indexOf(p) >= providers.length - 1;
+      if (isRateLimit && !isLastProvider) {
         console.warn(`[Cloud LLM] ${p.name} rate limited, trying fallback...`);
         continue;
       }
+      // Only count terminal failures (no more fallbacks remaining)
+      if (isLastProvider) consecutiveErrors++;
       console.error(`[Cloud LLM] Error from ${p.name} (source: ${source}):`, err?.message || err);
       logError({ service: source, error_message: err?.message || String(err), error_type: `${p.name}_api_error` });
 
@@ -167,7 +169,7 @@ export async function runCloudFree(prompt: string, source = "unknown"): Promise<
         }).catch(() => {});
       }
 
-      if (providers.indexOf(p) < providers.length - 1) continue;
+      if (!isLastProvider) continue;
       return "";
     }
   }

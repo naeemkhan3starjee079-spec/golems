@@ -172,12 +172,19 @@ async function safeRun(name: string, fn: () => Promise<unknown>): Promise<void> 
       ];
       const stateKey = stateKeyPrefixes.find(([prefix]) => name.startsWith(prefix))?.[1];
       if (stateKey) {
-        // Store both timestamp and status so dashboard can show real health
-        const stateValue = JSON.stringify({ time: endedAt, status, error: error?.slice(0, 200) ?? null });
+        // Write plain timestamp to original key (consumers expect ISO string)
         sb.from("golem_state")
-          .upsert({ key: stateKey, value: stateValue, updated_at: endedAt }, { onConflict: "key" })
+          .upsert({ key: stateKey, value: endedAt, updated_at: endedAt }, { onConflict: "key" })
           .then(({ error: stateErr }) => {
             if (stateErr) console.error(`[CloudWorker] golem_state ${stateKey} upsert failed:`, stateErr.message);
+          })
+          .catch(() => {});
+        // Write status metadata to separate key for dashboard health display
+        const metaValue = JSON.stringify({ time: endedAt, status, error: error?.slice(0, 200) ?? null });
+        sb.from("golem_state")
+          .upsert({ key: `${stateKey}_meta`, value: metaValue, updated_at: endedAt }, { onConflict: "key" })
+          .then(({ error: stateErr }) => {
+            if (stateErr) console.error(`[CloudWorker] golem_state ${stateKey}_meta upsert failed:`, stateErr.message);
           })
           .catch(() => {});
       }
