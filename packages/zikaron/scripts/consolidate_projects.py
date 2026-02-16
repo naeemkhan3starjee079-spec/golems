@@ -137,14 +137,29 @@ def main():
                 updates_for_table += count
 
                 if args.generate_rollback:
-                    # Escape single quotes in names
+                    # Export chunk IDs per old name for exact rollback
                     safe_old = (old_name or "").replace("'", "''")
-                    safe_new = canonical.replace("'", "''")
-                    rollback_lines.append(
-                        f"UPDATE {table} SET project = '{safe_old}' "
-                        f"WHERE project = '{safe_new}' "
-                        f"/* was: {count} rows */;"
-                    )
+                    if old_name is None:
+                        id_query = f"SELECT id FROM {table} WHERE project IS NULL"
+                    else:
+                        id_query = f"SELECT id FROM {table} WHERE project = '{safe_old}'"
+                    try:
+                        ids = [r[0] for r in db.cursor().execute(id_query)]
+                        if ids:
+                            # Batch into groups of 500 for SQL IN clause limits
+                            for batch_start in range(0, len(ids), 500):
+                                batch = ids[batch_start:batch_start + 500]
+                                id_list = ", ".join(f"'{i}'" for i in batch)
+                                rollback_lines.append(
+                                    f"UPDATE {table} SET project = '{safe_old}' "
+                                    f"WHERE id IN ({id_list});"
+                                )
+                    except apsw.SQLError:
+                        # Table might not have 'id' column
+                        rollback_lines.append(
+                            f"-- WARN: Cannot generate exact rollback for {table} "
+                            f"(no id column). Use DB backup instead."
+                        )
 
         if updates_for_table == 0:
             print("  (no changes needed)")
@@ -160,6 +175,8 @@ def main():
         rollback_path = Path(__file__).parent / "rollback_consolidation.sql"
         rollback_path.write_text(
             f"-- Rollback for project consolidation ({datetime.now().isoformat()})\n"
+            f"-- Uses per-chunk-ID mappings for exact reversal.\n"
+            f"-- Alternative: restore from backup: cp zikaron.db.backup-YYYYMMDD zikaron.db\n"
             f"-- Run: sqlite3 ~/.local/share/zikaron/zikaron.db < rollback_consolidation.sql\n\n"
             + "\n".join(rollback_lines) + "\n"
         )
