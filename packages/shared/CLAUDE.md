@@ -12,7 +12,7 @@ Shared is the **infrastructure layer** that every golem depends on. It provides 
 packages/shared/src/
 ├── lib/
 │   ├── supabase-factory.ts      # Supabase client creation (singleton)
-│   ├── llm.ts                   # Multi-backend LLM runner (Haiku, Ollama)
+│   ├── llm.ts                   # Multi-backend LLM runner (Haiku, Ollama, MLX, Gemini, Groq)
 │   ├── cloud-llm.ts             # Haiku backend with token/cost tracking
 │   ├── ollama-helper.ts         # Local Ollama wrapper
 │   ├── telegram-direct.ts       # Dual-mode: localhost:3847 or Bot API
@@ -51,19 +51,31 @@ import { getSupabase } from "@golems/shared/lib/supabase-factory";
 ```
 
 ### `lib/llm`
-Multi-backend LLM runner. Switch via `LLM_BACKEND` env var (`ollama` | `glm` | `haiku`).
+Multi-backend LLM runner. Switch via `LLM_BACKEND` env var (`ollama` | `glm` | `mlx` | `haiku` | `gemini` | `groq`).
 ```typescript
 import { runLLM, runLLMJSON } from "@golems/shared/lib/llm";
 ```
 - `ollama` (default): Local Ollama CLI, model from `OLLAMA_MODEL` env
 - `glm`: GLM-4.7-Flash via Ollama HTTP (free, local, 127.0.0.1:11434)
+- `mlx`: Local MLX server via OpenAI-compatible API (free, local, 127.0.0.1:8080)
 - `haiku`: Claude Haiku 4.5 via Anthropic API (paid)
+- `gemini`: Gemini Flash-Lite via Vercel AI SDK (free tier)
+- `groq`: Groq Llama via Vercel AI SDK (free tier)
 
 ### `lib/glm-llm`
 GLM-4.7-Flash backend via Ollama HTTP. Used when `LLM_BACKEND=glm`.
 ```typescript
 import { runGLM, runGLMJSON } from "@golems/shared/lib/glm-llm";
 ```
+
+### `lib/mlx-llm`
+Local MLX server backend. Used when `LLM_BACKEND=mlx`. Apple Silicon optimized, 21-87% faster than Ollama.
+```typescript
+import { runMLX, runMLXJSON } from "@golems/shared/lib/mlx-llm";
+```
+- OpenAI-compatible API at `http://127.0.0.1:8080/v1/chat/completions`
+- Start server: `python3 -m mlx_lm.server --model <model> --port 8080`
+- ENV: `MLX_URL` to override endpoint, `MLX_MODEL` for model name
 
 ### `lib/vercel-llm`
 Free cloud LLM backend via Vercel AI SDK (Gemini/Groq). Used when `LLM_BACKEND=gemini` or `groq`.

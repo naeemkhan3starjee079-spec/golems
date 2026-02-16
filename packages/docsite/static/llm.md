@@ -29,7 +29,7 @@ Golems is a **Bun workspace monorepo with 14 packages** — 7 golems (1 orchestr
 | `golems-tui` | React Ink terminal dashboard |
 | `tax-helper` | Schedule C transaction categorization (Sophtron MCP) |
 | `ralph` | Autonomous coding loop (PRD execution) |
-| `zikaron` | Memory layer (Python, 226K+ chunks, sqlite-vec) |
+| `zikaron` | Memory layer (Python, 260K+ chunks, sqlite-vec) |
 
 ## Mac = Brain, Railway = Body
 
@@ -1105,7 +1105,7 @@ The only hard dependency is `@golems/shared` for database and LLM access.
 
 ## What's the memory cost?
 
-Zikaron uses sqlite-vec with bge-large-en-v1.5 embeddings. For 238K+ chunks, the database is approximately 1-2GB on disk. Queries run in under 2 seconds. The embedding model loads into ~1.5GB of RAM when indexing, but the MCP server uses the pre-built index (no model loaded at query time).
+Zikaron uses sqlite-vec with bge-large-en-v1.5 embeddings. For 260K+ chunks, the database is approximately 1-2GB on disk. Queries run in under 2 seconds. The embedding model loads into ~1.5GB of RAM when indexing, but the MCP server uses the pre-built index (no model loaded at query time).
 
 ## Does it work without Railway?
 
@@ -3271,7 +3271,7 @@ Key capabilities: account listing, transaction history, identity verification.
 
 - **Email tools** use Supabase directly (cloud-first architecture)
 - **Job tools** query Supabase `golem_jobs` and `scrape_activity` tables
-- **Zikaron tools** query local sqlite-vec database (~1.4GB, 226K+ chunks)
+- **Zikaron tools** query local sqlite-vec database (~1.4GB, 260K+ chunks)
 - **GLM tools** run locally via Ollama (no network, ~3-8s per call on M1 Pro)
 - **Scoring:** Email scores 1-10 (10=urgent), Job scores 1-10 (8+=hot match)
 - **Categories:** Email categories are semantic (job, interview, subscription, tech-update, newsletter, promo, social, other)
@@ -3675,7 +3675,7 @@ await setState("nightShiftTarget", "songscript");
 
 ## What It Does
 
-Zikaron (Hebrew for "memory") is a **knowledge pipeline** that indexes every Claude Code conversation into a searchable database. It uses semantic embeddings to find past solutions, decisions, and patterns across all your projects. 238K+ chunks indexed, searchable in under 2 seconds.
+Zikaron (Hebrew for "memory") is a **knowledge pipeline** that indexes every Claude Code conversation into a searchable database. It uses semantic embeddings to find past solutions, decisions, and patterns across all your projects. 260K+ chunks indexed, searchable in under 2 seconds.
 
 ## Architecture
 
@@ -3721,7 +3721,7 @@ AST-aware chunking with tree-sitter for code (~500 tokens). Never splits stack t
 Uses `bge-large-en-v1.5` model (1024 dimensions). Runs locally via sentence-transformers.
 
 ### 5. Index
-sqlite-vec for vector similarity search. Sub-2-second queries across 238K+ chunks.
+sqlite-vec for vector similarity search. Sub-2-second queries across 260K+ chunks.
 
 ## Interfaces
 

@@ -203,6 +203,7 @@ export async function phasePreflight(log: SetupLogEntry[]): Promise<boolean> {
     checkPrerequisite("git", "--version", "brew install git"),
     checkPrerequisite("op", "--version", "brew install --cask 1password-cli"),
     checkPrerequisite("railway", "--version", "npm i -g @railway/cli"),
+    checkPrerequisite("ollama", "--version", "brew install ollama (for Zikaron enrichment)"),
   ];
 
   let allGood = true;

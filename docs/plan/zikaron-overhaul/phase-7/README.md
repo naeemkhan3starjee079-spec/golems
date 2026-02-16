@@ -83,11 +83,11 @@ Based on Cursor findings:
 
 ## Status
 
-- [ ] Update Zikaron CLAUDE.md
-- [ ] Update Golems root CLAUDE.md
-- [ ] Write enrichment runbook
-- [ ] Write backup/recovery docs
-- [ ] Update Doctor health checks
-- [ ] Update Wizard setup
-- [ ] Cursor doc verification sweep
-- [ ] Fix gaps and polish
+- [x] Update Zikaron CLAUDE.md
+- [x] Update Golems root CLAUDE.md
+- [x] Write enrichment runbook
+- [x] Write backup/recovery docs (added to enrichment-runbook.md)
+- [x] Update Doctor health checks (MLX, Ollama model, enrichment queue messages)
+- [x] Update Wizard setup (Ollama in preflight)
+- [x] ~~Cursor doc verification sweep~~ — Cursor hit usage limit; manual sweep done instead
+- [x] Fix gaps and polish (stale chunk counts: 226K/238K -> 260K+)

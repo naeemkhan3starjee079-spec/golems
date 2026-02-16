@@ -117,6 +117,45 @@ async function checkOllama() {
   }
 }
 
+// Check 2a: Ollama GLM model (needed for enrichment)
+async function checkOllamaModel() {
+  // Match any GLM variant: glm4, glm-4.7-flash, glm4:latest, etc.
+  const modelCheck = runCommand("ollama list 2>/dev/null | grep -qi 'glm'");
+  if (modelCheck.success) {
+    results.push({
+      name: "Ollama GLM Model",
+      status: "pass",
+      message: "GLM model available for enrichment",
+    });
+  } else {
+    results.push({
+      name: "Ollama GLM Model",
+      status: "warn",
+      message: "No GLM model found — needed for Zikaron enrichment",
+      fix: "ollama pull glm4",
+    });
+  }
+}
+
+// Check 2b: MLX Server (optional local LLM backend)
+async function checkMLX() {
+  const online = await httpCheck("http://127.0.0.1:8080/v1/models", 2000);
+  if (online) {
+    results.push({
+      name: "MLX Server",
+      status: "pass",
+      message: "Responding on 127.0.0.1:8080",
+    });
+  } else {
+    results.push({
+      name: "MLX Server",
+      status: "warn",
+      message: "Not running (optional — Ollama works as fallback)",
+      fix: "python3 -m mlx_lm.server --model mlx-community/Qwen2.5-Coder-14B-Instruct-4bit --port 8080",
+    });
+  }
+}
+
 // Check 3: Notification server (TCP connect test — no side effects)
 async function checkNotificationServer() {
   const portOpen = runCommand("lsof -i :3847 -sTCP:LISTEN | grep -q LISTEN");
@@ -410,6 +449,51 @@ async function checkGolemProfiles() {
   }
 }
 
+// Check enrichment queue depth
+async function checkEnrichmentQueue() {
+  const dbPath = `${process.env.HOME}/.local/share/zikaron/zikaron.db`;
+  const cmd = runCommand(
+    `python3 -c "import apsw; db=apsw.Connection('${dbPath}', flags=apsw.SQLITE_OPEN_READONLY); print(list(db.cursor().execute('SELECT COUNT(*) FROM chunks WHERE enriched_at IS NULL'))[0][0]); db.close()"`
+  );
+  if (cmd.success && cmd.output) {
+    const unenriched = parseInt(cmd.output.trim(), 10);
+    if (isNaN(unenriched)) {
+      results.push({
+        name: "Enrichment Queue",
+        status: "warn",
+        message: "Could not parse queue depth",
+      });
+    } else if (unenriched > 5000) {
+      const days = Math.round(unenriched / 1500);
+      results.push({
+        name: "Enrichment Queue",
+        status: "fail",
+        message: `${unenriched.toLocaleString()} unenriched — about ${days} days behind`,
+        fix: "./scripts/auto-enrich.sh --max-hours 6",
+      });
+    } else if (unenriched > 1000) {
+      results.push({
+        name: "Enrichment Queue",
+        status: "warn",
+        message: `${unenriched.toLocaleString()} unenriched — could use a catch-up run`,
+        fix: "./scripts/enrich.sh start",
+      });
+    } else {
+      results.push({
+        name: "Enrichment Queue",
+        status: "pass",
+        message: `Only ${unenriched.toLocaleString()} unenriched — looking good!`,
+      });
+    }
+  } else {
+    results.push({
+      name: "Enrichment Queue",
+      status: "warn",
+      message: "Could not check (DB or Python not available)",
+    });
+  }
+}
+
 // Format and print results
 function printResults() {
   console.log(`\n${colors.blue}=== GOLEMS HEALTH CHECK ===${colors.reset}\n`);
@@ -456,6 +540,8 @@ async function main() {
 
   await checkTelegramBot();
   await checkOllama();
+  await checkOllamaModel();
+  await checkMLX();
   await checkNotificationServer();
   await checkLaunchd();
   await checkStateFile();
@@ -464,6 +550,7 @@ async function main() {
   await checkAxiom();
   await checkRailway();
   await checkGolemProfiles();
+  await checkEnrichmentQueue();
 
   printResults();
 }

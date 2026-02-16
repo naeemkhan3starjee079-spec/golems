@@ -13,11 +13,11 @@
 |---|-------|--------|--------|-----|-------|
 | 1 | Project Consolidation + Worktree Normalization | [phase-1](phase-1/) | DONE | #195 | 149K rows consolidated (34→9 projects) |
 | 2 | WhatsApp Reindex | [phase-2](phase-2/) | PARTIAL | #196 | ChatStorage.sqlite missing; fixed 11.7K chunks in-place |
-| 3 | Gemini Batch Backfill | [phase-3](phase-3/) | ... | | Build + run cloud backfill (~$16) |
-| 4 | MLX Local Backend | [phase-4](phase-4/) | ... | | Add MLX alongside Ollama |
-| 5 | Ongoing Enrichment Tuning | [phase-5](phase-5/) | ... | | MLX parallelism, monitoring, defaults |
-| 6 | Audit + Wire-Up Verification | [phase-6](phase-6/) | ... | | Verify all wiring before documenting |
-| 7 | Human-Friendly Docs + Wizard + Doctor | [phase-7](phase-7/) | ... | | Write docs, update wizard/doctor, verify with Cursor |
+| 3 | Gemini Batch Backfill | [phase-3](phase-3/) | DONE | #197 | 10-field schema + cloud_backfill.py + review fixes |
+| 4 | MLX Local Backend | [phase-4](phase-4/) | DONE | #198 | mlx-llm.ts, llm.ts router, MCP, daemon, doctor |
+| 5 | Ongoing Enrichment Tuning | [phase-5](phase-5/) | DONE | #198 | --parallel flag, auto-enrich.sh, queue depth doctor |
+| 6 | Audit + Wire-Up Verification | [phase-6](phase-6/) | DONE | #198 | All wiring verified, PR review fixes applied |
+| 7 | Human-Friendly Docs + Wizard + Doctor | [phase-7](phase-7/) | DONE | #198 | Enrichment runbook, CLAUDE.md rewrite, doctor/wizard updates |
 
 ---
 
