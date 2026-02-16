@@ -102,15 +102,12 @@ Filter single-character junk during extraction (audit noted this issue).
 
 ## Status
 
-- [ ] Verify WhatsApp source data (ChatStorage.sqlite) exists
-- [ ] Backup DB (off-disk + export WhatsApp chunks as JSON)
-- [ ] Stop enrichment
-- [ ] Count + delete existing WhatsApp chunks
-- [ ] Add WhatsApp type to classify.py
-- [ ] Build WhatsApp index path (activate format_whatsapp_for_pipeline)
-- [ ] Extend upsert_chunks to write sender
-- [ ] Set source='whatsapp' during indexing
-- [ ] Run WhatsApp reindex
-- [ ] Verify counts, sender, content_type
-- [ ] Apply min_char_count filter
-- [ ] Restart enrichment
+- [x] Verify WhatsApp source data (ChatStorage.sqlite) exists — **NOT FOUND** (blocker for reimport)
+- [x] Backup WhatsApp chunks as JSON (11MB at /tmp/whatsapp-chunks-backup-20260216.json)
+- [x] Fix content_type on existing WhatsApp chunks (11,687 set to user_message, 4,660 short ones left NULL)
+- [x] Add WhatsApp type to classify.py (whatsapp_message → user_message/assistant_text)
+- [x] Apply min_char_count filter to extract_whatsapp.py (parameterized SQL)
+- [ ] ~~Count + delete existing WhatsApp chunks~~ — SKIPPED (ChatStorage.sqlite missing, chunks are only copy)
+- [ ] ~~Build WhatsApp index path~~ — DEFERRED (needs ChatStorage.sqlite for reimport)
+- [ ] ~~Extend upsert_chunks to write sender~~ — DEFERRED (needs is_from_me from source)
+- [ ] ~~Run WhatsApp reindex~~ — DEFERRED (needs ChatStorage.sqlite)
