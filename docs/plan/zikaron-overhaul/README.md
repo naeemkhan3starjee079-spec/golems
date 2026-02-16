@@ -17,7 +17,7 @@
 | 4 | MLX Local Backend | [phase-4](phase-4/) | DONE | #198 | mlx-llm.ts, llm.ts router, MCP, daemon, doctor |
 | 5 | Ongoing Enrichment Tuning | [phase-5](phase-5/) | DONE | #198 | --parallel flag, auto-enrich.sh, queue depth doctor |
 | 6 | Audit + Wire-Up Verification | [phase-6](phase-6/) | DONE | #198 | All wiring verified, PR review fixes applied |
-| 7 | Human-Friendly Docs + Wizard + Doctor | [phase-7](phase-7/) | ... | | Write docs, update wizard/doctor, verify with Cursor |
+| 7 | Human-Friendly Docs + Wizard + Doctor | [phase-7](phase-7/) | DONE | #198 | Enrichment runbook, CLAUDE.md rewrite, doctor/wizard updates |
 
 ---
 
