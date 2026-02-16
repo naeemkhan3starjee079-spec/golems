@@ -40,7 +40,7 @@ zikaron enrich
 │                                         1024 dims   fast DB │
 └─────────────────────────────────────────────────────────────┘
         ↓
-~/.local/share/zikaron/zikaron.db   # Storage: sqlite-vec (~1.4GB, 226K+ chunks)
+~/.local/share/zikaron/zikaron.db   # Storage: sqlite-vec (~1.4GB, 260K+ chunks)
         ↓
 ┌─────────────────────────────────────────────────────────────┐
 │  POST-PROCESSING                                             │
@@ -359,7 +359,7 @@ Used by the Golems Dashboard 3D visualization (`react-force-graph-3d`). Can be u
 | Path | Purpose |
 |------|---------|
 | `~/.claude/projects/` | Source conversations (read-only) |
-| `~/.local/share/zikaron/zikaron.db` | sqlite-vec database (~1.4GB, 226K+ chunks) |
+| `~/.local/share/zikaron/zikaron.db` | sqlite-vec database (~1.4GB, 260K+ chunks) |
 | `~/.local/share/zikaron/prompts/` | Deduplicated system prompts (SHA-256) |
 | `/tmp/zikaron.sock` | Daemon Unix socket |
 | `/tmp/zikaron-enrichment.lock` | Enrichment process lock file |
