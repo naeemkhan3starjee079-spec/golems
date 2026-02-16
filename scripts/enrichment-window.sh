@@ -46,7 +46,7 @@ log "Starting enrichment for ${HOURS}h (${SECONDS_TO_RUN}s)"
 cd "$ZIKARON_DIR" || exit 1
 source .venv/bin/activate
 
-# Load Supabase env vars for GLM usage logging
+# Load env vars (Supabase for logging, backend config)
 for ENV_FILE in "$HOME/Gits/golems/.env" "$HOME/Gits/golems/.env.local"; do
     if [ -f "$ENV_FILE" ]; then
         set -a
@@ -55,7 +55,22 @@ for ENV_FILE in "$HOME/Gits/golems/.env" "$HOME/Gits/golems/.env.local"; do
     fi
 done
 
-PYTHONUNBUFFERED=1 python3 -m zikaron.pipeline.enrichment --batch-size 50 >> "$LOG_DIR/enrichment.log" 2>&1 &
+# Default to MLX backend (Apple Silicon optimized, 21-87% faster than Ollama)
+export ZIKARON_ENRICH_BACKEND="${ZIKARON_ENRICH_BACKEND:-mlx}"
+
+# Verify MLX server is up before starting enrichment
+if [ "$ZIKARON_ENRICH_BACKEND" = "mlx" ]; then
+    MLX_BASE="${MLX_URL:-http://127.0.0.1:8080}"
+    MLX_BASE="${MLX_BASE%%/v1/*}"
+    if ! curl -sf "${MLX_BASE}/v1/models" > /dev/null 2>&1; then
+        log "WARN: MLX server not reachable at ${MLX_BASE}. Falling back to ollama."
+        export ZIKARON_ENRICH_BACKEND=ollama
+    else
+        log "MLX server OK at ${MLX_BASE}"
+    fi
+fi
+
+PYTHONUNBUFFERED=1 python3 -m zikaron.pipeline.enrichment --batch-size 50 --parallel=3 >> "$LOG_DIR/enrichment.log" 2>&1 &
 PID=$!
 echo "$PID" > "$LOCK_FILE"
 

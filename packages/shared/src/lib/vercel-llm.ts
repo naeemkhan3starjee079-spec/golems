@@ -61,6 +61,11 @@ let totalCalls = 0;
 let totalInputTokens = 0;
 let totalOutputTokens = 0;
 
+// Error rate tracking — alert on consecutive failures
+let consecutiveErrors = 0;
+let alertSentForBatch = false;
+const ERROR_ALERT_THRESHOLD = 5; // Alert after 5 consecutive failures
+
 function trackUsage(model: string, source: string, inputTokens: number, outputTokens: number, durationMs = 0) {
   totalInputTokens += inputTokens;
   totalOutputTokens += outputTokens;
@@ -134,16 +139,37 @@ export async function runCloudFree(prompt: string, source = "unknown"): Promise<
       const durationMs = Date.now() - startMs;
       trackUsage(p.model, source, inputTokens, outputTokens, durationMs);
 
+      // Reset error tracking on success
+      consecutiveErrors = 0;
+      alertSentForBatch = false;
+
       return result.text.trim();
     } catch (err: any) {
       const isRateLimit = err?.statusCode === 429 || err?.message?.includes("429") || err?.message?.includes("rate limit");
-      if (isRateLimit && providers.indexOf(p) < providers.length - 1) {
+      const isLastProvider = providers.indexOf(p) >= providers.length - 1;
+      if (isRateLimit && !isLastProvider) {
         console.warn(`[Cloud LLM] ${p.name} rate limited, trying fallback...`);
         continue;
       }
+      // Only count terminal failures (no more fallbacks remaining)
+      if (isLastProvider) consecutiveErrors++;
       console.error(`[Cloud LLM] Error from ${p.name} (source: ${source}):`, err?.message || err);
       logError({ service: source, error_message: err?.message || String(err), error_type: `${p.name}_api_error` });
-      if (providers.indexOf(p) < providers.length - 1) continue;
+
+      // Alert on consecutive failures (once per batch)
+      if (consecutiveErrors >= ERROR_ALERT_THRESHOLD && !alertSentForBatch) {
+        alertSentForBatch = true;
+        import("./telegram-direct").then(({ sendNotification }) => {
+          sendNotification({
+            title: "LLM Quota Alert",
+            body: `${consecutiveErrors} consecutive LLM failures (${p.name}). Jobs/emails may be degraded. Error: ${err?.message?.slice(0, 100) ?? "unknown"}`,
+            source: "healthcheck",
+            priority: "high",
+          }).catch(() => {});
+        }).catch(() => {});
+      }
+
+      if (!isLastProvider) continue;
       return "";
     }
   }

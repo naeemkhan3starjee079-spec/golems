@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.golems.mlx-server</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/etanheyman/Gits/golems/packages/zikaron/.venv/bin/python3</string>
+        <string>-m</string>
+        <string>mlx_lm</string>
+        <string>server</string>
+        <string>--model</string>
+        <string>mlx-community/Qwen2.5-Coder-14B-Instruct-4bit</string>
+        <string>--port</string>
+        <string>8080</string>
+    </array>
+
+    <!-- Keep alive — restart if it crashes -->
+    <key>KeepAlive</key>
+    <true/>
+
+    <!-- Wait 10s between restarts to avoid thrashing -->
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/etanheyman/Gits/golems/packages/zikaron</string>
+
+    <key>StandardOutPath</key>
+    <string>/Users/etanheyman/.golems-zikaron/logs/mlx-server.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/etanheyman/.golems-zikaron/logs/mlx-server-err.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/Users/etanheyman/.local/bin:/Users/etanheyman/Gits/golems/packages/zikaron/.venv/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <key>HOME</key>
+        <string>/Users/etanheyman</string>
+    </dict>
+</dict>
+</plist>

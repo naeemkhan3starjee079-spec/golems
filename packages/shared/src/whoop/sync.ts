@@ -59,7 +59,7 @@ export async function syncWhoopToSupabase(): Promise<{
   const supabase = getSupabase();
   const { error } = await supabase
     .from("whoop_snapshots")
-    .upsert(snapshot, { onConflict: "user_id,snapshot_date" });
+    .upsert(snapshot, { onConflict: "snapshot_date" });
 
   if (error) {
     throw new Error(`Whoop sync failed: ${error.message}`);

@@ -18,7 +18,7 @@ const SERVICE_CONFIG: Record<string, { label: string; group?: string; schedule: 
   "emailgolem--night-": { label: "Email (Night)", group: "email", schedule: "10pm", env: "cloud" },
   jobgolem: { label: "Job Golem", schedule: "6am, 9am, 1pm Sun-Thu", env: "cloud" },
   briefing: { label: "Morning Briefing", schedule: "8am daily", env: "cloud" },
-  whoopsync: { label: "Whoop Sync", schedule: "7am + 2pm daily", env: "cloud" },
+  whoopsync: { label: "Whoop Sync", schedule: "7am, 10am, 2pm, 5pm, 8pm", env: "cloud" },
   nightshift: { label: "Night Shift", schedule: "4am daily", env: "local" },
   enrichment: { label: "Enrichment", schedule: "Night Shift window", env: "local" },
 };
