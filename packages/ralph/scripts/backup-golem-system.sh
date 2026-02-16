@@ -29,13 +29,14 @@ fi
 echo "[0b/9] Backing up Claude Code sessions..."
 if [ -d "$JSONL_DIR" ]; then
   mkdir -p "$BACKUP_DIR/claude-sessions"
-  # Copy all JSONL files preserving project folder structure
-  cd "$JSONL_DIR"
-  find . -name "*.jsonl" -exec sh -c 'mkdir -p "'"$BACKUP_DIR/claude-sessions"'/$(dirname "$1")" && cp "$1" "'"$BACKUP_DIR/claude-sessions"'/$1"' _ {} \;
+  # Copy all JSONL files preserving project folder structure (subshell to avoid cd side effects)
+  (
+    cd "$JSONL_DIR"
+    find . -name "*.jsonl" -exec sh -c 'mkdir -p "'"$BACKUP_DIR/claude-sessions"'/$(dirname "$1")" && cp "$1" "'"$BACKUP_DIR/claude-sessions"'/$1"' _ {} \;
+  )
   JSONL_COUNT=$(find "$BACKUP_DIR/claude-sessions" -name "*.jsonl" | wc -l | tr -d ' ')
   JSONL_SIZE=$(du -sh "$BACKUP_DIR/claude-sessions" | cut -f1)
   echo "  -> $JSONL_COUNT files, $JSONL_SIZE"
-  cd - > /dev/null
 else
   echo "  -> WARN: $JSONL_DIR not found, skipping"
 fi

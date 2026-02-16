@@ -55,7 +55,6 @@ MERGE_MAP = {
 
     # etanheyman-com
     "-Users-etanheyman-Gits-etanheyman-com": "etanheyman-com",
-    "etanheyman-com": "etanheyman-com",
 
     # EtanHey (github profile repo)
     "-Users-etanheyman-Gits-EtanHey": "EtanHey",
@@ -138,11 +137,13 @@ def main():
 
                 if args.generate_rollback:
                     # Export chunk IDs per old name for exact rollback
-                    safe_old = (old_name or "").replace("'", "''")
                     if old_name is None:
                         id_query = f"SELECT id FROM {table} WHERE project IS NULL"
+                        set_clause = "SET project = NULL"
                     else:
+                        safe_old = old_name.replace("'", "''")
                         id_query = f"SELECT id FROM {table} WHERE project = '{safe_old}'"
+                        set_clause = f"SET project = '{safe_old}'"
                     try:
                         ids = [r[0] for r in db.cursor().execute(id_query)]
                         if ids:
@@ -151,7 +152,7 @@ def main():
                                 batch = ids[batch_start:batch_start + 500]
                                 id_list = ", ".join(f"'{i}'" for i in batch)
                                 rollback_lines.append(
-                                    f"UPDATE {table} SET project = '{safe_old}' "
+                                    f"UPDATE {table} {set_clause} "
                                     f"WHERE id IN ({id_list});"
                                 )
                     except apsw.SQLError:
@@ -187,36 +188,44 @@ def main():
         print("DRY RUN — no changes made. Use --execute to apply.")
         return
 
-    # Execute updates
+    # Execute updates in a single transaction
     print("Applying updates...")
     cursor = db.cursor()
+    cursor.execute("BEGIN IMMEDIATE")
 
-    for table in PROJECT_TABLES:
-        try:
-            rows = list(cursor.execute(
-                f"SELECT DISTINCT project FROM {table}"
-            ))
-        except apsw.SQLError:
-            continue
+    try:
+        for table in PROJECT_TABLES:
+            try:
+                rows = list(cursor.execute(
+                    f"SELECT DISTINCT project FROM {table}"
+                ))
+            except apsw.SQLError:
+                continue
 
-        table_updates = 0
-        for (old_name,) in rows:
-            canonical = get_canonical(old_name)
-            if canonical != old_name:
-                if old_name is None:
-                    cursor.execute(
-                        f"UPDATE {table} SET project = ? WHERE project IS NULL",
-                        (canonical,)
-                    )
-                else:
-                    cursor.execute(
-                        f"UPDATE {table} SET project = ? WHERE project = ?",
-                        (canonical, old_name)
-                    )
-                affected = db.changes()
-                table_updates += affected
+            table_updates = 0
+            for (old_name,) in rows:
+                canonical = get_canonical(old_name)
+                if canonical != old_name:
+                    if old_name is None:
+                        cursor.execute(
+                            f"UPDATE {table} SET project = ? WHERE project IS NULL",
+                            (canonical,)
+                        )
+                    else:
+                        cursor.execute(
+                            f"UPDATE {table} SET project = ? WHERE project = ?",
+                            (canonical, old_name)
+                        )
+                    affected = db.changes()
+                    table_updates += affected
 
-        print(f"  [{table}] {table_updates} rows updated")
+            print(f"  [{table}] {table_updates} rows updated")
+
+        cursor.execute("COMMIT")
+    except Exception:
+        cursor.execute("ROLLBACK")
+        print("\n  ✗ ERROR — all changes rolled back")
+        raise
 
     # Integrity check
     print("\nRunning integrity check...")

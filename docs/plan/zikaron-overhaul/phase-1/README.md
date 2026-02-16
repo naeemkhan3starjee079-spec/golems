@@ -69,11 +69,11 @@ Add `zikaron consolidate` subcommand wrapping the script.
 
 ## Status
 
-- [ ] Backup DB
-- [ ] Create consolidation script with merge mappings
-- [ ] Add `get_canonical_project()` to indexer
+- [x] Backup DB
+- [x] Create consolidation script with merge mappings
+- [x] Add `get_canonical_project()` to indexer
 - [ ] Fix git_overlay project format inconsistency
-- [ ] Wire `zikaron consolidate` CLI command
-- [ ] Fix `resp` undefined bug in `_log_glm_usage`
-- [ ] Run consolidation (dry-run then execute)
-- [ ] Verify search, stats, dashboard
+- [x] Wire `zikaron consolidate` CLI command
+- [x] Fix `resp` undefined bug in `_log_glm_usage`
+- [x] Run consolidation (dry-run then execute)
+- [x] Verify search, stats, dashboard

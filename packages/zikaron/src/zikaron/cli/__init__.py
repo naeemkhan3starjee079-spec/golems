@@ -1,6 +1,7 @@
 """Zikaron CLI - Command line interface for the knowledge pipeline."""
 
 import os
+import re as _re
 import sys
 import time
 
@@ -148,7 +149,6 @@ _MONOREPO_PACKAGES = {
 }
 
 # Regex for worktree/nightshift suffixes
-import re as _re
 _WORKTREE_SUFFIX = _re.compile(r"^(.+?)(?:-nightshift-\d+|-worktrees-.+|-haiku)$")
 
 
@@ -909,7 +909,6 @@ def consolidate(
 ) -> None:
     """Consolidate fragmented project names into canonical names."""
     import subprocess
-    import sys
     script = Path(__file__).parent.parent.parent.parent / "scripts" / "consolidate_projects.py"
     if not script.exists():
         rprint(f"[bold red]Error:[/] Script not found: {script}")
