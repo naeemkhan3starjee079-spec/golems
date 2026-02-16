@@ -23,6 +23,7 @@ Usage:
 import json
 import os
 import sys
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -31,6 +32,17 @@ from typing import Any, Dict, List, Optional
 import requests
 
 from ..vector_store import VectorStore
+
+# Thread-local storage for per-thread VectorStore connections.
+# APSW connections are not safe for concurrent use from multiple threads.
+_thread_local = threading.local()
+
+
+def _get_thread_store(db_path: Path) -> VectorStore:
+    """Get or create a thread-local VectorStore instance."""
+    if not hasattr(_thread_local, "store"):
+        _thread_local.store = VectorStore(db_path)
+    return _thread_local.store
 
 # AIDEV-NOTE: Uses local LLM only — never sends chunk content to cloud APIs
 # Backend selection: ollama (default) or mlx
@@ -361,11 +373,21 @@ def parse_enrichment(text: str) -> Optional[Dict[str, Any]]:
 
 
 def _enrich_one(
-    store: VectorStore,
+    store_or_path,
     chunk: Dict[str, Any],
     with_context: bool = True,
 ) -> bool:
-    """Enrich a single chunk. Returns True on success, False on failure."""
+    """Enrich a single chunk. Returns True on success, False on failure.
+
+    Args:
+        store_or_path: VectorStore instance (sequential) or Path (parallel, uses thread-local store).
+    """
+    # In parallel mode, each thread gets its own VectorStore connection.
+    if isinstance(store_or_path, Path):
+        store = _get_thread_store(store_or_path)
+    else:
+        store = store_or_path
+
     context_chunks = []
     if with_context and chunk.get("conversation_id") and chunk.get("position") is not None:
         ctx = store.get_context(chunk["id"], before=2, after=1)
@@ -419,10 +441,12 @@ def enrich_batch(
     failed = 0
 
     if parallel > 1:
-        # Parallel: use ThreadPoolExecutor for concurrent LLM calls
+        # Parallel: pass db_path so each thread gets its own VectorStore connection.
+        # APSW connections are not safe for concurrent use from multiple threads.
+        db_path = store.db_path
         with ThreadPoolExecutor(max_workers=parallel) as pool:
             futures = {
-                pool.submit(_enrich_one, store, chunk, with_context): chunk
+                pool.submit(_enrich_one, db_path, chunk, with_context): chunk
                 for chunk in chunks
             }
             for future in as_completed(futures):

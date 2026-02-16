@@ -75,6 +75,13 @@ if [ "$UNENRICHED" -gt 5000 ] && [ -x "$NOTIFY" ]; then
   "$NOTIFY" "Enrichment Behind" "Queue: ${UNENRICHED} chunks (~${DAYS_BEHIND} days behind)" 2>/dev/null || true
 fi
 
+# Load env vars BEFORE backend check — backend selection may be configured in .env
+for ENV_FILE in "$GOLEMS_DIR/.env" "$GOLEMS_DIR/.env.local"; do
+  if [ -f "$ENV_FILE" ]; then
+    set -a; source "$ENV_FILE"; set +a
+  fi
+done
+
 # Check backend
 BACKEND="${ZIKARON_ENRICH_BACKEND:-ollama}"
 if [ "$BACKEND" = "mlx" ]; then
@@ -97,24 +104,21 @@ else
   log "Backend: Ollama"
 fi
 
-# Load env vars
-for ENV_FILE in "$GOLEMS_DIR/.env" "$GOLEMS_DIR/.env.local"; do
-  if [ -f "$ENV_FILE" ]; then
-    set -a; source "$ENV_FILE"; set +a
-  fi
-done
-
 # Run enrichment
 log "Starting enrichment: max=${MAX_CHUNKS}, parallel=${PARALLEL}"
 cd "$ZIKARON_DIR"
 
+ENRICH_EXIT=0
 PYTHONUNBUFFERED=1 python3 -m zikaron.pipeline.enrichment \
   --batch-size=50 \
   --max="$MAX_CHUNKS" \
   --parallel="$PARALLEL" \
-  2>&1 | tee -a "$LOG_FILE" || {
-    log "Enrichment exited with error"
-  }
+  2>&1 | tee -a "$LOG_FILE"
+# PIPESTATUS[0] captures python3 exit code (not tee's)
+ENRICH_EXIT=${PIPESTATUS[0]}
+if [ "$ENRICH_EXIT" -ne 0 ]; then
+  log "Enrichment exited with error (code: ${ENRICH_EXIT})"
+fi
 
 # Post-run stats
 NEW_UNENRICHED=$(python3 -c "
@@ -133,3 +137,5 @@ log "Done: processed ~${PROCESSED} chunks, queue now: ${NEW_UNENRICHED:-unknown}
 if [ -x "$NOTIFY" ]; then
   "$NOTIFY" "Enrichment Done" "Processed ~${PROCESSED}, queue: ${NEW_UNENRICHED:-?}" 2>/dev/null || true
 fi
+
+exit "$ENRICH_EXIT"
