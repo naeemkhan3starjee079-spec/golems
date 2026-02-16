@@ -429,6 +429,50 @@ async function checkGolemProfiles() {
   }
 }
 
+// Check enrichment queue depth
+async function checkEnrichmentQueue() {
+  const dbPath = `${process.env.HOME}/.local/share/zikaron/zikaron.db`;
+  const cmd = runCommand(
+    `python3 -c "import apsw; db=apsw.Connection('${dbPath}', flags=apsw.SQLITE_OPEN_READONLY); print(list(db.cursor().execute('SELECT COUNT(*) FROM chunks WHERE enriched_at IS NULL'))[0][0]); db.close()"`
+  );
+  if (cmd.success && cmd.output) {
+    const unenriched = parseInt(cmd.output.trim(), 10);
+    if (isNaN(unenriched)) {
+      results.push({
+        name: "Enrichment Queue",
+        status: "warn",
+        message: "Could not parse queue depth",
+      });
+    } else if (unenriched > 5000) {
+      results.push({
+        name: "Enrichment Queue",
+        status: "fail",
+        message: `${unenriched.toLocaleString()} unenriched (3+ days behind)`,
+        fix: "./scripts/auto-enrich.sh --max-hours 6",
+      });
+    } else if (unenriched > 1000) {
+      results.push({
+        name: "Enrichment Queue",
+        status: "warn",
+        message: `${unenriched.toLocaleString()} unenriched chunks`,
+        fix: "./scripts/enrich.sh start",
+      });
+    } else {
+      results.push({
+        name: "Enrichment Queue",
+        status: "pass",
+        message: `${unenriched.toLocaleString()} unenriched (healthy)`,
+      });
+    }
+  } else {
+    results.push({
+      name: "Enrichment Queue",
+      status: "warn",
+      message: "Could not check (DB or Python not available)",
+    });
+  }
+}
+
 // Format and print results
 function printResults() {
   console.log(`\n${colors.blue}=== GOLEMS HEALTH CHECK ===${colors.reset}\n`);
@@ -484,6 +528,7 @@ async function main() {
   await checkAxiom();
   await checkRailway();
   await checkGolemProfiles();
+  await checkEnrichmentQueue();
 
   printResults();
 }

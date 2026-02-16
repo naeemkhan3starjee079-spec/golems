@@ -16,6 +16,7 @@ Usage:
     python -m zikaron.pipeline.enrichment                    # Process 100 chunks
     python -m zikaron.pipeline.enrichment --batch-size=50    # Smaller batches
     python -m zikaron.pipeline.enrichment --max=5000         # Process up to 5000
+    python -m zikaron.pipeline.enrichment --parallel=3       # 3 concurrent workers (MLX)
     python -m zikaron.pipeline.enrichment --stats            # Show progress
 """
 
@@ -23,6 +24,7 @@ import json
 import os
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -358,13 +360,55 @@ def parse_enrichment(text: str) -> Optional[Dict[str, Any]]:
         return None
 
 
+def _enrich_one(
+    store: VectorStore,
+    chunk: Dict[str, Any],
+    with_context: bool = True,
+) -> bool:
+    """Enrich a single chunk. Returns True on success, False on failure."""
+    context_chunks = []
+    if with_context and chunk.get("conversation_id") and chunk.get("position") is not None:
+        ctx = store.get_context(chunk["id"], before=2, after=1)
+        context_chunks = [
+            c for c in ctx.get("context", [])
+            if not c.get("is_target")
+        ]
+
+    prompt = build_prompt(chunk, context_chunks)
+    response = call_llm(prompt)
+
+    enrichment = parse_enrichment(response)
+    if enrichment:
+        store.update_enrichment(
+            chunk_id=chunk["id"],
+            summary=enrichment.get("summary"),
+            tags=enrichment.get("tags"),
+            importance=enrichment.get("importance"),
+            intent=enrichment.get("intent"),
+            primary_symbols=enrichment.get("primary_symbols"),
+            resolved_query=enrichment.get("resolved_query"),
+            epistemic_level=enrichment.get("epistemic_level"),
+            version_scope=enrichment.get("version_scope"),
+            debt_impact=enrichment.get("debt_impact"),
+            external_deps=enrichment.get("external_deps"),
+        )
+        return True
+    return False
+
+
 def enrich_batch(
     store: VectorStore,
     batch_size: int = 50,
     content_types: Optional[List[str]] = None,
     with_context: bool = True,
+    parallel: int = 1,
 ) -> Dict[str, int]:
-    """Process one batch of unenriched chunks. Returns counts."""
+    """Process one batch of unenriched chunks. Returns counts.
+
+    Args:
+        parallel: Number of concurrent workers (1=sequential, >1=ThreadPoolExecutor).
+                  MLX server supports concurrent requests. Ollama may not benefit.
+    """
     types = content_types or HIGH_VALUE_TYPES
     chunks = store.get_unenriched_chunks(batch_size=batch_size, content_types=types)
 
@@ -374,44 +418,41 @@ def enrich_batch(
     success = 0
     failed = 0
 
-    for chunk in chunks:
-        # Optionally get surrounding context
-        context_chunks = []
-        if with_context and chunk.get("conversation_id") and chunk.get("position") is not None:
-            ctx = store.get_context(chunk["id"], before=2, after=1)
-            context_chunks = [
-                c for c in ctx.get("context", [])
-                if not c.get("is_target")
-            ]
+    if parallel > 1:
+        # Parallel: use ThreadPoolExecutor for concurrent LLM calls
+        with ThreadPoolExecutor(max_workers=parallel) as pool:
+            futures = {
+                pool.submit(_enrich_one, store, chunk, with_context): chunk
+                for chunk in chunks
+            }
+            for future in as_completed(futures):
+                try:
+                    if future.result():
+                        success += 1
+                    else:
+                        failed += 1
+                except Exception as e:
+                    print(f"  Worker error: {e}", file=sys.stderr)
+                    failed += 1
 
-        prompt = build_prompt(chunk, context_chunks)
-        start = time.time()
-        response = call_llm(prompt)
-        duration = time.time() - start
+                done = success + failed
+                if done % 10 == 0:
+                    print(f"  [{done}/{len(chunks)}] ok={success} fail={failed}")
+    else:
+        # Sequential: one chunk at a time (original behavior)
+        for chunk in chunks:
+            start = time.time()
+            ok = _enrich_one(store, chunk, with_context)
+            duration = time.time() - start
 
-        enrichment = parse_enrichment(response)
-        if enrichment:
-            store.update_enrichment(
-                chunk_id=chunk["id"],
-                summary=enrichment.get("summary"),
-                tags=enrichment.get("tags"),
-                importance=enrichment.get("importance"),
-                intent=enrichment.get("intent"),
-                primary_symbols=enrichment.get("primary_symbols"),
-                resolved_query=enrichment.get("resolved_query"),
-                epistemic_level=enrichment.get("epistemic_level"),
-                version_scope=enrichment.get("version_scope"),
-                debt_impact=enrichment.get("debt_impact"),
-                external_deps=enrichment.get("external_deps"),
-            )
-            success += 1
-        else:
-            # Leave enriched_at NULL so chunk is retried on next run
-            failed += 1
+            if ok:
+                success += 1
+            else:
+                failed += 1
 
-        if (success + failed) % 10 == 0:
-            elapsed = time.time() - start
-            print(f"  [{success + failed}/{len(chunks)}] {duration:.1f}s | ok={success} fail={failed}")
+            done = success + failed
+            if done % 10 == 0:
+                print(f"  [{done}/{len(chunks)}] {duration:.1f}s | ok={success} fail={failed}")
 
     return {"processed": len(chunks), "success": success, "failed": failed}
 
@@ -422,6 +463,7 @@ def run_enrichment(
     max_chunks: int = 0,
     content_types: Optional[List[str]] = None,
     with_context: bool = True,
+    parallel: int = 1,
 ) -> None:
     """Run the enrichment pipeline until done or max reached."""
     path = db_path or DEFAULT_DB_PATH
@@ -452,7 +494,7 @@ def run_enrichment(
         print(f"Remaining: {stats['remaining']}")
         if stats['by_intent']:
             print(f"Intent distribution: {stats['by_intent']}")
-        print(f"Batch size: {batch_size}, Max: {max_chunks or 'unlimited'}")
+        print(f"Batch size: {batch_size}, Max: {max_chunks or 'unlimited'}, Parallel: {parallel}")
         print("---")
 
         total_processed = 0
@@ -466,6 +508,7 @@ def run_enrichment(
                 batch_size=batch_size,
                 content_types=content_types,
                 with_context=with_context,
+                parallel=parallel,
             )
 
             if result["processed"] == 0:
@@ -509,6 +552,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Enrich Zikaron chunks with LLM metadata")
     parser.add_argument("--batch-size", type=int, default=50)
     parser.add_argument("--max", type=int, default=0, help="Max chunks to process (0=unlimited)")
+    parser.add_argument("--parallel", type=int, default=1, help="Concurrent workers (1=sequential, 3=recommended for MLX)")
     parser.add_argument("--no-context", action="store_true", help="Skip surrounding context")
     parser.add_argument("--stats", action="store_true", help="Show enrichment stats and exit")
     parser.add_argument("--db", type=str, default=None, help="Database path")
@@ -531,4 +575,5 @@ if __name__ == "__main__":
             batch_size=args.batch_size,
             max_chunks=args.max,
             with_context=not args.no_context,
+            parallel=args.parallel,
         )
