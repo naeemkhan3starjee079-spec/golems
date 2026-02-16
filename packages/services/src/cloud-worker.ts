@@ -438,11 +438,9 @@ try {
     // Whoop health sync: 5 times/day for better coverage
     // 7am (after sleep scored), 10am, 2pm, 5pm (afternoon strain), 8pm (evening)
     const syncWhoop = await getWhoopSync();
-    scheduleDaily("WhoopSync", 7, syncWhoop);
-    scheduleDaily("WhoopSync-10am", 10, syncWhoop);
-    scheduleDaily("WhoopSync-Afternoon", 14, syncWhoop);
-    scheduleDaily("WhoopSync-5pm", 17, syncWhoop);
-    scheduleDaily("WhoopSync-Evening", 20, syncWhoop);
+    for (const hour of [7, 10, 14, 17, 20]) {
+      scheduleDaily("WhoopSync", hour, syncWhoop);
+    }
 
     console.log("[CloudWorker] All services scheduled:");
     console.log("  - EmailGolem: hourly 6am-7pm (skip lunch), 10pm final, OFF overnight");
