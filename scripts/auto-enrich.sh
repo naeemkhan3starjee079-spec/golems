@@ -108,14 +108,15 @@ fi
 log "Starting enrichment: max=${MAX_CHUNKS}, parallel=${PARALLEL}"
 cd "$ZIKARON_DIR"
 
-ENRICH_EXIT=0
+# Temporarily disable errexit so we can capture PIPESTATUS after pipeline
+set +eo pipefail
 PYTHONUNBUFFERED=1 python3 -m zikaron.pipeline.enrichment \
   --batch-size=50 \
   --max="$MAX_CHUNKS" \
   --parallel="$PARALLEL" \
   2>&1 | tee -a "$LOG_FILE"
-# PIPESTATUS[0] captures python3 exit code (not tee's)
 ENRICH_EXIT=${PIPESTATUS[0]}
+set -eo pipefail
 if [ "$ENRICH_EXIT" -ne 0 ]; then
   log "Enrichment exited with error (code: ${ENRICH_EXIT})"
 fi

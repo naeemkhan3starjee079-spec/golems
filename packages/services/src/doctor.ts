@@ -119,18 +119,19 @@ async function checkOllama() {
 
 // Check 2a: Ollama GLM model (needed for enrichment)
 async function checkOllamaModel() {
-  const modelCheck = runCommand("ollama list 2>/dev/null | grep -q glm4");
+  // Match any GLM variant: glm4, glm-4.7-flash, glm4:latest, etc.
+  const modelCheck = runCommand("ollama list 2>/dev/null | grep -qi 'glm'");
   if (modelCheck.success) {
     results.push({
       name: "Ollama GLM Model",
       status: "pass",
-      message: "glm4 model available for enrichment",
+      message: "GLM model available for enrichment",
     });
   } else {
     results.push({
       name: "Ollama GLM Model",
       status: "warn",
-      message: "glm4 model not found — needed for enrichment",
+      message: "No GLM model found — needed for Zikaron enrichment",
       fix: "ollama pull glm4",
     });
   }

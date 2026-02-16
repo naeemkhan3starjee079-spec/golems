@@ -48,7 +48,9 @@ def _get_thread_store(db_path: Path) -> VectorStore:
 # Backend selection: ollama (default) or mlx
 ENRICH_BACKEND = os.environ.get("ZIKARON_ENRICH_BACKEND", "ollama")
 OLLAMA_URL = "http://127.0.0.1:11434/api/generate"
-MLX_URL = os.environ.get("ZIKARON_MLX_URL", "http://127.0.0.1:8080/v1/chat/completions")
+# MLX URL: scripts also check MLX_URL for health, so accept both env vars
+MLX_URL = os.environ.get("ZIKARON_MLX_URL", os.environ.get("MLX_URL", "http://127.0.0.1:8080/v1/chat/completions"))
+MLX_BASE_URL = MLX_URL.rsplit("/v1/", 1)[0] if "/v1/" in MLX_URL else MLX_URL.rstrip("/")
 MODEL = os.environ.get("ZIKARON_ENRICH_MODEL", "glm-4.7-flash")
 MLX_MODEL = os.environ.get("ZIKARON_MLX_MODEL", "default")
 DEFAULT_DB_PATH = Path.home() / ".local" / "share" / "zikaron" / "zikaron.db"
@@ -108,8 +110,8 @@ def _sync_stats_to_supabase(store: "VectorStore") -> None:
         pass  # Never let sync failure affect enrichment
 
 
-def _log_glm_usage(prompt_tokens: int, completion_tokens: int, duration_ms: int) -> None:
-    """Log GLM usage to Supabase llm_usage table. Best-effort, never blocks enrichment."""
+def _log_glm_usage(prompt_tokens: int, completion_tokens: int, duration_ms: int, model: str = "") -> None:
+    """Log LLM usage to Supabase llm_usage table. Best-effort, never blocks enrichment."""
     if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
         return
     try:
@@ -122,7 +124,7 @@ def _log_glm_usage(prompt_tokens: int, completion_tokens: int, duration_ms: int)
                 "Prefer": "return=minimal",
             },
             json={
-                "model": MODEL,
+                "model": model or MODEL,
                 "source": "enrichment",
                 "input_tokens": prompt_tokens,
                 "output_tokens": completion_tokens,
@@ -273,8 +275,8 @@ def call_mlx(prompt: str, timeout: int = 240) -> Optional[str]:
         prompt_tokens = usage.get("prompt_tokens", 0)
         completion_tokens = usage.get("completion_tokens", 0)
 
-        # Log to Supabase (best-effort)
-        _log_glm_usage(prompt_tokens, completion_tokens, duration_ms)
+        # Log to Supabase (best-effort) — use MLX model name, not Ollama's
+        _log_glm_usage(prompt_tokens, completion_tokens, duration_ms, model=f"mlx:{MLX_MODEL}")
 
         # Extract response text
         choices = data.get("choices", [])
@@ -497,12 +499,12 @@ def run_enrichment(
         # Check LLM backend is running
         if ENRICH_BACKEND == "mlx":
             try:
-                resp = requests.get(MLX_URL.replace("/chat/completions", "/models"), timeout=5)
+                resp = requests.get(f"{MLX_BASE_URL}/v1/models", timeout=5)
                 resp.raise_for_status()
-                print(f"Backend: MLX ({MLX_URL})")
+                print(f"Backend: MLX ({MLX_BASE_URL})")
             except Exception:
                 raise RuntimeError(
-                    f"MLX server not running at {MLX_URL}. Start with: "
+                    f"MLX server not running at {MLX_BASE_URL}. Start with: "
                     "python3 -m mlx_lm.server --model <model> --port 8080"
                 )
         else:
