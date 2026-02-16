@@ -15,7 +15,7 @@ import { logLLMCall, logError } from "./axiom";
 
 const MLX_BASE_URL = process.env.MLX_URL || "http://127.0.0.1:8080";
 const MLX_CHAT_URL = `${MLX_BASE_URL}/v1/chat/completions`;
-const MODEL = process.env.MLX_MODEL || "default";
+const MODEL = process.env.MLX_MODEL || "mlx-community/Qwen2.5-Coder-14B-Instruct-4bit";
 
 // Persistent JSONL cost log — same path as cloud-llm/glm-llm
 const COST_LOG_DIR =
