@@ -21,7 +21,7 @@
 | **golems-tui** | `packages/golems-tui/` | React Ink terminal dashboard |
 | **tax-helper** | [`packages/tax-helper/`](packages/tax-helper/CLAUDE.md) | Schedule C transaction categorization (Sophtron MCP) |
 | **ralph** | [`packages/ralph/`](packages/ralph/CLAUDE.md) | Autonomous coding loop (PRD execution) |
-| **zikaron** | [`packages/zikaron/`](packages/zikaron/CLAUDE.md) | Memory layer (Python + sqlite-vec, 238K+ chunks) |
+| **zikaron** | [`packages/zikaron/`](packages/zikaron/CLAUDE.md) | Memory layer (Python + sqlite-vec, 260K+ chunks, 10-field enrichment) |
 
 **Always read the package-specific CLAUDE.md when working in that package.**
 
@@ -99,7 +99,7 @@ golems wizard          # Guided setup
 
 | Server | Command | Purpose |
 |--------|---------|---------|
-| **zikaron** | `zikaron-mcp` | Memory layer — search 226K+ indexed conversation chunks across all projects |
+| **zikaron** | `zikaron-mcp` | Memory layer — search 260K+ indexed conversation chunks across 9 projects |
 | **golems-email** | `bun run packages/shared/src/email/mcp-server.ts` | Email triage — recent, search, subscriptions, urgent, draft replies |
 | **golems-jobs** | `bun run packages/jobs/src/mcp-server.ts` | Job discovery — recent matches, search, stats |
 | **supabase** | `@supabase/mcp-server-supabase` | Database access — tables, SQL, migrations, types |

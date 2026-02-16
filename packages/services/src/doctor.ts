@@ -117,6 +117,25 @@ async function checkOllama() {
   }
 }
 
+// Check 2a: Ollama GLM model (needed for enrichment)
+async function checkOllamaModel() {
+  const modelCheck = runCommand("ollama list 2>/dev/null | grep -q glm4");
+  if (modelCheck.success) {
+    results.push({
+      name: "Ollama GLM Model",
+      status: "pass",
+      message: "glm4 model available for enrichment",
+    });
+  } else {
+    results.push({
+      name: "Ollama GLM Model",
+      status: "warn",
+      message: "glm4 model not found — needed for enrichment",
+      fix: "ollama pull glm4",
+    });
+  }
+}
+
 // Check 2b: MLX Server (optional local LLM backend)
 async function checkMLX() {
   const online = await httpCheck("http://127.0.0.1:8080/v1/models", 2000);
@@ -444,24 +463,25 @@ async function checkEnrichmentQueue() {
         message: "Could not parse queue depth",
       });
     } else if (unenriched > 5000) {
+      const days = Math.round(unenriched / 1500);
       results.push({
         name: "Enrichment Queue",
         status: "fail",
-        message: `${unenriched.toLocaleString()} unenriched (3+ days behind)`,
+        message: `${unenriched.toLocaleString()} unenriched — about ${days} days behind`,
         fix: "./scripts/auto-enrich.sh --max-hours 6",
       });
     } else if (unenriched > 1000) {
       results.push({
         name: "Enrichment Queue",
         status: "warn",
-        message: `${unenriched.toLocaleString()} unenriched chunks`,
+        message: `${unenriched.toLocaleString()} unenriched — could use a catch-up run`,
         fix: "./scripts/enrich.sh start",
       });
     } else {
       results.push({
         name: "Enrichment Queue",
         status: "pass",
-        message: `${unenriched.toLocaleString()} unenriched (healthy)`,
+        message: `Only ${unenriched.toLocaleString()} unenriched — looking good!`,
       });
     }
   } else {
@@ -519,6 +539,7 @@ async function main() {
 
   await checkTelegramBot();
   await checkOllama();
+  await checkOllamaModel();
   await checkMLX();
   await checkNotificationServer();
   await checkLaunchd();
