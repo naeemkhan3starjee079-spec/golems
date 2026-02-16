@@ -8,6 +8,7 @@
 # Models:
 #   gemini  (default) - Free, fast, good for summaries
 #   glm     - Local GLM-4.7-Flash via Ollama (free, no network, private)
+#   mlx     - Local MLX server (free, no network, Apple Silicon optimized)
 #   cursor  - GPT-5.2 Codex (paid $20/mo), deep analysis
 #   codex   - OpenAI Codex CLI (ChatGPT Plus), non-interactive agent
 #   kiro    - Free, AWS-backed, good for code analysis
@@ -65,6 +66,28 @@ case "$MODEL" in
     SUMMARY=$(echo "$RESPONSE" | jq -r '.response // empty')
     if [ -z "$SUMMARY" ]; then
       echo "Error: GLM returned empty response" >&2
+      exit 1
+    fi
+    echo "$SUMMARY" > "$OUTFILE"
+    ;;
+  mlx)
+    # MLX server — local, OpenAI-compatible API on port 8080
+    MLX_URL="${MLX_URL:-http://127.0.0.1:8080}"
+    if ! curl -sf "${MLX_URL}/v1/models" &>/dev/null; then
+      echo "Error: MLX server not running at $MLX_URL. Start with: python3 -m mlx_lm.server --model <model> --port 8080" >&2
+      exit 1
+    fi
+    PAYLOAD=$(jq -n --arg prompt "$FULL_PROMPT" \
+      '{model: "default", messages: [{role: "user", content: $prompt}]}')
+    RESPONSE=$(curl -sf "${MLX_URL}/v1/chat/completions" \
+      -H "Content-Type: application/json" -d "$PAYLOAD" 2>/dev/null)
+    if [ -z "$RESPONSE" ]; then
+      echo "Error: MLX request failed" >&2
+      exit 1
+    fi
+    SUMMARY=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // empty')
+    if [ -z "$SUMMARY" ]; then
+      echo "Error: MLX returned empty response" >&2
       exit 1
     fi
     echo "$SUMMARY" > "$OUTFILE"
@@ -131,7 +154,7 @@ case "$MODEL" in
     rm -f "$PROMPTFILE"
     ;;
   *)
-    echo "Error: Unknown model '$MODEL'. Use: glm, gemini, cursor, codex, kiro, haiku" >&2
+    echo "Error: Unknown model '$MODEL'. Use: glm, mlx, gemini, cursor, codex, kiro, haiku" >&2
     exit 1
     ;;
 esac

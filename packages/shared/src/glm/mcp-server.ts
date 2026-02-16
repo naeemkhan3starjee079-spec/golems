@@ -1,8 +1,10 @@
 /**
  * GLM MCP Server
  *
- * Exposes GLM-4.7-Flash (via Ollama) as MCP tools for Claude Code.
+ * Exposes local LLM (GLM-4.7-Flash via Ollama or MLX) as MCP tools for Claude Code.
  * Tools: glm_summarize, glm_score
+ *
+ * ENV: GLM_BACKEND=ollama|mlx (default: ollama)
  *
  * Usage in .mcp.json:
  * {
@@ -22,6 +24,18 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { runGLM, runGLMJSON } from "../lib/glm-llm";
+import { runMLX, runMLXJSON } from "../lib/mlx-llm";
+
+const GLM_BACKEND = process.env.GLM_BACKEND || "ollama";
+
+// Dispatch to the configured backend
+const runLocal = GLM_BACKEND === "mlx"
+  ? (prompt: string, source: string) => runMLX(prompt, source)
+  : (prompt: string, source: string) => runGLM(prompt, source);
+
+const runLocalJSON = GLM_BACKEND === "mlx"
+  ? <T>(prompt: string, source: string) => runMLXJSON<T>(prompt, source)
+  : <T>(prompt: string, source: string) => runGLMJSON<T>(prompt, source);
 
 const server = new Server(
   { name: "golems-glm", version: "1.0.0" },
@@ -125,14 +139,14 @@ ${text}
 
 SUMMARY:`;
 
-  const summary = await runGLM(prompt, "glm-mcp-summarize");
+  const summary = await runLocal(prompt, "glm-mcp-summarize");
 
   if (!summary) {
     return {
       content: [
         {
           type: "text" as const,
-          text: "GLM failed to generate summary. Ensure Ollama is running with glm-4.7-flash model.",
+          text: `Local LLM failed to generate summary. Ensure ${GLM_BACKEND === "mlx" ? "MLX server" : "Ollama"} is running.`,
         },
       ],
       isError: true,
@@ -181,14 +195,14 @@ ${schemaStr}
 
 JSON OUTPUT:`;
 
-  const result = await runGLMJSON<Record<string, unknown>>(prompt, "glm-mcp-score");
+  const result = await runLocalJSON<Record<string, unknown>>(prompt, "glm-mcp-score");
 
   if (!result) {
     return {
       content: [
         {
           type: "text" as const,
-          text: "GLM failed to produce valid JSON. Ensure Ollama is running with glm-4.7-flash model.",
+          text: `Local LLM failed to produce valid JSON. Ensure ${GLM_BACKEND === "mlx" ? "MLX server" : "Ollama"} is running.`,
         },
       ],
       isError: true,

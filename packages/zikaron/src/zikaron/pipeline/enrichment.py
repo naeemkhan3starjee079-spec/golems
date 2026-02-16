@@ -30,9 +30,13 @@ import requests
 
 from ..vector_store import VectorStore
 
-# AIDEV-NOTE: Uses local Ollama GLM only — never sends chunk content to cloud APIs
+# AIDEV-NOTE: Uses local LLM only — never sends chunk content to cloud APIs
+# Backend selection: ollama (default) or mlx
+ENRICH_BACKEND = os.environ.get("ZIKARON_ENRICH_BACKEND", "ollama")
 OLLAMA_URL = "http://127.0.0.1:11434/api/generate"
+MLX_URL = os.environ.get("ZIKARON_MLX_URL", "http://127.0.0.1:8080/v1/chat/completions")
 MODEL = os.environ.get("ZIKARON_ENRICH_MODEL", "glm-4.7-flash")
+MLX_MODEL = os.environ.get("ZIKARON_MLX_MODEL", "default")
 DEFAULT_DB_PATH = Path.home() / ".local" / "share" / "zikaron" / "zikaron.db"
 
 # Supabase usage logging — track GLM calls even though they're free
@@ -233,6 +237,48 @@ def call_glm(prompt: str, timeout: int = 240) -> Optional[str]:
         return None
 
 
+def call_mlx(prompt: str, timeout: int = 240) -> Optional[str]:
+    """Call local MLX server via OpenAI-compatible API. Logs usage to Supabase."""
+    try:
+        start_ms = int(time.time() * 1000)
+        resp = requests.post(
+            MLX_URL,
+            json={
+                "model": MLX_MODEL,
+                "messages": [{"role": "user", "content": prompt}],
+                "response_format": {"type": "json_object"},
+            },
+            timeout=timeout,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        duration_ms = int(time.time() * 1000) - start_ms
+
+        # Extract token counts from OpenAI-compatible response
+        usage = data.get("usage", {})
+        prompt_tokens = usage.get("prompt_tokens", 0)
+        completion_tokens = usage.get("completion_tokens", 0)
+
+        # Log to Supabase (best-effort)
+        _log_glm_usage(prompt_tokens, completion_tokens, duration_ms)
+
+        # Extract response text
+        choices = data.get("choices", [])
+        if choices:
+            return choices[0].get("message", {}).get("content", "")
+        return None
+    except Exception as e:
+        print(f"  MLX error: {e}", file=sys.stderr)
+        return None
+
+
+def call_llm(prompt: str, timeout: int = 240) -> Optional[str]:
+    """Call local LLM using configured backend (ollama or mlx)."""
+    if ENRICH_BACKEND == "mlx":
+        return call_mlx(prompt, timeout=timeout)
+    return call_glm(prompt, timeout=timeout)
+
+
 def parse_enrichment(text: str) -> Optional[Dict[str, Any]]:
     """Parse GLM's JSON response into enrichment metadata."""
     if not text:
@@ -340,7 +386,7 @@ def enrich_batch(
 
         prompt = build_prompt(chunk, context_chunks)
         start = time.time()
-        response = call_glm(prompt)
+        response = call_llm(prompt)
         duration = time.time() - start
 
         enrichment = parse_enrichment(response)
@@ -382,12 +428,24 @@ def run_enrichment(
     store = VectorStore(path)
 
     try:
-        # Check Ollama is running
-        try:
-            resp = requests.get("http://127.0.0.1:11434/api/tags", timeout=5)
-            resp.raise_for_status()
-        except Exception:
-            raise RuntimeError("Ollama is not running. Start it with: ollama serve")
+        # Check LLM backend is running
+        if ENRICH_BACKEND == "mlx":
+            try:
+                resp = requests.get(MLX_URL.replace("/chat/completions", "/models"), timeout=5)
+                resp.raise_for_status()
+                print(f"Backend: MLX ({MLX_URL})")
+            except Exception:
+                raise RuntimeError(
+                    f"MLX server not running at {MLX_URL}. Start with: "
+                    "python3 -m mlx_lm.server --model <model> --port 8080"
+                )
+        else:
+            try:
+                resp = requests.get("http://127.0.0.1:11434/api/tags", timeout=5)
+                resp.raise_for_status()
+                print(f"Backend: Ollama ({MODEL})")
+            except Exception:
+                raise RuntimeError("Ollama is not running. Start it with: ollama serve")
 
         stats = store.get_enrichment_stats()
         print(f"Enrichment status: {stats['enriched']}/{stats['total_chunks']} ({stats['percent']}%)")

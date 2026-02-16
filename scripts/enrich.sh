@@ -37,14 +37,25 @@ case "${1:-status}" in
       exit 1
     fi
 
-    # Check Ollama
-    if ! curl -sf http://127.0.0.1:11434/api/tags > /dev/null 2>&1; then
-      echo "Ollama not running. Starting..."
-      open -a OllamaHelper 2>/dev/null || ollama serve &
-      sleep 5
-      if ! curl -sf http://127.0.0.1:11434/api/tags > /dev/null 2>&1; then
-        echo "ERROR: Could not start Ollama."
+    # Check LLM backend
+    BACKEND="${ZIKARON_ENRICH_BACKEND:-ollama}"
+    if [ "$BACKEND" = "mlx" ]; then
+      MLX_URL="${MLX_URL:-http://127.0.0.1:8080}"
+      if ! curl -sf "${MLX_URL}/v1/models" > /dev/null 2>&1; then
+        echo "ERROR: MLX server not running at ${MLX_URL}."
+        echo "Start with: python3 -m mlx_lm.server --model <model> --port 8080"
         exit 1
+      fi
+      echo "Using MLX backend at ${MLX_URL}"
+    else
+      if ! curl -sf http://127.0.0.1:11434/api/tags > /dev/null 2>&1; then
+        echo "Ollama not running. Starting..."
+        open -a OllamaHelper 2>/dev/null || ollama serve &
+        sleep 5
+        if ! curl -sf http://127.0.0.1:11434/api/tags > /dev/null 2>&1; then
+          echo "ERROR: Could not start Ollama."
+          exit 1
+        fi
       fi
     fi
 

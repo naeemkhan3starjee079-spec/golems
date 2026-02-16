@@ -117,6 +117,25 @@ async function checkOllama() {
   }
 }
 
+// Check 2b: MLX Server (optional local LLM backend)
+async function checkMLX() {
+  const online = await httpCheck("http://127.0.0.1:8080/v1/models", 2000);
+  if (online) {
+    results.push({
+      name: "MLX Server",
+      status: "pass",
+      message: "Responding on 127.0.0.1:8080",
+    });
+  } else {
+    results.push({
+      name: "MLX Server",
+      status: "warn",
+      message: "Not running (optional — Ollama works as fallback)",
+      fix: "python3 -m mlx_lm.server --model mlx-community/Qwen2.5-Coder-14B-Instruct-4bit --port 8080",
+    });
+  }
+}
+
 // Check 3: Notification server (TCP connect test — no side effects)
 async function checkNotificationServer() {
   const portOpen = runCommand("lsof -i :3847 -sTCP:LISTEN | grep -q LISTEN");
@@ -456,6 +475,7 @@ async function main() {
 
   await checkTelegramBot();
   await checkOllama();
+  await checkMLX();
   await checkNotificationServer();
   await checkLaunchd();
   await checkStateFile();
