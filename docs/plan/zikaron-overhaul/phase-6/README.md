@@ -62,10 +62,10 @@ Run comprehensive Cursor audit across all changed files from Phases 1-5:
 
 ## Status
 
-- [ ] Audit enrichment pipeline end-to-end
-- [ ] Audit DB schema integrity
-- [ ] Audit project consolidation wiring
-- [ ] Audit MLX backend integration
-- [ ] Audit backup coverage
-- [ ] Run full test suite
-- [ ] Local CLI audit (Cursor)
+- [x] Audit enrichment pipeline end-to-end
+- [x] Audit DB schema integrity
+- [x] Audit project consolidation wiring
+- [x] Audit MLX backend integration
+- [x] Audit backup coverage
+- [x] Run full test suite
+- [ ] ~~Local CLI audit (Cursor)~~ — skipped (hanging, low ROI given all tests pass)
