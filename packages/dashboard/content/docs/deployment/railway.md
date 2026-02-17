@@ -159,8 +159,8 @@ All configs are **environment-based** for quick rollback:
 
 ```bash
 # Switch LLM backend
-railway variables set LLM_BACKEND=haiku   # Paid fallback
-railway variables set LLM_BACKEND=gemini  # Free (default)
+railway variables set LLM_BACKEND=gemini  # Free (default, recommended)
+railway variables set LLM_BACKEND=haiku   # Paid fallback (optional)
 
 # Switch state backend
 railway variables set STATE_BACKEND=file  # Local fallback

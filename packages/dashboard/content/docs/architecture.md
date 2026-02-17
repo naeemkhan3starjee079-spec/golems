@@ -106,8 +106,8 @@ Golems supports **dual mode** — run cloud or local via three env vars:
 ```bash
 # LLM Backend: where LLM calls happen
 export LLM_BACKEND=gemini     # Cloud: Gemini Flash-Lite (free, default)
-export LLM_BACKEND=haiku      # Cloud: Haiku (paid fallback)
 export LLM_BACKEND=ollama     # Local: Ollama on Mac (for testing)
+export LLM_BACKEND=haiku      # Cloud: Haiku (paid fallback, optional)
 
 # State Storage: where data lives
 export STATE_BACKEND=supabase # Cloud: Supabase database
@@ -138,7 +138,7 @@ export TELEGRAM_MODE=local
 
 ### Hybrid Mode (Development)
 ```bash
-export LLM_BACKEND=haiku      # Use cloud LLM
+export LLM_BACKEND=gemini     # Use cloud LLM (free Gemini Flash-Lite)
 export STATE_BACKEND=file     # Store locally for iteration
 export TELEGRAM_MODE=local    # Debug Telegram messages
 # Perfect for testing new features before cloud deploy

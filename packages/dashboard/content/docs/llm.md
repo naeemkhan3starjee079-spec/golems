@@ -109,8 +109,8 @@ Golems supports **dual mode** — run cloud or local via three env vars:
 ```bash
 # LLM Backend: where LLM calls happen
 export LLM_BACKEND=gemini     # Cloud: Gemini Flash-Lite (free, default)
-export LLM_BACKEND=haiku      # Cloud: Haiku (paid fallback)
 export LLM_BACKEND=ollama     # Local: Ollama on Mac (for testing)
+export LLM_BACKEND=haiku      # Cloud: Haiku (paid fallback, optional)
 
 # State Storage: where data lives
 export STATE_BACKEND=supabase # Cloud: Supabase database
@@ -141,7 +141,7 @@ export TELEGRAM_MODE=local
 
 ### Hybrid Mode (Development)
 ```bash
-export LLM_BACKEND=haiku      # Use cloud LLM
+export LLM_BACKEND=gemini     # Use cloud LLM (free Gemini Flash-Lite)
 export STATE_BACKEND=file     # Store locally for iteration
 export TELEGRAM_MODE=local    # Debug Telegram messages
 # Perfect for testing new features before cloud deploy
@@ -900,7 +900,7 @@ Returns `200 OK` with:
 {
   "status": "ok",
   "uptime": 3600,
-  "backend": "haiku",
+  "backend": "gemini",
   "stateBackend": "supabase",
   "telegramMode": "direct",
   "israelTime": "2026-02-06T12:30:00+02:00",
@@ -967,7 +967,7 @@ railway up
 Then switch back:
 
 ```bash
-railway variables set LLM_BACKEND=haiku
+railway variables set LLM_BACKEND=gemini
 railway up
 ```
 
@@ -1115,8 +1115,8 @@ Yes. Golems runs in three modes:
 | Mode | LLM | State | Best For |
 |------|-----|-------|----------|
 | **Full Local** | Ollama | File-based | Testing, development |
-| **Hybrid** | Haiku (cloud) | File-based | Development with better LLM |
-| **Full Cloud** | Haiku (cloud) | Supabase | Production |
+| **Hybrid** | Gemini (cloud) | File-based | Development with better LLM |
+| **Full Cloud** | Gemini (cloud) | Supabase | Production |
 
 Set with env vars: `LLM_BACKEND`, `STATE_BACKEND`, `TELEGRAM_MODE`.
 
@@ -1126,7 +1126,8 @@ Estimated monthly costs for production mode:
 
 | Service | Cost | Notes |
 |---------|------|-------|
-| **Anthropic (Haiku 4.5)** | ~$5-15/mo | Email scoring, job matching, drafts. Input: $0.80/MTok, Output: $4.00/MTok |
+| **Google (Gemini Flash-Lite)** | Free | Email scoring, job matching, drafts (default cloud backend) |
+| **Anthropic (Haiku 4.5)** | ~$5-15/mo | Optional paid fallback. Input: $0.80/MTok, Output: $4.00/MTok |
 | **Railway** | ~$5-10/mo | Cloud worker compute (email poller, job scraper, briefing) |
 | **Supabase** | Free tier | Sufficient for personal use (500MB database, 50K auth users) |
 | **Total** | ~$10-25/mo | Varies with usage volume |
@@ -1155,7 +1156,7 @@ Yes. RecruiterGolem includes a style adapter that matches tone and formality to 
 | **Cloud Compute** | Railway (Docker) |
 | **Local Services** | macOS launchd |
 | **Memory** | Python + sqlite-vec + sentence-transformers |
-| **LLM** | Anthropic Haiku 4.5 (cloud) or Ollama (local) |
+| **LLM** | Gemini 2.5 Flash-Lite (cloud, free), Haiku 4.5 (fallback), Ollama (local) |
 | **Autonomous Loop** | Zsh (Ralph) |
 | **Secrets** | 1Password CLI |
 
@@ -1633,7 +1634,7 @@ The email system is the intake layer for all external communication. It polls Gm
 
 ```mermaid
 flowchart LR
-    A[Gmail] --> B[OAuth2 Poll<br/>hourly / 10min] --> C[Scoring<br/>Haiku LLM] --> D[Routing] --> E[Domain Golems]
+    A[Gmail] --> B[OAuth2 Poll<br/>hourly / 10min] --> C[Scoring<br/>Cloud LLM] --> D[Routing] --> E[Domain Golems]
     D --> F[Follow-up Tracking]
     F --> G[Reply Drafting]
 ```
@@ -1645,7 +1646,7 @@ flowchart LR
 - **5-6** — Monthly tracking (archive, but revisit montly)
 - **1-4** — Ignore (auto-archive)
 
-Scoring is done via Ollama by default (or Haiku when `LLM_BACKEND=haiku`) analyzing subject, sender, and body context.
+Scoring is done via Gemini by default (or Ollama for local, Haiku as fallback) analyzing subject, sender, and body context. Set `LLM_BACKEND=gemini` (default) or `ollama`.
 
 ### Email Routing
 
@@ -1663,7 +1664,7 @@ Routes emails to domain golems based on content patterns:
 **Core Engine** (in `packages/shared/src/email/`):
 - `index.ts` — Main entry point, Gmail client initialization
 - `gmail-client.ts` — OAuth2 auth, polling logic
-- `scorer.ts` — Ollama/Haiku scoring pipeline (no caching)
+- `scorer.ts` — Gemini/Ollama/Haiku scoring pipeline (multi-backend)
 - `db-client.ts` — Supabase adapter with offline queue
 - `mcp-server.ts` — MCP server (7 email tools + 2 teller tools)
 - `types.ts` — TypeScript interfaces
@@ -1727,7 +1728,7 @@ export ANTHROPIC_API_KEY=$(op read op://YOUR_VAULT/YOUR_ANTHROPIC_ITEM/credentia
 export SUPABASE_SERVICE_KEY=$(op read op://YOUR_VAULT/YOUR_SUPABASE_ITEM/service_key)
 
 # Scoring model (Phase 2+)
-export LLM_BACKEND=haiku  # or 'ollama' (default)
+export LLM_BACKEND=gemini  # or 'ollama' (local), 'haiku' (fallback)
 ```
 
 ## Database Schema
@@ -1899,7 +1900,7 @@ cat ~/.golems-zikaron/job-golem/results/jobs-*.json
 
 ```bash
 # Optional: Use cloud-based LLM instead of Ollama
-LLM_BACKEND=haiku  # or "ollama" (default)
+LLM_BACKEND=gemini  # or "ollama" (local), "haiku" (fallback)
 
 # Supabase (for cloud deployment)
 SUPABASE_URL=...
@@ -2154,7 +2155,7 @@ Same schema + RLS policies for data isolation per account.
 export EXA_API_KEY=$(op read op://YOUR_VAULT/YOUR_EXA_ITEM/credential)
 
 # Outreach DB
-export LLM_BACKEND=haiku  # For style adaptation
+export LLM_BACKEND=gemini  # For style adaptation (or 'ollama', 'haiku')
 export STATE_BACKEND=supabase  # Phase 2+ uses cloud
 export SUPABASE_URL=$(op read op://YOUR_VAULT/YOUR_SUPABASE_ITEM/url)
 export SUPABASE_SERVICE_KEY=$(op read op://YOUR_VAULT/YOUR_SUPABASE_ITEM/service_key)
@@ -2360,7 +2361,7 @@ bun run src/index.ts --report --tax --year 2025
 
 ```bash
 # LLM for categorization
-export LLM_BACKEND=haiku  # or 'ollama' for local
+export LLM_BACKEND=gemini  # or 'ollama' (local), 'haiku' (fallback)
 
 # Database
 export SUPABASE_URL=...
@@ -3595,7 +3596,7 @@ Shared is the **infrastructure layer** of the Golems ecosystem. It provides data
 | Module | Import | Purpose |
 |--------|--------|---------|
 | `supabase-factory` | `@golems/shared/lib/supabase-factory` | Singleton Supabase client creation |
-| `llm` | `@golems/shared/lib/llm` | Multi-backend LLM runner (Haiku, Ollama) |
+| `llm` | `@golems/shared/lib/llm` | Multi-backend LLM runner (Gemini, Ollama, GLM, Haiku) |
 | `telegram-direct` | `@golems/shared/lib/telegram-direct` | Dual-mode notifications (localhost:3847 or Bot API) |
 | `state-store` | `@golems/shared/lib/state-store` | File/Supabase state abstraction |
 | `event-log` | `@golems/shared/lib/event-log` | Action logging ("while you were down" context) |
@@ -3631,8 +3632,9 @@ The email subsystem lives in `@golems/shared/email/` and provides the full Gmail
 Switch between backends with a single env var:
 
 ```bash
-LLM_BACKEND=haiku    # Cloud: Anthropic Haiku via API
+LLM_BACKEND=gemini   # Cloud: Gemini Flash-Lite (free, default)
 LLM_BACKEND=ollama   # Local: Ollama on your Mac
+LLM_BACKEND=haiku    # Cloud: Anthropic Haiku (paid fallback)
 ```
 
 ```typescript
@@ -3717,6 +3719,7 @@ Content types with preservation rules:
 | `file_read` | MEDIUM | Context-dependent |
 | `git_diff` | MEDIUM | Extract changed entities |
 | `build_log` | LOW | Summarize or mask |
+| `dir_listing` | LOW | Structure only |
 | `noise` | SKIP | Filter out |
 
 ### 3. Chunk

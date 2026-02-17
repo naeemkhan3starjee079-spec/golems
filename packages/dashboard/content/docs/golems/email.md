@@ -13,7 +13,7 @@ The email system is the intake layer for all external communication. It polls Gm
 
 ```mermaid
 flowchart LR
-    A[Gmail] --> B[OAuth2 Poll<br/>hourly / 10min] --> C[Scoring<br/>Haiku LLM] --> D[Routing] --> E[Domain Golems]
+    A[Gmail] --> B[OAuth2 Poll<br/>hourly / 10min] --> C[Scoring<br/>Cloud LLM] --> D[Routing] --> E[Domain Golems]
     D --> F[Follow-up Tracking]
     F --> G[Reply Drafting]
 ```
@@ -25,7 +25,7 @@ flowchart LR
 - **5-6** — Monthly tracking (archive, but revisit montly)
 - **1-4** — Ignore (auto-archive)
 
-Scoring is done via Ollama by default (or Haiku when `LLM_BACKEND=haiku`) analyzing subject, sender, and body context.
+Scoring is done via Gemini by default (or Ollama for local, Haiku as fallback) analyzing subject, sender, and body context. Set `LLM_BACKEND=gemini` (default) or `ollama`.
 
 ### Email Routing
 
@@ -43,7 +43,7 @@ Routes emails to domain golems based on content patterns:
 **Core Engine** (in `packages/shared/src/email/`):
 - `index.ts` — Main entry point, Gmail client initialization
 - `gmail-client.ts` — OAuth2 auth, polling logic
-- `scorer.ts` — Ollama/Haiku scoring pipeline (no caching)
+- `scorer.ts` — Gemini/Ollama/Haiku scoring pipeline (multi-backend)
 - `db-client.ts` — Supabase adapter with offline queue
 - `mcp-server.ts` — MCP server (7 email tools + 2 teller tools)
 - `types.ts` — TypeScript interfaces
@@ -107,7 +107,7 @@ export ANTHROPIC_API_KEY=$(op read op://YOUR_VAULT/YOUR_ANTHROPIC_ITEM/credentia
 export SUPABASE_SERVICE_KEY=$(op read op://YOUR_VAULT/YOUR_SUPABASE_ITEM/service_key)
 
 # Scoring model (Phase 2+)
-export LLM_BACKEND=haiku  # or 'ollama' (default)
+export LLM_BACKEND=gemini  # or 'ollama' (local), 'haiku' (fallback)
 ```
 
 ## Database Schema
