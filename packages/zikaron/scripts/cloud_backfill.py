@@ -38,6 +38,7 @@ from zikaron.pipeline.enrichment import (
     ENRICHMENT_PROMPT,
     HIGH_VALUE_TYPES,
     build_external_prompt,
+    build_prompt,
     parse_enrichment,
 )
 from zikaron.pipeline.sanitize import Sanitizer, SanitizeConfig
@@ -172,18 +173,22 @@ def export_unenriched_chunks(
     max_chunks: int = 0,
     content_types: Optional[List[str]] = None,
     min_char_count: int = 50,
+    no_sanitize: bool = False,
 ) -> List[Path]:
     """Export unenriched chunks to JSONL files (one per batch job).
 
     Content is sanitized before export — PII is stripped via build_external_prompt().
-    This is not optional. Every chunk going to an external API passes through the sanitizer.
+    Use no_sanitize=True only for local testing with trusted backends.
     """
     EXPORT_DIR.mkdir(parents=True, exist_ok=True)
     types = content_types or HIGH_VALUE_TYPES
 
-    # Initialize sanitizer (THE gate for external API calls)
-    print("Initializing PII sanitizer...")
-    sanitizer = _init_sanitizer(store)
+    if no_sanitize:
+        print("WARNING: PII sanitization DISABLED — use only for local testing!")
+        sanitizer = None
+    else:
+        print("Initializing PII sanitizer...")
+        sanitizer = _init_sanitizer(store)
 
     cursor = store.conn.cursor()
 
@@ -231,7 +236,6 @@ def export_unenriched_chunks(
 
         with open(filename, "w") as f:
             for chunk_id, content, project, content_type, source, sender in batch:
-                # Build prompt through the sanitizer gate
                 chunk_dict = {
                     "content": content,
                     "project": project,
@@ -239,12 +243,16 @@ def export_unenriched_chunks(
                     "source": source,
                     "sender": sender,
                 }
-                prompt, sanitize_result = build_external_prompt(
-                    chunk_dict, sanitizer
-                )
 
-                if sanitize_result.pii_detected:
-                    total_pii_found += 1
+                if sanitizer is not None:
+                    prompt, sanitize_result = build_external_prompt(
+                        chunk_dict, sanitizer
+                    )
+                    if sanitize_result.pii_detected:
+                        total_pii_found += 1
+                else:
+                    # No sanitization — use local prompt builder
+                    prompt = build_prompt(chunk_dict)
 
                 # Gemini Batch API format (camelCase — raw JSONL uses REST API casing)
                 request_line = {
@@ -260,8 +268,9 @@ def export_unenriched_chunks(
         print(f"  Wrote {filename.name} ({len(batch)} chunks)")
 
     # Save PII mapping for reversibility (local only, never uploaded)
-    mapping_path = EXPORT_DIR / "pii_mapping.json"
-    sanitizer.save_mapping(mapping_path)
+    if sanitizer is not None:
+        mapping_path = EXPORT_DIR / "pii_mapping.json"
+        sanitizer.save_mapping(mapping_path)
     print(f"\nPII sanitization: {total_pii_found}/{len(rows)} chunks had PII stripped")
     print(f"Mapping saved to: {mapping_path}")
     print(f"Exported {len(rows)} chunks to {len(jsonl_files)} JSONL files")
@@ -528,6 +537,7 @@ def run_full_backfill(
     model: str = "models/gemini-2.5-flash",
     dry_run: bool = False,
     sample: int = 0,
+    no_sanitize: bool = False,
 ) -> None:
     """Run the full backfill: export → submit → poll → import."""
     store = VectorStore(db_path)
@@ -541,7 +551,7 @@ def run_full_backfill(
 
         # Step 1: Export
         max_chunks = sample if sample > 0 else 0
-        jsonl_files = export_unenriched_chunks(store, max_chunks=max_chunks)
+        jsonl_files = export_unenriched_chunks(store, max_chunks=max_chunks, no_sanitize=no_sanitize)
 
         if not jsonl_files:
             print("Nothing to export!")
@@ -687,6 +697,8 @@ if __name__ == "__main__":
     parser.add_argument("--sample", type=int, default=0, help="Run N-chunk validation sample")
     parser.add_argument("--resume", action="store_true", help="Resume pending batch jobs")
     parser.add_argument("--status", action="store_true", help="Show batch job status")
+    parser.add_argument("--no-sanitize", action="store_true",
+                        help="Skip PII sanitization (local testing only — NEVER use for external APIs)")
 
     args = parser.parse_args()
     db = Path(args.db) if args.db else DEFAULT_DB_PATH
@@ -696,4 +708,5 @@ if __name__ == "__main__":
     elif args.resume:
         resume_backfill(db)
     else:
-        run_full_backfill(db, model=args.model, dry_run=args.dry_run, sample=args.sample)
+        run_full_backfill(db, model=args.model, dry_run=args.dry_run, sample=args.sample,
+                          no_sanitize=args.no_sanitize)
