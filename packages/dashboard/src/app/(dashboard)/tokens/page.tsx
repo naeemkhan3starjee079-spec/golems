@@ -24,6 +24,7 @@ const CHEAP_MODELS = new Set([
 type SourceEnv = "local" | "cloud" | "cli";
 
 const SOURCE_ENV: Record<string, { env: SourceEnv; label: string }> = {
+  "claude-code": { env: "local", label: "Claude Code" },
   enrichment: { env: "local", label: "Enrichment" },
   "email-golem": { env: "cloud", label: "Email Golem" },
   "email-scorer": { env: "cloud", label: "Email Scorer" },
@@ -321,6 +322,9 @@ export default function TokensPage() {
                     <p className="text-lg font-bold tabular-nums">{stats.calls.toLocaleString()} <span className="text-xs font-normal text-muted">calls</span></p>
                     <p className="text-xs text-amber tabular-nums">${stats.cost_usd.toFixed(3)}</p>
                     <p className="text-[10px] text-muted tabular-nums">{(stats.input_tokens + stats.output_tokens).toLocaleString()} tokens</p>
+                    {(stats.cache_read_tokens ?? 0) > 0 && (
+                      <p className="text-[10px] text-muted/60 tabular-nums">{((stats.cache_read_tokens ?? 0) / 1_000_000).toFixed(1)}M cache read</p>
+                    )}
                   </div>
                 );
               })}
@@ -380,7 +384,7 @@ export default function TokensPage() {
           {refreshing && " · refreshing..."}
         </p>
         <p className="text-right">
-          Not tracked: Claude Code sessions (billed to Anthropic subscription) · CLI agents (Cursor, Codex, Gemini CLI)
+          Not tracked: CLI agents (Cursor, Codex, Gemini CLI)
         </p>
       </div>
     </div>
