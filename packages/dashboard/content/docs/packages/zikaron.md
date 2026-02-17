@@ -50,6 +50,7 @@ Content types with preservation rules:
 | `file_read` | MEDIUM | Context-dependent |
 | `git_diff` | MEDIUM | Extract changed entities |
 | `build_log` | LOW | Summarize or mask |
+| `dir_listing` | LOW | Structure only |
 | `noise` | SKIP | Filter out |
 
 ### 3. Chunk

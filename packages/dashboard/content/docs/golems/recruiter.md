@@ -191,7 +191,7 @@ Same schema + RLS policies for data isolation per account.
 export EXA_API_KEY=$(op read op://YOUR_VAULT/YOUR_EXA_ITEM/credential)
 
 # Outreach DB
-export LLM_BACKEND=haiku  # For style adaptation
+export LLM_BACKEND=gemini  # For style adaptation (or 'ollama', 'haiku')
 export STATE_BACKEND=supabase  # Phase 2+ uses cloud
 export SUPABASE_URL=$(op read op://YOUR_VAULT/YOUR_SUPABASE_ITEM/url)
 export SUPABASE_SERVICE_KEY=$(op read op://YOUR_VAULT/YOUR_SUPABASE_ITEM/service_key)

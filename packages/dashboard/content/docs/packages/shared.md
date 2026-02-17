@@ -34,6 +34,7 @@ The Whoop subsystem lives in `@golems/shared/whoop/` and provides biometric data
 - **Client** (`whoop/client.ts`) — OAuth2 token refresh + API v2 calls
 - **Types** (`whoop/types.ts`) — `WhoopRecovery`, `WhoopSleep`, `WhoopStrain` interfaces
 - **Sync** (`whoop/sync.ts`) — `syncWhoopToSupabase()` for dashboard caching
+- **Auth Server** (`whoop/auth-server.ts`) — Local OAuth2 callback server for token exchange
 
 ```typescript
 import { getLatestRecovery, getLatestSleep, getTodayStrain } from "@golems/shared/whoop/client";
@@ -52,7 +53,7 @@ The email subsystem lives in `@golems/shared/email/` and provides the full Gmail
 - **Router** — Routes scored emails to the appropriate domain golem
 - **Draft replies** — Template-based reply generation
 - **Follow-up tracking** — Due date management for pending responses
-- **MCP server** — 7 email tools exposed to Claude Code
+- **MCP server** — 12 email tools exposed to Claude Code
 
 ### Email MCP Tools
 
@@ -65,14 +66,20 @@ The email subsystem lives in `@golems/shared/email/` and provides the full Gmail
 | `email_stats` | 24h category breakdown |
 | `email_getByGolem` | Emails routed to a specific golem |
 | `email_draftReply` | Generate reply draft by intent |
+| `email_getSenders` | List email senders with stats and actions |
+| `email_setSenderAction` | Set action for a sender (archive, star, etc.) |
+| `email_unsubscribe` | Unsubscribe from a sender |
+| `email_sendersByCategory` | Senders grouped by category |
+| `email_unsubscribeHistory` | History of unsubscribe attempts |
 
 ## LLM Abstraction
 
 Switch between backends with a single env var:
 
 ```bash
-LLM_BACKEND=haiku    # Cloud: Anthropic Haiku via API
+LLM_BACKEND=gemini   # Cloud: Gemini Flash-Lite (free, default)
 LLM_BACKEND=ollama   # Local: Ollama on your Mac
+LLM_BACKEND=haiku    # Cloud: Anthropic Haiku (paid fallback)
 LLM_BACKEND=glm      # Local: GLM-4.7-Flash via Ollama HTTP
 LLM_BACKEND=gemini   # Cloud: Gemini 2.5 Flash-Lite (free)
 LLM_BACKEND=groq     # Cloud: Llama 4 Scout (free)
