@@ -28,6 +28,7 @@ import hashlib
 import json
 import os
 import re
+import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -127,6 +128,7 @@ class Sanitizer:
         self.config = config
         self._nlp = None  # Lazy-loaded spaCy model
         self._name_to_pseudo: dict[str, str] = {}  # name.lower() → placeholder
+        self._pseudo_lock = threading.Lock()  # Thread-safe pseudonym access
         self._owner_re: Optional[re.Pattern[str]] = None
         self._known_names_re: Optional[re.Pattern[str]] = None
 
@@ -195,12 +197,13 @@ class Sanitizer:
         return self._nlp if self._nlp is not False else None
 
     def _pseudonym(self, name: str) -> str:
-        """Get or create a stable pseudonym for a name."""
+        """Get or create a stable pseudonym for a name. Thread-safe."""
         key = name.lower().strip()
-        if key not in self._name_to_pseudo:
-            h = hashlib.sha256(key.encode("utf-8")).hexdigest()[:8]
-            self._name_to_pseudo[key] = f"[PERSON_{h}]"
-        return self._name_to_pseudo[key]
+        with self._pseudo_lock:
+            if key not in self._name_to_pseudo:
+                h = hashlib.sha256(key.encode("utf-8")).hexdigest()[:8]
+                self._name_to_pseudo[key] = f"[PERSON_{h}]"
+            return self._name_to_pseudo[key]
 
     def sanitize(
         self,
@@ -474,9 +477,13 @@ class Sanitizer:
         """Load a previously saved mapping to maintain pseudonym consistency."""
         if not path.exists():
             return
-        data = json.loads(path.read_text())
-        existing = data.get("name_to_pseudonym", {})
-        self._name_to_pseudo.update(existing)
+        try:
+            data = json.loads(path.read_text())
+            existing = data.get("name_to_pseudonym", {})
+            self._name_to_pseudo.update(existing)
+        except (json.JSONDecodeError, KeyError, OSError) as e:
+            import sys
+            print(f"  Warning: could not load PII mapping from {path}: {e}", file=sys.stderr)
 
     @classmethod
     def from_env(cls) -> Sanitizer:

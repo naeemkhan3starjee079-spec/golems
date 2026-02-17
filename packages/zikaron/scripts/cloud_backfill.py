@@ -246,12 +246,12 @@ def export_unenriched_chunks(
                 if sanitize_result.pii_detected:
                     total_pii_found += 1
 
-                # Gemini Batch API format
+                # Gemini Batch API format (camelCase — raw JSONL uses REST API casing)
                 request_line = {
                     "key": chunk_id,
                     "request": {
                         "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-                        "generation_config": {"response_mime_type": "application/json"},
+                        "generationConfig": {"responseMimeType": "application/json"},
                     },
                 }
                 f.write(json.dumps(request_line) + "\n")
@@ -580,8 +580,8 @@ def run_full_backfill(
                     um = job.usage_metadata
                     in_tok = getattr(um, "prompt_token_count", 0) or 0
                     out_tok = getattr(um, "candidates_token_count", 0) or 0
-                    # Gemini 2.5 Flash-Lite: $0.075/1M input, $0.30/1M output
-                    cost = (in_tok * 0.075 + out_tok * 0.30) / 1_000_000
+                    # Gemini 2.5 Flash: $0.15/1M input, $0.60/1M output (Tier 1)
+                    cost = (in_tok * 0.15 + out_tok * 0.60) / 1_000_000
                     log_batch_usage(batch_name, model, in_tok, out_tok, cost)
 
                 save_checkpoint(store, batch_id=batch_name, status="completed",
