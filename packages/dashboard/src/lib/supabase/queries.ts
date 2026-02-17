@@ -1,4 +1,5 @@
 import { createClient } from "./client";
+import type { TokenStats } from "../types/tokens";
 
 // --- Ops ---
 
@@ -46,18 +47,7 @@ export async function fetchTokenStats(days: number) {
   const supabase = createClient();
   const { data, error } = await supabase.rpc("get_token_stats", { p_days: days });
   if (error) throw error;
-  return data as {
-    days: number;
-    total_cost_usd: number;
-    total_input_tokens: number;
-    total_output_tokens: number;
-    total_calls: number;
-    unique_sources: number;
-    entry_count: number;
-    by_model: Record<string, { calls: number; input_tokens: number; output_tokens: number; cost_usd: number; sources: string[] }>;
-    by_source: Record<string, { calls: number; input_tokens: number; output_tokens: number; cost_usd: number }>;
-    by_day: Record<string, { calls: number; input_tokens: number; output_tokens: number; cost_usd: number }>;
-  };
+  return data as TokenStats;
 }
 
 // --- Night Shift ---
