@@ -16,9 +16,10 @@ Shared is the **infrastructure layer** of the Golems ecosystem. It provides data
 | Module | Import | Purpose |
 |--------|--------|---------|
 | `supabase-factory` | `@golems/shared/lib/supabase-factory` | Singleton Supabase client creation |
-| `llm` | `@golems/shared/lib/llm` | Multi-backend LLM runner (Haiku, Ollama, GLM) |
+| `llm` | `@golems/shared/lib/llm` | Multi-backend LLM runner (Gemini, Ollama, GLM, MLX) |
 | `vercel-llm` | `@golems/shared/lib/vercel-llm` | Free cloud LLM (Gemini Flash-Lite, Groq) |
 | `glm-llm` | `@golems/shared/lib/glm-llm` | Local GLM-4.7-Flash via Ollama HTTP |
+| `mlx-llm` | `@golems/shared/lib/mlx-llm` | Local MLX inference on Apple Silicon (OpenAI-compatible API) |
 | `telegram-direct` | `@golems/shared/lib/telegram-direct` | Dual-mode notifications (localhost:3847 or Bot API) |
 | `state-store` | `@golems/shared/lib/state-store` | File/Supabase state abstraction |
 | `event-log` | `@golems/shared/lib/event-log` | Action logging ("while you were down" context) |

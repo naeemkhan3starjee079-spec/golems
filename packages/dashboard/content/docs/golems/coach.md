@@ -101,7 +101,7 @@ The `/coach` dashboard page shows:
 - **7-day trends** — sparkline bars for recovery, sleep, and strain
 - **Huberman reminders** — protocol checklist grid
 
-Data is synced from Whoop to `whoop_snapshots` Supabase table via Cloud Worker (7am + 2pm).
+Data is synced from Whoop to `whoop_snapshots` Supabase table via Cloud Worker (5x daily: 7am, 10am, 2pm, 5pm, 8pm).
 
 ## Wiring
 
@@ -110,7 +110,7 @@ Data is synced from Whoop to `whoop_snapshots` Supabase table via Cloud Worker (
 - **Whoop tokens** cached at `/tmp/whoop-tokens.json` (auth-server writes, client refreshes)
 - **Protocol** stored at `~/.golems-zikaron/coach/protocol.json`
 - **Compliance** stored in `~/.golems-zikaron/coach/compliance.json` (90-day retention)
-- **Cloud Worker** syncs Whoop data to Supabase at 7am and 2pm
+- **Cloud Worker** syncs Whoop data to Supabase 5x daily (7am, 10am, 2pm, 5pm, 8pm)
 
 ## Dependencies
 

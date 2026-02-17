@@ -60,7 +60,7 @@ The Railway cloud worker runs these jobs on a timer:
 |-----|----------|------|-------|
 | Email Poller | Hourly (6am-7pm, skip noon, +10pm) | Fetch Gmail, route to Golems | Gemini Flash-Lite |
 | Job Scraper | 6am, 9am, 1pm Sun-Thu | Find relevant jobs, score | Gemini Flash-Lite |
-| Whoop Sync | 7am + 2pm daily | Sync biometrics to Supabase | — |
+| Whoop Sync | 5x daily (7am, 10am, 2pm, 5pm, 8pm) | Sync biometrics to Supabase | — |
 | Briefing | 8:00 AM | Daily Telegram summary | Gemini Flash-Lite |
 
 Cloud jobs use **Gemini 2.5 Flash-Lite** (free tier) for cost efficiency. Each job publishes events to Supabase that trigger Mac-side Golems.
