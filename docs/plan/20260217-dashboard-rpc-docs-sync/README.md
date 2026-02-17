@@ -15,7 +15,7 @@
 | 3 | Dashboard query migration | [phase-3-dashboard-queries](phase-3-dashboard-queries/) | DONE | feature/phase2-3-rpc-dashboard | #204 |
 | 4 | ccusage integration | [phase-4-ccusage](phase-4-ccusage/) | DONE | feature/phase4-ccusage | #205 |
 | 5 | Content sync setup | [phase-5-content-sync](phase-5-content-sync/) | DONE | feature/docs-sync-from-golems | etanheyman.com#36 |
-| 6 | Rendering alignment | [phase-6-rendering-align](phase-6-rendering-align/) | ... | | |
+| 6 | Rendering alignment | [phase-6-rendering-align](phase-6-rendering-align/) | DONE | feature/phase6-rendering-align | #206 + etanheyman.com#37 |
 
 ---
 
