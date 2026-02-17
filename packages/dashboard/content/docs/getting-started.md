@@ -11,7 +11,7 @@ Golems is an autonomous AI agent ecosystem built for Claude Code. It's a Bun wor
 - **Orchestrator:** ClaudeGolem — Telegram bot that routes commands to the right golem
 - **Domain Golems:** RecruiterGolem, TellerGolem, JobGolem, CoachGolem, ContentGolem — each owns a specific knowledge area
 - **Infrastructure:** @golems/shared (foundation + email system), @golems/services (Night Shift, Cloud Worker, Briefing)
-- **Tools:** Ralph (autonomous coding loop), Zikaron (226K+ chunk memory layer)
+- **Tools:** Ralph (autonomous coding loop), Zikaron (260K+ chunk memory layer with 10-field enrichment)
 - **Core Principle:** Golems are domain experts, not I/O channels — they own specific knowledge areas and produce specialized outputs
 
 ## Architecture Principle

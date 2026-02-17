@@ -17,7 +17,7 @@ The only hard dependency is `@golems/shared` for database and LLM access.
 
 ## What's the memory cost?
 
-Zikaron uses sqlite-vec with bge-large-en-v1.5 embeddings. For 226K+ chunks, the database is approximately 1-2GB on disk. Queries run in under 2 seconds. The embedding model loads into ~1.5GB of RAM when indexing, but the MCP server uses the pre-built index (no model loaded at query time).
+Zikaron uses sqlite-vec with bge-large-en-v1.5 embeddings. For 260K+ chunks, the database is approximately 1.4GB on disk. Queries run in under 2 seconds. The embedding model loads into ~1.5GB of RAM when indexing, but the MCP server uses the pre-built index (no model loaded at query time).
 
 ## Does it work without Railway?
 

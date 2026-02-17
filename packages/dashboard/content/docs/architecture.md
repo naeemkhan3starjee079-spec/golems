@@ -25,7 +25,7 @@ Golems is a **Bun workspace monorepo with 14 packages** — 7 golems (1 orchestr
 | `golems-tui` | React Ink terminal dashboard |
 | `tax-helper` | Schedule C transaction categorization (Sophtron MCP) |
 | `ralph` | Autonomous coding loop (PRD execution) |
-| `zikaron` | Memory layer (Python, 226K+ chunks, sqlite-vec) |
+| `zikaron` | Memory layer (Python, 260K+ chunks, sqlite-vec) |
 
 ## Mac = Brain, Railway = Body
 

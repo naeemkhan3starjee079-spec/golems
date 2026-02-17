@@ -41,7 +41,7 @@ Instead of building golems first, we built **Zikaron** — a memory layer using 
 
 ### Jan 13: Architecture Crystallizes
 
-Chose monolithic Python daemon over microservices. One process, one database, instant queries. Zikaron now indexes 226K+ conversation chunks and returns results in under 2 seconds.
+Chose monolithic Python daemon over microservices. One process, one database, instant queries. Zikaron now indexes 260K+ conversation chunks and returns results in under 2 seconds.
 
 ### Jan 17: First Golem — Email Router
 
