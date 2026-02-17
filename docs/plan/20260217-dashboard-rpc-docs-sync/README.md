@@ -13,8 +13,8 @@
 | 1 | Docs accuracy fixes | [phase-1-docs-fixes](phase-1-docs-fixes/) | DONE | feature/phase1-docs-fixes | #203 |
 | 2 | Supabase RPC functions | [phase-2-rpc-functions](phase-2-rpc-functions/) | DONE | feature/phase2-3-rpc-dashboard | #204 |
 | 3 | Dashboard query migration | [phase-3-dashboard-queries](phase-3-dashboard-queries/) | DONE | feature/phase2-3-rpc-dashboard | #204 |
-| 4 | ccusage integration | [phase-4-ccusage](phase-4-ccusage/) | ... | | |
-| 5 | Content sync setup | [phase-5-content-sync](phase-5-content-sync/) | ... | | |
+| 4 | ccusage integration | [phase-4-ccusage](phase-4-ccusage/) | DONE | feature/phase4-ccusage | #205 |
+| 5 | Content sync setup | [phase-5-content-sync](phase-5-content-sync/) | DONE | feature/docs-sync-from-golems | etanheyman.com#36 |
 | 6 | Rendering alignment | [phase-6-rendering-align](phase-6-rendering-align/) | ... | | |
 
 ---

@@ -3,6 +3,7 @@ import path from "path";
 import matter from "gray-matter";
 import { marked } from "marked";
 import { createHighlighter, type Highlighter } from "shiki";
+import GithubSlugger from "github-slugger";
 
 const DOCS_DIR = path.join(process.cwd(), "content/docs");
 
@@ -125,15 +126,6 @@ export type TocItem = {
   level: number;
 };
 
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/<[^>]+>/g, "")
-    .replace(/[^\w\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .trim();
-}
-
 export async function renderMarkdown(content: string): Promise<{ html: string; toc: TocItem[] }> {
   const hl = await getHighlighter();
   const loadedLangs = new Set(hl.getLoadedLanguages());
@@ -164,21 +156,15 @@ export async function renderMarkdown(content: string): Promise<{ html: string; t
   );
 
   // Post-process: add IDs to h2/h3 headings and extract TOC
+  // Uses github-slugger for compatibility with rehype-slug (used in etanheyman.com)
   const toc: TocItem[] = [];
-  const usedIds = new Set<string>();
+  const slugger = new GithubSlugger();
 
   html = html.replace(
     /<h([23])>([\s\S]*?)<\/h\1>/g,
     (_match, level: string, text: string) => {
       const plainText = text.replace(/<[^>]+>/g, "").trim();
-      let id = slugify(plainText);
-      // Deduplicate IDs
-      if (usedIds.has(id)) {
-        let i = 1;
-        while (usedIds.has(`${id}-${i}`)) i++;
-        id = `${id}-${i}`;
-      }
-      usedIds.add(id);
+      const id = slugger.slug(plainText);
       toc.push({ id, text: plainText, level: parseInt(level) });
       return `<h${level} id="${id}">${text}</h${level}>`;
     },
