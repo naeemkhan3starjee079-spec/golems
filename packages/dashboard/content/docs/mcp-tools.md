@@ -38,7 +38,7 @@ Then in Claude Code: `/tools` or use `@golems-email` in any prompt.
 
 | Server | Command | Tools | Purpose |
 |--------|---------|-------|---------|
-| **zikaron** | `zikaron-mcp` | 8 | Memory layer — search 226K+ indexed conversation chunks |
+| **zikaron** | `zikaron-mcp` | 8 | Memory layer — search 260K+ indexed conversation chunks |
 | **golems-email** | `bun run packages/shared/src/email/mcp-server.ts` | 9 | Email triage + TellerGolem financial tools |
 | **golems-jobs** | `bun run packages/jobs/src/mcp-server.ts` | 5 | Job discovery, search, and stats |
 | **golems-glm** | `bun run packages/shared/src/glm/mcp-server.ts` | 2 | Local GLM-4.7-Flash — summarize, score/classify |
@@ -251,7 +251,7 @@ Quick job statistics.
 
 ## Memory Tools (zikaron)
 
-Zikaron provides persistent memory across Claude Code sessions — semantic search over 226K+ indexed conversation chunks using bge-large-en-v1.5 embeddings (1024 dims) and sqlite-vec.
+Zikaron provides persistent memory across Claude Code sessions — semantic search over 260K+ indexed conversation chunks using bge-large-en-v1.5 embeddings (1024 dims) and sqlite-vec.
 
 ### zikaron_search
 
@@ -430,7 +430,7 @@ Key capabilities: account listing, transaction history, identity verification.
 
 - **Email tools** use Supabase directly (cloud-first architecture)
 - **Job tools** query Supabase `golem_jobs` and `scrape_activity` tables
-- **Zikaron tools** query local sqlite-vec database (~1.4GB, 226K+ chunks)
+- **Zikaron tools** query local sqlite-vec database (~1.4GB, 260K+ chunks)
 - **GLM tools** run locally via Ollama (no network, ~3-8s per call on M1 Pro)
 - **Scoring:** Email scores 1-10 (10=urgent), Job scores 1-10 (8+=hot match)
 - **Categories:** Email categories are semantic (job, interview, subscription, tech-update, newsletter, promo, social, other)

@@ -29,7 +29,7 @@ Golems is a **Bun workspace monorepo with 14 packages** — 7 golems (1 orchestr
 | `golems-tui` | React Ink terminal dashboard |
 | `tax-helper` | Schedule C transaction categorization (Sophtron MCP) |
 | `ralph` | Autonomous coding loop (PRD execution) |
-| `zikaron` | Memory layer (Python, 226K+ chunks, sqlite-vec) |
+| `zikaron` | Memory layer (Python, 260K+ chunks, sqlite-vec) |
 
 ## Mac = Brain, Railway = Body
 
@@ -332,7 +332,7 @@ All environment variables used by Golems v2. Store sensitive values in 1Password
 
 | Variable | Default | Description | Required For |
 |----------|---------|-------------|--------------|
-| `LLM_BACKEND` | `ollama` | Which LLM to use: `haiku` (cloud) or `ollama` (local); cloud-worker sets `haiku` explicitly | Agent execution |
+| `LLM_BACKEND` | `ollama` | Which LLM to use: `gemini` (cloud, free), `haiku` (cloud, paid fallback), or `ollama` (local); cloud-worker sets `gemini` | Agent execution |
 | `STATE_BACKEND` | `file` | State storage: `supabase` (cloud) or `file` (local) | Persistent state |
 | `TELEGRAM_MODE` | `local` | Notification mode: `direct` (cloud) or `local` (launchd) | Telegram notifications |
 | `TZ` | `UTC` | Timezone (only used in helpers-status.ts); cloud-worker hardcodes `Asia/Jerusalem` | Status display |
@@ -340,11 +340,12 @@ All environment variables used by Golems v2. Store sensitive values in 1Password
 
 ## LLM Configuration
 
-### Cloud Backend (Haiku)
+### Cloud Backend (Gemini)
 
 | Variable | Default | Description | Required For |
 |----------|---------|-------------|--------------|
-| `ANTHROPIC_API_KEY` | — | Anthropic API key from 1Password (any item name you choose) | Cloud LLM calls |
+| `GOOGLE_GENERATIVE_AI_API_KEY` | — | Google AI API key from 1Password | Cloud LLM calls (free Gemini Flash-Lite) |
+| `ANTHROPIC_API_KEY` | — | Anthropic API key (paid Haiku fallback, optional) | Fallback LLM calls |
 | `RAILWAY_URL` | `https://your-service.up.railway.app` | Cloud worker endpoint for health checks | Health monitoring |
 
 ### Local Backend (Ollama)
@@ -439,12 +440,12 @@ export TELEGRAM_CHAT_ID=-1001234567890
 
 ```bash
 # Use cloud LLM and Supabase
-export LLM_BACKEND=haiku
+export LLM_BACKEND=gemini
 export STATE_BACKEND=supabase
 export TELEGRAM_MODE=direct
 
 # All secrets from 1Password (handled by Railway)
-# ANTHROPIC_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY, etc.
+# GOOGLE_GENERATIVE_AI_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY, etc.
 ```
 
 ## Loading Variables
@@ -850,7 +851,7 @@ Set all 18 variables in Railway dashboard (`Settings` → `Variables`):
 
 | Variable | Value | Notes |
 |----------|-------|-------|
-| `LLM_BACKEND` | `haiku` | Cloud execution |
+| `LLM_BACKEND` | `gemini` | Cloud execution (free Gemini Flash-Lite) |
 | `STATE_BACKEND` | `supabase` | Cloud state |
 | `TELEGRAM_MODE` | `direct` | Direct API calls |
 | `TZ` | `Asia/Jerusalem` | Scheduling |
@@ -1105,7 +1106,7 @@ The only hard dependency is `@golems/shared` for database and LLM access.
 
 ## What's the memory cost?
 
-Zikaron uses sqlite-vec with bge-large-en-v1.5 embeddings. For 238K+ chunks, the database is approximately 1-2GB on disk. Queries run in under 2 seconds. The embedding model loads into ~1.5GB of RAM when indexing, but the MCP server uses the pre-built index (no model loaded at query time).
+Zikaron uses sqlite-vec with bge-large-en-v1.5 embeddings. For 260K+ chunks, the database is approximately 1.4GB on disk. Queries run in under 2 seconds. The embedding model loads into ~1.5GB of RAM when indexing, but the MCP server uses the pre-built index (no model loaded at query time).
 
 ## Does it work without Railway?
 
@@ -1189,7 +1190,7 @@ Golems is an autonomous AI agent ecosystem built for Claude Code. It's a Bun wor
 - **Orchestrator:** ClaudeGolem — Telegram bot that routes commands to the right golem
 - **Domain Golems:** RecruiterGolem, TellerGolem, JobGolem, CoachGolem, ContentGolem — each owns a specific knowledge area
 - **Infrastructure:** @golems/shared (foundation + email system), @golems/services (Night Shift, Cloud Worker, Briefing)
-- **Tools:** Ralph (autonomous coding loop), Zikaron (238K+ chunk memory layer)
+- **Tools:** Ralph (autonomous coding loop), Zikaron (260K+ chunk memory layer with 10-field enrichment)
 - **Core Principle:** Golems are domain experts, not I/O channels — they own specific knowledge areas and produce specialized outputs
 
 ## Architecture Principle
@@ -2496,7 +2497,7 @@ Instead of building golems first, we built **Zikaron** — a memory layer using 
 
 ### Jan 13: Architecture Crystallizes
 
-Chose monolithic Python daemon over microservices. One process, one database, instant queries. Zikaron now indexes 238K+ conversation chunks and returns results in under 2 seconds.
+Chose monolithic Python daemon over microservices. One process, one database, instant queries. Zikaron now indexes 260K+ conversation chunks and returns results in under 2 seconds.
 
 ### Jan 17: First Golem — Email Router
 
@@ -2879,7 +2880,7 @@ Then in Claude Code: `/tools` or use `@golems-email` in any prompt.
 
 | Server | Command | Tools | Purpose |
 |--------|---------|-------|---------|
-| **zikaron** | `zikaron-mcp` | 8 | Memory layer — search 226K+ indexed conversation chunks |
+| **zikaron** | `zikaron-mcp` | 8 | Memory layer — search 260K+ indexed conversation chunks |
 | **golems-email** | `bun run packages/shared/src/email/mcp-server.ts` | 9 | Email triage + TellerGolem financial tools |
 | **golems-jobs** | `bun run packages/jobs/src/mcp-server.ts` | 5 | Job discovery, search, and stats |
 | **golems-glm** | `bun run packages/shared/src/glm/mcp-server.ts` | 2 | Local GLM-4.7-Flash — summarize, score/classify |
@@ -3092,7 +3093,7 @@ Quick job statistics.
 
 ## Memory Tools (zikaron)
 
-Zikaron provides persistent memory across Claude Code sessions — semantic search over 226K+ indexed conversation chunks using bge-large-en-v1.5 embeddings (1024 dims) and sqlite-vec.
+Zikaron provides persistent memory across Claude Code sessions — semantic search over 260K+ indexed conversation chunks using bge-large-en-v1.5 embeddings (1024 dims) and sqlite-vec.
 
 ### zikaron_search
 
@@ -3271,7 +3272,7 @@ Key capabilities: account listing, transaction history, identity verification.
 
 - **Email tools** use Supabase directly (cloud-first architecture)
 - **Job tools** query Supabase `golem_jobs` and `scrape_activity` tables
-- **Zikaron tools** query local sqlite-vec database (~1.4GB, 226K+ chunks)
+- **Zikaron tools** query local sqlite-vec database (~1.4GB, 260K+ chunks)
 - **GLM tools** run locally via Ollama (no network, ~3-8s per call on M1 Pro)
 - **Scoring:** Email scores 1-10 (10=urgent), Job scores 1-10 (8+=hot match)
 - **Categories:** Email categories are semantic (job, interview, subscription, tech-update, newsletter, promo, social, other)
@@ -3675,7 +3676,7 @@ await setState("nightShiftTarget", "songscript");
 
 ## What It Does
 
-Zikaron (Hebrew for "memory") is a **knowledge pipeline** that indexes every Claude Code conversation into a searchable database. It uses semantic embeddings to find past solutions, decisions, and patterns across all your projects. 238K+ chunks indexed, searchable in under 2 seconds.
+Zikaron (Hebrew for "memory") is a **knowledge pipeline** that indexes every Claude Code conversation into a searchable database. It uses semantic embeddings to find past solutions, decisions, and patterns across all your projects. 260K+ chunks indexed, searchable in under 2 seconds.
 
 ## Architecture
 
@@ -3687,18 +3688,22 @@ Zikaron (Hebrew for "memory") is a **knowledge pipeline** that indexes every Cla
                                   bge-large sqlite-vec
                                   1024 dims   fast DB
         |
-~/.local/share/zikaron/zikaron.db   # Storage (~1GB)
+~/.local/share/zikaron/zikaron.db   # Storage (~1.4GB)
+        |
+  POST-PROCESSING
+  Enrichment (10 fields)    PII Sanitization    Brain Graph
+  Ollama / MLX (local)      3-layer detection   Obsidian Export
+  Gemini (cloud backfill)   mandatory for ext.
         |
   INTERFACES
-  CLI            FastAPI Daemon      MCP Server
-  search         /tmp/zikaron.sock   zikaron-mcp
-  dashboard      (<2s queries)
+  CLI            FastAPI Daemon      MCP Server      Dashboard
+  search         :8787 / socket      zikaron-mcp     Next.js
 ```
 
 ## Pipeline Stages
 
 ### 1. Extract
-Parse JSONL conversation files. Content-addressable storage for system prompts (SHA-256 deduplication). Detects conversation continuations.
+Parse JSONL conversation files. Content-addressable storage for system prompts (SHA-256 deduplication). Detects conversation continuations. Also imports WhatsApp, YouTube, Markdown, and Claude Desktop sources.
 
 ### 2. Classify
 Content types with preservation rules:
@@ -3718,39 +3723,85 @@ Content types with preservation rules:
 AST-aware chunking with tree-sitter for code (~500 tokens). Never splits stack traces. Turn-based chunking for conversation with 10-20% overlap.
 
 ### 4. Embed
-Uses `bge-large-en-v1.5` model (1024 dimensions). Runs locally via sentence-transformers.
+Uses `bge-large-en-v1.5` model (1024 dimensions). Runs locally via sentence-transformers with MPS acceleration on Apple Silicon.
 
 ### 5. Index
-sqlite-vec for vector similarity search. Sub-2-second queries across 238K+ chunks.
+sqlite-vec for vector similarity search. WAL mode + `busy_timeout=5000ms` for concurrent access from daemon, MCP server, and enrichment. Sub-2-second queries across 260K+ chunks.
 
 ## Interfaces
 
 ### CLI
 ```bash
-zikaron search-fast "how did I implement auth"
-zikaron dashboard                              # Interactive TUI
+zikaron search "how did I implement auth"
+zikaron enrich                                 # Run local LLM enrichment
 zikaron index                                  # Re-index conversations
+zikaron dashboard                              # Interactive TUI
 ```
 
 ### MCP Server
-Exposed to Claude Code as `zikaron-mcp`:
+Exposed to Claude Code as `zikaron-mcp` (8 tools):
 
 | Tool | Description |
 |------|-------------|
-| `zikaron_search` | Semantic search across all sessions |
-| `zikaron_context` | Get surrounding conversation for a chunk |
-| `zikaron_stats` | Index statistics (chunk count, projects) |
+| `zikaron_search` | Semantic search across all sessions (with project, content_type, tag, intent, importance filters) |
+| `zikaron_context` | Get surrounding conversation chunks for a search result |
+| `zikaron_stats` | Index statistics (chunk count, projects, content types) |
+| `zikaron_list_projects` | List all indexed projects |
+| `zikaron_file_timeline` | File interaction history across sessions |
+| `zikaron_operations` | Logical operation groups (read/edit/test cycles) |
+| `zikaron_regression` | What changed since a file last worked |
+| `zikaron_plan_links` | Session to plan/phase linkage |
 
 ### FastAPI Daemon
-Unix socket server at `/tmp/zikaron.sock` for sub-2-second queries from any local process.
+HTTP server at `:8787` (or Unix socket) with 25+ endpoints. Powers the Next.js dashboard enrichment and session pages.
+
+## Enrichment Pipeline (10 Fields)
+
+Local LLM enrichment adds structured metadata to each chunk:
+
+| Field | What it captures | Example |
+|-------|-----------------|---------|
+| `summary` | 1-2 sentence gist | "Debugging why Telegram bot drops messages under load" |
+| `tags` | Topic tags (3-7 per chunk) | "telegram, debugging, performance" |
+| `importance` | 1-10 relevance score | 8 (architecture decision) vs 2 (directory listing) |
+| `intent` | What was happening | `debugging`, `designing`, `implementing`, `configuring` |
+| `primary_symbols` | Key code entities | "TelegramBot, handleMessage, grammy" |
+| `resolved_query` | Question this answers (HyDE) | "How does the Telegram bot handle rate limiting?" |
+| `epistemic_level` | How proven is this | `hypothesis`, `substantiated`, `validated` |
+| `version_scope` | Version/system state | "grammy 1.32, Node 22, pre-Railway migration" |
+| `debt_impact` | Technical debt signal | `introduction`, `resolution`, `none` |
+| `external_deps` | Libraries/APIs mentioned | "grammy, Supabase, Railway" |
+
+### Backends
+
+| Backend | How to start | Speed |
+|---------|-------------|-------|
+| **Ollama** (default) | `ollama serve` + `ollama pull glm4` | ~1s/chunk (short), ~13s (long) |
+| **MLX** (Apple Silicon) | `python3 -m mlx_lm.server --model <model> --port 8080` | 21-87% faster |
+| **Gemini** (cloud backfill) | Set `GOOGLE_API_KEY` | Batch API for bulk processing |
+
+Local backends (Ollama, MLX) process content directly. External backends (Gemini) go through mandatory PII sanitization.
+
+## PII Sanitization
+
+Before sending chunks to any external LLM API, content passes through a **3-layer sanitization pipeline**:
+
+1. **Regex** — owner names, emails, file paths, IPs, JWTs, phone numbers, 1Password refs, GitHub username
+2. **Known names dictionary** — WhatsApp contacts + manual list (Hebrew + English, with nikud normalization)
+3. **spaCy NER** — catches unknown English person names (`en_core_web_sm` model)
+
+The sanitizer is **tightly coupled** into the external enrichment path via `build_external_prompt()` — you cannot send content to Gemini or Groq without sanitizing first. Local enrichment (Ollama/MLX) is unaffected since content stays on-device.
+
+Replacements use stable hash-based pseudonyms (`[PERSON_a1b2c3d4]`) and a reversible mapping file saved locally.
 
 ## Stack
 
-- **Language:** Python 3.10+
-- **Embeddings:** bge-large-en-v1.5 (sentence-transformers)
-- **Vector DB:** sqlite-vec (1024 dimensions)
-- **API:** FastAPI (Unix socket)
+- **Language:** Python 3.11+
+- **Embeddings:** bge-large-en-v1.5 (sentence-transformers, 1024 dims)
+- **Vector DB:** sqlite-vec (WAL mode, busy_timeout=5000ms)
+- **API:** FastAPI (HTTP or Unix socket)
 - **Parser:** tree-sitter (AST-aware code chunking)
+- **NER:** spaCy en_core_web_sm (PII detection)
 
 ## Source
 

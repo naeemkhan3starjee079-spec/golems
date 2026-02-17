@@ -44,7 +44,7 @@ Single Railway service running all cloud golems on timezone-aware schedules (Isr
 |----------|---------|-------------|
 | Hourly 6am-7pm (skip noon) + 10pm | Email poller | Fetch Gmail, score, route |
 | 6am, 9am, 1pm (Sun-Thu) | Job scraper | Scrape boards, match, sync |
-| 7am + 2pm daily | Whoop sync | Sync biometrics to `whoop_snapshots` |
+| 5x daily (7am, 10am, 2pm, 5pm, 8pm) | Whoop sync | Sync biometrics to `whoop_snapshots` |
 | 8am daily | Briefing | Morning summary to Telegram |
 | 2am daily | Soltome learner | Scrape posts, learn patterns |
 
