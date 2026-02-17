@@ -42,92 +42,21 @@ export async function fetchServiceHeartbeats() {
 
 // --- Tokens ---
 
-type LlmRow = {
-  model: string;
-  source: string;
-  input_tokens: number;
-  output_tokens: number;
-  cost_usd: number;
-  created_at: string;
-};
-
 export async function fetchTokenStats(days: number) {
   const supabase = createClient();
-  const since = new Date();
-  since.setDate(since.getDate() - days);
-
-  const { data, error } = await supabase
-    .from("llm_usage")
-    .select("model, source, input_tokens, output_tokens, cost_usd, created_at")
-    .gte("created_at", since.toISOString())
-    .order("created_at", { ascending: false });
+  const { data, error } = await supabase.rpc("get_token_stats", { p_days: days });
   if (error) throw error;
-
-  const rows = (data ?? []) as LlmRow[];
-
-  // Aggregate by model+source
-  const byModel: Record<string, { calls: number; input_tokens: number; output_tokens: number; cost_usd: number; sources: Set<string> }> = {};
-  // Aggregate by day
-  const byDay: Record<string, { calls: number; input_tokens: number; output_tokens: number; cost_usd: number }> = {};
-  // Aggregate by source
-  const bySource: Record<string, { calls: number; input_tokens: number; output_tokens: number; cost_usd: number }> = {};
-
-  let totalCost = 0;
-  let totalInput = 0;
-  let totalOutput = 0;
-
-  for (const row of rows) {
-    totalCost += Number(row.cost_usd);
-    totalInput += row.input_tokens;
-    totalOutput += row.output_tokens;
-
-    // By model
-    if (!byModel[row.model]) {
-      byModel[row.model] = { calls: 0, input_tokens: 0, output_tokens: 0, cost_usd: 0, sources: new Set() };
-    }
-    byModel[row.model].calls++;
-    byModel[row.model].input_tokens += row.input_tokens;
-    byModel[row.model].output_tokens += row.output_tokens;
-    byModel[row.model].cost_usd += Number(row.cost_usd);
-    byModel[row.model].sources.add(row.source);
-
-    // By source
-    if (!bySource[row.source]) {
-      bySource[row.source] = { calls: 0, input_tokens: 0, output_tokens: 0, cost_usd: 0 };
-    }
-    bySource[row.source].calls++;
-    bySource[row.source].input_tokens += row.input_tokens;
-    bySource[row.source].output_tokens += row.output_tokens;
-    bySource[row.source].cost_usd += Number(row.cost_usd);
-
-    // By day
-    const day = row.created_at.slice(0, 10);
-    if (!byDay[day]) {
-      byDay[day] = { calls: 0, input_tokens: 0, output_tokens: 0, cost_usd: 0 };
-    }
-    byDay[day].calls++;
-    byDay[day].input_tokens += row.input_tokens;
-    byDay[day].output_tokens += row.output_tokens;
-    byDay[day].cost_usd += Number(row.cost_usd);
-  }
-
-  // Convert Set to array for serialization
-  const byModelSerialized: Record<string, { calls: number; input_tokens: number; output_tokens: number; cost_usd: number; sources: string[] }> = {};
-  for (const [model, stats] of Object.entries(byModel)) {
-    byModelSerialized[model] = { ...stats, sources: [...stats.sources] };
-  }
-
-  return {
-    days,
-    total_cost_usd: totalCost,
-    total_input_tokens: totalInput,
-    total_output_tokens: totalOutput,
-    total_calls: rows.length,
-    unique_sources: Object.keys(bySource).length,
-    entry_count: rows.length,
-    by_model: byModelSerialized,
-    by_source: bySource,
-    by_day: byDay,
+  return data as {
+    days: number;
+    total_cost_usd: number;
+    total_input_tokens: number;
+    total_output_tokens: number;
+    total_calls: number;
+    unique_sources: number;
+    entry_count: number;
+    by_model: Record<string, { calls: number; input_tokens: number; output_tokens: number; cost_usd: number; sources: string[] }>;
+    by_source: Record<string, { calls: number; input_tokens: number; output_tokens: number; cost_usd: number }>;
+    by_day: Record<string, { calls: number; input_tokens: number; output_tokens: number; cost_usd: number }>;
   };
 }
 
@@ -171,12 +100,14 @@ const NOTIFICATION_TYPES = [
 export async function fetchNotificationEvents(
   limit = 200,
   cursor?: { created_at: string; id: string },
+  types?: string[],
 ) {
   const supabase = createClient();
+  const filterTypes = types && types.length > 0 ? types : NOTIFICATION_TYPES;
   let query = supabase
     .from("golem_events")
     .select("id, actor, type, data, created_at")
-    .in("type", NOTIFICATION_TYPES)
+    .in("type", filterTypes)
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })
     .limit(limit);
@@ -233,6 +164,7 @@ export async function fetchBacklogItems(project?: string, planName?: string) {
     query = query.eq("plan_name", planName);
   }
 
+  query = query.limit(500);
   const { data, error } = await query;
   if (error) throw error;
   return data ?? [];
@@ -288,80 +220,54 @@ export async function fetchPipelineRuns(limit = 30) {
 
 export async function fetchPipelineStats() {
   const supabase = createClient();
-  const { data, error } = await supabase
-    .from("pipeline_runs")
-    .select("pipeline_id, success, duration_ms, quality_score, idea_type");
+  const { data, error } = await supabase.rpc("get_pipeline_stats");
   if (error) throw error;
-
-  const rows = data ?? [];
-  const grouped: Record<string, typeof rows> = {};
-  for (const row of rows) {
-    if (!grouped[row.pipeline_id]) grouped[row.pipeline_id] = [];
-    grouped[row.pipeline_id].push(row);
-  }
-
-  const stats = Object.entries(grouped).map(([pipeline_id, runs]) => {
-    const successful = runs.filter((r) => r.success);
-    const qualities = runs.map((r) => r.quality_score).filter((q): q is number => q != null);
-    const ideaTypes = [...new Set(runs.map((r) => r.idea_type))];
-
-    return {
-      pipeline_id,
-      total_runs: runs.length,
-      successful_runs: successful.length,
-      success_rate: runs.length > 0 ? successful.length / runs.length : 0,
-      avg_quality: qualities.length > 0 ? qualities.reduce((a, b) => a + b, 0) / qualities.length : null,
-      avg_duration_ms: runs.length > 0 ? runs.reduce((a, r) => a + (r.duration_ms ?? 0), 0) / runs.length : 0,
-      top_idea_types: ideaTypes.slice(0, 5),
-    };
-  });
-
-  return {
-    stats,
-    total_runs: rows.length,
+  return data as {
+    stats: Array<{
+      pipeline_id: string;
+      total_runs: number;
+      successful_runs: number;
+      success_rate: number;
+      avg_quality: number | null;
+      avg_duration_ms: number;
+      top_idea_types: string[];
+    }>;
+    total_runs: number;
   };
 }
 
 // --- Jobs ---
 
-export async function fetchJobs(limit = 100) {
+export async function fetchJobs(limit = 100, status?: string, source?: string, search?: string) {
   const supabase = createClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("golem_jobs")
     .select("id, title, company, location, url, source, status, match_score, tags, match_reasons, scraped_at, applied_at, created_at")
     .order("created_at", { ascending: false })
     .limit(limit);
+  if (status) {
+    query = query.eq("status", status);
+  }
+  if (source) {
+    query = query.eq("source", source);
+  }
+  if (search) {
+    query = query.or(`title.ilike.%${search}%,company.ilike.%${search}%`);
+  }
+  const { data, error } = await query;
   if (error) throw error;
   return data ?? [];
 }
 
 export async function fetchJobStats() {
   const supabase = createClient();
-  const { data, error } = await supabase
-    .from("golem_jobs")
-    .select("status, match_score, source, created_at");
+  const { data, error } = await supabase.rpc("get_job_stats");
   if (error) throw error;
-
-  const rows = data ?? [];
-  const byStatus: Record<string, number> = {};
-  const bySource: Record<string, number> = {};
-  let totalScore = 0;
-  let scoredCount = 0;
-
-  for (const row of rows) {
-    byStatus[row.status ?? "new"] = (byStatus[row.status ?? "new"] || 0) + 1;
-    bySource[row.source] = (bySource[row.source] || 0) + 1;
-    if (row.match_score != null) {
-      totalScore += row.match_score;
-      scoredCount++;
-    }
-  }
-
-  return {
-    total: rows.length,
-    by_status: byStatus,
-    by_source: bySource,
-    avg_score: scoredCount > 0 ? totalScore / scoredCount : null,
+  return data as {
+    total: number;
+    by_status: Record<string, number>;
+    by_source: Record<string, number>;
+    avg_score: number | null;
   };
 }
 
@@ -378,39 +284,34 @@ export async function fetchScrapeActivity(limit = 30) {
 
 // --- Emails ---
 
-export async function fetchEmails(limit = 50) {
+export async function fetchEmails(limit = 50, category?: string, search?: string) {
   const supabase = createClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("emails")
     .select("id, subject, from_address, snippet, score, category, received_at, human_score, human_category")
     .order("received_at", { ascending: false })
     .limit(limit);
+  if (category) {
+    query = query.or(`category.eq.${category},human_category.eq.${category}`);
+  }
+  if (search) {
+    query = query.or(`subject.ilike.%${search}%,from_address.ilike.%${search}%`);
+  }
+  const { data, error } = await query;
   if (error) throw error;
   return data ?? [];
 }
 
 export async function fetchEmailStats() {
   const supabase = createClient();
-  const { data, error } = await supabase
-    .from("emails")
-    .select("score, category, received_at, human_score, human_category");
+  const { data, error } = await supabase.rpc("get_email_stats");
   if (error) throw error;
-
-  const rows = data ?? [];
-  const byCategory: Record<string, number> = {};
-  const now = Date.now();
-  let last24h = 0;
-  let urgent = 0;
-
-  for (const row of rows) {
-    const effectiveCat = row.human_category ?? row.category ?? "unknown";
-    const effectiveScore = row.human_score ?? row.score ?? 0;
-    byCategory[effectiveCat] = (byCategory[effectiveCat] || 0) + 1;
-    if (now - new Date(row.received_at).getTime() < 24 * 60 * 60 * 1000) last24h++;
-    if (effectiveScore >= 8) urgent++;
-  }
-
-  return { total: rows.length, by_category: byCategory, last_24h: last24h, urgent };
+  return data as {
+    total: number;
+    by_category: Record<string, number>;
+    last_24h: number;
+    urgent: number;
+  };
 }
 
 export async function fetchEmailSenders(limit = 50) {
@@ -431,7 +332,8 @@ export async function fetchOutreachContacts() {
   const { data, error } = await supabase
     .from("outreach_contacts")
     .select("id, name, email, linkedin_url, company, role, source, created_at")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(200);
   if (error) throw error;
   return data ?? [];
 }
@@ -441,34 +343,21 @@ export async function fetchOutreachMessages() {
   const { data, error } = await supabase
     .from("outreach_messages")
     .select("id, contact_id, message_type, status, sent_at, created_at")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(500);
   if (error) throw error;
   return data ?? [];
 }
 
 export async function fetchLinkedInStats() {
   const supabase = createClient();
-  const { data, error } = await supabase
-    .from("linkedin_connections")
-    .select("company, position, connected_on, relationship_strength");
+  const { data, error } = await supabase.rpc("get_linkedin_stats");
   if (error) throw error;
-
-  const rows = data ?? [];
-  const byCompany: Record<string, number> = {};
-  const byStrength: Record<string, number> = {};
-
-  for (const row of rows) {
-    if (row.company) byCompany[row.company] = (byCompany[row.company] || 0) + 1;
-    byStrength[row.relationship_strength ?? "unknown"] = (byStrength[row.relationship_strength ?? "unknown"] || 0) + 1;
-  }
-
-  // Top 10 companies by connection count
-  const topCompanies = Object.entries(byCompany)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 10)
-    .map(([company, count]) => ({ company, count }));
-
-  return { total: rows.length, top_companies: topCompanies, by_strength: byStrength };
+  return data as {
+    total: number;
+    top_companies: Array<{ company: string; count: number }>;
+    by_strength: Record<string, number>;
+  };
 }
 
 // --- Teller ---
@@ -478,7 +367,8 @@ export async function fetchSubscriptions() {
   const { data, error } = await supabase
     .from("subscriptions")
     .select("id, service_name, amount, currency, frequency, status, first_seen, last_payment, created_at")
-    .order("service_name");
+    .order("service_name")
+    .limit(100);
   if (error) throw error;
   return data ?? [];
 }
@@ -505,7 +395,8 @@ export async function fetchWhoopSnapshots(days = 7) {
     .from("whoop_snapshots")
     .select("id, snapshot_date, recovery_score, recovery_state, hrv_rmssd, resting_heart_rate, spo2, skin_temp, sleep_duration_ms, sleep_quality_ms, rem_ms, deep_ms, light_ms, awake_ms, sleep_performance, sleep_consistency, sleep_efficiency, sleep_start, sleep_end, strain, kilojoule, avg_heart_rate, max_heart_rate, created_at")
     .gte("snapshot_date", since.toISOString().slice(0, 10))
-    .order("snapshot_date", { ascending: false });
+    .order("snapshot_date", { ascending: false })
+    .limit(365);
   if (error) throw error;
   return data ?? [];
 }
