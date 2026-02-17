@@ -103,3 +103,4 @@ export { generateDailyPlan, formatPlanForTelegram, formatHealthPlanForTelegram }
 export { getWeeklySummary } from "./tracker";
 export { generateCoaching } from "./coaching-engine";
 export { loadProtocol, saveProtocol } from "./protocol";
+export { syncCalendarToSupabase } from "./calendar-sync";

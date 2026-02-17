@@ -79,6 +79,11 @@ async function getWhoopSync() {
   return mod.syncWhoopToSupabase;
 }
 
+async function getCalendarSync() {
+  const mod = await import("@golems/coach/calendar-sync");
+  return mod.syncCalendarToSupabase;
+}
+
 // ═══════════════════════════════════════════════════════
 // Safe execution wrapper
 // ═══════════════════════════════════════════════════════
@@ -169,6 +174,7 @@ async function safeRun(name: string, fn: () => Promise<unknown>): Promise<void> 
         ["JobGolem", "lastJobRun"],
         ["Briefing", "lastBriefing"],
         ["WhoopSync", "lastWhoopSync"],
+        ["CalendarSync", "lastCalendarSync"],
       ];
       const stateKey = stateKeyPrefixes.find(([prefix]) => name.startsWith(prefix))?.[1];
       if (stateKey) {
@@ -442,11 +448,19 @@ try {
       scheduleDaily("WhoopSync", hour, syncWhoop);
     }
 
+    // Calendar sync: 3 times/day to catch new events
+    // 7am (morning), 12pm (midday), 6pm (evening)
+    const syncCalendar = await getCalendarSync();
+    for (const hour of [7, 12, 18]) {
+      scheduleDaily("CalendarSync", hour, syncCalendar);
+    }
+
     console.log("[CloudWorker] All services scheduled:");
     console.log("  - EmailGolem: hourly 6am-7pm (skip lunch), 10pm final, OFF overnight");
     console.log("  - JobGolem: 6am + 9am + 1pm Sun-Thu (Israeli work week)");
     console.log("  - Briefing: 8am Israel");
     console.log("  - WhoopSync: 7am, 10am, 2pm, 5pm, 8pm Israel");
+    console.log("  - CalendarSync: 7am, 12pm, 6pm Israel");
   } else if (emailOnly) {
     const processEmails = await getEmailGolem();
     scheduleEmail(processEmails);

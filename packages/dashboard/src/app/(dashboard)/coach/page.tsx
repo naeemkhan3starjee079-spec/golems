@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PageSkeleton } from "@/components/skeleton";
-import { fetchWhoopSnapshots, fetchLatestWhoopSnapshot, fetchTodayActivity } from "@/lib/supabase/queries";
+import { fetchWhoopSnapshots, fetchLatestWhoopSnapshot, fetchTodayActivity, fetchTodayCalendarEvents } from "@/lib/supabase/queries";
 import { timeAgo } from "@/lib/format";
 import type { WhoopSnapshot } from "@/lib/types";
 import { getRecoveryColor } from "@/lib/types/coach";
@@ -108,28 +108,39 @@ function SleepBar({ snapshot }: { snapshot: WhoopSnapshot }) {
 
 // --- 7-Day Trend Sparkline ---
 
-function TrendBar({ snapshots, field, max, colorFn }: {
+function TrendBar({ snapshots, field, max, colorFn, formatVal }: {
   snapshots: WhoopSnapshot[];
   field: keyof WhoopSnapshot;
   max: number;
   colorFn?: (val: number) => string;
+  formatVal?: (val: number) => string;
 }) {
+  const BAR_HEIGHT = 32; // px for the bar area
   const sorted = [...snapshots].reverse(); // oldest first
   return (
-    <div className="flex items-end gap-1 h-10">
+    <div className="flex items-end gap-1" role="img" aria-label={`${String(field).replace(/_/g, " ")} trend for last ${sorted.length} days`}>
       {sorted.map((s, i) => {
-        const val = (s[field] as number) ?? 0;
-        const height = Math.max(4, (val / max) * 100);
+        const raw = (s[field] as number) ?? 0;
+        const val = raw;
+        const heightPx = max === 0 ? 2 : Math.max(2, Math.round((val / max) * BAR_HEIGHT));
         const color = colorFn ? colorFn(val) : "bg-accent/60";
+        const label = formatVal ? formatVal(val) : String(Math.round(val));
+        const dayLabel = new Date(s.snapshot_date + "T12:00:00").toLocaleDateString("en", { weekday: "short" });
         return (
           <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
-            <div
-              className={`w-full rounded-sm ${color} transition-all duration-300`}
-              style={{ height: `${height}%` }}
-              title={`${s.snapshot_date}: ${val}`}
-            />
+            <div className="flex items-end" style={{ height: `${BAR_HEIGHT}px` }}>
+              <div
+                className={`w-full min-w-[6px] rounded-sm ${color} transition-all duration-300`}
+                style={{ height: `${heightPx}px` }}
+                role="meter"
+                aria-label={`${dayLabel}: ${label}`}
+                aria-valuenow={val}
+                aria-valuemin={0}
+                aria-valuemax={max}
+              />
+            </div>
             <span className="text-[8px] text-muted/50">
-              {new Date(s.snapshot_date + "T12:00:00").toLocaleDateString("en", { weekday: "narrow" })}
+              {dayLabel.charAt(0) + dayLabel.charAt(1)}
             </span>
           </div>
         );
@@ -148,28 +159,32 @@ function recoveryBarColor(val: number): string {
 
 type ActivityEvent = { type: string; actor: string; data: Record<string, unknown>; created_at: string };
 type ServiceRun = { service: string; started_at: string; ended_at: string | null; duration_ms: number | null; status: string };
+type CalendarEventRow = { event_id: string; summary: string; start_time: string; end_time: string; all_day: boolean; location: string | null; event_date: string };
 
 export default function CoachPage() {
   const [latest, setLatest] = useState<WhoopSnapshot | null>(null);
   const [history, setHistory] = useState<WhoopSnapshot[]>([]);
   const [todayEvents, setTodayEvents] = useState<ActivityEvent[]>([]);
   const [todayRuns, setTodayRuns] = useState<ServiceRun[]>([]);
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEventRow[]>([]);
   const [loaded, setLoaded] = useState(false);
   const fetchIdRef = useRef(0);
 
   const fetchAll = useCallback(async () => {
     const id = ++fetchIdRef.current;
     try {
-      const [snap, hist, activity] = await Promise.all([
+      const [snap, hist, activity, cal] = await Promise.all([
         fetchLatestWhoopSnapshot(),
         fetchWhoopSnapshots(7),
         fetchTodayActivity(),
+        fetchTodayCalendarEvents(),
       ]);
       if (id !== fetchIdRef.current) return;
       setLatest(snap);
       setHistory(hist);
       setTodayEvents(activity.events as ActivityEvent[]);
       setTodayRuns(activity.runs as ServiceRun[]);
+      setCalendarEvents(cal as CalendarEventRow[]);
     } catch {
       // silent
     } finally {
@@ -382,6 +397,7 @@ export default function CoachPage() {
               field="sleep_duration_ms"
               max={10 * 3600000}
               colorFn={() => "bg-violet-400/60"}
+              formatVal={(v) => `${(v / 3600000).toFixed(1)}h`}
             />
           </div>
           <div className="rounded-xl border border-border bg-surface p-4 space-y-2">
@@ -431,19 +447,61 @@ export default function CoachPage() {
       })()}
 
       {/* Calendar Events */}
-      <div className="rounded-xl border border-border/60 bg-surface/30 p-5 space-y-3">
-        <div className="flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-accent" />
-          <span className="text-xs font-semibold uppercase tracking-wider text-muted">Calendar Events</span>
+      <div className="rounded-xl border border-border bg-surface p-5 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-accent" />
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted">Calendar Events</span>
+          </div>
+          {calendarEvents.length > 0 && (
+            <span className="text-[10px] text-muted tabular-nums">{calendarEvents.length} events</span>
+          )}
         </div>
-        <div className="text-center py-6 text-muted">
-          <Calendar className="w-8 h-8 mx-auto mb-2 opacity-20" />
-          <p className="text-xs">Calendar sync is available locally but not yet wired to the cloud dashboard.</p>
-          <p className="text-[10px] text-muted/50 mt-1">
-            The coach golem reads Google Calendar via <code className="bg-surface px-1 py-0.5 rounded">calendar-client.ts</code>
-          </p>
-        </div>
-      </div>
+        {calendarEvents.length === 0 ? (
+          <div className="text-center py-4 text-muted">
+            <Calendar className="w-6 h-6 mx-auto mb-2 opacity-20" />
+            <p className="text-xs">No calendar events synced for today</p>
+            <p className="text-[10px] text-muted/50 mt-1">Events sync 3x/day from Google Calendar</p>
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {calendarEvents.map((evt) => {
+              const start = new Date(evt.start_time);
+              const end = new Date(evt.end_time);
+              const timeStr = evt.all_day
+                ? "All day"
+                : `${start.toLocaleTimeString("en-IL", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Jerusalem" })} \u2013 ${end.toLocaleTimeString("en-IL", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Jerusalem" })}`;
+              const now = new Date();
+              // All-day events use midnight UTC timestamps — compare by date only
+              const isPast = evt.all_day
+                ? end.toLocaleDateString("en-CA", { timeZone: "Asia/Jerusalem" }) < now.toLocaleDateString("en-CA", { timeZone: "Asia/Jerusalem" })
+                : end < now;
+              const isCurrent = evt.all_day
+                ? start.toLocaleDateString("en-CA", { timeZone: "Asia/Jerusalem" }) <= now.toLocaleDateString("en-CA", { timeZone: "Asia/Jerusalem" }) && !isPast
+                : start <= now && end >= now;
+
+              return (
+                <div
+                  key={evt.event_id}
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2 ${
+                    isCurrent ? "bg-accent/10 border border-accent/20" : isPast ? "opacity-50" : "bg-background/40"
+                  }`}
+                >
+                  <div className={`w-1 h-8 rounded-full shrink-0 ${
+                    isCurrent ? "bg-accent" : isPast ? "bg-border" : "bg-accent/30"
+                  }`} />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs font-medium truncate">{evt.summary}</div>
+                    <div className="text-[10px] text-muted flex items-center gap-2">
+                      <span>{timeStr}</span>
+                      {evt.location && <span className="truncate">{evt.location}</span>}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}</div>
 
       {/* Protocol Reminders */}
       <div className="rounded-xl border border-border bg-surface p-5 space-y-3">

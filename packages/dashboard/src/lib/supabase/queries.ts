@@ -413,6 +413,19 @@ export async function fetchTodayActivity() {
   return { events: events ?? [], runs: runs ?? [] };
 }
 
+export async function fetchTodayCalendarEvents() {
+  const supabase = createClient();
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Jerusalem" });
+
+  const { data, error } = await supabase
+    .from("calendar_events")
+    .select("event_id, summary, start_time, end_time, all_day, location, event_date")
+    .eq("event_date", today)
+    .order("start_time", { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function fetchLatestWhoopSnapshot() {
   const supabase = createClient();
   // Prefer snapshots with actual recovery data (skip partial syncs with null values)

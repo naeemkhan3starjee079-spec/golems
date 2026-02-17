@@ -186,7 +186,7 @@ async function getAccessToken(): Promise<string> {
 }
 
 /** Make an authenticated GET request to Whoop API */
-async function whoopGet<T>(
+export async function whoopGet<T>(
   path: string,
   params?: Record<string, string>,
 ): Promise<T> {
