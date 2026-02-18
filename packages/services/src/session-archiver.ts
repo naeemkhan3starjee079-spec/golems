@@ -26,6 +26,9 @@ const CLAUDE_JSON_PATH = join(homedir(), ".claude.json");
 // Safety: Don't archive sessions modified in last N minutes (likely active)
 const ACTIVE_SESSION_THRESHOLD_MS = 60 * 60 * 1000; // 1 hour
 
+// Safety: NEVER archive sessions younger than this (even if outside activity window)
+const MIN_SESSION_AGE_DAYS = 7;
+
 // Archive locations (local first for instant access, then optionally sync to cloud)
 // Research: iCloud can evict files, causing download latency when re-indexing
 const LOCAL_ARCHIVE_DIR = join(homedir(), ".claude-archive");
@@ -79,15 +82,58 @@ interface ArchiveManifest {
 }
 
 /**
- * Decode Claude's path encoding back to original path
- * e.g., "-Users-etanheyman-Gits-claude-golem" → "/Users/etanheyman/Gits/claude-golem"
+ * Decode Claude's path encoding back to original path.
+ *
+ * IMPORTANT: Naive dash→slash replacement breaks on directory names that
+ * contain dashes (e.g., "rudy-monorepo" becomes "rudy/monorepo" which
+ * doesn't exist, causing the project to be falsely marked as orphaned).
+ *
+ * Strategy:
+ * 1. Read sessions-index.json (has the real originalPath)
+ * 2. Fall back to iterative path resolution (try longest existing prefix)
+ * 3. Last resort: naive replacement (may be wrong)
  */
 function decodeProjectPath(encoded: string): string {
-  // Replace leading dash with /
-  // Then replace remaining dashes with /
-  // Handle edge case: root "/" is encoded as just "-"
   if (encoded === "-") return "/";
-  return "/" + encoded.slice(1).replace(/-/g, "/");
+
+  // Strategy 1: Read sessions-index.json for the authoritative path
+  const indexPath = join(CLAUDE_PROJECTS_DIR, encoded, "sessions-index.json");
+  if (existsSync(indexPath)) {
+    try {
+      const index = JSON.parse(readFileSync(indexPath, "utf-8"));
+      if (index.originalPath && typeof index.originalPath === "string") {
+        return index.originalPath;
+      }
+    } catch {
+      // Fall through to strategy 2
+    }
+  }
+
+  // Strategy 2: Iterative resolution — split on dashes and try combining
+  // segments until we find existing directories
+  const segments = encoded.slice(1).split("-"); // Remove leading dash, split
+  let resolved = "";
+  let i = 0;
+  while (i < segments.length) {
+    // Try progressively longer dash-joined segments
+    let found = false;
+    for (let j = segments.length; j > i; j--) {
+      const candidate = resolved + "/" + segments.slice(i, j).join("-");
+      if (existsSync(candidate)) {
+        resolved = candidate;
+        i = j;
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      // No existing path found — just append single segment
+      resolved += "/" + segments[i];
+      i++;
+    }
+  }
+
+  return resolved;
 }
 
 /**
@@ -555,6 +601,7 @@ async function main(): Promise<void> {
   console.log("=".repeat(60));
   console.log(`Mode: ${dryRun ? "DRY RUN (use --execute to apply)" : "EXECUTING"}`);
   console.log(`Activity days to keep: ${sessionsToKeep} (keeps ALL sessions from those days)`);
+  console.log(`Minimum session age: ${MIN_SESSION_AGE_DAYS} days (NEVER archive younger sessions)`);
   console.log(`Archive location: ${LOCAL_ARCHIVE_DIR}`);
   console.log();
 
@@ -575,13 +622,17 @@ async function main(): Promise<void> {
     let sortedDays: string[] = [];
     let cutoffDay: string | null = null;
 
+    // Safety: calculate minimum age cutoff — never archive sessions younger than MIN_SESSION_AGE_DAYS
+    const minAgeCutoff = new Date(Date.now() - MIN_SESSION_AGE_DAYS * 24 * 60 * 60 * 1000);
+
     if (isOrphan) {
-      // ORPHAN PROJECT: Archive ALL sessions (project no longer exists)
-      toArchive = project.sessions;
-      keptCount = 0;
-      console.log(`\nProject: ${project.projectId} [ORPHANED - archiving all]`);
+      // ORPHAN PROJECT: Archive sessions older than MIN_SESSION_AGE_DAYS
+      // (even orphans might have recent sessions the user wants to --continue)
+      toArchive = project.sessions.filter(s => s.mtime < minAgeCutoff);
+      keptCount = project.sessions.length - toArchive.length;
+      console.log(`\nProject: ${project.projectId} [ORPHANED]`);
       console.log(`  Path: ${project.decodedPath} (no longer exists)`);
-      console.log(`  Archiving ALL ${toArchive.length} sessions`);
+      console.log(`  Archiving ${toArchive.length} sessions older than ${MIN_SESSION_AGE_DAYS}d (keeping ${keptCount} recent)`);
     } else {
       // ACTIVE PROJECT: Keep last N days of activity
       // Find unique activity days (not sessions, DAYS of work)
@@ -596,9 +647,11 @@ async function main(): Promise<void> {
       cutoffDay = sortedDays[Math.min(sessionsToKeep - 1, sortedDays.length - 1)];
 
       // Keep sessions from the last N days of activity, archive the rest
+      // ALSO: never archive sessions younger than MIN_SESSION_AGE_DAYS
       toArchive = project.sessions.filter(s => {
+        // Must be outside the activity window AND older than MIN_SESSION_AGE_DAYS
         const sessionDay = s.mtime.toISOString().slice(0, 10);
-        return sessionDay < cutoffDay;
+        return sessionDay < cutoffDay && s.mtime < minAgeCutoff;
       });
 
       keptCount = project.sessions.length - toArchive.length;
@@ -607,7 +660,7 @@ async function main(): Promise<void> {
       console.log(`  Path: ${project.decodedPath}`);
       console.log(`  Activity: ${sortedDays.length} days, keeping ${Math.min(sortedDays.length, sessionsToKeep)} days (${keptCount} sessions), archiving ${toArchive.length} sessions`);
       if (toArchive.length > 0 && cutoffDay) {
-        console.log(`  Cutoff: ${cutoffDay} (archiving sessions before this date)`);
+        console.log(`  Cutoff: ${cutoffDay} (archiving sessions before this date, min age: ${MIN_SESSION_AGE_DAYS}d)`);
       }
     }
 
