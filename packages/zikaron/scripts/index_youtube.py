@@ -55,6 +55,8 @@ CHUNK_OVERLAP_CHARS = 200
 # Transcript extraction via youtube-transcript-api (primary — avoids yt-dlp 429s)
 # ---------------------------------------------------------------------------
 
+_yt_api = YouTubeTranscriptApi()  # Reuse single instance across calls
+
 def get_transcript_via_api(video_id: str) -> list[dict] | None:
     """Fetch transcript using youtube-transcript-api (v1.2.4+).
 
@@ -63,9 +65,8 @@ def get_transcript_via_api(video_id: str) -> list[dict] | None:
     Returns list of {"text": str, "start": float, "duration": float}.
     """
     try:
-        api = YouTubeTranscriptApi()
         # list() returns TranscriptList; try manual first, then auto
-        transcript_list = api.list(video_id)
+        transcript_list = _yt_api.list(video_id)
         transcript = None
         try:
             transcript = transcript_list.find_manually_created_transcript(["en"])
