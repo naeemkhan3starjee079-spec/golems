@@ -4,7 +4,7 @@
 
 ## Architecture (Approach B: MCP Server)
 
-```
+```text
 Terminal Tab 1 (Claude Code)          Terminal Tab 2 (Mic)
 ┌──────────────────────────┐          ┌─────────────────────┐
 │ Claude Code session      │          │ mic.sh              │
@@ -27,11 +27,11 @@ Flow: Claude → ask("How's the nav?") → edge-tts speaks → F5 opens Wispr
 
 ## Research Sources
 
-All research files in `/tmp/`:
-- `claude-qa-golem-research.md` — Main architecture (469 sources, Claude web)
-- `gemini-qa-golem-research.md` — Wispr Flow automation, edge-tts streaming, AI QA tools
-- `cursor-qa-golem-audit.md` — Monorepo structure, notify pattern, skill vs package
-- `claude-qa-golem-followup-convo.md` — MCP server architecture (the winning approach)
+Research files were in `/tmp/` (ephemeral — may be lost after reboot). Key decisions are captured in the plan:
+- Claude web research — Main architecture, 3 approaches compared
+- Gemini research — Wispr Flow automation, edge-tts streaming, AI QA tools landscape
+- Cursor IDE audit — Monorepo structure, notify pattern, skill vs package analysis
+- Claude follow-up — MCP server architecture (the winning approach)
 
 ## Progress
 
@@ -56,7 +56,7 @@ All research files in `/tmp/`:
 - **Skill structure**: See `skills/golem-powers/` for skill file patterns
 - **Agent format**: See `.claude/agents/` for agent .md format
 - **edge-tts npm**: `edge-tts-universal` package works natively in Bun
-- **Wispr F5 keycode**: 96 (external keyboard), 176 (Mac built-in) — see `memory/wispr-flow-f5-fix.md`
+- **Wispr F5 keycode**: 96 (external keyboard), 176 (Mac built-in)
 - **MCP timeout**: Set to 300s for voice tools (user may take time to respond)
 
 ## Cost

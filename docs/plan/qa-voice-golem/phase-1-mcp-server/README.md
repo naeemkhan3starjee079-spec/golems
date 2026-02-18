@@ -24,21 +24,22 @@ qa_voice_ask({ message: string, timeout?: number }) => string
 qa_voice_say({ message: string }) => void
 ```
 
-### Input channel: File watcher pattern
+### Input channel: File polling pattern
 
-MCP servers communicate with Claude Code via their own stdin/stdout pipe — they CAN'T read the terminal's stdin. Solution: file watcher.
+MCP servers communicate with Claude Code via their own stdin/stdout pipe — they CAN'T read the terminal's stdin. Solution: file polling.
 
-```
-MCP server polls /tmp/golems-qa-input.txt
+```text
+MCP server polls /tmp/golems-qa-input.txt (interval: ~200ms)
 mic.sh (separate terminal) writes to that file when user hits Enter
 ```
 
 ### TTS: edge-tts-universal
 
 ```typescript
-import { Communicate } from 'edge-tts-universal';
-const tts = new Communicate(text, { voice: 'en-US-EmmaMultilingualNeural' });
-await tts.save('/tmp/golems-tts.mp3');
+import { EdgeTTS } from 'edge-tts-universal';
+const tts = new EdgeTTS(text, 'en-US-EmmaMultilingualNeural');
+const result = await tts.synthesize();
+await Bun.write('/tmp/golems-tts.mp3', Buffer.from(await result.audio.arrayBuffer()));
 await Bun.spawn(['afplay', '/tmp/golems-tts.mp3']).exited;
 ```
 
@@ -47,6 +48,7 @@ Fallback: `say` command (macOS built-in, 50ms latency but robotic).
 ### F5 automation (optional, enhance in Phase 2)
 
 After TTS playback, simulate F5 to open Wispr Flow:
+
 ```bash
 osascript -e 'tell application "System Events" to key code 96'
 ```
@@ -64,7 +66,7 @@ osascript -e 'tell application "System Events" to key code 96'
 
 ## File Structure
 
-```
+```text
 packages/qa-voice/
 ├── src/
 │   ├── mcp-server.ts      # Main MCP server (~150 lines)
