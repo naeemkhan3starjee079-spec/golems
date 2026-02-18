@@ -1,6 +1,6 @@
 # Golems Monorepo
 
-> Autonomous AI agent ecosystem — Bun workspace with 13 packages. Each golem is a self-contained CC plugin.
+> Autonomous AI agent ecosystem — Bun workspace with 14 packages. Each golem is a self-contained CC plugin.
 
 ---
 
@@ -22,6 +22,7 @@
 | **tax-helper** | [`packages/tax-helper/`](packages/tax-helper/CLAUDE.md) | Schedule C transaction categorization (Sophtron MCP) |
 | **ralph** | [`packages/ralph/`](packages/ralph/CLAUDE.md) | Autonomous coding loop (PRD execution) |
 | **zikaron** | [`packages/zikaron/`](packages/zikaron/CLAUDE.md) | Memory layer (Python + sqlite-vec, 260K+ chunks, 10-field enrichment) |
+| **qa-voice** | [`packages/qa-voice/`](packages/qa-voice/CLAUDE.md) | Voice-powered QA & client discovery (MCP server, edge-tts, Wispr Flow) |
 
 **Always read the package-specific CLAUDE.md when working in that package.**
 
@@ -46,6 +47,7 @@ golems/                              # Bun workspace monorepo
 ├── packages/autonomous/             # Legacy stranglers (1-line re-exports)
 ├── packages/ralph/                  # Autonomous coding loop (PRD execution)
 ├── packages/zikaron/                # Memory layer (Python + sqlite-vec)
+├── packages/qa-voice/               # Voice QA & discovery (MCP server)
 ├── launchd/                         # macOS service plists
 ├── Dockerfile                       # Root workspace Dockerfile (Railway)
 └── railway.json                     # Railway deploy config
