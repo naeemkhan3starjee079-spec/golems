@@ -119,13 +119,13 @@ E-commerce site with custom CMS...
 
 ## Status
 
-- [ ] Create discovery agent system prompt
-- [ ] Define discovery checklist schema
-- [ ] Implement discovery checklist writer
-- [ ] Create brief renderer (JSON to markdown)
-- [ ] Write discovery category templates
-- [ ] Add suggest mode (whisper follow-ups)
-- [ ] Add red flag detection
-- [ ] Test with mock discovery call
-- [ ] Write discovery schema tests
-- [ ] Write brief renderer tests
+- [x] Create discovery agent system prompt (.claude/agents/discovery-voice.md)
+- [x] Define discovery checklist schema (schemas/discovery.ts)
+- [x] Implement discovery checklist writer (addChecklistItem, updateChecklistItem, getOpenQuestions)
+- [x] Create brief renderer (brief.ts — JSON to markdown)
+- [x] Write discovery category templates (7 categories, 23 questions, voice prompts)
+- [x] Suggest mode defined in agent prompt (whisper between topics)
+- [x] Red flag detection (addRedFlag, severity levels, 7 signal patterns in agent prompt)
+- [ ] Test with mock discovery call (needs manual session)
+- [x] Write discovery schema tests (7 tests)
+- [x] Write brief renderer tests (8 tests)
