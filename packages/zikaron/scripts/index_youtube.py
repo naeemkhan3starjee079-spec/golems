@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import Any
 
 import yt_dlp
+from youtube_transcript_api import YouTubeTranscriptApi
 
 # Add zikaron to path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
@@ -51,11 +52,58 @@ CHUNK_OVERLAP_CHARS = 200
 
 
 # ---------------------------------------------------------------------------
-# Transcript extraction via yt-dlp
+# Transcript extraction via youtube-transcript-api (primary — avoids yt-dlp 429s)
+# ---------------------------------------------------------------------------
+
+def get_transcript_via_api(video_id: str) -> list[dict] | None:
+    """Fetch transcript using youtube-transcript-api (v1.2.4+).
+
+    Uses a different internal YouTube endpoint than yt-dlp,
+    so it often works when yt-dlp subtitle downloads are 429'd.
+    Returns list of {"text": str, "start": float, "duration": float}.
+    """
+    try:
+        api = YouTubeTranscriptApi()
+        # list() returns TranscriptList; try manual first, then auto
+        transcript_list = api.list(video_id)
+        transcript = None
+        try:
+            transcript = transcript_list.find_manually_created_transcript(["en"])
+        except Exception:
+            try:
+                transcript = transcript_list.find_generated_transcript(["en"])
+            except Exception:
+                pass
+
+        if not transcript:
+            return None
+
+        fetched = transcript.fetch()
+        segments = []
+        for entry in fetched:
+            text = entry.text.strip()
+            if text and text not in ("[Music]", "[Applause]", "[Laughter]"):
+                segments.append({
+                    "text": text,
+                    "start": entry.start,
+                    "duration": entry.duration,
+                })
+        return segments if segments else None
+    except Exception as e:
+        log.warning(f"  youtube-transcript-api failed: {e}")
+        return None
+
+
+# ---------------------------------------------------------------------------
+# Transcript extraction via yt-dlp (fallback)
 # ---------------------------------------------------------------------------
 
 def extract_video_info(video_url: str) -> dict[str, Any] | None:
-    """Extract metadata + subtitles for a single video."""
+    """Extract metadata + subtitles for a single video.
+
+    Uses Brave browser cookies to bypass YouTube IP bans on subtitle requests.
+    Uses process=False to skip format selection (avoids 'format not available' errors).
+    """
     opts = {
         "skip_download": True,
         "writesubtitles": True,
@@ -63,10 +111,11 @@ def extract_video_info(video_url: str) -> dict[str, Any] | None:
         "subtitleslangs": ["en", "en-orig", "en.*"],
         "quiet": True,
         "no_warnings": True,
+        "cookiesfrombrowser": ("brave",),
     }
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:
-            return ydl.extract_info(video_url, download=False)
+            return ydl.extract_info(video_url, download=False, process=False)
     except Exception as e:
         log.warning(f"Failed to extract {video_url}: {e}")
         return None
@@ -91,6 +140,7 @@ def get_transcript_via_download(video_url: str) -> list[dict] | None:
             "outtmpl": f"{tmpdir}/%(id)s.%(ext)s",
             "quiet": True,
             "no_warnings": True,
+            "cookiesfrombrowser": ("brave",),
         }
         try:
             with yt_dlp.YoutubeDL(opts) as ydl:
@@ -266,6 +316,7 @@ def list_channel_videos(channel_id: str) -> list[dict]:
         "extract_flat": True,
         "quiet": True,
         "no_warnings": True,
+        "cookiesfrombrowser": ("brave",),
     }
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:
@@ -292,6 +343,7 @@ def list_playlist_videos(playlist_id: str) -> list[dict]:
         "extract_flat": True,
         "quiet": True,
         "no_warnings": True,
+        "cookiesfrombrowser": ("brave",),
     }
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:
@@ -481,9 +533,11 @@ def index_single_video(
     log.info(f"  Title: {title}")
     log.info(f"  Chapters: {len(chapters)}")
 
-    # Get transcript — try download method first (avoids rate limits),
-    # fall back to URL-based extraction from info dict
-    segments = get_transcript_via_download(video_url)
+    # Get transcript — try youtube-transcript-api first (different endpoint,
+    # avoids yt-dlp 429s), then yt-dlp download, then URL-based extraction
+    segments = get_transcript_via_api(video_id)
+    if not segments:
+        segments = get_transcript_via_download(video_url)
     if not segments:
         segments = get_transcript_from_info(info)
     if not segments:
