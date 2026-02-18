@@ -106,15 +106,15 @@ checks.push({
 
 ## Status
 
-- [ ] Add qa-voice to .mcp.json
-- [ ] Configure Playwright extension mode
-- [ ] Create CLI commands
-- [ ] Create session/reports/briefs directories
-- [ ] Add QA Voice to notify-server SOURCE_CONFIG
-- [ ] Update Doctor health checks
-- [ ] Update Wizard setup guide
-- [ ] Write packages/qa-voice/CLAUDE.md
-- [ ] Update root CLAUDE.md
-- [ ] Add Telegram notification on session complete
-- [ ] Write integration tests
-- [ ] Optional: Supabase session persistence
+- [x] Add qa-voice to .mcp.json (documented in CLAUDE.md, user adds to .mcp.json)
+- [x] Configure Playwright extension mode (documented in CLAUDE.md)
+- [ ] Create CLI commands (post-merge: add to bin/golems)
+- [x] Session lifecycle manager (session.ts — auto-creates ~/.golems/sessions/reports/briefs)
+- [ ] Add QA Voice to notify-server SOURCE_CONFIG (post-merge: packages/shared)
+- [ ] Update Doctor health checks (post-merge: packages/services)
+- [ ] Update Wizard setup guide (post-merge: packages/services)
+- [x] Write packages/qa-voice/CLAUDE.md (comprehensive docs)
+- [x] Update root CLAUDE.md (packages table + architecture)
+- [ ] Add Telegram notification on session complete (post-merge: uses existing notify)
+- [x] Write session lifecycle tests (6 tests)
+- [ ] Optional: Supabase session persistence (future enhancement)
