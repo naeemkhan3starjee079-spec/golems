@@ -2,12 +2,13 @@
 
 import { useEffect, useState, useCallback, useMemo, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import type { BrainGraph as BrainGraphType, GraphNode } from "@/lib/types";
+import type { BrainGraph as BrainGraphType, GraphNode, GraphFilters } from "@/lib/types";
 import { BrainGraph3D } from "@/components/brain-graph";
 import { BrainMinimap } from "@/components/brain-minimap";
 import { NodePanel } from "@/components/node-panel";
 import { BrainSearch } from "@/components/brain-search";
 import { BrainStats } from "@/components/brain-stats";
+import { BrainFilters } from "@/components/brain-filters";
 import { PageSkeleton } from "@/components/skeleton";
 import { downloadGraph } from "@/lib/supabase/graph";
 import { Camera, Maximize2, Minimize2 } from "lucide-react";
@@ -17,6 +18,7 @@ function BrainViewContent() {
   const [error, setError] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [filters, setFilters] = useState<GraphFilters>({ projects: [], sources: [], intents: [] });
   const [presenting, setPresenting] = useState(false);
   const graphRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -100,6 +102,19 @@ function BrainViewContent() {
     ).length;
   }, [graph, searchQuery]);
 
+  // Filter match count
+  const filterMatchCount = useMemo(() => {
+    if (!graph) return 0;
+    const hasFilters = filters.projects.length > 0 || filters.sources.length > 0 || filters.intents.length > 0;
+    if (!hasFilters) return graph.nodes.length;
+    return graph.nodes.filter((n) => {
+      if (filters.projects.length > 0 && !filters.projects.includes(n.project)) return false;
+      if (filters.sources.length > 0 && !filters.sources.includes(n.source ?? "unknown")) return false;
+      if (filters.intents.length > 0 && !filters.intents.includes(n.color_type)) return false;
+      return true;
+    }).length;
+  }, [graph, filters]);
+
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-4 text-muted">
@@ -150,6 +165,16 @@ function BrainViewContent() {
         />
       )}
 
+      {/* Filters overlay — hidden in presentation mode */}
+      {!presenting && (
+        <BrainFilters
+          graph={graph}
+          filters={filters}
+          onChange={setFilters}
+          matchCount={filterMatchCount}
+        />
+      )}
+
       {/* Stats overlay — hidden in presentation mode */}
       {!presenting && <BrainStats graph={graph} />}
 
@@ -158,6 +183,7 @@ function BrainViewContent() {
         ref={graphRef}
         graph={graph}
         searchQuery={presenting ? "" : searchQuery}
+        filters={presenting ? { projects: [], sources: [], intents: [] } : filters}
         onNodeClick={handleNodeClick}
         selectedNodeId={selectedNode?.id ?? null}
       />

@@ -36,4 +36,11 @@ export function getNodeSize(size: number, enriched: boolean): number {
   return Math.max(1, base);
 }
 
-export { TYPE_COLORS, DIM_COLOR_HEX };
+const SOURCE_COLORS: Record<string, string> = {
+  claude_code: "#60A5FA", // blue
+  whatsapp: "#34D399", // green
+  youtube: "#FB7185", // rose
+  unknown: "#94A3B8", // gray
+};
+
+export { TYPE_COLORS, SOURCE_COLORS, DIM_COLOR_HEX };

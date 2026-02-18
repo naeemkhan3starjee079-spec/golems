@@ -12,6 +12,7 @@ export type GraphNode = {
   z: number;
   size: number;
   color_type: string;
+  source?: string;
   project: string;
   branch: string;
   plan: string;
@@ -49,6 +50,12 @@ export type GraphMeta = {
     medium: number;
     fine: number;
   };
+};
+
+export type GraphFilters = {
+  projects: string[];
+  sources: string[];
+  intents: string[];
 };
 
 export type BrainGraph = {

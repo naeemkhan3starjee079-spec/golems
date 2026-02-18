@@ -1,7 +1,7 @@
 "use client";
 
 import { forwardRef, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { BrainGraph, GraphNode } from "@/lib/types";
+import type { BrainGraph, GraphNode, GraphFilters } from "@/lib/types";
 import {
   getNodeColorHex,
   getEmissiveIntensity,
@@ -21,6 +21,7 @@ const ForceGraph3D = dynamic(() => import("react-force-graph-3d"), {
 type Props = {
   graph: BrainGraph;
   searchQuery: string;
+  filters: GraphFilters;
   onNodeClick: (node: GraphNode | null) => void;
   selectedNodeId: string | null;
 };
@@ -61,6 +62,7 @@ function smoothstep(t: number): number {
 export const BrainGraph3D = forwardRef<any, Props>(function BrainGraph3D({
   graph,
   searchQuery,
+  filters,
   onNodeClick,
   selectedNodeId,
 }, ref) {
@@ -214,6 +216,20 @@ export const BrainGraph3D = forwardRef<any, Props>(function BrainGraph3D({
     return ids;
   }, [graph.nodes, searchQuery]);
 
+  // Build filter-matching set
+  const filteredIds = useMemo(() => {
+    const hasFilters = filters.projects.length > 0 || filters.sources.length > 0 || filters.intents.length > 0;
+    if (!hasFilters) return null;
+    const ids = new Set<string>();
+    for (const node of graph.nodes) {
+      if (filters.projects.length > 0 && !filters.projects.includes(node.project)) continue;
+      if (filters.sources.length > 0 && !filters.sources.includes(node.source ?? "unknown")) continue;
+      if (filters.intents.length > 0 && !filters.intents.includes(node.color_type)) continue;
+      ids.add(node.id);
+    }
+    return ids;
+  }, [graph.nodes, filters]);
+
   // Build neighbor set for selected node (1-hop)
   const neighborIds = useMemo(() => {
     if (!selectedNodeId) return null;
@@ -337,7 +353,7 @@ export const BrainGraph3D = forwardRef<any, Props>(function BrainGraph3D({
     [midBlend, closeBlend]
   );
 
-  // Node color with search/selection highlighting
+  // Node color with search/filter/selection highlighting
   const nodeColor = useCallback(
     (node: any) => {
       if (node.isSuperNode) {
@@ -345,6 +361,11 @@ export const BrainGraph3D = forwardRef<any, Props>(function BrainGraph3D({
       }
       const n = node as GraphNode;
       const enriched = isEnriched(n);
+
+      // Filter: dim non-matching nodes
+      if (filteredIds && !filteredIds.has(n.id)) {
+        return "rgba(30, 41, 59, 0.1)";
+      }
 
       // Search filtering: dim non-matching nodes
       if (matchingIds && !matchingIds.has(n.id)) {
@@ -358,7 +379,7 @@ export const BrainGraph3D = forwardRef<any, Props>(function BrainGraph3D({
 
       return getNodeColorHex(n.color_type, enriched);
     },
-    [matchingIds, neighborIds]
+    [filteredIds, matchingIds, neighborIds]
   );
 
   // Node size (super-nodes: member count; real: composite score)
@@ -371,14 +392,16 @@ export const BrainGraph3D = forwardRef<any, Props>(function BrainGraph3D({
       const enriched = isEnriched(n);
       let size = getNodeSize(n.size, enriched);
 
+      // Shrink filtered-out nodes
+      if (filteredIds && !filteredIds.has(n.id)) size *= 0.3;
       // Boost matched search results
-      if (matchingIds?.has(n.id)) size *= 1.5;
+      else if (matchingIds?.has(n.id)) size *= 1.5;
       // Boost selected node
       if (n.id === selectedNodeId) size *= 2;
 
       return size;
     },
-    [matchingIds, selectedNodeId]
+    [filteredIds, matchingIds, selectedNodeId]
   );
 
   // Edge color
@@ -396,16 +419,24 @@ export const BrainGraph3D = forwardRef<any, Props>(function BrainGraph3D({
         return "rgba(30, 41, 59, 0.03)";
       }
 
-      if (matchingIds) {
-        if (matchingIds.has(src) || matchingIds.has(tgt)) {
-          return "rgba(139, 92, 246, 0.3)";
-        }
+      // Check if endpoints pass both filters and search
+      const srcPassesFilter = !filteredIds || filteredIds.has(src);
+      const tgtPassesFilter = !filteredIds || filteredIds.has(tgt);
+      const srcPassesSearch = !matchingIds || matchingIds.has(src);
+      const tgtPassesSearch = !matchingIds || matchingIds.has(tgt);
+
+      const srcVisible = srcPassesFilter && srcPassesSearch;
+      const tgtVisible = tgtPassesFilter && tgtPassesSearch;
+
+      if (srcVisible && tgtVisible) {
+        return (filteredIds || matchingIds) ? "rgba(148, 163, 184, 0.1)" : "rgba(148, 163, 184, 0.06)";
+      }
+      if (srcVisible || tgtVisible) {
         return "rgba(30, 41, 59, 0.03)";
       }
-
-      return "rgba(148, 163, 184, 0.06)";
+      return "rgba(30, 41, 59, 0.01)";
     },
-    [matchingIds, neighborIds]
+    [filteredIds, matchingIds, neighborIds]
   );
 
   // Edge width
@@ -510,12 +541,13 @@ export const BrainGraph3D = forwardRef<any, Props>(function BrainGraph3D({
         targetOpacity = farBlend;
       } else {
         targetOpacity = Math.max(midBlend, closeBlend);
-        if (matchingIds && !matchingIds.has(node.id)) targetOpacity *= 0.08;
+        if (filteredIds && !filteredIds.has(node.id)) targetOpacity *= 0.06;
+        else if (matchingIds && !matchingIds.has(node.id)) targetOpacity *= 0.08;
         else if (neighborIds && !neighborIds.has(node.id)) targetOpacity *= 0.1;
       }
       mat.opacity = THREE.MathUtils.lerp(mat.opacity, targetOpacity, 0.08);
     },
-    [farBlend, midBlend, closeBlend, matchingIds, neighborIds]
+    [farBlend, midBlend, closeBlend, filteredIds, matchingIds, neighborIds]
   );
 
   // Node label: FAR=all super-nodes, MID=importance>7, CLOSE=hover only
