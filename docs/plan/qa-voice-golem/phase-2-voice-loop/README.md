@@ -37,10 +37,11 @@ Claude calls qa_voice_ask("question")
 5. Pick optimal voice: test EmmaMultilingual, Aria, Guy neural voices
 6. Implement F5 automation via osascript (key code 96 external, 176 Mac built-in)
 7. Test Accessibility permissions: iTerm2 needs permission for keystroke simulation
-8. End-to-end test: Claude Code session with ask tool, speech, Wispr, mic.sh, response
-9. Write tests for TTS module (mock afplay, verify edge-tts calls)
-10. Write tests for file watcher (timing, cleanup, concurrent access)
-11. Document latency benchmarks (ask call to audio start, audio end to response)
+8. Test MCP server with MCP inspector (deferred from Phase 1 — verify all 3 tools: ask, say, think)
+9. End-to-end test: Claude Code session with ask tool, speech, Wispr, mic.sh, response
+10. Write tests for TTS module (mock afplay, verify edge-tts calls)
+11. Write tests for file watcher (timing, cleanup, concurrent access)
+12. Document latency benchmarks (ask call to audio start, audio end to response)
 
 ## Depends On
 
@@ -55,6 +56,7 @@ Claude calls qa_voice_ask("question")
 - [ ] Pick optimal TTS voice
 - [ ] Implement F5 automation
 - [ ] Test Accessibility permissions
+- [ ] Test MCP server with MCP inspector (deferred from Phase 1)
 - [ ] End-to-end voice loop test
 - [ ] Write TTS module tests
 - [ ] Write file watcher tests

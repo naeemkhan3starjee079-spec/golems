@@ -80,11 +80,13 @@ packages/qa-voice/
 
 ## Status
 
-- [ ] Create package structure
-- [ ] Install edge-tts-universal
-- [ ] Implement MCP server with stdio transport
-- [ ] Implement qa_voice_ask tool
-- [ ] Implement qa_voice_say tool
-- [ ] Add macOS say fallback
-- [ ] Test with MCP inspector
-- [ ] Set 300s timeout
+- [x] Create package structure
+- [x] Install edge-tts-universal
+- [x] Implement MCP server with stdio transport
+- [x] Implement qa_voice_ask tool
+- [x] Implement qa_voice_say tool
+- [x] Add macOS say fallback
+- [x] Also added: qa_voice_think tool (live thinking log for discovery calls)
+- [x] Also added: input.ts (file watcher module)
+- [ ] Test with MCP inspector (deferred to Phase 2 e2e test)
+- [x] Set 300s timeout (configurable via timeout_seconds param)
