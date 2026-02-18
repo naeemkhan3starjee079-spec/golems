@@ -64,6 +64,59 @@ packages/recruiter/
 | `/outreach` | View/manage outreach pipeline |
 | `/followup` | Check overdue follow-ups |
 
+## LinkedIn Connections (Supabase)
+
+**823 connections** are imported in the `linkedin_connections` table. Use these for warm intros when reviewing job matches.
+
+### Quick Queries (via Supabase MCP)
+
+```sql
+-- Find connections at a specific company
+SELECT first_name, last_name, position, company
+FROM linkedin_connections
+WHERE company_normalized ILIKE '%odigos%';
+
+-- Find all connections matching current hot jobs
+SELECT DISTINCT lc.first_name, lc.last_name, lc.position, lc.company, gj.title as job_title
+FROM linkedin_connections lc
+JOIN golem_jobs gj ON LOWER(lc.company_normalized) = LOWER(gj.company)
+WHERE gj.match_score >= 8;
+
+-- Search by name
+SELECT first_name, last_name, company, position, linkedin_url
+FROM linkedin_connections
+WHERE first_name ILIKE '%name%' OR last_name ILIKE '%name%';
+```
+
+### Table Schema
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `first_name` | text | First name |
+| `last_name` | text | Last name |
+| `full_name` | text | Generated: first + last |
+| `company` | text | Company as listed on LinkedIn |
+| `company_normalized` | text | Lowercase, stripped suffixes |
+| `position` | text | Current role |
+| `linkedin_url` | text | Profile URL |
+| `email` | text | Email (if available) |
+| `connected_on` | date | Connection date |
+
+### Connection Matching
+
+`packages/jobs/src/connection-matcher.ts` can match jobs to connections by company name (exact, fuzzy, substring). The `job_connections` table stores matches. Run matching via:
+
+```sql
+-- Check existing matches
+SELECT jc.*, lc.first_name, lc.last_name, lc.position, gj.title
+FROM job_connections jc
+JOIN linkedin_connections lc ON jc.connection_id = lc.id
+JOIN golem_jobs gj ON jc.job_id = gj.id
+ORDER BY jc.created_at DESC;
+```
+
+**ALWAYS check LinkedIn connections when discussing job applications.** Before suggesting "check LinkedIn manually", query the table first — you already have the data.
+
 ## Email Routing
 
 Emails categorized as `job` or `interview` are routed to RecruiterGolem by the email router (`@golems/shared/email/router`).
