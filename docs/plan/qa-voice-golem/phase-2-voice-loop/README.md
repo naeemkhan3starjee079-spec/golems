@@ -49,15 +49,15 @@ Claude calls qa_voice_ask("question")
 
 ## Status
 
-- [ ] Create mic.sh
-- [ ] Create speak.sh
-- [ ] Test edge-tts installation
-- [ ] Test edge-tts-universal in Bun
-- [ ] Pick optimal TTS voice
-- [ ] Implement F5 automation
-- [ ] Test Accessibility permissions
+- [x] Create mic.sh
+- [x] Create speak.sh
+- [ ] Test edge-tts installation (needs manual: voice quality check)
+- [x] Fix edge-tts-universal API (EdgeTTS class, not Communicate)
+- [ ] Pick optimal TTS voice (needs manual: listen to voices)
+- [x] Implement F5 automation (osascript key code 96, env toggle)
+- [ ] Test Accessibility permissions (needs manual: iTerm2 permission)
 - [ ] Test MCP server with MCP inspector (deferred from Phase 1)
-- [ ] End-to-end voice loop test
-- [ ] Write TTS module tests
-- [ ] Write file watcher tests
-- [ ] Document latency benchmarks
+- [ ] End-to-end voice loop test (needs manual: mic + Wispr Flow)
+- [x] Write TTS module tests (3 tests, QA_VOICE_TTS_ENGINE=say mock)
+- [x] Write file watcher tests (8 tests, all passing)
+- [ ] Document latency benchmarks (needs manual: real audio playback)

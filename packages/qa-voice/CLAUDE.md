@@ -36,6 +36,8 @@ Communication: file watcher on `/tmp/golems-qa-input.txt`.
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `QA_VOICE_TTS_VOICE` | `en-US-EmmaMultilingualNeural` | edge-tts voice ID |
+| `QA_VOICE_TTS_ENGINE` | `edge-tts` | TTS engine: `edge-tts` or `say` (macOS fallback) |
+| `QA_VOICE_F5_ENABLED` | `true` | Set to `false` to disable F5 simulation after speech |
 | `QA_VOICE_INPUT_FILE` | `/tmp/golems-qa-input.txt` | File watcher input path |
 | `QA_VOICE_THINK_FILE` | `/tmp/golems-qa-thinking.md` | Live thinking log path |
 

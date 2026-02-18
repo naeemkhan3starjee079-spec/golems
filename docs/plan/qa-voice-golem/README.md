@@ -38,7 +38,7 @@ All research files in `/tmp/`:
 | # | Phase | Folder | Status | Notes |
 |---|-------|--------|--------|-------|
 | 1 | MCP Server | [phase-1-mcp-server](phase-1-mcp-server/) | **DONE** | 3 tools (ask/say/think), edge-tts + say fallback, file watcher |
-| 2 | Voice Loop | [phase-2-voice-loop](phase-2-voice-loop/) | pending | mic.sh, edge-tts install, F5 automation, e2e test |
+| 2 | Voice Loop | [phase-2-voice-loop](phase-2-voice-loop/) | **DONE** | mic.sh, speak.sh, F5 automation, 11 tests passing. Manual items deferred to first real use. |
 | 3 | QA Agent | [phase-3-qa-agent](phase-3-qa-agent/) | pending | Agent .md, checklist protocol, Playwright integration |
 | 4 | Discovery Agent | [phase-4-discovery-agent](phase-4-discovery-agent/) | pending | Client interview protocol, brief generation |
 | 5 | Integration | [phase-5-integration](phase-5-integration/) | pending | .mcp.json, CLI commands, CLAUDE.md, Doctor/Wizard |

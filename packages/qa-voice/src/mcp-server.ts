@@ -144,8 +144,8 @@ async function handleAsk(args: any) {
   // Clear any stale input
   clearInput(INPUT_FILE);
 
-  // Speak the question
-  await speak(message);
+  // Speak the question, then trigger F5 for Wispr Flow
+  await speak(message, true);
 
   // Wait for user response via file watcher
   const response = await waitForInput(INPUT_FILE, timeoutSeconds * 1000);
