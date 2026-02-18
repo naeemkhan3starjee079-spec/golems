@@ -4,7 +4,7 @@
 
 ## Architecture
 
-```
+```text
 Claude Code session
   ├── Playwright MCP (browser snapshots, --extension for co-browsing)
   ├── QA Voice MCP (this package)
@@ -87,7 +87,7 @@ packages/qa-voice/scripts/mic.sh
 
 ## File Structure
 
-```
+```text
 packages/qa-voice/
 ├── src/
 │   ├── mcp-server.ts          # MCP server (3 tools: ask, say, think)
@@ -101,7 +101,7 @@ packages/qa-voice/
 │   │   ├── qa-categories.ts   # 6 QA categories (31 checks)
 │   │   ├── discovery.ts       # Discovery session schema + helpers
 │   │   └── discovery-categories.ts  # 7 discovery categories (23 questions)
-│   └── __tests__/             # 42 tests, 104 expect() calls
+│   └── __tests__/             # 48 tests, 120 expect() calls
 ├── scripts/
 │   ├── mic.sh                 # Voice input companion terminal
 │   └── speak.sh               # Standalone TTS command
@@ -125,7 +125,6 @@ packages/qa-voice/
 - **Key codes:** 96 (external keyboard), 176 (Mac built-in)
 - **Accessibility:** iTerm2 needs System Preferences > Accessibility permission for osascript
 - **Config location:** `~/Library/Application Support/Wispr Flow/config.json`
-- **F5 fix details:** See `memory/wispr-flow-f5-fix.md`
 
 ## Dependencies
 
@@ -140,10 +139,11 @@ packages/qa-voice/
 bun test packages/qa-voice/src/__tests__/
 ```
 
-42 tests across 6 files:
+48 tests across 7 files:
 - `input.test.ts` — file watcher (8 tests)
 - `tts.test.ts` — TTS + F5 (3 tests)
 - `checklist.test.ts` — QA schema (8 tests)
 - `report.test.ts` — QA report renderer (8 tests)
 - `discovery.test.ts` — discovery schema (7 tests)
 - `brief.test.ts` — brief renderer (8 tests)
+- `session.test.ts` — session lifecycle (6 tests)

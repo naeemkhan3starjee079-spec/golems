@@ -14,7 +14,7 @@ Create the mic.sh companion script, wire F5 automation, install TTS dependencies
 
 ## The Voice Loop
 
-```
+```text
 Claude calls qa_voice_ask("question")
   -> MCP server synthesizes speech (edge-tts)
   -> afplay plays audio to speakers/headphones

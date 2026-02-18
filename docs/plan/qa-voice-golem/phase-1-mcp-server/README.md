@@ -4,7 +4,7 @@
 
 ## Goal
 
-Build a lightweight MCP server (~150 lines) that gives Claude Code two voice tools: `ask` (speak + wait for response) and `say` (speak without waiting).
+Build a lightweight MCP server (~150 lines) that gives Claude Code three voice tools: `ask` (speak + wait for response), `say` (speak without waiting), and `think` (silent note-taking).
 
 ## Tools
 
@@ -14,7 +14,7 @@ Build a lightweight MCP server (~150 lines) that gives Claude Code two voice too
 
 ## Architecture
 
-The MCP server exposes two tools via stdio protocol:
+The MCP server exposes three tools via stdio protocol:
 
 ```typescript
 // Tool 1: ask — speak a question and wait for user's voice response
@@ -69,8 +69,9 @@ osascript -e 'tell application "System Events" to key code 96'
 ```text
 packages/qa-voice/
 ├── src/
-│   ├── mcp-server.ts      # Main MCP server (~150 lines)
-│   └── tts.ts             # edge-tts wrapper with say fallback
+│   ├── mcp-server.ts      # Main MCP server (3 tools: ask, say, think)
+│   ├── tts.ts             # edge-tts wrapper with say fallback
+│   └── input.ts           # File polling for voice input
 ├── package.json            # @golems/qa-voice
 ├── CLAUDE.md               # Package docs
 └── tsconfig.json

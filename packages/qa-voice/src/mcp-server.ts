@@ -19,6 +19,7 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
+import { appendFileSync, existsSync, writeFileSync } from "fs";
 import { speak } from "./tts";
 import { waitForInput, clearInput } from "./input";
 
@@ -115,6 +116,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       default:
         return {
           content: [{ type: "text" as const, text: `Unknown tool: ${name}` }],
+          isError: true,
         };
     }
   } catch (err: any) {
@@ -211,7 +213,6 @@ async function handleThink(args: any) {
   const line = `- [${timestamp}] ${icon} ${thought}\n`;
 
   // Append to thinking file
-  const { appendFileSync, existsSync, writeFileSync } = await import("fs");
   if (!existsSync(THINK_FILE)) {
     writeFileSync(THINK_FILE, `# Live Thinking Log\n\n`);
   }
