@@ -92,7 +92,7 @@ const SIMPLE_COLOR_MAP: Record<string, string> = {
   dim: "#777777",    // everything else
 };
 
-const GLOW_CHARS = "אמת◆{}";
+const GLOW_CHARS = "אמת◆{}·";
 const ACCENT_CHARS = "╔╗╚╝║═┌┐└┘─│╠╣";
 const CLAY_CHARS = "▒▓█▄▀░■";
 

@@ -175,7 +175,9 @@ def generate_guardian_png(
             font = hebrew_font if ch in HEBREW_CHARS else art_font
             draw.text((x, y), ch, fill=rgba, font=font)
 
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    out_dir = os.path.dirname(output_path)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
     img.save(output_path, "PNG")
     print(f"Generated: {output_path} ({canvas_w}x{canvas_h}, '{clean_title}' + guardian)")
 
