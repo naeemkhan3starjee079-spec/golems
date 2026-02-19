@@ -763,9 +763,15 @@ function repoGolem() {
       _title=\"${capitalized_name} Claude\"
     fi
     echo -ne \"\\e]2;\${_title}\\a\"
-    printf \"\\e]1337;SetBadgeFormat=%s\\a\" \"\$(echo -n \"\${_title}\" | base64)\"
+    # Identity: badge (emoji+name, pinned top-right) + SVG mascot background image
+    # Profile switch first (Menlo font for badge), then badge + background — in background, write to /dev/tty
+    local _guardian_bg=\"\$HOME/.config/ralphtools/guardian-bg.png\"
+    (
+      /Applications/iTerm.app/Contents/Resources/it2profile -s Golems 2>/dev/null
+      printf \"\\e]1337;SetBadgeFormat=%s\\a\" \"\$(echo -n \"\${_title}\" | base64)\" > /dev/tty
+      [[ -f \"\${_guardian_bg}\" ]] && printf \"\\e]1337;SetBackgroundImageFile=%s\\a\" \"\$(echo -n \"\${_guardian_bg}\" | base64)\" > /dev/tty
+    ) &
     echo \"\${_title}\"
-    echo \"📂 \$(pwd)\"
     echo \"\"
 
     # Setup notifications

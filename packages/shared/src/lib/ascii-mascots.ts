@@ -1,197 +1,271 @@
 /**
- * ASCII Mascots — 5 distinct golem mascot variants for CLI and docs
+ * Guardian Golem — Canonical ASCII art + ANSI truecolor renderer
  *
- * Each variant has a different aesthetic: classic clay, circuit board,
- * minimalist, runic, and ember. All use pure ASCII/Unicode box-drawing.
+ * Source of truth: etanheyman.com GolemMascot.tsx (the 16-line guardian)
+ * Color palette: clay (#c4783c), accent (#8b7355), glow (#ffb020)
+ *
+ * Two variants:
+ *   - GUARDIAN_ART_SIMPLE: 16 lines, ~28 chars — canonical from GolemMascot.tsx
+ *   - GUARDIAN_ART_FULL: 22 lines, ~38 chars — hand-crafted scaled-up version
+ *
+ * Template format: ${c1}-${c6} placeholders replaced with ANSI color codes at render time.
  */
 
 // ---------------------------------------------------------------------------
-// Types
+// Guardian Art — Full variant (22 lines, hand-crafted from the 16-line guardian)
+// For terminals >= 60 cols
 // ---------------------------------------------------------------------------
 
-export interface AsciiMascot {
-  id: string;
-  name: string;
-  description: string;
-  art: string;
-  width: number;
-  height: number;
-  style: "classic" | "circuit" | "minimal" | "runic" | "ember";
-}
+// AIDEV-NOTE: The template uses ${c1}-${c6} color placeholders.
+// These are NOT JS template literals — they're string tokens replaced at render time.
+// This is a scaled-up version of GUARDIAN_ART_SIMPLE preserving all design elements:
+// rounded head, ▓░░ clay gradients, inscription plate with Hebrew אמת,
+// diamond eyes ■◆■, code mouth {··}, shoulder bars ╔══╗.
 
-// ---------------------------------------------------------------------------
-// Mascot definitions
-// ---------------------------------------------------------------------------
-
-const CLASSIC_GOLEM: AsciiMascot = {
-  id: "classic",
-  name: "Classic Golem",
-  description: "Traditional clay golem with the aleph on its forehead",
-  style: "classic",
-  width: 36,
-  height: 19,
-  art: `
-        ┌──────────────────┐
-        │   ╔════════════╗ │
-        │   ║            ║ │
-        │   ║     א      ║ │
-        │   ║            ║ │
-        │   ╚════════════╝ │
-        │                  │
-        │  ┌────┐  ┌────┐ │
-        │  │ ** │  │ ** │ │
-        │  └────┘  └────┘ │
-        │                  │
-        │    ┌────────┐    │
-        │    │ . .. . │    │
-        │    └────────┘    │
-        └──────┬────┬──────┘
-               │    │
-        ═══════╧════╧═══════
-`.trim(),
-};
-
-const CIRCUIT_GOLEM: AsciiMascot = {
-  id: "circuit",
-  name: "Circuit Golem",
-  description: "Digital golem with circuit-board aesthetic",
-  style: "circuit",
-  width: 40,
-  height: 19,
-  art: `
-     ┌─╥──────────────────────╥─┐
-     │ ║  +-+  +-+  +-+  +-+  ║ │
-     │ ║  |=|  |=|  |=|  |=|  ║ │
-     ╞═╬══════════════════════╬═╡
-     │ ║                      ║ │
-     │ ║   [  א  ]           ║ │
-     │ ║                      ║ │
-     │ ║  (o)          (o)    ║ │
-     │ ║  /|\\          /|\\    ║ │
-     │ ║                      ║ │
-     │ ║   >>> GOLEMS v2 <<<  ║ │
-     │ ║                      ║ │
-     ╞═╬══════════════════════╬═╡
-     │ ║  |=|  |=|  |=|  |=|  ║ │
-     │ ║  +-+  +-+  +-+  +-+  ║ │
-     └─╨──────────────────────╨─┘
-         ║║              ║║
-         ╚╝              ╚╝
-`.trim(),
-};
-
-const MINIMAL_GOLEM: AsciiMascot = {
-  id: "minimal",
-  name: "Minimal Golem",
-  description: "Clean, minimalist golem silhouette",
-  style: "minimal",
-  width: 24,
-  height: 15,
-  art: `
-       .--------.
-      /    א     \\
-     |            |
-     |   o    o   |
-     |            |
-     |   .----.   |
-     |   '----'   |
-      \\          /
-       '--------'
-          |  |
-       .--'  '--.
-      /          \\
-     '============'
-`.trim(),
-};
-
-const RUNIC_GOLEM: AsciiMascot = {
-  id: "runic",
-  name: "Runic Golem",
-  description: "Ancient runic golem with mystical symbols",
-  style: "runic",
-  width: 38,
-  height: 19,
-  art: `
-    *  .  *  .  *  .  *  .  *  .  *
-       ╔══════════════════════╗
-       ║  ~  ~  ~  ~  ~  ~   ║
-       ║ ╔══════════════════╗ ║
-       ║ ║                  ║ ║
-       ║ ║       א          ║ ║
-       ║ ║                  ║ ║
-       ║ ╚══════════════════╝ ║
-       ║                      ║
-       ║    ()          ()    ║
-       ║    ||          ||    ║
-       ║                      ║
-       ║   {  emet  }        ║
-       ║                      ║
-       ╚══════════╤══╤════════╝
-    *  .  *  .  * │  │ *  .  *  .  *
-       ═══════════╧══╧═══════════
-                  ****
-`.trim(),
-};
-
-const EMBER_GOLEM: AsciiMascot = {
-  id: "ember",
-  name: "Ember Golem",
-  description: "Fiery ember golem with flame-like patterns",
-  style: "ember",
-  width: 36,
-  height: 19,
-  art: `
-          )  (    )  (    )  (
-       .-'    '--'    '--'    '-.
-      /  ┌────────────────────┐  \\
-     |   │                    │   |
-     |   │   ╭──────────╮    │   |
-     |   │   │    א      │    │   |
-     |   │   ╰──────────╯    │   |
-     |   │                    │   |
-     |   │  <>          <>    │   |
-     |   │                    │   |
-     |   │   ╭──────────╮    │   |
-     |   │   │  ~ ~~ ~  │    │   |
-     |   │   ╰──────────╯    │   |
-     |   │                    │   |
-      \\  └────────┬──┬────────┘  /
-       '-. )  ( ) │  │ ( )  ( .-'
-           '------'  '------'
-            (    )    (    )
-`.trim(),
-};
-
-// ---------------------------------------------------------------------------
-// Catalog
-// ---------------------------------------------------------------------------
-
-export const MASCOT_CATALOG: AsciiMascot[] = [
-  CLASSIC_GOLEM,
-  CIRCUIT_GOLEM,
-  MINIMAL_GOLEM,
-  RUNIC_GOLEM,
-  EMBER_GOLEM,
+export const GUARDIAN_ART_FULL = [
+  "${c4}         ${c1}▄▄${c4}▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄${c1}▄▄",
+  "${c4}       ${c1}▄██${c2}▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓${c1}██▄",
+  "${c4}     ${c1}▄██${c2}▓${c1}░░░░░░░░░░░░░░░░░░░░░░░░${c2}▓${c1}██▄",
+  "${c4}    ${c1}███${c2}▓${c1}░░░${c5}┌──────────────────┐${c1}░░░${c2}▓${c1}███",
+  "${c4}    ${c1}███${c2}▓${c1}░░░${c5}│${c6}    א   מ   ת     ${c5}│${c1}░░░${c2}▓${c1}███",
+  "${c4}    ${c1}███${c2}▓${c1}░░░${c5}└──────────────────┘${c1}░░░${c2}▓${c1}███",
+  "${c4}    ${c1}███${c2}▓${c1}░░░░░░░░░░░░░░░░░░░░░░░░░░${c2}▓${c1}███",
+  "${c4}   ${c1}████${c2}▓${c1}░░░░${c2}■■■■${c1}░░░░░░░░░░${c2}■■■■${c1}░░░░${c2}▓${c1}████",
+  "${c4}   ${c1}████${c2}▓${c1}░░░░${c2}■${c6}◆◆${c2}■${c1}░░░░░░░░░░${c2}■${c6}◆◆${c2}■${c1}░░░░${c2}▓${c1}████",
+  "${c4}   ${c1}████${c2}▓${c1}░░░░${c2}■■■■${c1}░░░░░░░░░░${c2}■■■■${c1}░░░░${c2}▓${c1}████",
+  "${c4}    ${c1}███${c2}▓${c1}░░░░░░░░░░░░░░░░░░░░░░░░░░${c2}▓${c1}███",
+  "${c4}    ${c1}███${c2}▓${c1}░░░░${c5}╔════════════════╗${c1}░░░░${c2}▓${c1}███",
+  "${c4}    ${c1}███${c2}▓${c1}░░░░${c5}║${c6}     { ·· }     ${c5}║${c1}░░░░${c2}▓${c1}███",
+  "${c4}    ${c1}███${c2}▓${c1}░░░░${c5}╚════════════════╝${c1}░░░░${c2}▓${c1}███",
+  "${c4}    ${c1}███${c2}▓${c1}░░░░░░░░░░░░░░░░░░░░░░░░░░${c2}▓${c1}███",
+  "${c4}     ${c1}███${c2}▓${c1}░░░░░░░░░░░░░░░░░░░░░░░░${c2}▓${c1}███",
+  "${c4}      ${c1}▀██${c2}▓${c1}░░░░░░░░░░░░░░░░░░░░░░${c2}▓${c1}██▀",
+  "${c4}       ${c1}▀██${c2}▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓${c1}██▀",
+  "${c4}    ${c5}╔══${c1}▀██████████████████████████▀${c5}══╗",
+  "${c4}    ${c5}║${c1}░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░${c5}║",
+  "${c4}    ${c5}╚════════════════════════════════╝",
+  "${c3}                   ◇◇",
 ];
 
-export function getMascot(id: string): AsciiMascot | undefined {
-  return MASCOT_CATALOG.find((m) => m.id === id);
+// ---------------------------------------------------------------------------
+// Guardian Art — Simple variant (from GolemMascot.tsx, 16 lines)
+// For narrow terminals (< 40 cols)
+// ---------------------------------------------------------------------------
+
+export const GUARDIAN_ART_SIMPLE = [
+  "         ▄▄████████▄▄",
+  "       ▄██▓░░░░░░░░▓██▄",
+  "     ▄██▓░░┌──────┐░░▓██▄",
+  "    ███▓░░░│ אמת  │░░░▓███",
+  "   ███▓░░░░└──────┘░░░░▓███",
+  "   ███▓░░░░░░░░░░░░░░░░▓███",
+  "  ████▓░░■■■░░░░░░■■■░░▓████",
+  "  ████▓░░■◆■░░░░░░■◆■░░▓████",
+  "  ████▓░░■■■░░░░░░■■■░░▓████",
+  "   ███▓░░░░░░░░░░░░░░░░▓███",
+  "   ███▓░░░░╔══════╗░░░░▓███",
+  "   ███▓░░░░║ {··} ║░░░░▓███",
+  "    ███▓░░░╚══════╝░░░▓███",
+  "     ▀██▓░░░░░░░░░░░░▓██▀",
+  "    ╔══▀████████████████▀══╗",
+  "    ║                      ║",
+];
+
+// ---------------------------------------------------------------------------
+// Color palettes
+// ---------------------------------------------------------------------------
+
+export const GUARDIAN_COLORS = {
+  c1: "#c4783c", // Body fill (clay)
+  c2: "#a06030", // Detail blocks (dark clay)
+  c3: "#8b7355", // Accent features (borders, eyes glow, ══)
+  c4: "#6e5530", // Outer edge (dark outline)
+  c5: "#8b7355", // Box-drawing (inscription plate)
+  c6: "#ffb020", // Hebrew text + code mouth (gold glow)
+} as const;
+
+// Simple variant color mapping (character-based, from GolemMascot.tsx colorLine)
+const SIMPLE_COLOR_MAP: Record<string, string> = {
+  glow: "#ffb020",  // אמת, ◆
+  accent: "#8b7355", // ╔╗╚╝║═┌┐└┘─│╠╣
+  clay: "#c4783c",   // ▒▓█▄▀░■
+  dim: "#777777",    // everything else
+};
+
+const GLOW_CHARS = "אמת◆{}·";
+const ACCENT_CHARS = "╔╗╚╝║═┌┐└┘─│╠╣";
+const CLAY_CHARS = "▒▓█▄▀░■";
+
+// ---------------------------------------------------------------------------
+// ANSI rendering
+// ---------------------------------------------------------------------------
+
+const RESET = "\x1b[0m";
+
+/** Convert hex (#rrggbb) to ANSI truecolor foreground escape */
+export function hexToAnsi(hex: string, dim = 1): string {
+  const r = Math.min(255, Math.max(0, Math.round(parseInt(hex.slice(1, 3), 16) * dim)));
+  const g = Math.min(255, Math.max(0, Math.round(parseInt(hex.slice(3, 5), 16) * dim)));
+  const b = Math.min(255, Math.max(0, Math.round(parseInt(hex.slice(5, 7), 16) * dim)));
+  return `\x1b[38;2;${r};${g};${b}m`;
 }
 
-export function getMascotByStyle(style: AsciiMascot["style"]): AsciiMascot | undefined {
-  return MASCOT_CATALOG.find((m) => m.style === style);
+/**
+ * Render a ${c1}-${c6} template with ANSI colors.
+ * Each line gets color codes substituted and ends with reset.
+ */
+export function renderTemplate(
+  lines: string[],
+  colors: Record<string, string>,
+  dim = 1,
+): string[] {
+  const ansiColors: Record<string, string> = {};
+  for (const [key, hex] of Object.entries(colors)) {
+    ansiColors[key] = hexToAnsi(hex, dim);
+  }
+
+  return lines.map((line) => {
+    let rendered = line;
+    for (const [key, ansi] of Object.entries(ansiColors)) {
+      // Replace all occurrences of ${cN} with the ANSI code
+      rendered = rendered.replaceAll(`\${${key}}`, ansi);
+    }
+    return rendered + RESET;
+  });
 }
 
-export function listMascots(): string[] {
-  return MASCOT_CATALOG.map((m) => m.id);
+/**
+ * Render the simple variant with per-character coloring (like GolemMascot.tsx colorLine).
+ */
+export function renderSimpleAnsi(dim = 1): string[] {
+  const glowAnsi = hexToAnsi(SIMPLE_COLOR_MAP.glow, dim);
+  const accentAnsi = hexToAnsi(SIMPLE_COLOR_MAP.accent, dim);
+  const clayAnsi = hexToAnsi(SIMPLE_COLOR_MAP.clay, dim);
+  const dimAnsi = hexToAnsi(SIMPLE_COLOR_MAP.dim, dim);
+
+  return GUARDIAN_ART_SIMPLE.map((line) => {
+    let result = "";
+    for (const ch of line) {
+      if (GLOW_CHARS.includes(ch)) {
+        result += glowAnsi + ch;
+      } else if (ACCENT_CHARS.includes(ch)) {
+        result += accentAnsi + ch;
+      } else if (CLAY_CHARS.includes(ch)) {
+        result += clayAnsi + ch;
+      } else {
+        result += dimAnsi + ch;
+      }
+    }
+    return result + RESET;
+  });
 }
 
-export function getRandomMascot(): AsciiMascot {
-  return MASCOT_CATALOG[Math.floor(Math.random() * MASCOT_CATALOG.length)];
+/**
+ * Render the guardian golem with ANSI truecolor.
+ *
+ * @param variant - 'full' (22-line template) or 'simple' (16-line character-based)
+ * @param dim - Brightness multiplier 0-1 (1 = full, 0.3 = dim backlight)
+ */
+export function renderGuardianAnsi(opts?: {
+  variant?: "full" | "simple";
+  dim?: number;
+}): string[] {
+  const variant = opts?.variant ?? "full";
+  const dim = opts?.dim ?? 1;
+
+  if (variant === "simple") {
+    return renderSimpleAnsi(dim);
+  }
+
+  return renderTemplate(GUARDIAN_ART_FULL, GUARDIAN_COLORS, dim);
+}
+
+/**
+ * Render the guardian in the top-right corner of the terminal.
+ * Uses cursor save/restore + absolute positioning.
+ *
+ * @param dim - Brightness 0-1 (default 0.4 for subtle backlight)
+ * @param padding - Right margin in columns (default 2)
+ */
+export function renderGuardianTopRight(opts?: {
+  dim?: number;
+  padding?: number;
+}): string {
+  const dim = opts?.dim ?? 0.4;
+  const padding = opts?.padding ?? 2;
+  const cols = process.stdout.columns || 80;
+
+  // Pick variant based on terminal width
+  const useSimple = cols < 50;
+  const lines = renderGuardianAnsi({
+    variant: useSimple ? "simple" : "full",
+    dim,
+  });
+
+  // Calculate art width (strip ANSI codes to measure visible characters)
+  const rawLines = useSimple ? GUARDIAN_ART_SIMPLE : GUARDIAN_ART_FULL;
+  const maxVisibleWidth = Math.max(
+    ...rawLines.map((l) => l.replace(/\$\{c[1-6]\}/g, "").length),
+  );
+
+  const startCol = Math.max(1, cols - maxVisibleWidth - padding);
+
+  // Build output: save cursor, position each line, restore cursor
+  let output = "\x1b[s"; // save cursor
+  for (let i = 0; i < lines.length; i++) {
+    output += `\x1b[${i + 1};${startCol}H${lines[i]}`;
+  }
+  output += "\x1b[u"; // restore cursor
+
+  return output;
+}
+
+/**
+ * Render the guardian as a backlight — dim art at the right side of the
+ * terminal, composed on the SAME lines as text content.
+ *
+ * Each output line = text (left) + cursor-jump-to-column + art (right).
+ * No cursor save/restore or movement — single-pass, no scroll issues.
+ *
+ * @param dim - Brightness 0-1 (default 0.25 for subtle backlight)
+ * @param padding - Right margin in columns (default 2)
+ * @param textLines - Text to place on the left side (title, path, etc.)
+ */
+export function renderGuardianBacklight(opts?: {
+  dim?: number;
+  padding?: number;
+  textLines?: string[];
+}): string {
+  const dim = opts?.dim ?? 0.25;
+  const padding = opts?.padding ?? 2;
+  const cols = process.stdout.columns || 80;
+
+  const useSimple = cols < 50;
+  const artLines = renderGuardianAnsi({
+    variant: useSimple ? "simple" : "full",
+    dim,
+  });
+
+  const rawLines = useSimple ? GUARDIAN_ART_SIMPLE : GUARDIAN_ART_FULL;
+  const maxVisibleWidth = Math.max(
+    ...rawLines.map((l) => l.replace(/\$\{c[1-6]\}/g, "").length),
+  );
+
+  const startCol = Math.max(1, cols - maxVisibleWidth - padding);
+  const textArr = opts?.textLines ?? [];
+
+  // Compose each line: text at left + art at right column
+  let output = "";
+  for (let i = 0; i < artLines.length; i++) {
+    const text = textArr[i] ?? "";
+    output += `${text}\x1b[${startCol}G${artLines[i]}\n`;
+  }
+
+  return output;
 }
 
 // ---------------------------------------------------------------------------
-// Display helpers
+// Display helpers (kept from original)
 // ---------------------------------------------------------------------------
 
 export function centerText(text: string, width: number): string {
@@ -200,59 +274,25 @@ export function centerText(text: string, width: number): string {
   return " ".repeat(padding) + text;
 }
 
-export function addBorder(art: string, char: string = "#"): string {
-  const lines = art.split("\n");
-  const maxWidth = Math.max(...lines.map((l) => l.length));
-  const border = char.repeat(maxWidth + 4);
-  const padded = lines.map((l) => `${char} ${l.padEnd(maxWidth)} ${char}`);
-  return [border, ...padded, border].join("\n");
-}
-
-export function addCaption(mascot: AsciiMascot, caption?: string): string {
-  const lines = mascot.art.split("\n");
-  const maxWidth = Math.max(...lines.map((l) => l.length));
-  const text = caption || mascot.name;
-  const centered = centerText(text, maxWidth);
-  return mascot.art + "\n" + centered;
-}
-
-// ---------------------------------------------------------------------------
-// Greeting / splash screen
-// ---------------------------------------------------------------------------
-
-export function formatSplash(mascot?: AsciiMascot): string {
-  const m = mascot || getRandomMascot();
+export function formatSplash(): string {
   const lines: string[] = [];
-  lines.push(m.art);
+  const artLines = renderGuardianAnsi({ dim: 1 });
+  lines.push(artLines.join("\n"));
   lines.push("");
-  lines.push(centerText(`~ ${m.name} ~`, m.width));
-  lines.push(centerText(m.description, m.width));
+  lines.push(centerText("~ Guardian Golem ~", 30));
+  lines.push(centerText("Protector of the developer ecosystem", 40));
   return lines.join("\n");
 }
 
-export function formatCatalog(): string {
-  const lines: string[] = [];
-  lines.push("ASCII Mascot Catalog");
-  lines.push("====================");
-  lines.push("");
-
-  for (const m of MASCOT_CATALOG) {
-    lines.push(`[${m.id}] ${m.name} (${m.style})`);
-    lines.push(`  ${m.description}`);
-    lines.push(`  Size: ${m.width}x${m.height}`);
-    lines.push("");
+/**
+ * Get plain-text (no ANSI) guardian art.
+ */
+export function getGuardianPlain(variant: "full" | "simple" = "full"): string {
+  if (variant === "simple") {
+    return GUARDIAN_ART_SIMPLE.join("\n");
   }
-
-  return lines.join("\n");
-}
-
-export function formatMascotPreview(mascot: AsciiMascot): string {
-  const lines: string[] = [];
-  lines.push(`Name: ${mascot.name}`);
-  lines.push(`Style: ${mascot.style}`);
-  lines.push(`Size: ${mascot.width}x${mascot.height}`);
-  lines.push(`Description: ${mascot.description}`);
-  lines.push("");
-  lines.push(mascot.art);
-  return lines.join("\n");
+  // Strip ${cN} placeholders from full variant
+  return GUARDIAN_ART_FULL.map((line) =>
+    line.replace(/\$\{c[1-6]\}/g, ""),
+  ).join("\n");
 }

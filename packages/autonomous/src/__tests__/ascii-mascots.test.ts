@@ -1,101 +1,233 @@
 import { describe, test, expect } from "bun:test";
 import {
-  MASCOT_CATALOG,
-  getMascot,
-  getMascotByStyle,
-  listMascots,
-  getRandomMascot,
+  GUARDIAN_ART_FULL,
+  GUARDIAN_ART_SIMPLE,
+  GUARDIAN_COLORS,
+  hexToAnsi,
+  renderTemplate,
+  renderSimpleAnsi,
+  renderGuardianAnsi,
+  renderGuardianTopRight,
+  renderGuardianBacklight,
   centerText,
-  addBorder,
-  addCaption,
   formatSplash,
-  formatCatalog,
-  formatMascotPreview,
+  getGuardianPlain,
 } from "@golems/shared/lib/ascii-mascots";
 
 // ---------------------------------------------------------------------------
-// Catalog
+// Guardian art definitions
 // ---------------------------------------------------------------------------
 
-describe("catalog", () => {
-  test("has exactly 5 mascots", () => {
-    expect(MASCOT_CATALOG.length).toBe(5);
+describe("guardian art", () => {
+  test("full art has 22 lines", () => {
+    expect(GUARDIAN_ART_FULL.length).toBe(22);
   });
 
-  test("all mascots have unique IDs", () => {
-    const ids = MASCOT_CATALOG.map((m) => m.id);
-    expect(new Set(ids).size).toBe(5);
+  test("simple art has 16 lines", () => {
+    expect(GUARDIAN_ART_SIMPLE.length).toBe(16);
   });
 
-  test("all mascots have unique styles", () => {
-    const styles = MASCOT_CATALOG.map((m) => m.style);
-    expect(new Set(styles).size).toBe(5);
+  test("full template contains Hebrew אמת", () => {
+    const joined = GUARDIAN_ART_FULL.join("\n");
+    expect(joined).toContain("א");
+    expect(joined).toContain("מ");
+    expect(joined).toContain("ת");
   });
 
-  test("all mascots have non-empty art", () => {
-    for (const m of MASCOT_CATALOG) {
-      expect(m.art.length).toBeGreaterThan(50);
-    }
+  test("simple art contains Hebrew אמת", () => {
+    const joined = GUARDIAN_ART_SIMPLE.join("\n");
+    expect(joined).toContain("אמת");
   });
 
-  test("all mascots have aleph character", () => {
-    for (const m of MASCOT_CATALOG) {
-      expect(m.art).toContain("א");
-    }
+  test("full template contains code mouth {··}", () => {
+    const joined = GUARDIAN_ART_FULL.join("\n");
+    expect(joined).toContain("{");
+    expect(joined).toContain("}");
   });
 
-  test("all mascots have name and description", () => {
-    for (const m of MASCOT_CATALOG) {
-      expect(m.name.length).toBeGreaterThan(0);
-      expect(m.description.length).toBeGreaterThan(0);
-    }
+  test("full template uses ${c1}-${c6} placeholders", () => {
+    const joined = GUARDIAN_ART_FULL.join("\n");
+    expect(joined).toContain("${c1}");
+    expect(joined).toContain("${c2}");
+    expect(joined).toContain("${c3}");
+    expect(joined).toContain("${c4}");
+    expect(joined).toContain("${c5}");
+    expect(joined).toContain("${c6}");
   });
 
-  test("all mascots have positive dimensions", () => {
-    for (const m of MASCOT_CATALOG) {
-      expect(m.width).toBeGreaterThan(0);
-      expect(m.height).toBeGreaterThan(0);
-    }
+  test("simple art does NOT use template placeholders", () => {
+    const joined = GUARDIAN_ART_SIMPLE.join("\n");
+    expect(joined).not.toContain("${c");
   });
 });
 
 // ---------------------------------------------------------------------------
-// Lookup functions
+// Color palette
 // ---------------------------------------------------------------------------
 
-describe("lookup", () => {
-  test("getMascot finds by id", () => {
-    expect(getMascot("classic")?.name).toBe("Classic Golem");
-    expect(getMascot("circuit")?.style).toBe("circuit");
-    expect(getMascot("minimal")?.style).toBe("minimal");
-    expect(getMascot("runic")?.style).toBe("runic");
-    expect(getMascot("ember")?.style).toBe("ember");
+describe("colors", () => {
+  test("GUARDIAN_COLORS has all 6 color slots", () => {
+    expect(GUARDIAN_COLORS.c1).toBeTruthy();
+    expect(GUARDIAN_COLORS.c2).toBeTruthy();
+    expect(GUARDIAN_COLORS.c3).toBeTruthy();
+    expect(GUARDIAN_COLORS.c4).toBeTruthy();
+    expect(GUARDIAN_COLORS.c5).toBeTruthy();
+    expect(GUARDIAN_COLORS.c6).toBeTruthy();
   });
 
-  test("getMascot returns undefined for unknown", () => {
-    expect(getMascot("nonexistent")).toBeUndefined();
+  test("all colors are valid hex", () => {
+    for (const color of Object.values(GUARDIAN_COLORS)) {
+      expect(color).toMatch(/^#[0-9a-f]{6}$/i);
+    }
   });
 
-  test("getMascotByStyle finds by style", () => {
-    expect(getMascotByStyle("classic")?.id).toBe("classic");
-    expect(getMascotByStyle("circuit")?.id).toBe("circuit");
+  test("c6 is glow (gold)", () => {
+    expect(GUARDIAN_COLORS.c6).toBe("#ffb020");
   });
 
-  test("listMascots returns all IDs", () => {
-    const ids = listMascots();
-    expect(ids).toContain("classic");
-    expect(ids).toContain("circuit");
-    expect(ids).toContain("minimal");
-    expect(ids).toContain("runic");
-    expect(ids).toContain("ember");
-    expect(ids.length).toBe(5);
+  test("c1 is clay", () => {
+    expect(GUARDIAN_COLORS.c1).toBe("#c4783c");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ANSI rendering
+// ---------------------------------------------------------------------------
+
+describe("hexToAnsi", () => {
+  test("converts hex to truecolor escape", () => {
+    const result = hexToAnsi("#ff0000");
+    expect(result).toBe("\x1b[38;2;255;0;0m");
   });
 
-  test("getRandomMascot returns a valid mascot", () => {
-    const m = getRandomMascot();
-    expect(m.id).toBeTruthy();
-    expect(m.art).toBeTruthy();
-    expect(MASCOT_CATALOG).toContain(m);
+  test("converts with dim factor", () => {
+    const result = hexToAnsi("#ff0000", 0.5);
+    expect(result).toBe("\x1b[38;2;128;0;0m");
+  });
+
+  test("dim=0 produces black", () => {
+    const result = hexToAnsi("#ffffff", 0);
+    expect(result).toBe("\x1b[38;2;0;0;0m");
+  });
+});
+
+describe("renderTemplate", () => {
+  test("substitutes color placeholders", () => {
+    const lines = ["${c1}Hello${c2}World"];
+    const colors = { c1: "#ff0000", c2: "#00ff00" };
+    const result = renderTemplate(lines, colors);
+    expect(result[0]).toContain("\x1b[38;2;255;0;0m");
+    expect(result[0]).toContain("\x1b[38;2;0;255;0m");
+    expect(result[0]).toContain("Hello");
+    expect(result[0]).toContain("World");
+  });
+
+  test("each line ends with reset", () => {
+    const lines = ["${c1}test"];
+    const colors = { c1: "#ff0000" };
+    const result = renderTemplate(lines, colors);
+    expect(result[0]).toEndWith("\x1b[0m");
+  });
+
+  test("supports dim factor", () => {
+    const lines = ["${c1}x"];
+    const colors = { c1: "#ff0000" };
+    const full = renderTemplate(lines, colors, 1);
+    const dimmed = renderTemplate(lines, colors, 0.5);
+    expect(full[0]).toContain("255;0;0");
+    expect(dimmed[0]).toContain("128;0;0");
+  });
+});
+
+describe("renderSimpleAnsi", () => {
+  test("returns 16 colored lines", () => {
+    const result = renderSimpleAnsi();
+    expect(result.length).toBe(16);
+  });
+
+  test("lines contain ANSI escape codes", () => {
+    const result = renderSimpleAnsi();
+    expect(result[0]).toContain("\x1b[38;2;");
+  });
+
+  test("lines end with reset", () => {
+    const result = renderSimpleAnsi();
+    for (const line of result) {
+      expect(line).toEndWith("\x1b[0m");
+    }
+  });
+});
+
+describe("renderGuardianAnsi", () => {
+  test("defaults to full variant (22 lines)", () => {
+    const result = renderGuardianAnsi();
+    expect(result.length).toBe(22);
+  });
+
+  test("simple variant returns 16 lines", () => {
+    const result = renderGuardianAnsi({ variant: "simple" });
+    expect(result.length).toBe(16);
+  });
+
+  test("no template placeholders remain in output", () => {
+    const result = renderGuardianAnsi();
+    const joined = result.join("\n");
+    expect(joined).not.toContain("${c");
+  });
+
+  test("dim parameter reduces brightness", () => {
+    const full = renderGuardianAnsi({ dim: 1 });
+    const dimmed = renderGuardianAnsi({ dim: 0.3 });
+    // Full brightness c1 (#c4783c) = 196;120;60
+    // Dimmed at 0.3 = 59;36;18
+    expect(full.join("")).toContain("196;120;60");
+    expect(dimmed.join("")).not.toContain("196;120;60");
+  });
+});
+
+describe("renderGuardianTopRight", () => {
+  test("includes cursor save and restore", () => {
+    const result = renderGuardianTopRight();
+    expect(result).toStartWith("\x1b[s");
+    expect(result).toEndWith("\x1b[u");
+  });
+
+  test("includes cursor positioning sequences", () => {
+    const result = renderGuardianTopRight();
+    // Should contain \x1b[row;colH patterns
+    expect(result).toMatch(/\x1b\[\d+;\d+H/);
+  });
+
+  test("respects dim parameter", () => {
+    const bright = renderGuardianTopRight({ dim: 1 });
+    const dim = renderGuardianTopRight({ dim: 0.2 });
+    expect(bright).not.toBe(dim);
+  });
+});
+
+describe("renderGuardianBacklight", () => {
+  test("returns string output", () => {
+    const result = renderGuardianBacklight();
+    expect(typeof result).toBe("string");
+    expect(result.length).toBeGreaterThan(0);
+  });
+
+  test("output contains column positioning", () => {
+    const result = renderGuardianBacklight();
+    // Should contain \x1b[colG patterns (column positioning)
+    expect(result).toMatch(/\x1b\[\d+G/);
+  });
+
+  test("includes text lines when provided", () => {
+    const result = renderGuardianBacklight({ textLines: ["Hello", "World"] });
+    expect(result).toContain("Hello");
+    expect(result).toContain("World");
+  });
+
+  test("respects dim parameter", () => {
+    const bright = renderGuardianBacklight({ dim: 1 });
+    const dimmed = renderGuardianBacklight({ dim: 0.1 });
+    expect(bright).not.toBe(dimmed);
   });
 });
 
@@ -106,7 +238,6 @@ describe("lookup", () => {
 describe("display helpers", () => {
   test("centerText centers text in width", () => {
     const result = centerText("Hello", 20);
-    // padding = floor((20 - 5) / 2) = 7, so result is 7 spaces + "Hello" = 12 chars
     expect(result.trim()).toBe("Hello");
     expect(result.startsWith("       ")).toBe(true);
     expect(result.length).toBe(12);
@@ -117,67 +248,25 @@ describe("display helpers", () => {
     expect(result).toBe("Hello World");
   });
 
-  test("addBorder wraps art in border", () => {
-    const result = addBorder("Hello\nWorld");
-    expect(result.startsWith("#")).toBe(true);
-    expect(result).toContain("# Hello #");
-    expect(result).toContain("# World #");
-  });
-
-  test("addBorder uses custom character", () => {
-    const result = addBorder("Hi", "*");
-    expect(result).toContain("* Hi *");
-  });
-
-  test("addCaption adds text below mascot", () => {
-    const mascot = getMascot("minimal")!;
-    const result = addCaption(mascot, "Test Caption");
-    expect(result).toContain(mascot.art);
-    expect(result).toContain("Test Caption");
-  });
-
-  test("addCaption uses mascot name by default", () => {
-    const mascot = getMascot("classic")!;
-    const result = addCaption(mascot);
-    expect(result).toContain("Classic Golem");
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Formatters
-// ---------------------------------------------------------------------------
-
-describe("formatters", () => {
-  test("formatSplash includes art and name", () => {
-    const mascot = getMascot("ember")!;
-    const output = formatSplash(mascot);
-    expect(output).toContain(mascot.art);
-    expect(output).toContain("Ember Golem");
-    expect(output).toContain(mascot.description);
-  });
-
-  test("formatSplash works without arg (random)", () => {
+  test("formatSplash includes colored art and name", () => {
     const output = formatSplash();
-    expect(output.length).toBeGreaterThan(50);
-    expect(output).toContain("~");
+    expect(output.length).toBeGreaterThan(100);
+    expect(output).toContain("Guardian Golem");
+    expect(output).toContain("Protector");
+    // Should contain ANSI codes
+    expect(output).toContain("\x1b[38;2;");
   });
 
-  test("formatCatalog lists all mascots", () => {
-    const output = formatCatalog();
-    expect(output).toContain("ASCII Mascot Catalog");
-    expect(output).toContain("classic");
-    expect(output).toContain("circuit");
-    expect(output).toContain("minimal");
-    expect(output).toContain("runic");
-    expect(output).toContain("ember");
+  test("getGuardianPlain returns clean text (full)", () => {
+    const plain = getGuardianPlain("full");
+    expect(plain).not.toContain("${c");
+    expect(plain).not.toContain("\x1b[");
+    expect(plain).toContain("א");
   });
 
-  test("formatMascotPreview shows full details", () => {
-    const mascot = getMascot("runic")!;
-    const output = formatMascotPreview(mascot);
-    expect(output).toContain("Runic Golem");
-    expect(output).toContain("runic");
-    expect(output).toContain(mascot.art);
-    expect(output).toContain("Description:");
+  test("getGuardianPlain returns simple variant", () => {
+    const plain = getGuardianPlain("simple");
+    expect(plain).toContain("אמת");
+    expect(plain.split("\n").length).toBe(16);
   });
 });
