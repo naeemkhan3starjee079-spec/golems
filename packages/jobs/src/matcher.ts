@@ -64,8 +64,13 @@ async function callLLM(prompt: string): Promise<{ score: number; reason: string;
   }>(prompt);
 
   if (result) {
+    // Normalize score to 1-10 range — LLMs sometimes return 0-100 scale
+    let score = result.score || 5;
+    if (score > 10) score = Math.max(1, Math.min(10, Math.round(score / 10)));
+    score = Math.max(1, Math.min(10, score));
+
     return {
-      score: result.score || 5,
+      score,
       reason: result.reason || "No reason",
       highlights: result.highlights || [],
     };

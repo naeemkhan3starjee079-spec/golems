@@ -183,8 +183,18 @@ async function syncJobs(filteredJobs?: JobListing[], dryRun = false) {
 }
 
 /**
- * Sync match scores back to Supabase after Ollama scoring
+ * Normalize a score to the 1-10 range.
+ * LLMs sometimes return scores on 0-100 scale instead of 1-10.
  */
+function normalizeScore(score: number): number {
+  if (score > 10) {
+    // Likely on 0-100 scale — convert to 1-10
+    return Math.max(1, Math.min(10, Math.round(score / 10)));
+  }
+  return Math.max(1, Math.min(10, score));
+}
+
+/** Sync match scores back to Supabase after Ollama scoring */
 async function syncScores(matches: MatchResult[]) {
   if (!SUPABASE_URL || !SUPABASE_KEY) {
     console.error("[SyncScores] Missing Supabase env vars");
@@ -201,10 +211,15 @@ async function syncScores(matches: MatchResult[]) {
   let errors = 0;
 
   for (const match of matches) {
+    const normalizedScore = normalizeScore(match.score);
+    if (normalizedScore !== match.score) {
+      console.log(`[SyncScores] Normalized score ${match.score} → ${normalizedScore} for ${match.job.title}`);
+    }
+
     const { error } = await supabase
       .from("golem_jobs")
       .update({
-        match_score: match.score,
+        match_score: normalizedScore,
         notes: match.reason,
         tags: match.highlights,
         match_reasons: match.highlights.length > 0 ? match.highlights : null,

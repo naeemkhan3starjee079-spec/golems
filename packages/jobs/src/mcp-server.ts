@@ -2,9 +2,9 @@
  * JobGolem MCP Server
  *
  * Exposes job data as MCP tools for Claude Code.
- * Tools: getHot, getRecent, search, watchlist, outreachDrafts
+ * Tools: getHot, getRecent, search, watchlist, dailyDigest, outreachDrafts
  *
- * Reads from local JSON files - no DB connection needed.
+ * Primary data source: Supabase golem_jobs table (cloud worker writes there).
  */
 
 import "@golems/shared/lib/load-env";
@@ -15,10 +15,9 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { existsSync, readFileSync, readdirSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import { getSupabaseAnon } from "@golems/shared/lib/supabase-factory";
-import { loadScrapedJobs, type JobListing } from "./scraper";
 import { getActiveCompanies, getOutreachCandidates } from "./watchlist";
 import { matchJobsToConnections } from "./connection-matcher";
 import { createAndSaveDraft, getOutreachDrafts, updateDraftStatus } from "@golems/recruiter/draft-outreach";
@@ -27,10 +26,6 @@ import { getFullUsageStats, getSupabaseUsageStats, readCostLog, readFromSupabase
 // Use shared factory — anon key for RLS-respecting queries
 const getSupabase = getSupabaseAnon;
 
-const RESULTS_DIR =
-  process.env.HOME + "/.golems-zikaron/job-golem/results";
-const SEEN_JOBS_PATH =
-  process.env.HOME + "/.golems-zikaron/job-golem/seen-jobs.json";
 
 const server = new Server(
   { name: "golems-jobs", version: "1.0.0" },
@@ -349,89 +344,85 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   }
 });
 
-interface ScoredJob {
-  job: JobListing;
-  score: number;
-  reason: string;
-  highlights: string[];
-}
-
-function loadLatestResults(): ScoredJob[] {
-  if (!existsSync(RESULTS_DIR)) return [];
-
-  const files = readdirSync(RESULTS_DIR)
-    .filter((f) => f.startsWith("jobs-") && f.endsWith(".json"))
-    .sort()
-    .reverse();
-
-  if (files.length === 0) return [];
-
-  // Load the most recent results file
-  const latest = readFileSync(`${RESULTS_DIR}/${files[0]}`, "utf-8");
-  return JSON.parse(latest);
-}
-
-function formatJob(j: ScoredJob): string {
-  const { job, score, reason, highlights } = j;
+/** Format a job row from Supabase for display */
+function formatSupabaseJob(j: any): string {
+  const score = j.match_score != null ? j.match_score : "?";
+  const reasons = j.match_reasons?.length > 0 ? ` (${j.match_reasons.join(", ")})` : "";
   return [
-    `- **[${score}/10]** ${job.title} @ ${job.company}`,
-    `  ${job.location} | ${job.experience || "N/A"}`,
-    highlights.length > 0 ? `  Matches: ${highlights.join(", ")}` : "",
-    reason ? `  Why: ${reason}` : "",
-    job.url ? `  ${job.url}` : "",
+    `- **[${score}/10]** ${j.title} @ ${j.company}`,
+    `  ${j.location || "Israel"} | ${j.source}${reasons}`,
+    j.notes ? `  Why: ${j.notes.slice(0, 100)}` : "",
+    j.url ? `  ${j.url}` : "",
   ]
     .filter(Boolean)
     .join("\n");
 }
 
-function handleGetHot(args: any) {
-  const minScore = args?.minScore ?? 8;
-  const results = loadLatestResults();
-  const hot = results.filter((r) => r.score >= minScore);
+async function handleGetHot(args: any) {
+  const sb = getSupabase();
+  if (!sb) {
+    return { content: [{ type: "text" as const, text: "Supabase not configured." }], isError: true };
+  }
 
-  if (hot.length === 0) {
+  const minScore = args?.minScore ?? 8;
+  const { data, error } = await sb
+    .from("golem_jobs")
+    .select("*")
+    .gte("match_score", minScore)
+    .not("status", "in", "(archived,rejected)")
+    .order("match_score", { ascending: false })
+    .limit(30);
+
+  if (error || !data || data.length === 0) {
     return {
-      content: [
-        {
-          type: "text" as const,
-          text: `No jobs scoring ${minScore}+ in the latest batch.`,
-        },
-      ],
+      content: [{ type: "text" as const, text: `No jobs scoring ${minScore}+ found.` }],
     };
   }
 
   const lines = [
     `## Hot Jobs (score >= ${minScore})`,
-    `**${hot.length} matches**\n`,
-    ...hot.map(formatJob),
+    `**${data.length} matches**\n`,
+    ...data.map((j: any) => formatSupabaseJob(j)),
   ];
 
   return { content: [{ type: "text" as const, text: lines.join("\n") }] };
 }
 
-function handleGetRecent(args: any) {
-  const limit = args?.limit ?? 20;
-  const results = loadLatestResults().slice(0, limit);
+async function handleGetRecent(args: any) {
+  const sb = getSupabase();
+  if (!sb) {
+    return { content: [{ type: "text" as const, text: "Supabase not configured." }], isError: true };
+  }
 
-  if (results.length === 0) {
+  const limit = args?.limit ?? 20;
+  const { data, error } = await sb
+    .from("golem_jobs")
+    .select("*")
+    .order("scraped_at", { ascending: false })
+    .limit(limit);
+
+  if (error || !data || data.length === 0) {
     return {
-      content: [
-        { type: "text" as const, text: "No recent job results found." },
-      ],
+      content: [{ type: "text" as const, text: "No recent job results found." }],
     };
   }
 
   const lines = [
-    `## Recent Job Results (${results.length})`,
+    `## Recent Job Results (${data.length})`,
     "",
-    ...results.map(formatJob),
+    ...data.map((j: any) => formatSupabaseJob(j)),
   ];
 
   return { content: [{ type: "text" as const, text: lines.join("\n") }] };
 }
 
-function handleSearch(args: any) {
-  const query = args?.query?.toLowerCase();
+async function handleSearch(args: any) {
+  const sb = getSupabase();
+  if (!sb) {
+    return { content: [{ type: "text" as const, text: "Supabase not configured." }], isError: true };
+  }
+
+  const query = args?.query;
   if (!query) {
     return {
       content: [{ type: "text" as const, text: "Missing required: query" }],
@@ -439,35 +430,27 @@ function handleSearch(args: any) {
     };
   }
 
-  // Search both scraped jobs and scored results
-  const scraped = loadScrapedJobs();
-  const matches = scraped
-    .filter(
-      (j) =>
-        j.title?.toLowerCase().includes(query) ||
-        j.company?.toLowerCase().includes(query) ||
-        j.description?.toLowerCase().includes(query)
-    )
-    .slice(0, 20);
+  // Search by title, company, or description using ilike
+  const { data, error } = await sb
+    .from("golem_jobs")
+    .select("*")
+    .or(`title.ilike.%${query}%,company.ilike.%${query}%,description.ilike.%${query}%`)
+    .order("match_score", { ascending: false, nullsFirst: false })
+    .limit(20);
 
-  if (matches.length === 0) {
+  if (error || !data || data.length === 0) {
     return {
-      content: [
-        {
-          type: "text" as const,
-          text: `No jobs matching "${args.query}" in scraped data.`,
-        },
-      ],
+      content: [{ type: "text" as const, text: `No jobs matching "${query}".` }],
     };
   }
 
   const lines = [
-    `## Job Search: "${args.query}"`,
-    `**${matches.length} matches**\n`,
-    ...matches.map(
-      (j) =>
-        `- **${j.title}** @ ${j.company} (${j.location}) [${j.source}]\n  ${j.url || ""}`
-    ),
+    `## Job Search: "${query}"`,
+    `**${data.length} matches**\n`,
+    ...data.map((j: any) => {
+      const score = j.match_score != null ? `[${j.match_score}/10] ` : "";
+      return `- ${score}**${j.title}** @ ${j.company} (${j.location || "Israel"}) [${j.source}]\n  ${j.url || ""}`;
+    }),
   ];
 
   return { content: [{ type: "text" as const, text: lines.join("\n") }] };
@@ -499,29 +482,30 @@ function handleWatchlist() {
   return { content: [{ type: "text" as const, text: lines.join("\n") }] };
 }
 
-function handleStats() {
-  const scraped = loadScrapedJobs();
-  const results = loadLatestResults();
-  const seenCount = existsSync(SEEN_JOBS_PATH)
-    ? JSON.parse(readFileSync(SEEN_JOBS_PATH, "utf-8")).length
-    : 0;
+async function handleStats() {
+  const sb = getSupabase();
+  if (!sb) {
+    return { content: [{ type: "text" as const, text: "Supabase not configured." }], isError: true };
+  }
 
-  const resultFiles = existsSync(RESULTS_DIR)
-    ? readdirSync(RESULTS_DIR).filter((f) => f.endsWith(".json")).length
-    : 0;
-
-  const hot = results.filter((r) => r.score >= 8).length;
-  const warm = results.filter((r) => r.score >= 6 && r.score < 8).length;
+  const [totalRes, hotRes, warmRes, coldRes, unscoredRes, recentRes] = await Promise.all([
+    sb.from("golem_jobs").select("id", { count: "exact", head: true }),
+    sb.from("golem_jobs").select("id", { count: "exact", head: true }).gte("match_score", 8),
+    sb.from("golem_jobs").select("id", { count: "exact", head: true }).gte("match_score", 6).lt("match_score", 8),
+    sb.from("golem_jobs").select("id", { count: "exact", head: true }).lt("match_score", 6).not("match_score", "is", null),
+    sb.from("golem_jobs").select("id", { count: "exact", head: true }).is("match_score", null),
+    sb.from("golem_jobs").select("id", { count: "exact", head: true }).gte("scraped_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
+  ]);
 
   const lines = [
     "## Job Pipeline Stats",
-    `- **Total scraped:** ${scraped.length}`,
-    `- **Seen (deduped):** ${seenCount}`,
-    `- **Result batches:** ${resultFiles}`,
-    `- **Latest batch:** ${results.length} scored`,
-    `  - Hot (8+): ${hot}`,
-    `  - Warm (6-7): ${warm}`,
-    `  - Cold (<6): ${results.length - hot - warm}`,
+    `- **Total in DB:** ${totalRes.count || 0}`,
+    `- **Last 24h:** ${recentRes.count || 0} new`,
+    `- **Score breakdown:**`,
+    `  - Hot (8+): ${hotRes.count || 0}`,
+    `  - Warm (6-7): ${warmRes.count || 0}`,
+    `  - Cold (<6): ${coldRes.count || 0}`,
+    `  - Unscored: ${unscoredRes.count || 0}`,
   ];
 
   return { content: [{ type: "text" as const, text: lines.join("\n") }] };
@@ -578,7 +562,8 @@ async function handleDailyDigest(args: any) {
     lines.push("### Top Matches");
     for (const j of topMatches) {
       const reasons = j.match_reasons?.length > 0 ? ` (${j.match_reasons.join(", ")})` : "";
-      lines.push(`- **[${j.match_score || "?"}]** ${j.title} @ ${j.company}${reasons}`);
+      const score = j.match_score != null ? j.match_score : "?";
+      lines.push(`- **[${score}]** ${j.title} @ ${j.company}${reasons}`);
       if (j.url) lines.push(`  ${j.url}`);
     }
   }
