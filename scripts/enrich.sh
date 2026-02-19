@@ -13,8 +13,7 @@
 set -euo pipefail
 
 GOLEMS_DIR="${HOME}/Gits/golems"
-ZIKARON_DIR="${GOLEMS_DIR}/packages/zikaron"
-VENV="${ZIKARON_DIR}/.venv/bin/activate"
+BRAINLAYER_DIR="${HOME}/Gits/brainlayer"
 LOG_DIR="${HOME}/.golems-zikaron/logs"
 PID_FILE="${HOME}/.golems-zikaron/enrich.pid"
 LOG_FILE="${LOG_DIR}/enrich-on-demand.log"
@@ -31,7 +30,7 @@ case "${1:-status}" in
     MAX="${2:-5000}"
 
     # Check if already running
-    if [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
+    if [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE" 2>/dev/null)" 2>/dev/null; then
       echo "Enrichment already running (PID: $(cat "$PID_FILE"))"
       echo "Use './scripts/enrich.sh stop' first."
       exit 1
@@ -68,10 +67,9 @@ case "${1:-status}" in
       cleanup() { rm -f "$PID_FILE"; }
       trap cleanup EXIT
 
-      source "$VENV"
       echo "[$(date '+%H:%M:%S')] Starting enrichment: max=${MAX}" >> "$LOG_FILE"
 
-      python3 -m zikaron.pipeline.enrichment \
+      python3 -m brainlayer.pipeline.enrichment \
         --batch-size=50 \
         --max="$MAX" \
         2>&1 | tee -a "$LOG_FILE" || {
@@ -98,7 +96,7 @@ case "${1:-status}" in
         # Kill the whole process group
         kill -- -"$PID" 2>/dev/null || kill "$PID" 2>/dev/null || true
         # Also kill any python enrichment processes spawned by it
-        pkill -f "zikaron.pipeline.enrichment" 2>/dev/null || true
+        pkill -f "brainlayer.pipeline.enrichment" 2>/dev/null || true
         rm -f "$PID_FILE"
         echo "Enrichment stopped (was PID: $PID)"
         echo "[$(date '+%H:%M:%S')] Enrichment STOPPED by user" >> "$LOG_FILE"
@@ -108,8 +106,8 @@ case "${1:-status}" in
       fi
     else
       # Check if enrichment process is running anyway
-      if pgrep -f "zikaron.pipeline.enrichment" > /dev/null 2>&1; then
-        pkill -f "zikaron.pipeline.enrichment" 2>/dev/null || true
+      if pgrep -f "brainlayer.pipeline.enrichment" > /dev/null 2>&1; then
+        pkill -f "brainlayer.pipeline.enrichment" 2>/dev/null || true
         echo "Enrichment process killed (no PID file found)"
       else
         echo "No enrichment running."
@@ -118,7 +116,7 @@ case "${1:-status}" in
     ;;
 
   status)
-    if [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
+    if [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE" 2>/dev/null)" 2>/dev/null; then
       PID=$(cat "$PID_FILE")
       echo "Enrichment RUNNING (PID: $PID)"
       echo ""
@@ -134,8 +132,7 @@ case "${1:-status}" in
     fi
 
     # Show overall progress (query enriched_at directly)
-    if [ -f "$VENV" ]; then
-      source "$VENV" 2>/dev/null
+    if command -v python3 &>/dev/null; then
       STATS=$(python3 -c "
 import apsw
 from pathlib import Path

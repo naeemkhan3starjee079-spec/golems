@@ -78,5 +78,5 @@ High-frequency mistake patterns get added to project CLAUDE.md:
 
 ## See Also
 
-- Zikaron for embeddings: `~/Gits/golems/packages/zikaron/CLAUDE.md`
+- BrainLayer for embeddings: `~/Gits/brainlayer/CLAUDE.md`
 - Night Shift for nightly runs: `~/Gits/golems/packages/autonomous/CLAUDE.md`

@@ -24,14 +24,13 @@
         "main": "ralph.zsh"
       }
     },
-    "zikaron": {
-      "path": "packages/zikaron",
-      "description": "Memory layer for Claude Code — semantic search over past sessions",
+    "brainlayer": {
+      "path": "external:github.com/EtanHey/brainlayer",
+      "description": "Memory layer for Claude Code — semantic search over past sessions (external repo)",
       "runtime": "python",
       "entrypoints": {
-        "daemon": "src/zikaron/daemon.py",
-        "cli": "src/zikaron/cli/__init__.py",
-        "mcp": "src/zikaron/mcp/__init__.py"
+        "cli": "brainlayer",
+        "mcp": "brainlayer-mcp"
       }
     },
     "docsite": {
@@ -140,7 +139,7 @@
   },
 
   "mcpServers": {
-    "zikaron": {
+    "brainlayer": {
       "description": "Memory search over past Claude Code sessions",
       "transport": "stdio"
     },
@@ -218,6 +217,6 @@
     "test-plan",
     "worktrees",
     "writing-skills",
-    "zikaron"
+    "brainlayer"
   ]
 }

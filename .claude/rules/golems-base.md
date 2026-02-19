@@ -77,4 +77,4 @@ When making architecture decisions in this repo:
 1. Document the decision in `docs/architecture/` as a markdown file
 2. Include: context, options considered, decision, rationale
 3. These get indexed into BrainLayer for future retrieval
-4. Search past decisions: `mcp__zikaron__brainlayer_search(query="topic", project="-Users-etanheyman-Gits-golems")`
+4. Search past decisions: `mcp__brainlayer__brainlayer_search(query="topic", project="-Users-etanheyman-Gits-golems")`

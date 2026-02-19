@@ -16,8 +16,7 @@
 set -euo pipefail
 
 GOLEMS_DIR="${HOME}/Gits/golems"
-ZIKARON_DIR="${GOLEMS_DIR}/packages/zikaron"
-VENV="${ZIKARON_DIR}/.venv/bin/activate"
+BRAINLAYER_DIR="${HOME}/Gits/brainlayer"
 LOG_DIR="${HOME}/.golems-zikaron/logs"
 LOG_FILE="${LOG_DIR}/auto-index-$(date +%Y-%m-%d).log"
 PROJECTS_DIR="${HOME}/.claude/projects"
@@ -112,21 +111,21 @@ if [ "$ENRICH_ONLY" = false ] && [ "$TABA_ONLY" = false ]; then
     log "  Found ${FILE_COUNT} files to index (${SKIPPED_ACTIVE} skipped as active)"
 
     # Activate venv and run indexing
-    source "$VENV"
+    # brainlayer is system-installed (pip install -e ~/Gits/brainlayer)
     BEFORE=$(python3 -c "
-from zikaron.vector_store import VectorStore
+from brainlayer.vector_store import VectorStore
 from pathlib import Path
 s = VectorStore(Path.home() / '.local/share/zikaron/zikaron.db')
 print(s.get_stats().get('total_chunks', 0))
 s.close()
 " 2>/dev/null || echo "0")
 
-    zikaron index 2>&1 | tail -5 | tee -a "$LOG_FILE" || {
+    brainlayer index 2>&1 | tail -5 | tee -a "$LOG_FILE" || {
       log "  WARNING: zikaron index failed (exit $?), continuing..."
     }
 
     AFTER=$(python3 -c "
-from zikaron.vector_store import VectorStore
+from brainlayer.vector_store import VectorStore
 from pathlib import Path
 s = VectorStore(Path.home() / '.local/share/zikaron/zikaron.db')
 print(s.get_stats().get('total_chunks', 0))
@@ -147,12 +146,12 @@ ENRICH_OK=true
 
 if [ "$INDEX_ONLY" = false ] && [ "$TABA_ONLY" = false ] && [ "$MAX_ENRICH" -gt 0 ]; then
   log "Step 2: Enriching up to ${MAX_ENRICH} chunks via GLM..."
-  source "$VENV" 2>/dev/null || true
+  # brainlayer is system-installed (pip install -e ~/Gits/brainlayer) 2>/dev/null || true
 
   START_TIME=$(date +%s)
 
   # Run enrichment, capture output and exit code
-  ENRICH_OUTPUT=$(python3 -m zikaron.pipeline.enrichment \
+  ENRICH_OUTPUT=$(python3 -m brainlayer.pipeline.enrichment \
     --batch-size=50 \
     --max="$MAX_ENRICH" \
     2>&1) || ENRICH_OK=false

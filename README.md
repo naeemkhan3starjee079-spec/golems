@@ -35,7 +35,7 @@ Golems is a personal AI agent ecosystem built as a **Bun workspace monorepo**. E
 
 It's not a Telegram bot — it's a **collection of skills, rules, MCP tools, and agent profiles** bundled into an ecosystem. Telegram is just one surface. A Codex agent, a Cursor session, or a fresh Claude Code instance can all use golems by pointing at the plugin directory.
 
-Your Mac runs the brain (Telegram bot, Night Shift, memory). Railway runs the body (email polling, job scraping, briefings). Every conversation gets indexed into searchable memory via [Zikaron](packages/zikaron/) (238K+ chunks).
+Your Mac runs the brain (Telegram bot, Night Shift, memory). Railway runs the body (email polling, job scraping, briefings). Every conversation gets indexed into searchable memory via [BrainLayer](https://github.com/EtanHey/brainlayer) (260K+ chunks).
 
 ---
 
@@ -106,12 +106,12 @@ golems/
 │   ├── golems-tui/     # React Ink terminal dashboard
 │   ├── autonomous/     # Legacy test host (test files only)
 │   ├── ralph/          # Autonomous coding loop (PRD → stories → code → review)
-│   └── zikaron/        # Memory layer (238K+ chunks, semantic search)
+│   └── qa-voice/       # Voice QA & discovery (MCP server)
 ├── .claude/agents/     # 7 named agent profiles (/agents)
 ├── .claude/rules/      # Auto-loaded rules (survives compaction)
 ├── skills/             # 30+ golem-powers skills in 6 categories
 ├── rules-library/      # Exportable rules for any Claude Code project
-├── docs/architecture/  # Architecture decisions (Zikaron-indexed)
+├── docs/architecture/  # Architecture decisions (BrainLayer-indexed)
 ├── launchd/            # macOS service plists
 └── Dockerfile          # Railway deployment
 ```
@@ -138,7 +138,7 @@ golems/
 
 | Environment | What Runs |
 |-------------|-----------|
-| **Mac (brain)** | Telegram bot, Night Shift, Zikaron, notification server |
+| **Mac (brain)** | Telegram bot, Night Shift, BrainLayer, notification server |
 | **Railway (body)** | Email poller, job scraper, briefing, cloud LLM (Gemini) |
 | **Supabase** | Database, auth, storage |
 
@@ -155,7 +155,7 @@ golems/
                           └─────┬────┴─────┬────┘          │
                                 ▼          ▼               │
                      ┌──────────┐┌──────────┐┌──────────┐  │
-                     │  Email + ││ Services ││  Zikaron │◄─┘
+                     │  Email + ││ Services ││BrainLayer│◄─┘
                      │   Jobs   ││ (Railway)││ (memory) │
                      └──────────┘└──────────┘└──────────┘
 ```
@@ -225,7 +225,7 @@ The plugin brings its CLAUDE.md, skills, MCP tools, and rules automatically.
 
 | Server | What it does |
 |--------|-------------|
-| **zikaron** | Search 238K+ indexed conversation chunks — persistent memory across sessions |
+| **[brainlayer](https://github.com/EtanHey/brainlayer)** | Search 260K+ indexed conversation chunks — persistent memory across sessions |
 | **golems-email** | Email triage — recent, search, subscriptions, urgent, draft replies |
 | **golems-jobs** | Job discovery — recent matches, search, stats |
 | **supabase** | Database access — tables, SQL, migrations |

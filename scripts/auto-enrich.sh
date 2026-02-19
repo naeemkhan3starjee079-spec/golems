@@ -16,8 +16,7 @@
 set -euo pipefail
 
 GOLEMS_DIR="${HOME}/Gits/golems"
-ZIKARON_DIR="${GOLEMS_DIR}/packages/zikaron"
-VENV="${ZIKARON_DIR}/.venv/bin/activate"
+BRAINLAYER_DIR="${HOME}/Gits/brainlayer"
 DB_PATH="${HOME}/.local/share/zikaron/zikaron.db"
 LOG_DIR="${HOME}/.golems-zikaron/logs"
 LOG_FILE="${LOG_DIR}/auto-enrich.log"
@@ -45,13 +44,7 @@ mkdir -p "$LOG_DIR"
 log() { echo "$(date '+%Y-%m-%d %H:%M:%S'): $1" | tee -a "$LOG_FILE"; }
 
 # Check venv exists
-if [ ! -f "$VENV" ]; then
-  log "ERROR: Zikaron venv not found at ${VENV}"
-  exit 1
-fi
-
 # Get queue depth
-source "$VENV" 2>/dev/null
 UNENRICHED=$(python3 -c "
 import apsw
 from pathlib import Path
@@ -106,11 +99,11 @@ fi
 
 # Run enrichment
 log "Starting enrichment: max=${MAX_CHUNKS}, parallel=${PARALLEL}"
-cd "$ZIKARON_DIR"
+cd "$BRAINLAYER_DIR"
 
 # Temporarily disable errexit so we can capture PIPESTATUS after pipeline
 set +eo pipefail
-PYTHONUNBUFFERED=1 python3 -m zikaron.pipeline.enrichment \
+PYTHONUNBUFFERED=1 python3 -m brainlayer.pipeline.enrichment \
   --batch-size=50 \
   --max="$MAX_CHUNKS" \
   --parallel="$PARALLEL" \

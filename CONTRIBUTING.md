@@ -16,7 +16,7 @@ Each package has its own setup:
 | **autonomous** | `cd packages/autonomous && bun install` |
 | **docsite** | `cd packages/docsite && npm install` |
 | **ralph** | `cd packages/ralph` (zsh scripts, no install needed) |
-| **zikaron** | `cd packages/zikaron && python3 -m venv .venv && pip install -r requirements.txt` |
+| **brainlayer** | `pip install git+https://github.com/EtanHey/brainlayer.git` (external repo) |
 
 ## Development Workflow
 

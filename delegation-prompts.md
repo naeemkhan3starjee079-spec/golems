@@ -44,40 +44,10 @@ curl -X POST http://localhost:3847/notify -H "Content-Type: application/json" \
 
 ---
 
-## 2. Zikaron Package (`golems/packages/zikaron/`)
+## 2. BrainLayer (External Repo)
 
-```
-You're working on Zikaron - the memory layer that indexes Claude Code conversations.
-
-## Your Task
-Improve README and add documentation for:
-1. Pipeline architecture (extract → classify → embed → index)
-2. ChromaDB storage structure
-3. CLI commands and usage
-4. MCP server integration
-5. Style analysis features
-
-## Context Files to Read
-- `README.md` (current state)
-- `src/zikaron/pipeline/*.py` (core pipeline)
-- `src/zikaron/cli/__init__.py` (CLI commands)
-- `src/zikaron/mcp/__init__.py` (MCP server)
-- `scripts/watcher.py` (file watcher)
-
-## Key Points to Document
-- How conversations are extracted from ~/.claude/projects/
-- Classification categories (problem-solving, code-review, etc.)
-- Embedding with Ollama (mxbai-embed-large)
-- ChromaDB at ~/.local/share/zikaron/chromadb
-- How to search/query memories
-
-## Output
-Update README.md with architecture diagrams, usage examples, and API docs.
-
-When done, notify via:
-curl -X POST http://localhost:3847/notify -H "Content-Type: application/json" \
-  -d '{"title":"Zikaron README Done","body":"Documentation updated","source":"claude"}'
-```
+> BrainLayer has been extracted to its own repo: https://github.com/EtanHey/brainlayer
+> Use `pip install git+https://github.com/EtanHey/brainlayer.git` to install.
 
 ---
 

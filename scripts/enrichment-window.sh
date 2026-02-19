@@ -11,7 +11,7 @@ SECONDS_TO_RUN=$((HOURS * 3600))
 LOG_DIR="$HOME/.golems-zikaron/logs"
 DB_PATH="$HOME/.local/share/zikaron/zikaron.db"
 LOCK_FILE="/tmp/zikaron-enrichment.lock"
-ZIKARON_DIR="$HOME/Gits/golems/packages/zikaron"
+BRAINLAYER_DIR="$HOME/Gits/brainlayer"
 
 mkdir -p "$LOG_DIR"
 
@@ -43,8 +43,7 @@ fi
 log "Starting enrichment for ${HOURS}h (${SECONDS_TO_RUN}s)"
 
 # --- Run enrichment ---
-cd "$ZIKARON_DIR" || exit 1
-source .venv/bin/activate
+cd "$BRAINLAYER_DIR" || exit 1
 
 # Load env vars (Supabase for logging, backend config)
 for ENV_FILE in "$HOME/Gits/golems/.env" "$HOME/Gits/golems/.env.local"; do
@@ -70,7 +69,7 @@ if [ "$ZIKARON_ENRICH_BACKEND" = "mlx" ]; then
     fi
 fi
 
-PYTHONUNBUFFERED=1 python3 -m zikaron.pipeline.enrichment --batch-size 50 --parallel=3 >> "$LOG_DIR/enrichment.log" 2>&1 &
+PYTHONUNBUFFERED=1 python3 -m brainlayer.pipeline.enrichment --batch-size 50 --parallel=3 >> "$LOG_DIR/enrichment.log" 2>&1 &
 PID=$!
 echo "$PID" > "$LOCK_FILE"
 

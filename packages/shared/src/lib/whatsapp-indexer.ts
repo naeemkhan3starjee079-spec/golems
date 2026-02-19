@@ -1,8 +1,8 @@
 /**
- * WhatsApp Indexer - Send WhatsApp chats to Zikaron for semantic search
+ * WhatsApp Indexer - Send WhatsApp chats to BrainLayer for semantic search
  *
  * Converts WhatsApp exports to JSONL format and indexes them using
- * Zikaron's CLI (zikaron index-fast).
+ * BrainLayer's CLI (brainlayer index-fast).
  */
 
 import { parseWhatsAppExport, groupMessages } from './whatsapp-parser';
@@ -12,7 +12,7 @@ import * as os from 'os';
 import { spawnSync } from 'child_process';
 
 /**
- * Index WhatsApp chat export in Zikaron
+ * Index WhatsApp chat export in BrainLayer
  *
  * @param exportPath - Path to WhatsApp .txt export file
  * @param chatName - Display name for the chat (e.g., "Family Group", "John Doe")
@@ -65,22 +65,22 @@ export async function indexWhatsAppChat(
     fs.writeFileSync(jsonlPath, jsonlLines.join('\n'));
     console.log(`Created JSONL file: ${jsonlPath}`);
 
-    // Call Zikaron CLI to index
-    console.log('Indexing with Zikaron...');
-    const zikaronPath = findZikaronCli();
+    // Call BrainLayer CLI to index
+    console.log('Indexing with BrainLayer...');
+    const brainlayerPath = findBrainLayerCli();
 
-    if (!zikaronPath) {
-      throw new Error('Zikaron CLI not found. Install: cd ~/Gits/golems/packages/zikaron && pip install -e ".[dev]"');
+    if (!brainlayerPath) {
+      throw new Error('BrainLayer CLI not found. Install: pip install git+https://github.com/EtanHey/brainlayer.git');
     }
 
     const result = spawnSync(
-      zikaronPath,
+      brainlayerPath,
       ['index-fast', jsonlPath, '--project', `whatsapp-${sanitizeChatName(chatName)}`],
       { stdio: 'inherit' }
     );
 
     if (result.status !== 0) {
-      throw new Error(`Zikaron indexing failed with exit code ${result.status}`);
+      throw new Error(`BrainLayer indexing failed with exit code ${result.status}`);
     }
 
     console.log(`✓ Indexed ${textMessages.length} messages from "${chatName}"`);
@@ -91,16 +91,14 @@ export async function indexWhatsAppChat(
 }
 
 /**
- * Find Zikaron CLI executable
+ * Find BrainLayer CLI executable
  */
-function findZikaronCli(): string | null {
+function findBrainLayerCli(): string | null {
   // Try common paths
   const paths = [
-    // Zikaron venv in golems monorepo
-    `${process.env.HOME}/Gits/golems/packages/zikaron/.venv/bin/zikaron`,
     // System-wide installation
-    '/usr/local/bin/zikaron',
-    `${process.env.HOME}/.local/bin/zikaron`
+    '/usr/local/bin/brainlayer',
+    `${process.env.HOME}/.local/bin/brainlayer`
   ];
 
   for (const p of paths) {
@@ -110,7 +108,7 @@ function findZikaronCli(): string | null {
   }
 
   // Try PATH
-  const which = spawnSync('which', ['zikaron'], { encoding: 'utf-8' });
+  const which = spawnSync('which', ['brainlayer'], { encoding: 'utf-8' });
   if (which.status === 0 && which.stdout.trim()) {
     return which.stdout.trim();
   }

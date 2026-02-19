@@ -10,10 +10,10 @@ CLI commands, data stores, and how everything connects.
 | --- | --- |
 | `packages/autonomous` | Main golem runtime: Telegram bot, cloud worker, golems, LLM tooling |
 | `packages/ralph` | Ralph autonomous coding loop (Zsh + Bun + React Ink TUI) |
-| `packages/zikaron` | Memory pipeline (Python, sqlite-vec, MCP server) |
+| [BrainLayer](https://github.com/EtanHey/brainlayer) | Memory pipeline — external repo (Python, sqlite-vec, MCP server) |
 | `.claude/rules/` | Auto-loaded rules (survives compaction) |
 | `rules-library/` | Exportable context/rules library |
-| `docs/architecture/` | Architecture decisions (Zikaron-indexed) |
+| `docs/architecture/` | Architecture decisions (BrainLayer-indexed) |
 | `skills/golem-powers/` | Skills used by Ralph and Claude |
 | `docs/` | Global architecture notes |
 | `docs.local/` | Local research and planning (gitignored) |
@@ -197,8 +197,8 @@ Email and Teller MCP (`packages/autonomous/src/email-golem/mcp-server.ts`):
 Job MCP (`packages/autonomous/src/job-golem/mcp-server.ts`):
 - `jobs_getHot`, `jobs_getRecent`, `jobs_search`, `jobs_watchlist`, `jobs_stats`
 
-Zikaron MCP (`packages/zikaron`):
-- `zikaron_search`, `zikaron_stats`, `zikaron_list_projects`
+BrainLayer MCP (external: `brainlayer-mcp`):
+- `brainlayer_search`, `brainlayer_stats`, `brainlayer_list_projects`
 
 ## CLI Commands
 
@@ -258,12 +258,12 @@ Cloud worker schedule in `src/cloud-worker.ts` (Asia/Jerusalem):
 - **Skills**: uses `skills/golem-powers/` and `.claude/rules/`.
 - **Connection to golems**: NightShift reuses Ralph worktree and PR patterns.
 
-### packages/zikaron
+### BrainLayer (external repo: github.com/EtanHey/brainlayer)
 - **Role**: Memory pipeline for Claude Code sessions.
-- **Entry**: `src/zikaron/` pipeline, `cli/`, `mcp/`.
+- **Entry**: `brainlayer` CLI, `brainlayer-mcp` MCP server.
 - **Data**: `~/.local/share/zikaron/zikaron.db` (sqlite-vec).
 - **Connections**: style data consumed by RecruiterGolem and style export; WhatsApp
-  indexer uses `zikaron index-fast`.
+  indexer uses `brainlayer index-fast`.
 
 ### packages/docsite
 - **Role**: Docusaurus docs for golems architecture and golems usage.

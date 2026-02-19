@@ -21,7 +21,7 @@
 | **golems-tui** | `packages/golems-tui/` | React Ink terminal dashboard |
 | **tax-helper** | [`packages/tax-helper/`](packages/tax-helper/CLAUDE.md) | Schedule C transaction categorization (Sophtron MCP) |
 | **ralph** | [`packages/ralph/`](packages/ralph/CLAUDE.md) | Autonomous coding loop (PRD execution) |
-| **brainlayer** | [`packages/zikaron/`](packages/zikaron/CLAUDE.md) | Memory layer — extracted to [BrainLayer](https://github.com/EtanHey/brainlayer) (Python + sqlite-vec, 260K+ chunks) |
+| **brainlayer** | [github.com/EtanHey/brainlayer](https://github.com/EtanHey/brainlayer) | Memory layer — external repo (Python + sqlite-vec, 260K+ chunks) |
 | **qa-voice** | [`packages/qa-voice/`](packages/qa-voice/CLAUDE.md) | Voice-powered QA & client discovery (MCP server, edge-tts, Wispr Flow) |
 
 **Always read the package-specific CLAUDE.md when working in that package.**
@@ -46,7 +46,6 @@ golems/                              # Bun workspace monorepo
 ├── packages/tax-helper/             # Schedule C tax categorization
 ├── packages/autonomous/             # Legacy stranglers (1-line re-exports)
 ├── packages/ralph/                  # Autonomous coding loop (PRD execution)
-├── packages/zikaron/                # Memory layer — see github.com/EtanHey/brainlayer
 ├── packages/qa-voice/               # Voice QA & discovery (MCP server)
 ├── launchd/                         # macOS service plists
 ├── Dockerfile                       # Root workspace Dockerfile (Railway)
