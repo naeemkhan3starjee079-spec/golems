@@ -90,6 +90,20 @@ For each comment:
 
 Push fixes, repeat until clean.
 
+### 8.5. Cursor Audit (Pre-Merge)
+
+After PR bots are clean, run the structured Cursor audit workflow. See [workflows/cursor-audit.md](cursor-audit.md).
+
+1. Write 8-12 domain-specific audit prompts → `docs.local/prompts/<feature>-audit-prompts.md`
+2. User runs in Cursor IDE → results land in `docs.local/logs/audit-*.md`
+3. Read results, triage into "fix now" vs "skip/defer"
+4. Fix real issues, commit, push
+5. Write 3-5 verification prompts → `docs.local/prompts/<feature>-final-verification.md`
+6. User runs in Cursor → results land in `docs.local/logs/verify-*.md`
+7. All pass → proceed to merge
+
+**Skip this step** for trivial phases (docs-only, config changes, single-file fixes).
+
 ### 9. Merge
 
 ```bash

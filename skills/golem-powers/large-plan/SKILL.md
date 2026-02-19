@@ -13,6 +13,7 @@ description: Scaffold and execute folder-based multi-phase plans with async agen
 |---------------------|----------|
 | Create a new plan from a description | [workflows/scaffold.md](workflows/scaffold.md) |
 | Execute the next phase in a plan | [workflows/execute-phase.md](workflows/execute-phase.md) |
+| Run pre-merge Cursor audit | [workflows/cursor-audit.md](workflows/cursor-audit.md) |
 | Start async collab on a phase | [workflows/collab.md](workflows/collab.md) |
 
 ---
@@ -155,6 +156,7 @@ For phases that benefit from multi-agent collaboration:
 | `/prd` | Create PRDs from phase specs |
 | `/commit` | CodeRabbit review + atomic commit |
 | `/create-pr` | Create PR with proper format |
+| `/cli-agents` | Run Cursor/Gemini/Codex for audit prompts |
 
 ---
 
