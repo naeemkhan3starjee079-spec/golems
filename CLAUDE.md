@@ -21,7 +21,7 @@
 | **golems-tui** | `packages/golems-tui/` | React Ink terminal dashboard |
 | **tax-helper** | [`packages/tax-helper/`](packages/tax-helper/CLAUDE.md) | Schedule C transaction categorization (Sophtron MCP) |
 | **ralph** | [`packages/ralph/`](packages/ralph/CLAUDE.md) | Autonomous coding loop (PRD execution) |
-| **zikaron** | [`packages/zikaron/`](packages/zikaron/CLAUDE.md) | Memory layer (Python + sqlite-vec, 260K+ chunks, 10-field enrichment) |
+| **brainlayer** | [`packages/zikaron/`](packages/zikaron/CLAUDE.md) | Memory layer — extracted to [BrainLayer](https://github.com/EtanHey/brainlayer) (Python + sqlite-vec, 260K+ chunks) |
 | **qa-voice** | [`packages/qa-voice/`](packages/qa-voice/CLAUDE.md) | Voice-powered QA & client discovery (MCP server, edge-tts, Wispr Flow) |
 
 **Always read the package-specific CLAUDE.md when working in that package.**
@@ -46,7 +46,7 @@ golems/                              # Bun workspace monorepo
 ├── packages/tax-helper/             # Schedule C tax categorization
 ├── packages/autonomous/             # Legacy stranglers (1-line re-exports)
 ├── packages/ralph/                  # Autonomous coding loop (PRD execution)
-├── packages/zikaron/                # Memory layer (Python + sqlite-vec)
+├── packages/zikaron/                # Memory layer — see github.com/EtanHey/brainlayer
 ├── packages/qa-voice/               # Voice QA & discovery (MCP server)
 ├── launchd/                         # macOS service plists
 ├── Dockerfile                       # Root workspace Dockerfile (Railway)
@@ -101,7 +101,7 @@ golems wizard          # Guided setup
 
 | Server | Command | Purpose |
 |--------|---------|---------|
-| **zikaron** | `zikaron-mcp` | Memory layer — search 260K+ indexed conversation chunks across 9 projects |
+| **brainlayer** | `brainlayer-mcp` | Memory layer — search 260K+ indexed conversation chunks across 9 projects ([BrainLayer](https://github.com/EtanHey/brainlayer)) |
 | **golems-email** | `bun run packages/shared/src/email/mcp-server.ts` | Email triage — recent, search, subscriptions, urgent, draft replies |
 | **golems-jobs** | `bun run packages/jobs/src/mcp-server.ts` | Job discovery — recent matches, search, stats |
 | **supabase** | `@supabase/mcp-server-supabase` | Database access — tables, SQL, migrations, types |
@@ -110,17 +110,17 @@ golems wizard          # Guided setup
 | **sophtron** | `@sophtron/sophtron-mcp-server` | Bank account access — transactions, identity |
 | **qa-voice** | `bun run packages/qa-voice/src/mcp-server.ts` | Voice QA & discovery — ask/say/think, edge-tts, Wispr Flow STT |
 
-### Zikaron MCP (8 Tools)
+### BrainLayer MCP (8 Tools)
 
-Zikaron provides persistent memory across Claude Code sessions:
-- **`zikaron_search`**: Search past conversations (with `project`, `content_type`, `source`, `tag`, `intent`, `importance_min` filters)
-- **`zikaron_context`**: Get surrounding chunks for a search result
-- **`zikaron_stats`**: Knowledge base statistics
-- **`zikaron_list_projects`**: List indexed projects
-- **`zikaron_file_timeline`**: File interaction history across sessions
-- **`zikaron_operations`**: Logical operation groups (read/edit/test cycles)
-- **`zikaron_regression`**: What changed since a file last worked
-- **`zikaron_plan_links`**: Session to plan/phase linkage
+[BrainLayer](https://github.com/EtanHey/brainlayer) provides persistent memory across Claude Code sessions:
+- **`brainlayer_search`**: Search past conversations (with `project`, `content_type`, `source`, `tag`, `intent`, `importance_min` filters)
+- **`brainlayer_context`**: Get surrounding chunks for a search result
+- **`brainlayer_stats`**: Knowledge base statistics
+- **`brainlayer_list_projects`**: List indexed projects
+- **`brainlayer_file_timeline`**: File interaction history across sessions
+- **`brainlayer_operations`**: Logical operation groups (read/edit/test cycles)
+- **`brainlayer_regression`**: What changed since a file last worked
+- **`brainlayer_plan_links`**: Session to plan/phase linkage
 
 ---
 
@@ -131,7 +131,7 @@ Zikaron provides persistent memory across Claude Code sessions:
 | `.claude/agents/` | Agent profiles for `/agents` command |
 | `.claude/rules/` | Auto-loaded rules (survives compaction) |
 | `rules-library/` | Exportable context/rules library |
-| `docs/architecture/` | Architecture decisions (indexed by Zikaron) |
+| `docs/architecture/` | Architecture decisions (indexed by BrainLayer) |
 | `skills/golem-powers/` | Skills (symlinked to ralph) |
 | `docs/plan/` | Active plans and phase tracking |
 | `launchd/` | macOS launchd service plists |

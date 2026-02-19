@@ -15,6 +15,7 @@
 - `~/.claude`
 - `~/.golems-zikaron`
 - `~/.local/share/zikaron`
+- `~/.local/share/brainlayer`
 - Any path containing "golem"
 
 ## Usage

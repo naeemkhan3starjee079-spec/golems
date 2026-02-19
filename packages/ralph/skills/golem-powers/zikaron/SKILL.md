@@ -3,9 +3,12 @@ name: zikaron
 description: Local knowledge pipeline for Claude Code conversations - index, search, and retrieve past solutions
 ---
 
-# Zikaron (זיכרון) - Knowledge Pipeline
+# BrainLayer (formerly Zikaron) - Knowledge Pipeline
 
-Zikaron indexes Claude Code conversation history and markdown files into a searchable vector database. Query past solutions, code patterns, and debugging sessions.
+> **Extracted to standalone repo:** [github.com/EtanHey/brainlayer](https://github.com/EtanHey/brainlayer)
+> CLI commands now use `brainlayer` instead of `zikaron`. MCP tools use `brainlayer_*` prefix.
+
+BrainLayer indexes Claude Code conversation history and markdown files into a searchable vector database. Query past solutions, code patterns, and debugging sessions.
 
 ## Architecture (Feb 2026)
 
