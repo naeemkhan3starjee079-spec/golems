@@ -763,18 +763,14 @@ function repoGolem() {
       _title=\"${capitalized_name} Claude\"
     fi
     echo -ne \"\\e]2;\${_title}\\a\"
-    # Guardian watermark: art via background image, name via badge (sticky top-right)
-    local _bg_img=\"\$HOME/.config/ralphtools/guardian-bg.png\"
-    local _bg_script=\"\$HOME/Gits/golems/packages/shared/scripts/generate-guardian-bg.py\"
-    local _badge_b64=\"\$(echo -n \"\${_title}\" | base64)\"
-    if [[ -f \"\$_bg_script\" ]]; then
-      (python3 \"\$_bg_script\" 0.8 20 && \\
-       /Applications/iTerm.app/Contents/Resources/it2profile -s Golems 2>/dev/null && \\
-       bash \"\$HOME/Gits/golems/scripts/set-iterm-bg.sh\" \"\$_bg_img\" && \\
-       printf \"\\e]1337;SetBadgeFormat=%s\\a\" \"\${_badge_b64}\" > /dev/tty) &
-    else
-      printf \"\\e]1337;SetBadgeFormat=%s\\a\" \"\${_badge_b64}\"
-    fi
+    # Identity: badge (emoji+name, pinned top-right) + SVG mascot background image
+    # Profile switch first (Menlo font for badge), then badge + background — in background, write to /dev/tty
+    local _guardian_bg=\"\$HOME/.config/ralphtools/guardian-bg.png\"
+    (
+      /Applications/iTerm.app/Contents/Resources/it2profile -s Golems 2>/dev/null
+      printf \"\\e]1337;SetBadgeFormat=%s\\a\" \"\$(echo -n \"\${_title}\" | base64)\" > /dev/tty
+      [[ -f \"\${_guardian_bg}\" ]] && printf \"\\e]1337;SetBackgroundImageFile=%s\\a\" \"\$(base64 < \"\${_guardian_bg}\")\" > /dev/tty
+    ) &
     echo \"\${_title}\"
     echo \"\"
 

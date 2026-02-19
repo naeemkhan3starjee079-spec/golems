@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 """Generate guardian golem watermark PNG for iTerm2 background.
 
-Renders the guardian art as a small watermark in the top-right corner of a
-large transparent canvas. Text identity is handled by iTerm2 badge (fixed
-size, survives split-screen). This script only renders the art.
+Renders the golem name + guardian art as a watermark in the top-right corner
+of a large transparent canvas. Everything in one image — no badge needed.
 
 Usage:
-  python3 generate-guardian-bg.py [dim] [font_size]
-  python3 generate-guardian-bg.py 0.8 20    # default settings
-  python3 generate-guardian-bg.py 0.6 18    # dimmer, smaller
+  python3 generate-guardian-bg.py [title] [dim] [font_size]
+  python3 generate-guardian-bg.py "Golems"           # default settings
+  python3 generate-guardian-bg.py "Recruiter" 0.6 22 # dimmer, bigger
 
 Output: ~/.config/ralphtools/guardian-bg.png
 """
 
 import os
+import re
 import sys
 from PIL import Image, ImageDraw, ImageFont
 
@@ -82,12 +82,21 @@ def load_font(paths: list, size: int):
     return ImageFont.load_default()
 
 
+def strip_emoji(text: str) -> str:
+    """Strip emoji and non-Latin characters from title (Pillow can't render them)."""
+    clean = re.sub(r'[^\w\s\-.]', '', text, flags=re.ASCII).strip()
+    return clean if clean else text.strip()
+
+
 def generate_guardian_png(
     output_path: str,
+    title: str = "Golems",
     dim: float = 0.8,
     font_size: int = 20,
 ):
-    """Render guardian art as a watermark in the top-right. Text handled by badge."""
+    """Render title + guardian art as watermark in the top-right."""
+
+    clean_title = strip_emoji(title)
 
     # Monospace font for art (block chars, box-drawing)
     art_font = load_font([
@@ -103,6 +112,14 @@ def generate_guardian_png(
         "/System/Library/Fonts/Supplemental/Times New Roman.ttf",
     ], font_size)
 
+    # Title font — 2.5x art size (large but not badge-huge)
+    title_font_size = int(font_size * 2.5)
+    title_font = load_font([
+        "/Library/Fonts/Arial Unicode.ttf",
+        "/System/Library/Fonts/Supplemental/Verdana.ttf",
+        "/System/Library/Fonts/Menlo.ttc",
+    ], title_font_size)
+
     # Measure character cell — terminal chars are ~55% as wide as tall
     bbox = art_font.getbbox("█")
     char_h = int((bbox[3] - bbox[1]) * 1.15)
@@ -112,21 +129,39 @@ def generate_guardian_png(
     art_w = max_line_len * char_w
     art_h = len(ART_LINES) * char_h
 
-    # Canvas: 16:9 aspect ratio matching typical monitors
+    # Measure title
+    title_bbox = title_font.getbbox(clean_title)
+    title_w = title_bbox[2] - title_bbox[0]
+    title_h = title_bbox[3] - title_bbox[1]
+    title_gap = int(title_h * 0.3)
+
+    # Total block
+    block_w = max(art_w, title_w)
+    block_h = title_h + title_gap + art_h
+
+    # Canvas: 16:9
     canvas_w = 3840
     canvas_h = 2160
 
-    # Position in top-right with generous margin
+    # Position in top-right
     margin_right = int(canvas_w * 0.05)
     margin_top = int(canvas_h * 0.04)
-    art_x = canvas_w - art_w - margin_right
-    art_y = margin_top
+    block_x = canvas_w - block_w - margin_right
+    block_y = margin_top
 
     # Transparent background
     img = Image.new("RGBA", (canvas_w, canvas_h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
 
-    # Draw guardian art
+    # Draw title (centered above art)
+    title_x = block_x + (block_w - title_w) // 2
+    title_color = tuple(int(c * dim) for c in COLORS["glow"]) + (int(255 * dim),)
+    draw.text((title_x, block_y), clean_title, fill=title_color, font=title_font)
+
+    # Draw guardian art below title
+    art_offset_x = block_x + (block_w - art_w) // 2
+    art_offset_y = block_y + title_h + title_gap
+
     for row, line in enumerate(ART_LINES):
         for col, ch in enumerate(line):
             if ch == " ":
@@ -134,20 +169,21 @@ def generate_guardian_png(
             r, g, b = get_char_color(ch)
             alpha = max(10, int(255 * dim))
             rgba = (int(r * dim), int(g * dim), int(b * dim), alpha)
-            x = art_x + col * char_w
-            y = art_y + row * char_h
+            x = art_offset_x + col * char_w
+            y = art_offset_y + row * char_h
             font = hebrew_font if ch in HEBREW_CHARS else art_font
             draw.text((x, y), ch, fill=rgba, font=font)
 
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     img.save(output_path, "PNG")
-    print(f"Generated: {output_path} ({canvas_w}x{canvas_h}, guardian art only)")
+    print(f"Generated: {output_path} ({canvas_w}x{canvas_h}, '{clean_title}' + guardian)")
 
 
 if __name__ == "__main__":
-    dim = float(sys.argv[1]) if len(sys.argv) > 1 else 0.8
-    font_size = int(sys.argv[2]) if len(sys.argv) > 2 else 20
-    output = sys.argv[3] if len(sys.argv) > 3 else os.path.expanduser(
+    title = sys.argv[1] if len(sys.argv) > 1 else "Golems"
+    dim = float(sys.argv[2]) if len(sys.argv) > 2 else 0.8
+    font_size = int(sys.argv[3]) if len(sys.argv) > 3 else 20
+    output = sys.argv[4] if len(sys.argv) > 4 else os.path.expanduser(
         "~/.config/ralphtools/guardian-bg.png"
     )
-    generate_guardian_png(output, dim=dim, font_size=font_size)
+    generate_guardian_png(output, title=title, dim=dim, font_size=font_size)
