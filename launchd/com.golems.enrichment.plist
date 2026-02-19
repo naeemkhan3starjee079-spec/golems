@@ -22,7 +22,7 @@
     </dict>
 
     <key>WorkingDirectory</key>
-    <string>/Users/etanheyman/Gits/golems/packages/zikaron</string>
+    <string>/Users/etanheyman/Gits/brainlayer</string>
 
     <key>StandardOutPath</key>
     <string>/Users/etanheyman/.golems-zikaron/logs/enrichment-launchd.log</string>

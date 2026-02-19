@@ -106,7 +106,7 @@ Then Claude Code can query directly: "Search my past conversations for authentic
 zikaron-daemon
 
 # Install auto-start service (launchd)
-python ~/Gits/golems/packages/zikaron/scripts/install_service.py install
+python ~/Gits/brainlayer/scripts/install_service.py install
 ```
 
 ## Troubleshooting
