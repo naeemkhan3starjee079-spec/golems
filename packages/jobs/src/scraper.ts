@@ -804,10 +804,26 @@ export async function scrapeIndeedIsrael(): Promise<JobListing[]> {
       });
 
       for (const job of results) {
+        // ts-jobspy uses companyName, not company
+        const companyName = job.companyName || "Unknown";
+
+        // ts-jobspy returns location as {city, state, country} object — extract readable string
+        const loc = job.location;
+        let locationStr = "Israel";
+        if (loc) {
+          // Map IL state codes to readable names
+          const stateNames: Record<string, string> = {
+            TA: "Tel Aviv", M: "Central", JM: "Jerusalem",
+            HA: "Haifa", H: "South", Z: "North",
+          };
+          const parts = [loc.city, loc.state ? stateNames[loc.state] || loc.state : null].filter(Boolean);
+          locationStr = parts.length > 0 ? parts.join(", ") + ", Israel" : "Israel";
+        }
+
         // Create stable ID - avoid double prefix
         const baseId = job.id
           ? (job.id.startsWith("indeed-") ? job.id : `indeed-${job.id}`)
-          : `indeed-${(job.title + job.company).replace(/\s+/g, "-").toLowerCase().slice(0, 50)}`;
+          : `indeed-${(job.title + companyName).replace(/\s+/g, "-").toLowerCase().slice(0, 50)}`;
 
         if (seenIds.has(baseId)) continue;
         seenIds.add(baseId);
@@ -816,8 +832,8 @@ export async function scrapeIndeedIsrael(): Promise<JobListing[]> {
         const listing: JobListing = {
           id: baseId,
           title: job.title,
-          company: job.company || "Unknown",
-          location: job.location || "Israel",
+          company: companyName,
+          location: locationStr,
           experience: "", // Indeed doesn't provide structured experience data
           description: job.description?.slice(0, 800) || "",
           url: job.jobUrl,
