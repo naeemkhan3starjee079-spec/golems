@@ -92,7 +92,7 @@ const SIMPLE_COLOR_MAP: Record<string, string> = {
   dim: "#777777",    // everything else
 };
 
-const GLOW_CHARS = "אמת◆";
+const GLOW_CHARS = "אמת◆{}";
 const ACCENT_CHARS = "╔╗╚╝║═┌┐└┘─│╠╣";
 const CLAY_CHARS = "▒▓█▄▀░■";
 
@@ -104,9 +104,9 @@ const RESET = "\x1b[0m";
 
 /** Convert hex (#rrggbb) to ANSI truecolor foreground escape */
 export function hexToAnsi(hex: string, dim = 1): string {
-  const r = Math.round(parseInt(hex.slice(1, 3), 16) * dim);
-  const g = Math.round(parseInt(hex.slice(3, 5), 16) * dim);
-  const b = Math.round(parseInt(hex.slice(5, 7), 16) * dim);
+  const r = Math.min(255, Math.max(0, Math.round(parseInt(hex.slice(1, 3), 16) * dim)));
+  const g = Math.min(255, Math.max(0, Math.round(parseInt(hex.slice(3, 5), 16) * dim)));
+  const b = Math.min(255, Math.max(0, Math.round(parseInt(hex.slice(5, 7), 16) * dim)));
   return `\x1b[38;2;${r};${g};${b}m`;
 }
 

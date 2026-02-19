@@ -5,11 +5,12 @@ Renders the golem name + guardian art as a watermark in the top-right corner
 of a large transparent canvas. Everything in one image — no badge needed.
 
 Usage:
-  python3 generate-guardian-bg.py [title] [dim] [font_size]
+  python3 generate-guardian-bg.py [title] [dim] [font_size] [output]
   python3 generate-guardian-bg.py "Golems"           # default settings
   python3 generate-guardian-bg.py "Recruiter" 0.6 22 # dimmer, bigger
+  python3 generate-guardian-bg.py "Golems" 0.8 20 ~/custom-bg.png
 
-Output: ~/.config/ralphtools/guardian-bg.png
+Output: ~/.config/ralphtools/guardian-bg.png (default, override with 4th arg)
 """
 
 import os
@@ -85,7 +86,7 @@ def load_font(paths: list, size: int):
 def strip_emoji(text: str) -> str:
     """Strip emoji and non-Latin characters from title (Pillow can't render them)."""
     clean = re.sub(r'[^\w\s\-.]', '', text, flags=re.ASCII).strip()
-    return clean if clean else text.strip()
+    return clean if clean else "Golems"
 
 
 def generate_guardian_png(
@@ -155,7 +156,7 @@ def generate_guardian_png(
 
     # Draw title (centered above art)
     title_x = block_x + (block_w - title_w) // 2
-    title_color = tuple(int(c * dim) for c in COLORS["glow"]) + (int(255 * dim),)
+    title_color = tuple(min(255, int(c * dim)) for c in COLORS["glow"]) + (min(255, int(255 * dim)),)
     draw.text((title_x, block_y), clean_title, fill=title_color, font=title_font)
 
     # Draw guardian art below title
@@ -167,8 +168,8 @@ def generate_guardian_png(
             if ch == " ":
                 continue
             r, g, b = get_char_color(ch)
-            alpha = max(10, int(255 * dim))
-            rgba = (int(r * dim), int(g * dim), int(b * dim), alpha)
+            alpha = min(255, max(10, int(255 * dim)))
+            rgba = (min(255, int(r * dim)), min(255, int(g * dim)), min(255, int(b * dim)), alpha)
             x = art_offset_x + col * char_w
             y = art_offset_y + row * char_h
             font = hebrew_font if ch in HEBREW_CHARS else art_font

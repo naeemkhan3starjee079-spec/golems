@@ -769,7 +769,7 @@ function repoGolem() {
     (
       /Applications/iTerm.app/Contents/Resources/it2profile -s Golems 2>/dev/null
       printf \"\\e]1337;SetBadgeFormat=%s\\a\" \"\$(echo -n \"\${_title}\" | base64)\" > /dev/tty
-      [[ -f \"\${_guardian_bg}\" ]] && printf \"\\e]1337;SetBackgroundImageFile=%s\\a\" \"\$(base64 < \"\${_guardian_bg}\")\" > /dev/tty
+      [[ -f \"\${_guardian_bg}\" ]] && printf \"\\e]1337;SetBackgroundImageFile=%s\\a\" \"\$(echo -n \"\${_guardian_bg}\" | base64)\" > /dev/tty
     ) &
     echo \"\${_title}\"
     echo \"\"

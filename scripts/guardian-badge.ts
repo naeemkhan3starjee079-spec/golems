@@ -7,7 +7,7 @@
  * proportional badge fonts. Key guardian elements preserved:
  * clay head (▄█▀), Hebrew אמת, diamond eyes ◆, code mouth {··}.
  *
- * Usage: bun scripts/guardian-badge.ts [title] [path]
+ * Usage: bun scripts/guardian-badge.ts [title]
  * Output: title + guardian art (for base64 → SetBadgeFormat)
  */
 
