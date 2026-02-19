@@ -4,12 +4,11 @@
 # Usage: ./scripts/speak.sh "Hello, how are you?"
 #        echo "text" | ./scripts/speak.sh
 #
-# Uses edge-tts-universal via Bun first, falls back to macOS `say`.
+# Uses Python edge-tts CLI + afplay (matches MCP server tts.ts).
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PACKAGE_DIR="$(dirname "$SCRIPT_DIR")"
-VOICE="${QA_VOICE_TTS_VOICE:-en-US-EmmaMultilingualNeural}"
-TTS_FILE="/tmp/golems-tts.mp3"
+VOICE="${QA_VOICE_TTS_VOICE:-en-US-JennyNeural}"
+RATE="${QA_VOICE_TTS_RATE:-+15%}"
+TTS_FILE="/tmp/golems-tts-$$.mp3"
 
 # Get text from args or stdin
 if [ $# -gt 0 ]; then
@@ -26,25 +25,12 @@ if [ -z "$TEXT" ]; then
     exit 1
 fi
 
-# Try edge-tts-universal via Bun
-speak_edge_tts() {
-    bun -e "
-        import { EdgeTTS } from 'edge-tts-universal';
-        const tts = new EdgeTTS(process.argv[1], '$VOICE');
-        const result = await tts.synthesize();
-        const buf = Buffer.from(await result.audio.arrayBuffer());
-        await Bun.write('$TTS_FILE', buf);
-    " "$TEXT" 2>/dev/null && afplay "$TTS_FILE" 2>/dev/null
-}
-
-# Fallback: macOS say
-speak_macos() {
-    say "$TEXT"
-}
-
-if speak_edge_tts; then
-    exit 0
-else
-    echo "[speak.sh] edge-tts failed, using macOS say" >&2
-    speak_macos
+# Synthesize via Python edge-tts CLI
+if ! python3 -m edge_tts --text "$TEXT" --voice "$VOICE" --rate "$RATE" --write-media "$TTS_FILE" 2>/dev/null; then
+    echo "[speak.sh] edge-tts failed. Is it installed? Run: pip3 install edge-tts" >&2
+    exit 1
 fi
+
+# Play audio
+afplay "$TTS_FILE" 2>/dev/null
+rm -f "$TTS_FILE"

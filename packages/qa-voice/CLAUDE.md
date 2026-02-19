@@ -8,7 +8,7 @@
 Claude Code session
   ├── Playwright MCP (browser snapshots, --extension for co-browsing)
   ├── QA Voice MCP (this package)
-  │   ├── qa_voice_ask(message) → speaks + waits for response
+  │   ├── qa_voice_ask(message) → speaks + records mic → Wispr Flow STT → transcription
   │   ├── qa_voice_say(message) → speaks only
   │   └── qa_voice_think(thought) → writes to live thinking log
   └── Supabase MCP (data persistence)
@@ -29,42 +29,56 @@ Client call assistant: track unknowns, whisper follow-up suggestions, detect red
 
 - Agent: `.claude/agents/discovery-voice.md`
 - Schema: `src/schemas/discovery.ts`
-- Categories: `src/schemas/discovery-categories.ts` (7 categories, 23 questions)
+- Categories: `src/schemas/discovery-categories.ts` (7 categories, 22 questions)
 - Brief: `src/brief.ts` → `~/.golems/briefs/discovery-{date}-{id}.md`
 
 ## How It Works
 
-Two terminal tabs:
+Single terminal — no companion script needed.
 
-**Tab 1 (Claude Code):** Normal Claude Code session with QA Voice MCP configured.
-**Tab 2 (Mic):** Runs `scripts/mic.sh` — Wispr Flow types transcriptions here, user hits Enter to send.
-
-Communication: file watcher on `/tmp/golems-qa-input.txt`.
+1. Claude calls `qa_voice_ask("question")` via MCP
+2. edge-tts speaks the question aloud via afplay
+3. Mic recording starts via `rec` (sox) — 16kHz 16-bit mono PCM
+4. Audio streams to Wispr Flow WebSocket API in 1-second chunks
+5. RMS energy monitors for silence — detects when user stops speaking
+6. Wispr Flow returns the transcription
+7. Claude receives the text and continues
 
 ## Quick Start
 
-1. Add to `.mcp.json`:
+### Prerequisites
+
+```bash
+brew install sox          # Provides `rec` command for mic recording
+pip3 install edge-tts     # Python TTS engine
+```
+
+### Setup
+
+1. Get your Wispr Flow API key from [Wispr Flow settings](https://wisprflow.ai)
+
+2. Add to `.mcp.json`:
 ```json
 {
   "qa-voice": {
     "command": "bun",
-    "args": ["run", "packages/qa-voice/src/mcp-server.ts"]
+    "args": ["run", "packages/qa-voice/src/mcp-server.ts"],
+    "env": {
+      "QA_VOICE_WISPR_KEY": "your-api-key-here"
+    }
   }
 }
 ```
 
-2. Open second terminal tab, run:
-```bash
-packages/qa-voice/scripts/mic.sh
-```
+3. Grant microphone access to your terminal app (System Settings > Privacy > Microphone)
 
-3. In Claude Code, use the QA or Discovery agent prompt.
+4. In Claude Code, use the QA or Discovery agent prompt.
 
 ## MCP Tools
 
 | Tool | Purpose | Returns |
 |------|---------|---------|
-| `qa_voice_ask` | Speak a question, wait for voice response | Transcribed text |
+| `qa_voice_ask` | Speak a question, record + transcribe voice response | Transcribed text |
 | `qa_voice_say` | Speak a message (no response) | Confirmation |
 | `qa_voice_think` | Append to live thinking log (silent) | Confirmation |
 
@@ -72,17 +86,18 @@ packages/qa-voice/scripts/mic.sh
 
 | Script | Purpose |
 |--------|---------|
-| `scripts/mic.sh` | Companion terminal for voice input |
-| `scripts/speak.sh` | Standalone TTS command |
+| `scripts/speak.sh` | Standalone TTS command (Python edge-tts + afplay) |
+| `scripts/test-wispr-ws.ts` | Standalone Wispr Flow WebSocket test |
 
 ## Environment Variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `QA_VOICE_TTS_VOICE` | `en-US-EmmaMultilingualNeural` | edge-tts voice ID |
-| `QA_VOICE_TTS_ENGINE` | `edge-tts` | TTS engine: `edge-tts` or `say` (macOS fallback) |
-| `QA_VOICE_F5_ENABLED` | `true` | Set to `false` to disable F5 simulation after speech |
-| `QA_VOICE_INPUT_FILE` | `/tmp/golems-qa-input.txt` | File watcher input path |
+| `QA_VOICE_WISPR_KEY` | (required) | Wispr Flow API key for WebSocket STT |
+| `QA_VOICE_TTS_VOICE` | `en-US-JennyNeural` | edge-tts voice ID |
+| `QA_VOICE_TTS_RATE` | `+15%` | Speech rate adjustment |
+| `QA_VOICE_SILENCE_SECONDS` | `2` | Seconds of silence before speech end detection |
+| `QA_VOICE_SILENCE_THRESHOLD` | `500` | RMS energy threshold for silence (0-32767) |
 | `QA_VOICE_THINK_FILE` | `/tmp/golems-qa-thinking.md` | Live thinking log path |
 
 ## File Structure
@@ -91,8 +106,8 @@ packages/qa-voice/scripts/mic.sh
 packages/qa-voice/
 ├── src/
 │   ├── mcp-server.ts          # MCP server (3 tools: ask, say, think)
-│   ├── tts.ts                 # edge-tts + macOS say fallback + F5 automation
-│   ├── input.ts               # File watcher for voice input
+│   ├── tts.ts                 # edge-tts (Python CLI) + afplay
+│   ├── input.ts               # Wispr Flow WebSocket client + mic recording + silence detection
 │   ├── session.ts             # Session lifecycle (save/load/generate)
 │   ├── report.ts              # QA report renderer (JSON → markdown)
 │   ├── brief.ts               # Discovery brief renderer (JSON → markdown)
@@ -101,9 +116,8 @@ packages/qa-voice/
 │   │   ├── qa-categories.ts   # 6 QA categories (31 checks)
 │   │   ├── discovery.ts       # Discovery session schema + helpers
 │   │   └── discovery-categories.ts  # 7 discovery categories (23 questions)
-│   └── __tests__/             # 48 tests, 120 expect() calls
+│   └── __tests__/             # 47 tests, 119 expect() calls
 ├── scripts/
-│   ├── mic.sh                 # Voice input companion terminal
 │   └── speak.sh               # Standalone TTS command
 ├── package.json
 ├── tsconfig.json
@@ -121,17 +135,18 @@ packages/qa-voice/
 
 ## Wispr Flow Integration
 
-- **F5 push-to-talk:** Automatically triggered after `qa_voice_ask` speaks
-- **Key codes:** 96 (external keyboard), 176 (Mac built-in)
-- **Accessibility:** iTerm2 needs System Preferences > Accessibility permission for osascript
-- **Config location:** `~/Library/Application Support/Wispr Flow/config.json`
+- **WebSocket API**: Streams audio chunks for real-time transcription
+- **Endpoint**: `wss://platform-api.wisprflow.ai/api/v1/dash/ws`
+- **Auth**: API key passed as query parameter
+- **Audio format**: 16kHz, 16-bit signed, mono PCM (via sox `rec`)
+- **Silence detection**: RMS energy monitoring with configurable threshold
 
 ## Dependencies
 
-- `edge-tts-universal` — Microsoft neural TTS (free, no API key)
 - `@modelcontextprotocol/sdk` — MCP server SDK
-- `afplay` — macOS built-in audio player
-- `say` — macOS built-in TTS (fallback)
+- `edge-tts` (Python) — Microsoft neural TTS (free, no API key)
+- `sox` (system) — Audio recording via `rec` command
+- `afplay` (macOS built-in) — Audio playback
 
 ## Tests
 
@@ -139,9 +154,9 @@ packages/qa-voice/
 bun test packages/qa-voice/src/__tests__/
 ```
 
-48 tests across 7 files:
-- `input.test.ts` — file watcher (8 tests)
-- `tts.test.ts` — TTS + F5 (3 tests)
+47 tests across 7 files:
+- `input.test.ts` — RMS calculation + WebSocket input (7 tests)
+- `tts.test.ts` — TTS pipeline (3 tests)
 - `checklist.test.ts` — QA schema (8 tests)
 - `report.test.ts` — QA report renderer (8 tests)
 - `discovery.test.ts` — discovery schema (7 tests)

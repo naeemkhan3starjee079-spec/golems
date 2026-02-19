@@ -1,86 +1,80 @@
-import { describe, it, expect, beforeEach, afterEach } from "bun:test";
-import { waitForInput, clearInput } from "../input";
-import { writeFileSync, unlinkSync, existsSync } from "fs";
-
-const TEST_INPUT_FILE = "/tmp/golems-qa-test-input.txt";
+import { describe, it, expect } from "bun:test";
+import { calculateRMS, clearInput } from "../input";
 
 describe("input module", () => {
-  beforeEach(() => {
-    // Clean up test file
-    if (existsSync(TEST_INPUT_FILE)) {
-      unlinkSync(TEST_INPUT_FILE);
-    }
+  describe("calculateRMS", () => {
+    it("returns 0 for empty buffer", () => {
+      const buffer = new Uint8Array(0);
+      expect(calculateRMS(buffer)).toBe(0);
+    });
+
+    it("returns 0 for silent audio (all zeros)", () => {
+      // 100 samples of silence (200 bytes, 16-bit)
+      const buffer = new Uint8Array(200);
+      expect(calculateRMS(buffer)).toBe(0);
+    });
+
+    it("returns high RMS for loud audio", () => {
+      // Create buffer with max-amplitude 16-bit samples
+      const numSamples = 100;
+      const buffer = new Uint8Array(numSamples * 2);
+      const view = new DataView(buffer.buffer);
+      for (let i = 0; i < numSamples; i++) {
+        view.setInt16(i * 2, 20000, true); // loud signal
+      }
+
+      const rms = calculateRMS(buffer);
+      expect(rms).toBeGreaterThan(10000);
+    });
+
+    it("returns moderate RMS for moderate audio", () => {
+      const numSamples = 100;
+      const buffer = new Uint8Array(numSamples * 2);
+      const view = new DataView(buffer.buffer);
+      for (let i = 0; i < numSamples; i++) {
+        view.setInt16(i * 2, 1000, true); // moderate signal
+      }
+
+      const rms = calculateRMS(buffer);
+      expect(rms).toBeGreaterThan(500);
+      expect(rms).toBeLessThan(5000);
+    });
+
+    it("handles alternating positive/negative samples", () => {
+      const numSamples = 100;
+      const buffer = new Uint8Array(numSamples * 2);
+      const view = new DataView(buffer.buffer);
+      for (let i = 0; i < numSamples; i++) {
+        // Alternating +5000 / -5000 — RMS should be same as constant 5000
+        view.setInt16(i * 2, i % 2 === 0 ? 5000 : -5000, true);
+      }
+
+      const rms = calculateRMS(buffer);
+      expect(rms).toBeCloseTo(5000, -1); // within rounding
+    });
   });
 
-  afterEach(() => {
-    if (existsSync(TEST_INPUT_FILE)) {
-      unlinkSync(TEST_INPUT_FILE);
-    }
+  describe("clearInput", () => {
+    it("does not throw (no-op in WebSocket mode)", () => {
+      expect(() => clearInput()).not.toThrow();
+    });
   });
 
-  it("waitForInput returns content when file has text", async () => {
-    // Write content before waiting
-    writeFileSync(TEST_INPUT_FILE, "hello from wispr");
+  describe("waitForInput", () => {
+    it("throws when WISPR_KEY is not set", async () => {
+      // Save and clear the env var
+      const saved = process.env.QA_VOICE_WISPR_KEY;
+      delete process.env.QA_VOICE_WISPR_KEY;
 
-    const result = await waitForInput(TEST_INPUT_FILE, 2000);
-    expect(result).toBe("hello from wispr");
-  });
-
-  it("waitForInput clears the file after reading", async () => {
-    writeFileSync(TEST_INPUT_FILE, "test content");
-
-    await waitForInput(TEST_INPUT_FILE, 2000);
-
-    // File should be empty after reading
-    const content = Bun.file(TEST_INPUT_FILE).size;
-    expect(content).toBe(0);
-  });
-
-  it("waitForInput returns null on timeout", async () => {
-    // Don't write anything — should timeout
-    const result = await waitForInput(TEST_INPUT_FILE, 500);
-    expect(result).toBeNull();
-  });
-
-  it("waitForInput ignores empty file", async () => {
-    // Create empty file
-    writeFileSync(TEST_INPUT_FILE, "");
-
-    const result = await waitForInput(TEST_INPUT_FILE, 500);
-    expect(result).toBeNull();
-  });
-
-  it("waitForInput picks up content written after polling starts", async () => {
-    // Start waiting, then write after a delay
-    const waitPromise = waitForInput(TEST_INPUT_FILE, 3000);
-
-    // Write after 300ms (file watcher polls every 200ms)
-    setTimeout(() => {
-      writeFileSync(TEST_INPUT_FILE, "delayed response");
-    }, 300);
-
-    const result = await waitPromise;
-    expect(result).toBe("delayed response");
-  });
-
-  it("clearInput creates an empty file", () => {
-    writeFileSync(TEST_INPUT_FILE, "stale data");
-    clearInput(TEST_INPUT_FILE);
-
-    const content = require("fs").readFileSync(TEST_INPUT_FILE, "utf-8");
-    expect(content).toBe("");
-  });
-
-  it("clearInput works when file doesn't exist", () => {
-    // Should not throw
-    clearInput(TEST_INPUT_FILE);
-    expect(existsSync(TEST_INPUT_FILE)).toBe(true);
-  });
-
-  it("waitForInput trims whitespace from response", async () => {
-    writeFileSync(TEST_INPUT_FILE, "  response with spaces  \n");
-
-    const result = await waitForInput(TEST_INPUT_FILE, 2000);
-    expect(result).toBe("response with spaces");
+      try {
+        // Re-import to pick up cleared env var
+        // Since the module reads env at import time, we need to test the check
+        const { waitForInput } = await import("../input");
+        await expect(waitForInput(1000)).rejects.toThrow("QA_VOICE_WISPR_KEY");
+      } finally {
+        // Restore
+        if (saved) process.env.QA_VOICE_WISPR_KEY = saved;
+      }
+    });
   });
 });

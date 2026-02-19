@@ -2,7 +2,9 @@
 
 > AI QA companion that browses pages with you, speaks questions via TTS, listens to your voice responses via Wispr Flow, and generates structured reports.
 
-## Architecture (Approach B: MCP Server)
+> **Note (2026-02-19):** Architecture changed after these phases were completed. The file watcher / mic.sh / F5 automation approach was replaced with direct mic recording via sox + Wispr Flow WebSocket streaming. See `packages/qa-voice/CLAUDE.md` for the current architecture. These plan docs are preserved as historical records.
+
+## Architecture (Approach B: MCP Server) — SUPERSEDED
 
 ```text
 Terminal Tab 1 (Claude Code)          Terminal Tab 2 (Mic)

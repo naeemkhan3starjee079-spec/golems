@@ -1,9 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 
-// Force macOS say engine to avoid edge-tts network calls in tests
-process.env.QA_VOICE_TTS_ENGINE = "say";
-
-// Mock Bun.spawn to avoid actually playing audio or running osascript
+// Mock Bun.spawn to avoid actually playing audio
 const originalSpawn = Bun.spawn;
 let spawnCalls: { cmd: string[] }[] = [];
 
@@ -21,35 +18,35 @@ describe("tts module", () => {
     Bun.spawn = originalSpawn;
   });
 
-  it("speak() calls macOS say command", async () => {
+  it("speak() calls edge-tts then afplay", async () => {
     const { speak } = await import("../tts");
 
     await speak("Hello test");
 
-    expect(spawnCalls.length).toBe(1);
-    expect(spawnCalls[0].cmd[0]).toBe("say");
-    expect(spawnCalls[0].cmd[1]).toBe("Hello test");
-  });
-
-  it("speak() with triggerF5 calls osascript after speech", async () => {
-    const { speak } = await import("../tts");
-
-    await speak("F5 test", true);
-
-    // Should have say call + osascript call
     expect(spawnCalls.length).toBe(2);
-    expect(spawnCalls[0].cmd[0]).toBe("say");
-    expect(spawnCalls[1].cmd[0]).toBe("osascript");
+    expect(spawnCalls[0].cmd[0]).toBe("python3");
+    expect(spawnCalls[0].cmd).toContain("edge_tts");
+    expect(spawnCalls[0].cmd).toContain("Hello test");
+    expect(spawnCalls[1].cmd[0]).toBe("afplay");
   });
 
-  it("speak() without triggerF5 does NOT call osascript", async () => {
+  it("speak() uses configured voice and rate", async () => {
     const { speak } = await import("../tts");
 
-    await speak("No F5 test", false);
+    await speak("Voice test");
 
-    expect(spawnCalls.length).toBe(1);
-    expect(spawnCalls[0].cmd[0]).toBe("say");
-    // No osascript call
+    const edgeTtsCmd = spawnCalls[0].cmd;
+    const voiceIdx = edgeTtsCmd.indexOf("--voice");
+    expect(voiceIdx).toBeGreaterThan(-1);
+    // Default voice should be JennyNeural
+    expect(edgeTtsCmd[voiceIdx + 1]).toContain("Jenny");
+  });
+
+  it("speak() only calls edge-tts and afplay", async () => {
+    const { speak } = await import("../tts");
+
+    await speak("No F5 test");
+
     const osascriptCall = spawnCalls.find((c) => c.cmd[0] === "osascript");
     expect(osascriptCall).toBeUndefined();
   });

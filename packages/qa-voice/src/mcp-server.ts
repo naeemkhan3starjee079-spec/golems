@@ -2,7 +2,7 @@
  * QA Voice MCP Server
  *
  * Exposes voice I/O tools for Claude Code: ask (speak + wait), say (speak only), think (write to file).
- * TTS via edge-tts-universal, input via file watcher (mic.sh writes to /tmp/golems-qa-input.txt).
+ * TTS via edge-tts (Python CLI), input via Wispr Flow WebSocket (mic recording + cloud STT).
  *
  * Usage in .mcp.json:
  * {
@@ -23,7 +23,6 @@ import { appendFileSync, existsSync, writeFileSync } from "fs";
 import { speak } from "./tts";
 import { waitForInput, clearInput } from "./input";
 
-const INPUT_FILE = process.env.QA_VOICE_INPUT_FILE || "/tmp/golems-qa-input.txt";
 const THINK_FILE = process.env.QA_VOICE_THINK_FILE || "/tmp/golems-qa-thinking.md";
 const DEFAULT_TIMEOUT_MS = 300_000; // 5 minutes
 
@@ -40,7 +39,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       name: "qa_voice_ask",
       description:
         "Speak a question aloud via TTS and wait for the user's voice response. " +
-        "The user responds via Wispr Flow (speech-to-text) in a companion terminal. " +
+        "The user responds via microphone — audio is streamed to Wispr Flow for transcription. " +
         "Returns the transcribed text. Use for QA questions, discovery interview questions, " +
         "or any time you need verbal input from the user.",
       inputSchema: {
@@ -119,12 +118,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           isError: true,
         };
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     return {
       content: [
         {
           type: "text" as const,
-          text: `Error in ${name}: ${err.message}`,
+          text: `Error in ${name}: ${err instanceof Error ? err.message : String(err)}`,
         },
       ],
       isError: true,
@@ -134,7 +133,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
 async function handleAsk(args: any) {
   const message = args?.message;
-  const timeoutSeconds = args?.timeout_seconds ?? 300;
+  const timeoutSeconds = Math.min(Math.max(Number(args?.timeout_seconds) || 300, 10), 3600);
 
   if (!message) {
     return {
@@ -143,14 +142,13 @@ async function handleAsk(args: any) {
     };
   }
 
-  // Clear any stale input
-  clearInput(INPUT_FILE);
+  clearInput();
 
-  // Speak the question, then trigger F5 for Wispr Flow
-  await speak(message, true);
+  // Speak the question aloud
+  await speak(message);
 
-  // Wait for user response via file watcher
-  const response = await waitForInput(INPUT_FILE, timeoutSeconds * 1000);
+  // Record mic + stream to Wispr Flow WebSocket for transcription
+  const response = await waitForInput(timeoutSeconds * 1000);
 
   if (response === null) {
     return {

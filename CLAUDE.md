@@ -108,6 +108,7 @@ golems wizard          # Guided setup
 | **exa** | `exa-mcp-server` | Web search — code context, company research |
 | **golems-glm** | `bun run packages/shared/src/glm/mcp-server.ts` | Local GLM-4.7-Flash — summarize text, score/classify with JSON output |
 | **sophtron** | `@sophtron/sophtron-mcp-server` | Bank account access — transactions, identity |
+| **qa-voice** | `bun run packages/qa-voice/src/mcp-server.ts` | Voice QA & discovery — ask/say/think, edge-tts, Wispr Flow STT |
 
 ### Zikaron MCP (8 Tools)
 
