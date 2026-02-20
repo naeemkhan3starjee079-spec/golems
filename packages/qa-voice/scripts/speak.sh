@@ -8,7 +8,7 @@
 # Uses Python edge-tts CLI + afplay (matches MCP server tts.ts).
 
 VOICE="${QA_VOICE_TTS_VOICE:-en-US-JennyNeural}"
-RATE="${QA_VOICE_TTS_RATE:-+15%}"
+RATE="${QA_VOICE_TTS_RATE:-+0%}"
 TTS_FILE="/tmp/golems-tts-$$.mp3"
 
 # Get text from args or stdin

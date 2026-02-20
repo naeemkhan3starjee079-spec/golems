@@ -129,7 +129,7 @@ pip3 install edge-tts     # Python TTS engine
 |----------|---------|-------------|
 | `QA_VOICE_WISPR_KEY` | (required) | Wispr Flow API key for WebSocket STT |
 | `QA_VOICE_TTS_VOICE` | `en-US-JennyNeural` | edge-tts voice ID |
-| `QA_VOICE_TTS_RATE` | `+15%` | Speech rate adjustment |
+| `QA_VOICE_TTS_RATE` | `+0%` | Base speech rate (per-mode defaults: announce +10%, brief -10%, consult +5%, converse +0%). Auto-slows for long text. |
 | `QA_VOICE_SILENCE_SECONDS` | `2` | Default silence seconds (converse overrides to 5) |
 | `QA_VOICE_SILENCE_THRESHOLD` | `500` | RMS energy threshold for silence (0-32767) |
 | `QA_VOICE_THINK_FILE` | `/tmp/golems-qa-thinking.md` | Live thinking log path |
