@@ -12,13 +12,9 @@
         <string>--max=5000</string>
     </array>
 
-    <key>StartCalendarInterval</key>
-    <dict>
-        <key>Hour</key>
-        <integer>5</integer>
-        <key>Minute</key>
-        <integer>0</integer>
-    </dict>
+    <!-- Run every 30 minutes so brainlayer_current_context stays fresh -->
+    <key>StartInterval</key>
+    <integer>1800</integer>
 
     <key>WorkingDirectory</key>
     <string>/Users/etanheyman/Gits/golems</string>
@@ -32,7 +28,7 @@
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>
-        <string>/Users/etanheyman/.local/bin:/Users/etanheyman/.bun/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <string>/Users/etanheyman/.local/bin:/Users/etanheyman/.bun/bin:/Library/Frameworks/Python.framework/Versions/3.13/bin:/usr/local/bin:/usr/bin:/bin</string>
         <key>HOME</key>
         <string>/Users/etanheyman</string>
     </dict>

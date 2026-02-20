@@ -7,7 +7,7 @@
  */
 
 import * as readline from "readline";
-import { existsSync, mkdirSync, writeFileSync, statSync } from "fs";
+import { existsSync, mkdirSync, writeFileSync, readFileSync, statSync } from "fs";
 import { execSync } from "child_process";
 import { join } from "path";
 
@@ -203,7 +203,8 @@ export async function phasePreflight(log: SetupLogEntry[]): Promise<boolean> {
     checkPrerequisite("git", "--version", "brew install git"),
     checkPrerequisite("op", "--version", "brew install --cask 1password-cli"),
     checkPrerequisite("railway", "--version", "npm i -g @railway/cli"),
-    checkPrerequisite("ollama", "--version", "brew install ollama (for Zikaron enrichment)"),
+    checkPrerequisite("python3", "--version", "brew install python3 (for MLX server)"),
+    checkPrerequisite("ollama", "--version", "brew install ollama (fallback LLM backend)"),
   ];
 
   let allGood = true;
@@ -298,6 +299,95 @@ export async function phaseCoreSetup(log: SetupLogEntry[]): Promise<boolean> {
   log.push({ phase: "core", item: "state_dir", status: "ok" });
 
   return true;
+}
+
+// ---------------------------------------------------------------------------
+// Phase 2b: LLM Backend Selection
+// ---------------------------------------------------------------------------
+
+export async function phaseLLMBackend(log: SetupLogEntry[]): Promise<void> {
+  header("Phase 2b: LLM Backend");
+
+  const isArm64 = process.arch === "arm64" && process.platform === "darwin";
+  print("Local LLM backend powers BrainLayer enrichment and GLM MCP tools.\n");
+
+  if (isArm64) {
+    print("  Detected: Apple Silicon (arm64)");
+    print("  Recommended: MLX (21-87% faster than Ollama on Apple Silicon)\n");
+  } else {
+    print("  Detected: x86_64");
+    print("  Recommended: Ollama (MLX requires Apple Silicon)\n");
+  }
+
+  print("Options:");
+  print("  1) MLX  — Apple Silicon optimized, OpenAI-compatible API on port 8080");
+  print("  2) Ollama — Cross-platform, runs GLM-4.7-Flash on port 11434");
+  print("");
+
+  let backend = isArm64 ? "mlx" : "ollama";
+
+  if (isArm64) {
+    const choice = await ask("Choose backend [1=MLX (default), 2=Ollama]: ");
+    if (choice === "2") {
+      backend = "ollama";
+    }
+  } else {
+    const choice = await ask("Choose backend [1=MLX, 2=Ollama (default)]: ");
+    if (choice === "1") {
+      backend = "mlx";
+      warn("MLX requires Apple Silicon — may not work on this architecture");
+    }
+  }
+
+  // Check if the chosen backend is available
+  if (backend === "mlx") {
+    const python3 = shellExec("python3 --version");
+    if (!python3.ok) {
+      warn("python3 not found — MLX requires python3 + mlx_lm package");
+      info("Install: brew install python3 && pip3 install mlx-lm");
+      log.push({ phase: "llm_backend", item: "python3", status: "warning", detail: "not found" });
+    } else {
+      const mlxCheck = shellExec("python3 -c 'import mlx_lm' 2>&1");
+      if (mlxCheck.ok) {
+        success("mlx_lm package found");
+        log.push({ phase: "llm_backend", item: "mlx_lm", status: "ok" });
+      } else {
+        warn("mlx_lm package not installed");
+        info("Install: pip3 install mlx-lm");
+        log.push({ phase: "llm_backend", item: "mlx_lm", status: "warning", detail: "not installed" });
+      }
+    }
+  } else {
+    const ollamaCheck = shellExec("ollama --version");
+    if (!ollamaCheck.ok) {
+      warn("Ollama not found");
+      info("Install: brew install ollama");
+      log.push({ phase: "llm_backend", item: "ollama", status: "warning", detail: "not found" });
+    } else {
+      success(`Ollama found: ${ollamaCheck.output.split("\n")[0]}`);
+      log.push({ phase: "llm_backend", item: "ollama", status: "ok" });
+    }
+  }
+
+  // Write GLM_BACKEND to .env if file exists
+  if (existsSync(ENV_PATH)) {
+    const envContent = readFileSync(ENV_PATH, "utf-8");
+    if (/^GLM_BACKEND=/m.test(envContent)) {
+      // Replace existing (handles quoted, empty, or unquoted values)
+      const updated = envContent.replace(/^GLM_BACKEND=.*/m, `GLM_BACKEND=${backend}`);
+      writeFileSync(ENV_PATH, updated);
+      success(`Updated GLM_BACKEND=${backend} in .env`);
+    } else {
+      // Append
+      writeFileSync(ENV_PATH, envContent.trimEnd() + `\nGLM_BACKEND=${backend}\n`);
+      success(`Added GLM_BACKEND=${backend} to .env`);
+    }
+  } else {
+    info(`Will set GLM_BACKEND=${backend} when .env is created (Phase 4)`);
+  }
+
+  log.push({ phase: "llm_backend", item: "backend_choice", status: "ok", detail: backend });
+  print(`\n  Selected backend: ${backend.toUpperCase()}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -650,7 +740,7 @@ export function generateSetupLog(
   ];
 
   // Group by phase
-  const phases = ["preflight", "core", "services", "secrets", "deploy", "verify", "profiles"];
+  const phases = ["preflight", "core", "llm_backend", "services", "secrets", "deploy", "verify", "profiles"];
   for (const phase of phases) {
     const entries = log.filter((e) => e.phase === phase);
     if (entries.length === 0) continue;
@@ -733,6 +823,9 @@ export async function runWizard(): Promise<void> {
       rl.close();
       return;
     }
+
+    // Phase 2b: LLM Backend
+    await phaseLLMBackend(log);
 
     // Phase 3
     const selected = await phaseServiceSelection(log);

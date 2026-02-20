@@ -14,7 +14,7 @@
  * - Supabase connectivity (if configured)
  */
 
-import { promises as fs } from "fs";
+import { promises as fs, existsSync } from "fs";
 import { execSync } from "child_process";
 
 // Color codes
@@ -35,6 +35,11 @@ interface CheckResult {
 }
 
 const results: CheckResult[] = [];
+
+// Auto-detect LLM backend: MLX on Apple Silicon (macOS arm64), Ollama otherwise
+const isAppleSilicon = process.arch === "arm64" && process.platform === "darwin";
+const defaultGlmBackend = isAppleSilicon ? "mlx" : "ollama";
+const GLM_BACKEND = process.env.GLM_BACKEND || defaultGlmBackend;
 
 // Helper: format check output
 function checkmark(status: "pass" | "fail" | "warn"): string {
@@ -98,60 +103,69 @@ async function checkTelegramBot() {
   }
 }
 
-// Check 2: Ollama
+// Check 2: Ollama (required when GLM_BACKEND=ollama, optional otherwise)
 async function checkOllama() {
   const online = await httpCheck("http://127.0.0.1:11434/api/version", 2000);
+  const isConfigured = GLM_BACKEND === "ollama";
   if (online) {
     results.push({
       name: "Ollama",
       status: "pass",
-      message: "Responding on 127.0.0.1:11434",
+      message: `Responding on 127.0.0.1:11434${isConfigured ? " (configured backend)" : " (available as fallback)"}`,
     });
   } else {
     results.push({
       name: "Ollama",
-      status: "fail",
-      message: "Not responding on 127.0.0.1:11434",
-      fix: "golems start ollama",
+      status: isConfigured ? "fail" : "warn",
+      message: `Not responding on 127.0.0.1:11434${isConfigured ? " (configured backend!)" : " (MLX is primary)"}`,
+      fix: isConfigured ? "golems start ollama" : "ollama serve  (optional fallback for MLX)",
     });
   }
 }
 
-// Check 2a: Ollama GLM model (needed for enrichment)
+// Check 2a: Ollama GLM model (required for Ollama backend, warn for MLX fallback)
 async function checkOllamaModel() {
   // Match any GLM variant: glm4, glm-4.7-flash, glm4:latest, etc.
   const modelCheck = runCommand("ollama list 2>/dev/null | grep -qi 'glm'");
+  const isConfigured = GLM_BACKEND === "ollama";
   if (modelCheck.success) {
     results.push({
       name: "Ollama GLM Model",
       status: "pass",
-      message: "GLM model available for enrichment",
+      message: `GLM model available${isConfigured ? " for BrainLayer enrichment" : " (Ollama fallback ready)"}`,
     });
   } else {
     results.push({
       name: "Ollama GLM Model",
       status: "warn",
-      message: "No GLM model found — needed for Zikaron enrichment",
+      message: isConfigured
+        ? "No GLM model found — needed for BrainLayer enrichment"
+        : "No GLM model found — Ollama fallback won't work without it",
       fix: "ollama pull glm4",
     });
   }
 }
 
-// Check 2b: MLX Server (optional local LLM backend)
+// Check 2b: MLX Server (required when GLM_BACKEND=mlx, optional otherwise)
 async function checkMLX() {
   const online = await httpCheck("http://127.0.0.1:8080/v1/models", 2000);
+  const isConfigured = GLM_BACKEND === "mlx";
   if (online) {
     results.push({
       name: "MLX Server",
       status: "pass",
-      message: "Responding on 127.0.0.1:8080",
+      message: `Responding on 127.0.0.1:8080${isConfigured ? " (configured backend)" : ""}`,
     });
   } else {
     results.push({
       name: "MLX Server",
-      status: "warn",
-      message: "Not running (optional — Ollama works as fallback)",
-      fix: "python3 -m mlx_lm.server --model mlx-community/Qwen2.5-Coder-14B-Instruct-4bit --port 8080",
+      status: isConfigured ? "fail" : "warn",
+      message: isConfigured
+        ? "Not running — configured as primary backend (Ollama used as fallback)"
+        : "Not running (optional — Ollama is configured backend)",
+      fix: isConfigured
+        ? "launchctl load ~/Library/LaunchAgents/com.golems.mlx-server.plist"
+        : "python3 -m mlx_lm.server --model mlx-community/Qwen2.5-Coder-14B-Instruct-4bit --port 8080",
     });
   }
 }
@@ -451,7 +465,10 @@ async function checkGolemProfiles() {
 
 // Check enrichment queue depth
 async function checkEnrichmentQueue() {
-  const dbPath = `${process.env.HOME}/.local/share/zikaron/zikaron.db`;
+  // Try brainlayer path first (new), fall back to zikaron (legacy)
+  const brainlayerDb = `${process.env.HOME}/.local/share/brainlayer/brainlayer.db`;
+  const zikaronDb = `${process.env.HOME}/.local/share/zikaron/zikaron.db`;
+  const dbPath = existsSync(brainlayerDb) ? brainlayerDb : zikaronDb;
   const cmd = runCommand(
     `python3 -c "import apsw; db=apsw.Connection('${dbPath}', flags=apsw.SQLITE_OPEN_READONLY); print(list(db.cursor().execute('SELECT COUNT(*) FROM chunks WHERE enriched_at IS NULL'))[0][0]); db.close()"`
   );
@@ -537,6 +554,7 @@ function printResults() {
 // Main
 async function main() {
   console.log("Checking Golems health...\n");
+  console.log(`  LLM Backend: ${GLM_BACKEND} (arch: ${process.arch})\n`);
 
   await checkTelegramBot();
   await checkOllama();

@@ -4,7 +4,7 @@
  * Exposes local LLM (GLM-4.7-Flash via Ollama or MLX) as MCP tools for Claude Code.
  * Tools: glm_summarize, glm_score
  *
- * ENV: GLM_BACKEND=ollama|mlx (default: ollama)
+ * ENV: GLM_BACKEND=ollama|mlx (default: mlx on arm64, ollama otherwise)
  *
  * Usage in .mcp.json:
  * {
@@ -26,16 +26,37 @@ import {
 import { runGLM, runGLMJSON } from "../lib/glm-llm";
 import { runMLX, runMLXJSON } from "../lib/mlx-llm";
 
-const GLM_BACKEND = process.env.GLM_BACKEND || "ollama";
+// Auto-detect: default to MLX on Apple Silicon (macOS arm64), Ollama otherwise
+const isAppleSilicon = process.arch === "arm64" && process.platform === "darwin";
+const defaultBackend = isAppleSilicon ? "mlx" : "ollama";
+const GLM_BACKEND = process.env.GLM_BACKEND || defaultBackend;
 
-// Dispatch to the configured backend
-const runLocal = GLM_BACKEND === "mlx"
-  ? (prompt: string, source: string) => runMLX(prompt, source)
-  : (prompt: string, source: string) => runGLM(prompt, source);
+// Dispatch with fallback: MLX primary → Ollama fallback on arm64
+async function runLocalWithFallback(prompt: string, source: string): Promise<string> {
+  if (GLM_BACKEND === "mlx") {
+    try {
+      const result = await runMLX(prompt, source);
+      if (result !== null && result !== "") return result;
+    } catch {
+      console.error("[golems-glm] MLX failed, falling back to Ollama");
+    }
+    return runGLM(prompt, source);
+  }
+  return runGLM(prompt, source);
+}
 
-const runLocalJSON = GLM_BACKEND === "mlx"
-  ? <T>(prompt: string, source: string) => runMLXJSON<T>(prompt, source)
-  : <T>(prompt: string, source: string) => runGLMJSON<T>(prompt, source);
+async function runLocalJSONWithFallback<T>(prompt: string, source: string): Promise<T | null> {
+  if (GLM_BACKEND === "mlx") {
+    try {
+      const result = await runMLXJSON<T>(prompt, source);
+      if (result !== null) return result;
+    } catch {
+      console.error("[golems-glm] MLX JSON failed, falling back to Ollama");
+    }
+    return runGLMJSON<T>(prompt, source);
+  }
+  return runGLMJSON<T>(prompt, source);
+}
 
 const server = new Server(
   { name: "golems-glm", version: "1.0.0" },
@@ -139,14 +160,14 @@ ${text}
 
 SUMMARY:`;
 
-  const summary = await runLocal(prompt, "glm-mcp-summarize");
+  const summary = await runLocalWithFallback(prompt, "glm-mcp-summarize");
 
   if (!summary) {
     return {
       content: [
         {
           type: "text" as const,
-          text: `Local LLM failed to generate summary. Ensure ${GLM_BACKEND === "mlx" ? "MLX server" : "Ollama"} is running.`,
+          text: `Local LLM failed to generate summary. Backend: ${GLM_BACKEND}. Ensure ${GLM_BACKEND === "mlx" ? "MLX server (port 8080) or Ollama (fallback)" : "Ollama"} is running.`,
         },
       ],
       isError: true,
@@ -195,14 +216,14 @@ ${schemaStr}
 
 JSON OUTPUT:`;
 
-  const result = await runLocalJSON<Record<string, unknown>>(prompt, "glm-mcp-score");
+  const result = await runLocalJSONWithFallback<Record<string, unknown>>(prompt, "glm-mcp-score");
 
   if (!result) {
     return {
       content: [
         {
           type: "text" as const,
-          text: `Local LLM failed to produce valid JSON. Ensure ${GLM_BACKEND === "mlx" ? "MLX server" : "Ollama"} is running.`,
+          text: `Local LLM failed to produce valid JSON. Backend: ${GLM_BACKEND}. Ensure ${GLM_BACKEND === "mlx" ? "MLX server (port 8080) or Ollama (fallback)" : "Ollama"} is running.`,
         },
       ],
       isError: true,
@@ -224,7 +245,7 @@ JSON OUTPUT:`;
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("[golems-glm] MCP server running on stdio");
+  console.error(`[golems-glm] MCP server running on stdio (backend: ${GLM_BACKEND}, arch: ${process.arch})`);
 }
 
 main().catch((err) => {

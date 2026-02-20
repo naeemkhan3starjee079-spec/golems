@@ -17,9 +17,10 @@
         <string>8080</string>
     </array>
 
-    <!-- Keep alive — restart if it crashes -->
+    <!-- On-demand: don't keep alive — 14B model eats ~8GB RAM.
+         Start manually or via launchctl kickstart when needed. -->
     <key>KeepAlive</key>
-    <true/>
+    <false/>
 
     <!-- Wait 10s between restarts to avoid thrashing -->
     <key>ThrottleInterval</key>
