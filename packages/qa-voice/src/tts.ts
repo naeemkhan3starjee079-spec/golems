@@ -80,11 +80,12 @@ export async function speak(
     // Play audio — monitor stop signal so user can interrupt
     const play = Bun.spawn(["afplay", ttsFile]);
 
-    // Poll for stop signal during playback
+    // Poll for stop signal during playback — clean up signal file after kill
     const stopPoll = setInterval(() => {
       if (existsSync(STOP_SIGNAL)) {
         play.kill("SIGTERM");
         clearInterval(stopPoll);
+        try { unlinkSync(STOP_SIGNAL); } catch {}
       }
     }, STOP_POLL_MS);
 
