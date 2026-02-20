@@ -13,7 +13,7 @@
 | `supabase` | `@supabase/mcp-server-supabase` | 20+ | Third-party |
 | `exa` | `exa-mcp-server` | 3 | Third-party |
 | `sophtron` | `@sophtron/sophtron-mcp-server` | 6 | Third-party |
-| `qa-voice` | `bun run packages/qa-voice/src/mcp-server.ts` | 3 | `packages/qa-voice` |
+| `qa-voice` | `bun run ~/Gits/voicelayer/src/mcp-server.ts` | 3 | External: [voicelayer](https://github.com/EtanHey/voicelayer) |
 | `playwright` | `@anthropic-ai/mcp-playwright` | 15+ | Third-party |
 
 ## Standard Structure (Bun servers)

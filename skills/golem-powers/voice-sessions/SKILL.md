@@ -1,11 +1,11 @@
 ---
 name: voice-sessions
-description: Structured voice sessions via qa-voice MCP. 4 modes (announce/brief/consult/converse) + silent think for drilling, coaching, and capturing insights to Obsidian.
+description: Structured voice sessions via VoiceLayer MCP. 4 modes (announce/brief/consult/converse) + silent think for drilling, coaching, and capturing insights to Obsidian.
 ---
 
 # Voice Sessions
 
-> Structured voice-powered sessions using qa-voice MCP. Converse, drill, capture, output.
+> Structured voice-powered sessions using VoiceLayer MCP ([github.com/EtanHey/voicelayer](https://github.com/EtanHey/voicelayer)). Converse, drill, capture, output.
 
 ## When to Use
 
@@ -64,6 +64,6 @@ Voice sessions are locked per-session to prevent mic conflicts. `converse` mode 
 
 ## Requirements
 
-- **qa-voice MCP** connected (check `.mcp.json`)
+- **VoiceLayer MCP** connected (check `.mcp.json` — points to `~/Gits/voicelayer/src/mcp-server.ts`)
 - **Obsidian vault** — workflows reference `$OBSIDIAN_VAULT` (resolve via obsidian skill or user's configured vault path)
 - Text fallback: all workflows work with typed answers if voice isn't available

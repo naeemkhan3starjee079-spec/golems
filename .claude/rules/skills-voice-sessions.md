@@ -1,6 +1,6 @@
 # Voice Sessions Rules
 
-> Voice-powered sessions via qa-voice MCP. 5 modes (announce, brief, consult, converse, think) for drilling, coaching, QA, and insights.
+> Voice-powered sessions via VoiceLayer MCP ([github.com/EtanHey/voicelayer](https://github.com/EtanHey/voicelayer)). 5 modes (announce, brief, consult, converse, think) for drilling, coaching, QA, and insights.
 
 ## Voice Modes
 
@@ -41,5 +41,5 @@ All workflows work with typed answers if voice isn't available. The skill detect
 
 ## MCP Server
 
-**Name:** `qa-voice` | **Package:** `packages/qa-voice/`
+**Name:** `qa-voice` | **Repo:** [github.com/EtanHey/voicelayer](https://github.com/EtanHey/voicelayer) (local clone: `~/Gits/voicelayer`)
 **Tools:** `qa_voice_ask`, `qa_voice_say`, `qa_voice_think`

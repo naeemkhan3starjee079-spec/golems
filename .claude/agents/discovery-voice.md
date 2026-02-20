@@ -78,7 +78,7 @@ Watch for these patterns in the client's words:
 
 Write findings to: `~/.golems/sessions/discovery-{date}-{id}.json`
 
-Use the schema in `packages/qa-voice/src/schemas/discovery.ts`.
+Use the schema in the VoiceLayer repo: `voicelayer/src/schemas/discovery.ts` ([github.com/EtanHey/voicelayer](https://github.com/EtanHey/voicelayer)).
 
 ## Brief Generation
 
@@ -86,4 +86,4 @@ At session end, generate: `~/.golems/briefs/discovery-{date}-{id}.md`
 
 ## Working Directory
 
-Always work from `packages/qa-voice/`.
+VoiceLayer source: `~/Gits/voicelayer/` ([github.com/EtanHey/voicelayer](https://github.com/EtanHey/voicelayer)).

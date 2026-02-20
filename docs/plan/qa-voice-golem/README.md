@@ -2,7 +2,7 @@
 
 > AI QA companion that browses pages with you, speaks questions via TTS, listens to your voice responses via Wispr Flow, and generates structured reports.
 
-> **Note (2026-02-19):** Architecture changed after these phases were completed. The file watcher / mic.sh / F5 automation approach was replaced with direct mic recording via sox + Wispr Flow WebSocket streaming. See `packages/qa-voice/CLAUDE.md` for the current architecture. These plan docs are preserved as historical records.
+> **Note (2026-02-21):** `packages/qa-voice/` was extracted to a standalone repo: [github.com/EtanHey/voicelayer](https://github.com/EtanHey/voicelayer) (Layers v2 Phase 5 — VoiceLayer Extraction). See [voicelayer/CLAUDE.md](https://github.com/EtanHey/voicelayer/blob/main/CLAUDE.md) for the current architecture. These plan docs are preserved as historical records.
 
 ## Architecture (Approach B: MCP Server) — SUPERSEDED
 

@@ -105,7 +105,7 @@ flowchart LR
 | SEO | 5 | Meta tags, headings, structured data, sitemap |
 
 - **Agent prompt:** `.claude/agents/qa-voice.md`
-- **Schema:** `packages/qa-voice/src/schemas/checklist.ts`
+- **Schema:** `voicelayer/src/schemas/checklist.ts`
 - **Reports:** `~/.golems/reports/qa-{date}-{id}.md`
 
 ### Discovery Mode — Client Calls
@@ -136,7 +136,7 @@ flowchart LR
 | Competitive | 2 | Competitors, differentiation |
 
 - **Agent prompt:** `.claude/agents/discovery-voice.md`
-- **Schema:** `packages/qa-voice/src/schemas/discovery.ts`
+- **Schema:** `voicelayer/src/schemas/discovery.ts`
 - **Briefs:** `~/.golems/briefs/discovery-{date}-{id}.md`
 
 ## MCP Tools
@@ -186,7 +186,7 @@ pip3 install edge-tts
 {
   "qa-voice": {
     "command": "bun",
-    "args": ["run", "packages/qa-voice/src/mcp-server.ts"],
+    "args": ["run", "/path/to/voicelayer/src/mcp-server.ts"],
     "env": {
       "QA_VOICE_WISPR_KEY": "your-api-key-here"
     }
@@ -253,7 +253,9 @@ pip3 install edge-tts
 
 ## Source
 
-- **Package:** [`packages/qa-voice/`](https://github.com/EtanHey/golems/tree/master/packages/qa-voice)
-- **CLAUDE.md:** [`packages/qa-voice/CLAUDE.md`](https://github.com/EtanHey/golems/blob/master/packages/qa-voice/CLAUDE.md)
+> VoiceLayer was extracted from `packages/qa-voice/` into a standalone repo in Phase 5 of the Layers v2 plan.
+
+- **Repo:** [github.com/EtanHey/voicelayer](https://github.com/EtanHey/voicelayer)
+- **CLAUDE.md:** [voicelayer/CLAUDE.md](https://github.com/EtanHey/voicelayer/blob/main/CLAUDE.md)
 - **QA Agent:** [`.claude/agents/qa-voice.md`](https://github.com/EtanHey/golems/blob/master/.claude/agents/qa-voice.md)
 - **Discovery Agent:** [`.claude/agents/discovery-voice.md`](https://github.com/EtanHey/golems/blob/master/.claude/agents/discovery-voice.md)

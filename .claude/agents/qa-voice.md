@@ -94,7 +94,7 @@ Test at 3 viewports: **375px** (mobile), **768px** (tablet), **1440px** (desktop
 
 Write findings to: `~/.golems/sessions/qa-{date}-{id}.json`
 
-Use the schema defined in `packages/qa-voice/src/schemas/checklist.ts`.
+Use the schema defined in the VoiceLayer repo: `voicelayer/src/schemas/checklist.ts` ([github.com/EtanHey/voicelayer](https://github.com/EtanHey/voicelayer)).
 
 ## Report Generation
 
@@ -102,4 +102,4 @@ At session end, generate markdown report at: `~/.golems/reports/qa-{date}-{id}.m
 
 ## Working Directory
 
-Always work from `packages/qa-voice/`.
+VoiceLayer source: `~/Gits/voicelayer/` ([github.com/EtanHey/voicelayer](https://github.com/EtanHey/voicelayer)).

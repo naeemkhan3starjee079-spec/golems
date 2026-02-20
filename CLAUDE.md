@@ -1,6 +1,6 @@
 # Golems Monorepo
 
-> Autonomous AI agent ecosystem — Bun workspace with 14 packages. Each golem is a self-contained CC plugin.
+> Autonomous AI agent ecosystem — Bun workspace with 13 packages. Each golem is a self-contained CC plugin.
 
 ---
 
@@ -22,7 +22,7 @@
 | **tax-helper** | [`packages/tax-helper/`](packages/tax-helper/CLAUDE.md) | Schedule C transaction categorization (Sophtron MCP) |
 | **ralph** | [`packages/ralph/`](packages/ralph/CLAUDE.md) | Autonomous coding loop (PRD execution) |
 | **brainlayer** | [github.com/EtanHey/brainlayer](https://github.com/EtanHey/brainlayer) | Memory layer — external repo (Python + sqlite-vec, 260K+ chunks) |
-| **qa-voice** | [`packages/qa-voice/`](packages/qa-voice/CLAUDE.md) | Voice-powered QA & client discovery (MCP server, edge-tts, Wispr Flow) |
+| **voicelayer** | [github.com/EtanHey/voicelayer](https://github.com/EtanHey/voicelayer) | Voice I/O layer — external repo (MCP server, edge-tts, whisper.cpp, session booking) |
 
 **Always read the package-specific CLAUDE.md when working in that package.**
 
@@ -46,7 +46,7 @@ golems/                              # Bun workspace monorepo
 ├── packages/tax-helper/             # Schedule C tax categorization
 ├── packages/autonomous/             # Legacy stranglers (1-line re-exports)
 ├── packages/ralph/                  # Autonomous coding loop (PRD execution)
-├── packages/qa-voice/               # Voice QA & discovery (MCP server)
+├── (voicelayer → external repo)      # Voice I/O layer (github.com/EtanHey/voicelayer)
 ├── launchd/                         # macOS service plists
 ├── Dockerfile                       # Root workspace Dockerfile (Railway)
 └── railway.json                     # Railway deploy config
@@ -107,7 +107,7 @@ golems wizard          # Guided setup
 | **exa** | `exa-mcp-server` | Web search — code context, company research |
 | **golems-glm** | `bun run packages/shared/src/glm/mcp-server.ts` | Local GLM-4.7-Flash — summarize text, score/classify with JSON output |
 | **sophtron** | `@sophtron/sophtron-mcp-server` | Bank account access — transactions, identity |
-| **qa-voice** | `bun run packages/qa-voice/src/mcp-server.ts` | Voice QA & discovery — ask/say/think, edge-tts, Wispr Flow STT |
+| **qa-voice** | `bun run ~/Gits/voicelayer/src/mcp-server.ts` | Voice I/O layer — external repo ([VoiceLayer](https://github.com/EtanHey/voicelayer)) |
 
 ### BrainLayer MCP (8 Tools)
 
