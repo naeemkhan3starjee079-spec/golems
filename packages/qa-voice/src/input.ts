@@ -4,11 +4,14 @@
  * Records audio via sox `rec` command (16kHz 16-bit mono PCM),
  * streams to Wispr Flow WebSocket API for transcription.
  * Detects speech end via RMS energy silence detection.
+ * Supports stop signal file for user-controlled stop.
  *
  * Prerequisites:
  *   brew install sox
  *   QA_VOICE_WISPR_KEY env var set
  */
+
+import { hasStopSignal, clearStopSignal } from "./session-booking";
 
 const SAMPLE_RATE = 16000;
 const BYTES_PER_SAMPLE = 2;
@@ -16,7 +19,7 @@ const CHUNK_DURATION_S = 1;
 const CHUNK_SIZE = SAMPLE_RATE * BYTES_PER_SAMPLE * CHUNK_DURATION_S; // 32000 bytes
 
 const SILENCE_THRESHOLD = Number(process.env.QA_VOICE_SILENCE_THRESHOLD) || 500;
-const SILENCE_SECONDS = Number(process.env.QA_VOICE_SILENCE_SECONDS) || 2;
+const DEFAULT_SILENCE_SECONDS = Number(process.env.QA_VOICE_SILENCE_SECONDS) || 2;
 
 /**
  * Calculate RMS energy of a 16-bit signed PCM audio buffer.
@@ -39,8 +42,15 @@ export function calculateRMS(buffer: Uint8Array): number {
 /**
  * Wait for user voice input via mic recording + Wispr Flow WebSocket.
  * Returns the transcribed text, or null on timeout / no speech.
+ *
+ * @param timeoutMs - Max wait time in milliseconds
+ * @param silenceSeconds - Seconds of silence before auto-stop (default from env or 2)
  */
-export async function waitForInput(timeoutMs: number): Promise<string | null> {
+export async function waitForInput(
+  timeoutMs: number,
+  silenceSeconds?: number,
+): Promise<string | null> {
+  const effectiveSilence = silenceSeconds ?? DEFAULT_SILENCE_SECONDS;
   const apiKey = process.env.QA_VOICE_WISPR_KEY;
   if (!apiKey) {
     throw new Error(
@@ -58,6 +68,9 @@ export async function waitForInput(timeoutMs: number): Promise<string | null> {
   }
 
   const wsUrl = `wss://platform-api.wisprflow.ai/api/v1/dash/ws?api_key=Bearer%20${apiKey}`;
+
+  // Clear any leftover stop signal from previous recording
+  clearStopSignal();
 
   return new Promise<string | null>((resolve, reject) => {
     let packetIndex = 0;
@@ -149,8 +162,26 @@ export async function waitForInput(timeoutMs: number): Promise<string | null> {
                 silentChunks++;
               }
 
+              // Check for user-initiated stop signal
+              if (hasSpeech && hasStopSignal()) {
+                clearStopSignal();
+                console.error("[qa-voice] Stop signal received — ending recording");
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                  ws.send(
+                    JSON.stringify({
+                      type: "commit",
+                      total_packets: packetIndex,
+                    }),
+                  );
+                }
+                try {
+                  recorder?.kill();
+                } catch {}
+                return;
+              }
+
               // Only commit after speech was detected AND silence follows
-              if (hasSpeech && silentChunks >= SILENCE_SECONDS) {
+              if (hasSpeech && silentChunks >= effectiveSilence) {
                 if (ws && ws.readyState === WebSocket.OPEN) {
                   ws.send(
                     JSON.stringify({

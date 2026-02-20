@@ -19,5 +19,5 @@ See `packages/qa-voice/CLAUDE.md` for full QA session documentation.
 ## Quick Start
 
 1. Navigate to the site in Playwright
-2. Use qa_voice_ask for each check category
+2. Use qa_voice_converse for each check category
 3. Generate report with qa-voice report tools

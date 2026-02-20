@@ -16,9 +16,9 @@ description: Voice-powered presentation/pitch practice with drilling, fact-check
 ## Phase 1: Setup
 
 ```
-qa_voice_ask: "What are we practicing — a presentation, a pitch, or something else?"
-qa_voice_ask: "How long is the talk supposed to be?"
-qa_voice_ask: "What's your main message in one sentence?"
+qa_voice_converse: "What are we practicing — a presentation, a pitch, or something else?"
+qa_voice_converse: "How long is the talk supposed to be?"
+qa_voice_converse: "What's your main message in one sentence?"
 ```
 
 Load the outline (Obsidian file, pptx notes, or user describes it).
@@ -34,10 +34,10 @@ For each slide/section:
 
 1. **Read back the slide's key point:**
    ```
-   qa_voice_say: "Slide {N}: {slide title or key point}. Go ahead, present this part."
+   qa_voice_brief: "Slide {N}: {slide title or key point}. Go ahead, present this part."
    ```
 
-2. **Listen to their delivery** (qa_voice_ask with long timeout)
+2. **Listen to their delivery** (qa_voice_converse with long timeout)
 
 3. **Evaluate and drill:**
    - Too long? → "That was about {X} minutes. You need it under {Y}. What can you cut?"
@@ -76,7 +76,7 @@ Review any numbers, dates, or claims mentioned during practice:
 - Comparisons — verify they're fair
 
 ```
-qa_voice_say: "Let me fact-check a few things you said..."
+qa_voice_brief: "Let me fact-check a few things you said..."
 ```
 
 Flag corrections:
@@ -87,13 +87,13 @@ qa_voice_think(category: "red-flag", thought: "Claimed {X} but actual is {Y}")
 ## Phase 5: Debrief
 
 ```
-qa_voice_ask: "How did that feel? What parts felt natural vs forced?"
-qa_voice_ask: "What do you want to change for the next run?"
+qa_voice_converse: "How did that feel? What parts felt natural vs forced?"
+qa_voice_converse: "What do you want to change for the next run?"
 ```
 
 Summarize:
 ```
-qa_voice_say: "Here's what I noticed: {key observations}"
+qa_voice_brief: "Here's what I noticed: {key observations}"
 ```
 
 ## Phase 6: Output

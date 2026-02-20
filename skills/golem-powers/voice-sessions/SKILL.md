@@ -1,11 +1,11 @@
 ---
 name: voice-sessions
-description: Structured voice sessions via qa-voice MCP. Covers post-conversation debriefs, presentation/pitch practice, QA testing, and more. Each workflow uses ask/say/think for drilling, coaching, and capturing insights to Obsidian.
+description: Structured voice sessions via qa-voice MCP. 4 modes (announce/brief/consult/converse) + silent think for drilling, coaching, and capturing insights to Obsidian.
 ---
 
 # Voice Sessions
 
-> Structured voice-powered sessions using qa-voice MCP. Ask, drill, capture, output.
+> Structured voice-powered sessions using qa-voice MCP. Converse, drill, capture, output.
 
 ## When to Use
 
@@ -38,13 +38,29 @@ All workflows follow the same pattern:
 5. Output: structured Obsidian note or report
 ```
 
-## Tools Used
+## Voice Modes
 
-| Tool | What It Does |
-|------|-------------|
-| `qa_voice_ask` | Speak a question, wait for voice response |
-| `qa_voice_say` | Speak without waiting (status updates, prompts, slide readback) |
-| `qa_voice_think` | Silent notes to thinking log (insights, red flags, timing) |
+| Mode | Tool | What It Does |
+|------|------|-------------|
+| **announce** | `qa_voice_announce` | Fire-and-forget TTS (status updates, narration) |
+| **brief** | `qa_voice_brief` | One-way explanation (reading back decisions, summaries) |
+| **consult** | `qa_voice_consult` | Checkpoint — speak + hint user may respond |
+| **converse** | `qa_voice_converse` | Full Q&A — speak question, wait for voice response |
+| **think** | `qa_voice_think` | Silent notes to thinking log (insights, red flags, timing) |
+
+**Aliases:** `qa_voice_ask` → converse, `qa_voice_say` → announce (backward compat)
+
+### Which mode to use when
+
+- **Opening/closing a session** → `announce` ("Let's start your debrief")
+- **Explaining something back** → `brief` ("Here's what I captured...")
+- **Asking a question** → `converse` ("Walk me through what happened")
+- **Pre-action checkpoint** → `consult` ("About to save the report, anything to add?")
+- **Taking notes** → `think` (silent markdown log)
+
+## Session Booking
+
+Voice sessions are locked per-session to prevent mic conflicts. `converse` mode auto-books on first call. Other sessions see "line busy" and fall back to text.
 
 ## Requirements
 

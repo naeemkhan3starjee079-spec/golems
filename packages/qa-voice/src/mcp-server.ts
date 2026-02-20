@@ -1,16 +1,18 @@
 /**
- * QA Voice MCP Server
+ * QA Voice MCP Server — 4 voice modes + silent think tool.
  *
- * Exposes voice I/O tools for Claude Code: ask (speak + wait), say (speak only), think (write to file).
- * TTS via edge-tts (Python CLI), input via Wispr Flow WebSocket (mic recording + cloud STT).
+ * Modes:
+ *   announce  — fire-and-forget TTS (status updates, narration)
+ *   brief     — one-way explanation via TTS (reading back decisions, summaries)
+ *   consult   — speak + signal that user may respond (non-blocking checkpoint)
+ *   converse  — bidirectional voice Q&A with user-controlled stop (blocking)
+ *   think     — silent markdown log (no voice)
  *
- * Usage in .mcp.json:
- * {
- *   "qa-voice": {
- *     "command": "bun",
- *     "args": ["run", "packages/qa-voice/src/mcp-server.ts"]
- *   }
- * }
+ * Aliases (backward compat):
+ *   qa_voice_say → qa_voice_announce
+ *   qa_voice_ask → qa_voice_converse
+ *
+ * Session booking: lockfile at /tmp/voicelayer-session.lock prevents mic conflicts.
  */
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
@@ -22,12 +24,19 @@ import {
 import { appendFileSync, existsSync, writeFileSync } from "fs";
 import { speak } from "./tts";
 import { waitForInput, clearInput } from "./input";
+import {
+  bookVoiceSession,
+  releaseVoiceSession,
+  isVoiceBooked,
+  clearStopSignal,
+} from "./session-booking";
 
 const THINK_FILE = process.env.QA_VOICE_THINK_FILE || "/tmp/golems-qa-thinking.md";
 const DEFAULT_TIMEOUT_MS = 300_000; // 5 minutes
+const CONVERSE_SILENCE_SECONDS = 5; // longer silence for converse mode (user pauses to think)
 
 const server = new Server(
-  { name: "qa-voice", version: "1.0.0" },
+  { name: "qa-voice", version: "2.0.0" },
   { capabilities: { tools: {} } }
 );
 
@@ -35,34 +44,13 @@ const server = new Server(
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: [
+    // --- Voice Mode: Announce ---
     {
-      name: "qa_voice_ask",
-      description:
-        "Speak a question aloud via TTS and wait for the user's voice response. " +
-        "The user responds via microphone — audio is streamed to Wispr Flow for transcription. " +
-        "Returns the transcribed text. Use for QA questions, discovery interview questions, " +
-        "or any time you need verbal input from the user.",
-      inputSchema: {
-        type: "object" as const,
-        properties: {
-          message: {
-            type: "string",
-            description: "The question or message to speak aloud",
-          },
-          timeout_seconds: {
-            type: "number",
-            description: "How long to wait for a response (default: 300 seconds)",
-            default: 300,
-          },
-        },
-        required: ["message"],
-      },
-    },
-    {
-      name: "qa_voice_say",
+      name: "qa_voice_announce",
       description:
         "Speak a message aloud via TTS without waiting for a response. " +
-        "Use for status updates, acknowledgments, or transitions between topics.",
+        "Fire-and-forget — use for status updates, narration, task completion alerts. " +
+        "Does NOT require voice session booking.",
       inputSchema: {
         type: "object" as const,
         properties: {
@@ -74,6 +62,69 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: ["message"],
       },
     },
+    // --- Voice Mode: Brief ---
+    {
+      name: "qa_voice_brief",
+      description:
+        "Speak a one-way explanation aloud via TTS. No response expected. " +
+        "Use for reading back decisions, summarizing findings, explaining plans. " +
+        "Longer content than announce — Claude explains, user listens.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          message: {
+            type: "string",
+            description: "The explanation or summary to speak aloud",
+          },
+        },
+        required: ["message"],
+      },
+    },
+    // --- Voice Mode: Consult ---
+    {
+      name: "qa_voice_consult",
+      description:
+        "Speak a checkpoint message — the user MAY want to respond. Non-blocking. " +
+        "Use for preemptive checkpoints: 'about to commit, want to review?' " +
+        "Returns immediately. If user input is needed, follow up with qa_voice_converse.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          message: {
+            type: "string",
+            description: "The checkpoint question or status to speak",
+          },
+        },
+        required: ["message"],
+      },
+    },
+    // --- Voice Mode: Converse ---
+    {
+      name: "qa_voice_converse",
+      description:
+        "Speak a question aloud and wait for the user's voice response. BLOCKING. " +
+        "Records mic audio, streams to STT, returns transcription. " +
+        "User-controlled stop: touch /tmp/voicelayer-stop to end recording. " +
+        "Silence detection (5s) is fallback only. " +
+        "Requires voice session booking — other sessions see 'line busy'. " +
+        "Use for interactive Q&A, drilling sessions, interviews.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          message: {
+            type: "string",
+            description: "The question or prompt to speak aloud",
+          },
+          timeout_seconds: {
+            type: "number",
+            description: "How long to wait for a response (default: 300 seconds)",
+            default: 300,
+          },
+        },
+        required: ["message"],
+      },
+    },
+    // --- Silent: Think ---
     {
       name: "qa_voice_think",
       description:
@@ -96,6 +147,42 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: ["thought"],
       },
     },
+    // --- Aliases (backward compat) ---
+    {
+      name: "qa_voice_say",
+      description:
+        "ALIAS for qa_voice_announce. Speak a message aloud without waiting for a response.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          message: {
+            type: "string",
+            description: "The message to speak aloud",
+          },
+        },
+        required: ["message"],
+      },
+    },
+    {
+      name: "qa_voice_ask",
+      description:
+        "ALIAS for qa_voice_converse. Speak a question and wait for voice response.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          message: {
+            type: "string",
+            description: "The question or message to speak aloud",
+          },
+          timeout_seconds: {
+            type: "number",
+            description: "How long to wait for a response (default: 300 seconds)",
+            default: 300,
+          },
+        },
+        required: ["message"],
+      },
+    },
   ],
 }));
 
@@ -106,12 +193,22 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
   try {
     switch (name) {
-      case "qa_voice_ask":
-        return await handleAsk(args);
-      case "qa_voice_say":
-        return await handleSay(args);
+      // New 4 modes
+      case "qa_voice_announce":
+        return await handleAnnounce(args);
+      case "qa_voice_brief":
+        return await handleBrief(args);
+      case "qa_voice_consult":
+        return await handleConsult(args);
+      case "qa_voice_converse":
+        return await handleConverse(args);
       case "qa_voice_think":
         return await handleThink(args);
+      // Aliases
+      case "qa_voice_say":
+        return await handleAnnounce(args);
+      case "qa_voice_ask":
+        return await handleConverse(args);
       default:
         return {
           content: [{ type: "text" as const, text: `Unknown tool: ${name}` }],
@@ -131,9 +228,69 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   }
 });
 
-async function handleAsk(args: any) {
+// --- Mode Handlers ---
+
+async function handleAnnounce(args: any) {
   const message = args?.message;
-  const timeoutSeconds = Math.min(Math.max(Number(args?.timeout_seconds) || 300, 10), 3600);
+  if (!message) {
+    return {
+      content: [{ type: "text" as const, text: "Missing required: message" }],
+      isError: true,
+    };
+  }
+
+  await speak(message);
+
+  return {
+    content: [{ type: "text" as const, text: `[announce] Spoke: "${message}"` }],
+  };
+}
+
+async function handleBrief(args: any) {
+  const message = args?.message;
+  if (!message) {
+    return {
+      content: [{ type: "text" as const, text: "Missing required: message" }],
+      isError: true,
+    };
+  }
+
+  await speak(message);
+
+  return {
+    content: [{ type: "text" as const, text: `[brief] Explained: "${message}"` }],
+  };
+}
+
+async function handleConsult(args: any) {
+  const message = args?.message;
+  if (!message) {
+    return {
+      content: [{ type: "text" as const, text: "Missing required: message" }],
+      isError: true,
+    };
+  }
+
+  await speak(message);
+
+  return {
+    content: [
+      {
+        type: "text" as const,
+        text:
+          `[consult] Spoke: "${message}"\n` +
+          "User may want to respond. Use qa_voice_converse to collect voice input if needed.",
+      },
+    ],
+  };
+}
+
+async function handleConverse(args: any) {
+  const message = args?.message;
+  const timeoutSeconds = Math.min(
+    Math.max(Number(args?.timeout_seconds) || 300, 10),
+    3600,
+  );
 
   if (!message) {
     return {
@@ -142,20 +299,53 @@ async function handleAsk(args: any) {
     };
   }
 
+  // Session booking — auto-book if not already booked
+  const booking = isVoiceBooked();
+  if (booking.booked && !booking.ownedByUs) {
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text:
+            `[converse] Line is busy — voice session owned by ${booking.owner?.sessionId} ` +
+            `(PID ${booking.owner?.pid}) since ${booking.owner?.startedAt}. ` +
+            "Fall back to text input, or wait for the other session to finish.",
+        },
+      ],
+    };
+  }
+
+  if (!booking.booked) {
+    const result = bookVoiceSession();
+    if (!result.success) {
+      return {
+        content: [
+          { type: "text" as const, text: `[converse] ${result.error}` },
+        ],
+        isError: true,
+      };
+    }
+  }
+
   clearInput();
+  clearStopSignal();
 
   // Speak the question aloud
   await speak(message);
 
   // Record mic + stream to Wispr Flow WebSocket for transcription
-  const response = await waitForInput(timeoutSeconds * 1000);
+  // Uses longer silence threshold (5s) — user may pause to think
+  const response = await waitForInput(
+    timeoutSeconds * 1000,
+    CONVERSE_SILENCE_SECONDS,
+  );
 
   if (response === null) {
     return {
       content: [
         {
           type: "text" as const,
-          text: `No response received within ${timeoutSeconds} seconds. The user may have stepped away.`,
+          text: `[converse] No response received within ${timeoutSeconds} seconds. The user may have stepped away.`,
         },
       ],
     };
@@ -163,23 +353,6 @@ async function handleAsk(args: any) {
 
   return {
     content: [{ type: "text" as const, text: response }],
-  };
-}
-
-async function handleSay(args: any) {
-  const message = args?.message;
-
-  if (!message) {
-    return {
-      content: [{ type: "text" as const, text: "Missing required: message" }],
-      isError: true,
-    };
-  }
-
-  await speak(message);
-
-  return {
-    content: [{ type: "text" as const, text: `Spoke: "${message}"` }],
   };
 }
 
@@ -201,13 +374,13 @@ async function handleThink(args: any) {
   });
 
   const icons: Record<string, string> = {
-    insight: "💡",
-    question: "❓",
-    "red-flag": "🚩",
-    "checklist-update": "✅",
+    insight: "\u{1F4A1}",
+    question: "\u{2753}",
+    "red-flag": "\u{1F6A9}",
+    "checklist-update": "\u{2705}",
   };
 
-  const icon = icons[category] || "📝";
+  const icon = icons[category] || "\u{1F4DD}";
   const line = `- [${timestamp}] ${icon} ${thought}\n`;
 
   // Append to thinking file
@@ -226,7 +399,7 @@ async function handleThink(args: any) {
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("[qa-voice] MCP server running on stdio");
+  console.error("[qa-voice] MCP server v2.0 running — 4 modes: announce, brief, consult, converse");
 }
 
 main().catch((err) => {

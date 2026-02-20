@@ -19,7 +19,7 @@ sequenceDiagram
     participant Mic as sox rec
     participant Wispr as Wispr Flow API
 
-    Claude->>MCP: qa_voice_ask("How's the nav?")
+    Claude->>MCP: qa_voice_converse("How's the nav?")
     MCP->>TTS: Synthesize speech
     TTS-->>MCP: Audio played via speakers
     MCP->>Wispr: Open WebSocket + auth
@@ -30,7 +30,7 @@ sequenceDiagram
         MCP->>MCP: Calculate RMS energy
         MCP->>Wispr: Stream audio (base64)
     end
-    Note over MCP: Silence detected (2s)
+    Note over MCP: Silence detected (5s) or stop signal
     MCP->>Wispr: Commit transcription
     Wispr-->>MCP: "The navigation looks good but..."
     MCP-->>Claude: Transcribed text
@@ -47,23 +47,31 @@ graph TB
     end
 
     subgraph "QA Voice MCP"
-        ASK["qa_voice_ask<br/><small>Speak + Record + Transcribe</small>"]
-        SAY["qa_voice_say<br/><small>Speak only</small>"]
+        ANN["qa_voice_announce<br/><small>Fire-and-forget TTS</small>"]
+        BRF["qa_voice_brief<br/><small>One-way explanation</small>"]
+        CST["qa_voice_consult<br/><small>Speak + follow-up hint</small>"]
+        CNV["qa_voice_converse<br/><small>Speak + Record + Transcribe</small>"]
         THINK["qa_voice_think<br/><small>Silent notes to file</small>"]
     end
 
-    QV --> ASK
-    QV --> SAY
+    QV --> ANN
+    QV --> BRF
+    QV --> CST
+    QV --> CNV
     QV --> THINK
 
-    ASK --> TTS["edge-tts<br/><small>Python CLI</small>"]
-    ASK --> SOX["sox rec<br/><small>Mic recording</small>"]
-    ASK --> WSP["Wispr Flow<br/><small>WebSocket STT</small>"]
-    SAY --> TTS
+    CNV --> TTS["edge-tts<br/><small>Python CLI</small>"]
+    CNV --> SOX["sox rec<br/><small>Mic recording</small>"]
+    CNV --> WSP["Wispr Flow<br/><small>WebSocket STT</small>"]
+    ANN --> TTS
+    BRF --> TTS
+    CST --> TTS
 
     style QV fill:#4a9eff,color:#fff
-    style ASK fill:#22c55e,color:#fff
-    style SAY fill:#f59e0b,color:#fff
+    style CNV fill:#22c55e,color:#fff
+    style ANN fill:#f59e0b,color:#fff
+    style BRF fill:#f59e0b,color:#fff
+    style CST fill:#f59e0b,color:#fff
     style THINK fill:#a855f7,color:#fff
 ```
 
@@ -75,7 +83,7 @@ Systematic website testing with voice. Browse pages with Playwright, speak findi
 
 ```mermaid
 flowchart LR
-    B["Browse page<br/><small>Playwright snapshot</small>"] --> A["Ask question<br/><small>qa_voice_ask</small>"]
+    B["Browse page<br/><small>Playwright snapshot</small>"] --> A["Ask question<br/><small>qa_voice_converse</small>"]
     A --> R["Record finding<br/><small>Pass / Fail / Skip</small>"]
     R --> N["Next check<br/><small>31 checks across 6 categories</small>"]
     N --> B
@@ -106,8 +114,8 @@ Client discovery call assistant. Track unknowns, get whispered follow-up suggest
 
 ```mermaid
 flowchart LR
-    L["Listen<br/><small>qa_voice_ask relays</small>"] --> T["Think<br/><small>qa_voice_think</small>"]
-    T --> W["Whisper suggestion<br/><small>qa_voice_say</small>"]
+    L["Listen<br/><small>qa_voice_converse relays</small>"] --> T["Think<br/><small>qa_voice_think</small>"]
+    T --> W["Whisper suggestion<br/><small>qa_voice_announce</small>"]
     W --> L
     L --> BR["Generate brief<br/><small>~/.golems/briefs/</small>"]
 
@@ -133,11 +141,15 @@ flowchart LR
 
 ## MCP Tools
 
-| Tool | Purpose | Returns |
-|------|---------|---------|
-| `qa_voice_ask` | Speak a question via TTS, record mic, stream to Wispr Flow, return transcription | Transcribed text (or timeout message) |
-| `qa_voice_say` | Speak a message aloud (no response expected) | Confirmation |
-| `qa_voice_think` | Silently append a note to the live thinking log | Confirmation |
+| Tool | Mode | Returns |
+|------|------|---------|
+| `qa_voice_announce` | Fire-and-forget TTS (status updates, narration) | Confirmation |
+| `qa_voice_brief` | One-way explanation TTS (reading back decisions) | Confirmation |
+| `qa_voice_consult` | Speak checkpoint + follow-up hint | Confirmation + hint |
+| `qa_voice_converse` | Speak + record mic + Wispr Flow STT | Transcribed text (or timeout) |
+| `qa_voice_think` | Silent append to thinking log | Confirmation |
+| `qa_voice_say` | ALIAS → announce | Confirmation |
+| `qa_voice_ask` | ALIAS → converse | Transcribed text |
 
 ## Prerequisites
 

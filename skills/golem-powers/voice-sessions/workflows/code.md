@@ -10,8 +10,8 @@ description: Future stub — live code review with voice commentary
 ## Idea
 
 - Watch a file or directory for changes
-- On save: analyze diff, speak observations via qa_voice_say
-- User can ask questions back via qa_voice_ask
+- On save: analyze diff, speak observations via qa_voice_announce
+- User can ask questions back via qa_voice_converse
 - Think log captures review notes silently
 
 ## Not Yet Implemented

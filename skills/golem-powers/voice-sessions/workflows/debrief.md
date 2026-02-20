@@ -7,16 +7,16 @@ description: Full voice-powered conversation debrief with probing questions
 
 ## Prerequisites
 
-- qa-voice MCP connected (`qa_voice_ask`, `qa_voice_say`, `qa_voice_think`)
+- qa-voice MCP connected (`qa_voice_converse`, `qa_voice_announce`, `qa_voice_brief`, `qa_voice_think`)
 - Obsidian vault accessible
 
 ## Phase 1: Context Setup
 
-Use `qa_voice_ask` for each question. Wait for response before next question.
+Use `qa_voice_converse` for each question. Wait for response before next question.
 
 ### Opening
 ```
-qa_voice_say: "Let's debrief your conversation. I'll ask you some questions and take notes."
+qa_voice_announce: "Let's debrief your conversation. I'll ask you some questions and take notes."
 ```
 
 ### Context Questions (ask in order, skip if already known)
@@ -70,7 +70,7 @@ qa_voice_think(category: "red-flag", thought: "{flag description}")
 16. "Anything else you want to remember about this conversation?"
 
 ```
-qa_voice_say: "Got it. Writing up your debrief now."
+qa_voice_brief: "Got it. Writing up your debrief now."
 ```
 
 ## Phase 6: Generate Journal Entry
