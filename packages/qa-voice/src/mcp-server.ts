@@ -50,13 +50,18 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       description:
         "Speak a message aloud via TTS without waiting for a response. " +
         "Fire-and-forget — use for status updates, narration, task completion alerts. " +
-        "Does NOT require voice session booking.",
+        "Does NOT require voice session booking. " +
+        "User can stop playback: touch /tmp/voicelayer-stop",
       inputSchema: {
         type: "object" as const,
         properties: {
           message: {
             type: "string",
             description: "The message to speak aloud",
+          },
+          rate: {
+            type: "string",
+            description: "Speech rate override (e.g. '-10%', '+5%'). Default: +10% for announce. Auto-slows for long text.",
           },
         },
         required: ["message"],
@@ -68,13 +73,19 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       description:
         "Speak a one-way explanation aloud via TTS. No response expected. " +
         "Use for reading back decisions, summarizing findings, explaining plans. " +
-        "Longer content than announce — Claude explains, user listens.",
+        "Longer content than announce — Claude explains, user listens. " +
+        "Speaks SLOWER than announce (auto-adjusted for text length). " +
+        "User can stop playback: touch /tmp/voicelayer-stop",
       inputSchema: {
         type: "object" as const,
         properties: {
           message: {
             type: "string",
             description: "The explanation or summary to speak aloud",
+          },
+          rate: {
+            type: "string",
+            description: "Speech rate override (e.g. '-15%', '+0%'). Default: -10% for brief. Auto-slows further for long text.",
           },
         },
         required: ["message"],
@@ -86,13 +97,18 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       description:
         "Speak a checkpoint message — the user MAY want to respond. Non-blocking. " +
         "Use for preemptive checkpoints: 'about to commit, want to review?' " +
-        "Returns immediately. If user input is needed, follow up with qa_voice_converse.",
+        "Returns immediately. If user input is needed, follow up with qa_voice_converse. " +
+        "User can stop playback: touch /tmp/voicelayer-stop",
       inputSchema: {
         type: "object" as const,
         properties: {
           message: {
             type: "string",
             description: "The checkpoint question or status to speak",
+          },
+          rate: {
+            type: "string",
+            description: "Speech rate override (e.g. '-5%', '+10%'). Default: +5% for consult.",
           },
         },
         required: ["message"],
@@ -239,7 +255,7 @@ async function handleAnnounce(args: any) {
     };
   }
 
-  await speak(message);
+  await speak(message, { mode: "announce", rate: args?.rate });
 
   return {
     content: [{ type: "text" as const, text: `[announce] Spoke: "${message}"` }],
@@ -255,7 +271,7 @@ async function handleBrief(args: any) {
     };
   }
 
-  await speak(message);
+  await speak(message, { mode: "brief", rate: args?.rate });
 
   return {
     content: [{ type: "text" as const, text: `[brief] Explained: "${message}"` }],
@@ -271,7 +287,7 @@ async function handleConsult(args: any) {
     };
   }
 
-  await speak(message);
+  await speak(message, { mode: "consult", rate: args?.rate });
 
   return {
     content: [
@@ -331,7 +347,7 @@ async function handleConverse(args: any) {
   clearStopSignal();
 
   // Speak the question aloud
-  await speak(message);
+  await speak(message, { mode: "converse" });
 
   // Record mic + stream to Wispr Flow WebSocket for transcription
   // Uses longer silence threshold (5s) — user may pause to think
