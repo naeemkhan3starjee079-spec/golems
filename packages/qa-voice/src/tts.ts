@@ -81,8 +81,10 @@ export async function speak(
     const play = Bun.spawn(["afplay", ttsFile]);
 
     // Poll for stop signal during playback — clean up signal file after kill
+    let stoppedByUser = false;
     const stopPoll = setInterval(() => {
       if (existsSync(STOP_SIGNAL)) {
+        stoppedByUser = true;
         play.kill("SIGTERM");
         clearInterval(stopPoll);
         try { unlinkSync(STOP_SIGNAL); } catch {}
@@ -90,7 +92,11 @@ export async function speak(
     }, STOP_POLL_MS);
 
     try {
-      await play.exited;
+      const playExit = await play.exited;
+      // Non-zero exit is expected when user stops playback via signal
+      if (playExit !== 0 && !stoppedByUser) {
+        throw new Error(`afplay failed with exit code ${playExit}`);
+      }
     } finally {
       clearInterval(stopPoll);
     }
