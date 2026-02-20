@@ -11,12 +11,37 @@ Claude Code session
   │   ├── qa_voice_announce(message) → fire-and-forget TTS
   │   ├── qa_voice_brief(message) → one-way explanation TTS
   │   ├── qa_voice_consult(message) → speak + hint user may respond
-  │   ├── qa_voice_converse(message) → speak + record mic → Wispr Flow STT → transcription
+  │   ├── qa_voice_converse(message) → speak + record mic → local STT → transcription
   │   ├── qa_voice_think(thought) → writes to live thinking log (silent)
   │   ├── qa_voice_say(message) → ALIAS for announce
   │   └── qa_voice_ask(message) → ALIAS for converse
   └── Supabase MCP (data persistence)
 ```
+
+## STT Backends
+
+Pluggable speech-to-text with auto-detection:
+
+| Backend | Type | Speed (5s clip) | Setup |
+|---------|------|-----------------|-------|
+| **whisper.cpp** | Local (default) | ~200-400ms on M1 Pro | `brew install whisper-cpp` + download model |
+| **Wispr Flow** | Cloud (fallback) | ~500ms + network | Set `QA_VOICE_WISPR_KEY` |
+
+Auto-detection priority:
+1. `QA_VOICE_STT_BACKEND=whisper` → force whisper.cpp
+2. `QA_VOICE_STT_BACKEND=wispr` → force Wispr Flow
+3. `QA_VOICE_STT_BACKEND=auto` (default) → whisper.cpp if available, else Wispr Flow
+
+### whisper.cpp Setup
+
+```bash
+brew install whisper-cpp
+mkdir -p ~/.cache/whisper
+curl -L -o ~/.cache/whisper/ggml-large-v3-turbo.bin \
+  https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin
+```
+
+Model search order: `QA_VOICE_WHISPER_MODEL` env var → `~/.cache/whisper/ggml-large-v3-turbo.bin` → any `ggml-*.bin` in `~/.cache/whisper/`.
 
 ## Voice Modes
 
@@ -68,10 +93,10 @@ Single terminal — no companion script needed.
 1. Claude calls `qa_voice_converse("question")` via MCP
 2. Session booking checked/acquired (lockfile)
 3. edge-tts speaks the question aloud via afplay
-4. Mic recording starts via `rec` (sox) — 16kHz 16-bit mono PCM
-5. Audio streams to Wispr Flow WebSocket API in 1-second chunks
-6. Stop when: user touches `/tmp/voicelayer-stop`, OR 5s silence detected
-7. Wispr Flow returns the transcription
+4. Mic recording starts via `rec` (sox) — 16kHz 16-bit mono PCM to buffer
+5. Stop when: user touches `/tmp/voicelayer-stop`, OR 5s silence detected
+6. Recorded audio saved as WAV, sent to STT backend (whisper.cpp or Wispr Flow)
+7. STT returns the transcription
 8. Claude receives the text and continues
 
 ## Quick Start
@@ -81,13 +106,16 @@ Single terminal — no companion script needed.
 ```bash
 brew install sox          # Provides `rec` command for mic recording
 pip3 install edge-tts     # Python TTS engine
+# For local STT (recommended):
+brew install whisper-cpp
+mkdir -p ~/.cache/whisper
+curl -L -o ~/.cache/whisper/ggml-large-v3-turbo.bin \
+  https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin
 ```
 
 ### Setup
 
-1. Get your Wispr Flow API key from [Wispr Flow settings](https://wisprflow.ai)
-
-2. Add to `.mcp.json`:
+Add to `.mcp.json`:
 ```json
 {
   "qa-voice": {
@@ -100,9 +128,9 @@ pip3 install edge-tts     # Python TTS engine
 }
 ```
 
-3. Grant microphone access to your terminal app (System Settings > Privacy > Microphone)
+Note: `QA_VOICE_WISPR_KEY` is only needed if whisper.cpp is not installed (cloud fallback).
 
-4. In Claude Code, use the QA or Discovery agent prompt.
+Grant microphone access to your terminal app (System Settings > Privacy > Microphone).
 
 ## MCP Tools
 
@@ -127,7 +155,9 @@ pip3 install edge-tts     # Python TTS engine
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `QA_VOICE_WISPR_KEY` | (required) | Wispr Flow API key for WebSocket STT |
+| `QA_VOICE_STT_BACKEND` | `auto` | STT backend: `whisper` (local), `wispr` (cloud), `auto` (prefer local) |
+| `QA_VOICE_WHISPER_MODEL` | (auto-detected) | Path to whisper.cpp GGML model file |
+| `QA_VOICE_WISPR_KEY` | — | Wispr Flow API key (cloud fallback only) |
 | `QA_VOICE_TTS_VOICE` | `en-US-JennyNeural` | edge-tts voice ID |
 | `QA_VOICE_TTS_RATE` | `+0%` | Base speech rate (per-mode defaults: announce +10%, brief -10%, consult +5%, converse +0%). Auto-slows for long text. |
 | `QA_VOICE_SILENCE_SECONDS` | `2` | Default silence seconds (converse overrides to 5) |
@@ -141,7 +171,8 @@ packages/qa-voice/
 ├── src/
 │   ├── mcp-server.ts          # MCP server (5 modes + 2 aliases)
 │   ├── tts.ts                 # edge-tts (Python CLI) + afplay
-│   ├── input.ts               # Wispr Flow WebSocket client + mic recording + silence detection
+│   ├── input.ts               # Mic recording + STT transcription pipeline
+│   ├── stt.ts                 # STT backend abstraction (whisper.cpp + Wispr Flow)
 │   ├── session-booking.ts     # Lockfile-based voice session mutex
 │   ├── session.ts             # Session lifecycle (save/load/generate)
 │   ├── report.ts              # QA report renderer (JSON → markdown)
@@ -151,7 +182,7 @@ packages/qa-voice/
 │   │   ├── qa-categories.ts   # 6 QA categories (31 checks)
 │   │   ├── discovery.ts       # Discovery session schema + helpers
 │   │   └── discovery-categories.ts  # 7 discovery categories (23 questions)
-│   └── __tests__/             # 59 tests, 145 expect() calls
+│   └── __tests__/             # 75 tests, 178 expect() calls
 ├── scripts/
 │   └── speak.sh               # Standalone TTS command
 ├── package.json
@@ -169,14 +200,7 @@ packages/qa-voice/
 | Thinking Log | `/tmp/golems-qa-thinking.md` |
 | Session Lock | `/tmp/voicelayer-session.lock` |
 | Stop Signal | `/tmp/voicelayer-stop` |
-
-## Wispr Flow Integration
-
-- **WebSocket API**: Streams audio chunks for real-time transcription
-- **Endpoint**: `wss://platform-api.wisprflow.ai/api/v1/dash/ws`
-- **Auth**: API key passed as query parameter
-- **Audio format**: 16kHz, 16-bit signed, mono PCM (via sox `rec`)
-- **Silence detection**: RMS energy monitoring with configurable threshold
+| Recording (temp) | `/tmp/voicelayer-recording-{pid}-{ts}.wav` |
 
 ## Dependencies
 
@@ -184,19 +208,4 @@ packages/qa-voice/
 - `edge-tts` (Python) — Microsoft neural TTS (free, no API key)
 - `sox` (system) — Audio recording via `rec` command
 - `afplay` (macOS built-in) — Audio playback
-
-## Tests
-
-```bash
-bun test packages/qa-voice/src/__tests__/
-```
-
-59 tests across 8 files:
-- `input.test.ts` — RMS calculation + WebSocket input (7 tests)
-- `tts.test.ts` — TTS pipeline (3 tests)
-- `checklist.test.ts` — QA schema (8 tests)
-- `report.test.ts` — QA report renderer (8 tests)
-- `discovery.test.ts` — discovery schema (7 tests)
-- `brief.test.ts` — brief renderer (8 tests)
-- `session.test.ts` — session lifecycle (6 tests)
-- `session-booking.test.ts` — voice booking + stop signal (12 tests)
+- `whisper-cpp` (system, optional) — Local STT engine

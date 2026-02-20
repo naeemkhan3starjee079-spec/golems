@@ -24,6 +24,7 @@ import {
 import { appendFileSync, existsSync, writeFileSync } from "fs";
 import { speak } from "./tts";
 import { waitForInput, clearInput } from "./input";
+import { getBackend } from "./stt";
 import {
   bookVoiceSession,
   releaseVoiceSession,
@@ -36,7 +37,7 @@ const DEFAULT_TIMEOUT_MS = 300_000; // 5 minutes
 const CONVERSE_SILENCE_SECONDS = 5; // longer silence for converse mode (user pauses to think)
 
 const server = new Server(
-  { name: "qa-voice", version: "2.0.0" },
+  { name: "qa-voice", version: "2.1.0" },
   { capabilities: { tools: {} } }
 );
 
@@ -349,7 +350,7 @@ async function handleConverse(args: any) {
   // Speak the question aloud
   await speak(message, { mode: "converse" });
 
-  // Record mic + stream to Wispr Flow WebSocket for transcription
+  // Record mic audio, then transcribe with selected STT backend
   // Uses longer silence threshold (5s) — user may pause to think
   const response = await waitForInput(
     timeoutSeconds * 1000,
@@ -413,9 +414,17 @@ async function handleThink(args: any) {
 // --- Start server ---
 
 async function main() {
+  // Detect STT backend early so we log it on startup (getBackend logs details)
+  try {
+    await getBackend();
+  } catch (err: unknown) {
+    console.error(`[qa-voice] Warning: no STT backend available — converse mode will fail`);
+    console.error(`[qa-voice]   ${err instanceof Error ? err.message : String(err)}`);
+  }
+
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("[qa-voice] MCP server v2.0 running — 4 modes: announce, brief, consult, converse");
+  console.error("[qa-voice] MCP server v2.1 running — 4 modes: announce, brief, consult, converse");
 }
 
 main().catch((err) => {
