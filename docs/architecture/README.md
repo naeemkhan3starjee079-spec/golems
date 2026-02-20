@@ -13,14 +13,14 @@ When making architecture decisions:
 
 ## Auto-Indexing
 
-Files in this folder get indexed into Zikaron for semantic search:
+Files in this folder get indexed into BrainLayer for semantic search:
 
 ```bash
 # Search past decisions
-zikaron search "telegram routing" --project golems
+brainlayer search "telegram routing" --project golems
 
 # Or via MCP
-mcp__zikaron__zikaron_search(query="telegram routing", project="-Users-etanheyman-Gits-golems")
+mcp__brainlayer__brainlayer_search(query="telegram routing", project="-Users-etanheyman-Gits-golems")
 ```
 
 ## Current Documents

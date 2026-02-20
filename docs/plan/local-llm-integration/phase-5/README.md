@@ -1,10 +1,10 @@
-# Phase 5: Zikaron Enrichment Pipeline
+# Phase 5: BrainLayer Enrichment Pipeline
 
 > [Back to main plan](../README.md)
 
 ## Goal
 
-Batch-process Zikaron's 226K chunks through local GLM to add summaries, tags, entities, and intent metadata — transforming dumb vector search into rich, filterable retrieval.
+Batch-process BrainLayer's 226K chunks through local GLM to add summaries, tags, entities, and intent metadata — transforming dumb vector search into rich, filterable retrieval.
 
 ## Tools
 
@@ -26,8 +26,8 @@ Batch-process Zikaron's 226K chunks through local GLM to add summaries, tags, en
      "conversation_context": "Part of Telegram bot EADDRINUSE fix session"
    }
    ```
-2. Add metadata columns to Zikaron sqlite-vec schema (new table or JSON column)
-3. Create `packages/zikaron/src/zikaron/enrichment.py`:
+2. Add metadata columns to BrainLayer sqlite-vec schema (new table or JSON column)
+3. Create enrichment pipeline (`brainlayer/src/brainlayer/enrichment.py`):
    - Read chunks in batches (100 at a time)
    - For each batch: send surrounding context (not just the chunk) to GLM
    - Parse structured JSON response
@@ -40,10 +40,10 @@ Batch-process Zikaron's 226K chunks through local GLM to add summaries, tags, en
 6. Run on small sample (100 chunks), evaluate quality
 7. Optimize: batch size, prompt, which chunks to skip (very short, system messages)
 8. Full batch run on 226K chunks (estimate time, could be hours)
-9. Update Zikaron search to use metadata:
-   - `mcp__zikaron__zikaron_search` gains `tag`, `intent`, `importance_min` filters
+9. Update BrainLayer search to use metadata:
+   - `mcp__brainlayer__brainlayer_search` gains `tag`, `intent`, `importance_min` filters
    - Results include summary in output (faster context understanding)
-10. Update Zikaron MCP tool descriptions
+10. Update BrainLayer MCP tool descriptions
 
 ## Performance Estimate
 

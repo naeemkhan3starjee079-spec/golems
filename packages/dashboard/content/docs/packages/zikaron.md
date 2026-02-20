@@ -1,15 +1,16 @@
 ---
-title: "Zikaron — Memory Layer"
-description: "Persistent memory for Claude Code. 260K+ indexed conversation chunks with semantic search, 10-field enrichment, and PII sanitization."
+title: "BrainLayer — Memory Layer"
+description: "Persistent memory for Claude Code. 268K+ indexed conversation chunks with semantic search, 10-field enrichment, and PII sanitization."
 ---
 
-# Zikaron (Memory)
+# BrainLayer (Memory)
 
 > Persistent memory for Claude Code conversations. Index, search, and retrieve knowledge from past coding sessions.
+> **External repo:** [github.com/EtanHey/brainlayer](https://github.com/EtanHey/brainlayer) (formerly Zikaron)
 
 ## What It Does
 
-Zikaron (Hebrew for "memory") is a **knowledge pipeline** that indexes every Claude Code conversation into a searchable database. It uses semantic embeddings to find past solutions, decisions, and patterns across all your projects. 260K+ chunks indexed, searchable in under 2 seconds.
+BrainLayer is a **knowledge pipeline** that indexes every Claude Code conversation into a searchable database. It uses semantic embeddings to find past solutions, decisions, and patterns across all your projects. 268K+ chunks indexed, searchable in under 2 seconds.
 
 ## Architecture
 
@@ -21,7 +22,7 @@ Zikaron (Hebrew for "memory") is a **knowledge pipeline** that indexes every Cla
                                   bge-large sqlite-vec
                                   1024 dims   fast DB
         |
-~/.local/share/zikaron/zikaron.db   # Storage (~1.4GB)
+~/.local/share/brainlayer/brainlayer.db   # Storage (~1.4GB)
         |
   POST-PROCESSING
   Enrichment (10 fields)    PII Sanitization    Brain Graph
@@ -30,7 +31,7 @@ Zikaron (Hebrew for "memory") is a **knowledge pipeline** that indexes every Cla
         |
   INTERFACES
   CLI            FastAPI Daemon      MCP Server      Dashboard
-  search         :8787 / socket      zikaron-mcp     Next.js
+  brainlayer     :8787 / socket      brainlayer-mcp  Next.js
 ```
 
 ## Pipeline Stages
@@ -60,31 +61,35 @@ AST-aware chunking with tree-sitter for code (~500 tokens). Never splits stack t
 Uses `bge-large-en-v1.5` model (1024 dimensions). Runs locally via sentence-transformers with MPS acceleration on Apple Silicon.
 
 ### 5. Index
-sqlite-vec for vector similarity search. WAL mode + `busy_timeout=5000ms` for concurrent access from daemon, MCP server, and enrichment. Sub-2-second queries across 260K+ chunks.
+sqlite-vec for vector similarity search. WAL mode + `busy_timeout=5000ms` for concurrent access from daemon, MCP server, and enrichment. Sub-2-second queries across 268K+ chunks.
 
 ## Interfaces
 
 ### CLI
 ```bash
-zikaron search "how did I implement auth"
-zikaron enrich                                 # Run local LLM enrichment
-zikaron index                                  # Re-index conversations
-zikaron dashboard                              # Interactive TUI
+brainlayer search "how did I implement auth"
+brainlayer enrich                              # Run local LLM enrichment
+brainlayer index                               # Re-index conversations
+brainlayer dashboard                           # Interactive TUI
 ```
 
 ### MCP Server
-Exposed to Claude Code as `zikaron-mcp` (8 tools):
+Exposed to Claude Code as `brainlayer-mcp` (12 tools):
 
 | Tool | Description |
 |------|-------------|
-| `zikaron_search` | Semantic search across all sessions (with project, content_type, tag, intent, importance filters) |
-| `zikaron_context` | Get surrounding conversation chunks for a search result |
-| `zikaron_stats` | Index statistics (chunk count, projects, content types) |
-| `zikaron_list_projects` | List all indexed projects |
-| `zikaron_file_timeline` | File interaction history across sessions |
-| `zikaron_operations` | Logical operation groups (read/edit/test cycles) |
-| `zikaron_regression` | What changed since a file last worked |
-| `zikaron_plan_links` | Session to plan/phase linkage |
+| `brainlayer_search` | Semantic search across all sessions (with project, content_type, tag, intent, importance filters) |
+| `brainlayer_context` | Get surrounding conversation chunks for a search result |
+| `brainlayer_stats` | Index statistics (chunk count, projects, content types) |
+| `brainlayer_list_projects` | List all indexed projects |
+| `brainlayer_file_timeline` | File interaction history across sessions |
+| `brainlayer_operations` | Logical operation groups (read/edit/test cycles) |
+| `brainlayer_regression` | What changed since a file last worked |
+| `brainlayer_plan_links` | Session to plan/phase linkage |
+| `brainlayer_think` | Task-aware context retrieval (decisions, patterns, bugs) |
+| `brainlayer_recall` | Proactive retrieval by file path or topic |
+| `brainlayer_sessions` | List recent sessions with metadata |
+| `brainlayer_current_context` | Current working context (lightweight) |
 
 ### FastAPI Daemon
 HTTP server at `:8787` (or Unix socket) with 25+ endpoints. Powers the Next.js dashboard enrichment and session pages.
@@ -139,4 +144,4 @@ Replacements use stable hash-based pseudonyms (`[PERSON_a1b2c3d4]`) and a revers
 
 ## Source
 
-[`packages/zikaron/`](https://github.com/EtanHey/golems/tree/master/packages/zikaron)
+[`github.com/EtanHey/brainlayer`](https://github.com/EtanHey/brainlayer)

@@ -44,10 +44,10 @@ curl -X POST http://localhost:3847/notify -H "Content-Type: application/json" \
 
 ---
 
-## 2. BrainLayer (External Repo)
+## 2. BrainLayer (External Repo — formerly Zikaron)
 
 > BrainLayer has been extracted to its own repo: https://github.com/EtanHey/brainlayer
-> Use `pip install git+https://github.com/EtanHey/brainlayer.git` to install.
+> Install: `pip install brainlayer` or `pip install git+https://github.com/EtanHey/brainlayer.git`
 
 ---
 
@@ -329,12 +329,10 @@ curl -X POST http://localhost:3847/notify -H "Content-Type: application/json" \
 
 **BLOCKER:** The monorepo needs setup before LaunchAgents can point to new paths:
 
-1. **Zikaron venv not set up:**
+1. **BrainLayer installed:**
    ```bash
-   cd ~/Gits/golems/packages/zikaron
-   python3 -m venv .venv
-   source .venv/bin/activate
-   pip install -e .
+   pip install brainlayer  # or: pip install git+https://github.com/EtanHey/brainlayer.git
+   brainlayer-mcp --help   # Verify MCP server works
    ```
 
 2. **Autonomous package dependencies:**
@@ -345,8 +343,8 @@ curl -X POST http://localhost:3847/notify -H "Content-Type: application/json" \
 
 3. **Test before switching:**
    ```bash
-   # Test zikaron watcher
-   ~/Gits/golems/packages/zikaron/.venv/bin/python ~/Gits/golems/packages/zikaron/scripts/watcher.py
+   # Test brainlayer MCP
+   brainlayer-mcp
 
    # Test telegram bot
    bun ~/Gits/golems/packages/autonomous/src/telegram-bot.ts

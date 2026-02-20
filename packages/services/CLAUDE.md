@@ -83,17 +83,17 @@ Runs at 4am via launchd. Per-repo Claude sessions:
 | Doctor | `golems doctor` | Health checks for all wiring |
 | Status | `golems status` | All-golem status overview |
 
-## Debugging with Zikaron MCP
+## Debugging with BrainLayer MCP
 
 When debugging issues or understanding why something is wired a certain way:
 
 1. **Architecture decisions:** `docs/architecture/` — key decisions and migration records
 2. **Phase findings:** `docs/plan/componentize-golems/phase-*/findings.md` — detailed per-phase notes
-3. **Zikaron search:** Use the Zikaron MCP to search past session transcripts:
+3. **BrainLayer search:** Use the BrainLayer MCP to search past session transcripts:
    ```
-   mcp__zikaron__zikaron_search(query="topic", project="-Users-etanheyman-Gits-golems")
+   mcp__brainlayer__brainlayer_search(query="topic", project="-Users-etanheyman-Gits-golems")
    ```
-4. **Zikaron context:** Get surrounding conversation for a search result:
+4. **BrainLayer context:** Get surrounding conversation for a search result:
    ```
-   mcp__zikaron__zikaron_context(chunk_id="<id from search>")
+   mcp__brainlayer__brainlayer_context(chunk_id="<id from search>")
    ```

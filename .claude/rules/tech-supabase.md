@@ -1,5 +1,5 @@
 ---
-globs: "packages/{shared,services,jobs,teller,coach,claude,recruiter}/**"
+globs: "packages/{shared,services,jobs,teller,coach,claude,recruiter,content,dashboard,tax-helper}/**"
 ---
 
 # Supabase Rules

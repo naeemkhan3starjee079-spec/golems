@@ -24,7 +24,11 @@ Ralph is an autonomous coding loop that executes PRD stories. The user runs `ral
 | `lib/` | Modular zsh library |
 | `ralph-ui/` | React Ink dashboard |
 | `bun/` | TypeScript story management |
-| `contexts/` | Shared context rules (DEPRECATED — see .claude/rules/) |
+| `contexts/` | DEPRECATED — migrated to `.claude/rules/` (auto-loaded) |
+
+## Voice Sessions
+
+Ralph PRD stories can use voice-sessions for QA and review. See `.claude/rules/skills-voice-sessions.md`.
 
 ## JQ Escaping Bug Workaround
 
@@ -59,4 +63,4 @@ CodeRabbit ALWAYS comes BEFORE commit. No exceptions.
 
 ## Full Reference
 
-For complete Ralph workflow documentation, see `contexts/workflow/ralph.md`.
+For complete Ralph workflow documentation, see `rules-library/workflow/ralph.md`.

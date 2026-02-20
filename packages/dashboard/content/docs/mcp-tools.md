@@ -24,8 +24,8 @@ Add to `.mcp.json` in your Claude Code project:
     "command": "bun",
     "args": ["run", "packages/shared/src/glm/mcp-server.ts"]
   },
-  "zikaron": {
-    "command": "zikaron-mcp"
+  "brainlayer": {
+    "command": "brainlayer-mcp"
   }
 }
 ```
@@ -38,7 +38,7 @@ Then in Claude Code: `/tools` or use `@golems-email` in any prompt.
 
 | Server | Command | Tools | Purpose |
 |--------|---------|-------|---------|
-| **zikaron** | `zikaron-mcp` | 8 | Memory layer — search 260K+ indexed conversation chunks |
+| **brainlayer** | `brainlayer-mcp` | 12 | Memory layer — search 268K+ indexed conversation chunks |
 | **golems-email** | `bun run packages/shared/src/email/mcp-server.ts` | 9 | Email triage + TellerGolem financial tools |
 | **golems-jobs** | `bun run packages/jobs/src/mcp-server.ts` | 5 | Job discovery, search, and stats |
 | **golems-glm** | `bun run packages/shared/src/glm/mcp-server.ts` | 2 | Local GLM-4.7-Flash — summarize, score/classify |
@@ -249,11 +249,11 @@ Quick job statistics.
 
 ---
 
-## Memory Tools (zikaron)
+## Memory Tools (BrainLayer)
 
-Zikaron provides persistent memory across Claude Code sessions — semantic search over 260K+ indexed conversation chunks using bge-large-en-v1.5 embeddings (1024 dims) and sqlite-vec.
+BrainLayer provides persistent memory across Claude Code sessions — semantic search over 268K+ indexed conversation chunks using bge-large-en-v1.5 embeddings (1024 dims) and sqlite-vec.
 
-### zikaron_search
+### brainlayer_search
 
 Semantic + keyword hybrid search across all past Claude Code sessions.
 
@@ -269,7 +269,7 @@ Semantic + keyword hybrid search across all past Claude Code sessions.
 
 **Returns:** Matching chunks with content, score, project, and timestamp
 
-### zikaron_context
+### brainlayer_context
 
 Get surrounding conversation context for a search result.
 
@@ -280,19 +280,19 @@ Get surrounding conversation context for a search result.
 
 **Returns:** The chunk plus surrounding conversation turns for full context
 
-### zikaron_stats
+### brainlayer_stats
 
 Knowledge base statistics.
 
 **Returns:** Total chunks, projects indexed, database size, content type breakdown
 
-### zikaron_list_projects
+### brainlayer_list_projects
 
 List all indexed projects.
 
 **Returns:** Project paths with chunk counts
 
-### zikaron_file_timeline
+### brainlayer_file_timeline
 
 Get the interaction timeline for a specific file across sessions.
 
@@ -303,7 +303,7 @@ Get the interaction timeline for a specific file across sessions.
 
 **Returns:** Chronological list of all sessions that read, edited, or wrote to the file
 
-### zikaron_operations
+### brainlayer_operations
 
 Get logical operation groups for a session (read-edit-test cycles, research chains, debug sequences).
 
@@ -312,7 +312,7 @@ Get logical operation groups for a session (read-edit-test cycles, research chai
 
 **Returns:** Grouped operations with types and file lists
 
-### zikaron_regression
+### brainlayer_regression
 
 Analyze a file for regressions — shows the last successful operation and all changes after it.
 
@@ -322,7 +322,7 @@ Analyze a file for regressions — shows the last successful operation and all c
 
 **Returns:** Last success point and subsequent changes
 
-### zikaron_plan_links
+### brainlayer_plan_links
 
 Query plan-linked sessions — which plan/phase a session belongs to, or all sessions for a plan.
 

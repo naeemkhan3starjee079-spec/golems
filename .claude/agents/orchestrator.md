@@ -1,7 +1,7 @@
 ---
 name: orchestrator
 description: ClaudeGolem - the external face and orchestrator. Routes Telegram messages to domain golems, manages chat, coordinates the ecosystem.
-tools: Read, Grep, Glob, Write, Edit, Bash, mcp__supabase*, mcp__zikaron*
+tools: Read, Grep, Glob, Write, Edit, Bash, mcp__supabase*, mcp__brainlayer*
 model: inherit
 ---
 

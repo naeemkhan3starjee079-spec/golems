@@ -1,7 +1,7 @@
 ---
 name: content
 description: Content creator and publisher - LinkedIn posts, Soltome content, ghostwriting in Hebrew tech voice.
-tools: Read, Grep, Glob, Write, Bash, mcp__zikaron*
+tools: Read, Grep, Glob, Write, Bash, mcp__brainlayer*
 model: sonnet
 ---
 

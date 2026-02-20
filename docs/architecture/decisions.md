@@ -56,7 +56,7 @@ Setup: `/setup alerts` in the Alerts topic. General works automatically.
 
 | Environment | Components | Why |
 |-------------|-----------|-----|
-| Mac (launchd) | Telegram bot, Night Shift, Briefing, Zikaron | Needs local Claude CLI, file access |
+| Mac (launchd) | Telegram bot, Night Shift, Briefing, BrainLayer | Needs local Claude CLI, file access |
 | Railway (Docker) | Email poller, Job scraper, Cloud LLM | Scheduled tasks, always-on |
 | Supabase | Database, auth, storage | Shared state |
 
@@ -140,16 +140,16 @@ Without this: EADDRINUSE crash loop when KeepAlive restarts.
 
 ---
 
-## Debugging with Zikaron
+## Debugging with BrainLayer
 
 Search past decisions and implementation context:
 ```bash
-zikaron search "topic" --project "-Users-etanheyman-Gits-golems"
+brainlayer search "topic" --project "-Users-etanheyman-Gits-golems"
 ```
 
 Or via MCP in Claude Code:
 ```
-mcp__zikaron__zikaron_search(query="topic", project="-Users-etanheyman-Gits-golems")
+mcp__brainlayer__brainlayer_search(query="topic", project="-Users-etanheyman-Gits-golems")
 ```
 
 ### Phase Findings

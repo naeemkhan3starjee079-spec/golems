@@ -1,7 +1,7 @@
 ---
 name: recruiter
 description: Job hunt assistant - interview practice with Elo tracking, outreach strategy, contact management, and career planning.
-tools: Read, Grep, Glob, Write, Bash, mcp__supabase*, mcp__zikaron*
+tools: Read, Grep, Glob, Write, Bash, mcp__supabase*, mcp__brainlayer*
 model: inherit
 ---
 

@@ -1,5 +1,7 @@
 # ClaudeGolem (autonomous)
 
+> **DEPRECATION NOTICE:** This package contains legacy stranglers (1-line re-exports) for backward compatibility. Active development happens in domain-specific packages (`@golems/claude`, `@golems/jobs`, `@golems/services`, etc.). The memory layer is now [BrainLayer](https://github.com/EtanHey/brainlayer) (external repo).
+
 > Autonomous Telegram bot + Soltome presence for the Golem ecosystem.
 
 ---
@@ -332,7 +334,7 @@ launchctl list | grep golems
 
 ## Owner Communication Style
 
-Based on Zikaron analysis (`~/Gits/zikaron/data/archives/style-2026-01-31-2121/`):
+Based on BrainLayer analysis:
 
 | Trait | Value |
 |-------|-------|
@@ -383,8 +385,8 @@ See `SOUL.md` for full persona guidelines.
 | Day | Repo |
 |-----|------|
 | Mon, Thu | songscript |
-| Tue, Fri | zikaron |
-| Wed, Sat, Sun | claude-golem |
+| Tue, Fri | brainlayer |
+| Wed, Sat, Sun | golems |
 
 Override: `/tonight zikaron`
 
@@ -498,8 +500,8 @@ Research conducted via Ralph (gitignored, local only):
 
 | Project | Path | Purpose |
 |---------|------|---------|
-| **Zikaron** | `~/Gits/zikaron/` | Memory layer, style analysis |
-| **Claude-Golem** | `~/Gits/claude-golem/` | Ralph autonomous loop |
+| **BrainLayer** | `~/Gits/brainlayer/` | Memory layer (external repo, 268K+ chunks) |
+| **Ralph** | `packages/ralph/` | Autonomous coding loop |
 | **SongScript** | `~/Gits/songscript/` | Night Shift target (private) |
 
 ---
@@ -763,7 +765,7 @@ op item get "GolemsZikaron Telegram Bot" --fields credential
 
 ## Constraints
 
-- **Can access:** Zikaron, Claude-Golem (for Soltome content)
+- **Can access:** BrainLayer, Claude-Golem (for Soltome content)
 - **Night Shift only:** SongScript
 - **Never mention:** Domica
 - **All Soltome posts:** Require approval

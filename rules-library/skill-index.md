@@ -44,7 +44,7 @@
 - /golem-powers:test-plan
 - /golem-powers:worktrees
 - /golem-powers:writing-skills
-- /golem-powers:zikaron
+- /golem-powers:brainlayer
 
 ### superpowers
 - /superpowers:brainstorming

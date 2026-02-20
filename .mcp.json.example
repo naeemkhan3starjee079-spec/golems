@@ -12,8 +12,8 @@
         "SOPHTRON_ACCESS_KEY": "op://<your-vault>/sophtron/SOPHTRON_ACCESS_KEY"
       }
     },
-    "zikaron": {
-      "command": "zikaron-mcp"
+    "brainlayer": {
+      "command": "brainlayer-mcp"
     },
     "golems-email": {
       "command": "bun",

@@ -12,10 +12,11 @@
 ## Blocked Directories
 
 - `~/Gits/golems` (all packages)
+- `~/Gits/brainlayer` (memory layer — external repo)
 - `~/.claude`
-- `~/.golems-zikaron`
-- `~/.local/share/zikaron`
-- `~/.local/share/brainlayer`
+- `~/.golems-zikaron` (golems runtime state — legacy name, still active)
+- `~/.local/share/zikaron` (legacy BrainLayer data path)
+- `~/.local/share/brainlayer` (BrainLayer database)
 - Any path containing "golem"
 
 ## Usage

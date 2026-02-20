@@ -9,7 +9,7 @@
 | PR comments | >5 comments | Use `mcp__glm__summarize` on each comment body |
 | File reads | >100 lines | Use `scripts/summarize-file.sh <file> "<prompt>" glm` |
 | Web search results | >5000 chars | Use `mcp__glm__summarize` on combined results |
-| Zikaron results | >3 chunks | Use `mcp__glm__summarize` to synthesize into one answer |
+| BrainLayer results | >3 chunks | Use `mcp__glm__summarize` to synthesize into one answer |
 | Subagent output | Always | Agent writes to file, use `mcp__glm__summarize` before reading |
 
 ## Pattern: Summarize Before Reading
