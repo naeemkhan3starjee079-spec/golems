@@ -58,7 +58,7 @@ export function loadState(): State {
     console.warn("[State] Failed to load, using defaults:", (err as Error).message);
     return {
       nightShiftTarget: "songscript",
-      rotation: ["songscript", "zikaron", "claude-golem"],
+      rotation: ["songscript", "brainlayer", "claude-golem"],
       telegramChatId: null,
       nightShiftPRs: [],
       lastNightShift: null,

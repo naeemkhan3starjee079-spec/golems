@@ -6,11 +6,18 @@
 
 | Mode | MCP Tool | What |
 |------|----------|------|
-| **announce** | `qa_voice_say` | Fire-and-forget TTS (status updates, narration) |
-| **brief** | `qa_voice_say` | One-way explanation (reading back summaries) |
-| **consult** | `qa_voice_ask` | Checkpoint — speak + hint user may respond |
-| **converse** | `qa_voice_ask` | Full Q&A — speak question, wait for voice response |
+| **announce** | `qa_voice_announce` | Fire-and-forget TTS (status updates, narration) |
+| **brief** | `qa_voice_brief` | One-way explanation (reading back summaries, slower rate) |
+| **consult** | `qa_voice_consult` | Checkpoint — speak + hint user may respond (non-blocking) |
+| **converse** | `qa_voice_converse` | Full Q&A — speak question, wait for voice response (blocking) |
 | **think** | `qa_voice_think` | Silent notes to thinking log (insights, red flags) |
+
+### Aliases
+
+| Alias | Maps To | Use |
+|-------|---------|-----|
+| `qa_voice_say` | `qa_voice_announce` | Short form for announce |
+| `qa_voice_ask` | `qa_voice_converse` | Short form for converse |
 
 ## Workflows (6)
 
@@ -42,4 +49,4 @@ All workflows work with typed answers if voice isn't available. The skill detect
 ## MCP Server
 
 **Name:** `qa-voice` | **Repo:** [github.com/EtanHey/voicelayer](https://github.com/EtanHey/voicelayer) (local clone: `~/Gits/voicelayer`)
-**Tools:** `qa_voice_ask`, `qa_voice_say`, `qa_voice_think`
+**Tools (7):** `qa_voice_announce`, `qa_voice_brief`, `qa_voice_consult`, `qa_voice_converse`, `qa_voice_think`, `qa_voice_say` (alias), `qa_voice_ask` (alias)

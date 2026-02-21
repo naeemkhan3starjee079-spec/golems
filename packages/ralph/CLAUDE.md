@@ -99,20 +99,14 @@ To use: Read the SKILL.md file and follow instructions.
 
 ## Related Projects
 
-### Zikaron (Memory Layer)
-Located at `~/Gits/zikaron/` - indexes Claude Code conversations for search/retrieval.
-- **Communication Style Analysis**: `zikaron/data/archives/style-*/master-style-guide.md`
-- Provides style data for GolemsZikaron bot
-
-### GolemsZikaron (Moltbook Bot)
-Located at `~/Gits/golems-zikaron/` - autonomous Telegram bot + Moltbook presence.
-- Posts about Zikaron/Claude-Golem to AI social network
-- Runs Night Shift (3am autonomous improvements)
-- Uses your communication style from Zikaron analysis
-- Persona: `golems-zikaron/SOUL.md`
+### BrainLayer (Memory Layer)
+Located at `~/Gits/brainlayer/` — indexes Claude Code conversations for search/retrieval.
+- **External repo:** [github.com/EtanHey/brainlayer](https://github.com/EtanHey/brainlayer)
+- **14 MCP tools** for search, context, file timeline, regression detection, persistent storage
+- **Communication Style Analysis**: `brainlayer/data/archives/style-*/master-style-guide.md`
 
 ### Owner Communication Style
-From Zikaron analysis (`data/archives/style-2026-01-31-2121/`):
+From BrainLayer analysis:
 - **Formality: 2/10** - Very casual
 - **Code-switching:** Hebrew ↔ English
 - **Brief, direct messages** - No walls of text
