@@ -54,19 +54,18 @@ for ENV_FILE in "$HOME/Gits/golems/.env" "$HOME/Gits/golems/.env.local"; do
     fi
 done
 
-# Default to MLX backend (Apple Silicon optimized, 21-87% faster than Ollama)
-export ZIKARON_ENRICH_BACKEND="${ZIKARON_ENRICH_BACKEND:-mlx}"
+# MLX-only backend (Apple Silicon optimized, 21-87% faster than Ollama)
+# AIDEV-NOTE: No Ollama fallback — if MLX is down, enrichment should NOT run.
+# Running on Ollama silently is wasteful and confusing. Fix MLX instead.
+export BRAINLAYER_ENRICH_BACKEND=mlx
 
-# Verify MLX server is up before starting enrichment
-if [ "$ZIKARON_ENRICH_BACKEND" = "mlx" ]; then
-    MLX_BASE="${MLX_URL:-http://127.0.0.1:8080}"
-    MLX_BASE="${MLX_BASE%%/v1/*}"
-    if ! curl -sf "${MLX_BASE}/v1/models" > /dev/null 2>&1; then
-        log "WARN: MLX server not reachable at ${MLX_BASE}. Falling back to ollama."
-        export ZIKARON_ENRICH_BACKEND=ollama
-    else
-        log "MLX server OK at ${MLX_BASE}"
-    fi
+MLX_BASE="${MLX_URL:-http://127.0.0.1:8080}"
+MLX_BASE="${MLX_BASE%%/v1/*}"
+if ! curl -sf "${MLX_BASE}/v1/models" > /dev/null 2>&1; then
+    log "ERROR: MLX server not reachable at ${MLX_BASE}. Enrichment requires MLX. Exiting."
+    exit 1
+else
+    log "MLX server OK at ${MLX_BASE}"
 fi
 
 PYTHONUNBUFFERED=1 python3 -m brainlayer.pipeline.enrichment --batch-size 50 --parallel=3 >> "$LOG_DIR/enrichment.log" 2>&1 &
