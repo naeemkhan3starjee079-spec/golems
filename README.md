@@ -106,7 +106,7 @@ golems/
 │   ├── golems-tui/     # React Ink terminal dashboard
 │   ├── autonomous/     # Legacy test host (test files only)
 │   ├── ralph/          # Autonomous coding loop (PRD → stories → code → review)
-│   └── qa-voice/       # Voice QA & discovery (MCP server)
+│   └── (voicelayer)    # Voice I/O layer — external repo (github.com/EtanHey/voicelayer)
 ├── .claude/agents/     # 7 named agent profiles (/agents)
 ├── .claude/rules/      # Auto-loaded rules (survives compaction)
 ├── skills/             # 30+ golem-powers skills in 6 categories

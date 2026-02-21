@@ -6,15 +6,15 @@
 
 | Server | Command | Tools | Package/Source |
 |--------|---------|-------|----------------|
-| `brainlayer` | `brainlayer-mcp` | 12 | External repo (`~/Gits/brainlayer`) |
+| `brainlayer` | `brainlayer-mcp` | 14 | External repo (`~/Gits/brainlayer`) |
 | `golems-email` | `bun run packages/shared/src/email/mcp-server.ts` | 11 | `@golems/shared` |
 | `golems-jobs` | `bun run packages/jobs/src/mcp-server.ts` | 12 | `@golems/jobs` |
 | `golems-glm` | `bun run packages/shared/src/glm/mcp-server.ts` | 2 | `@golems/shared` |
 | `supabase` | `@supabase/mcp-server-supabase` | 20+ | Third-party |
 | `exa` | `exa-mcp-server` | 3 | Third-party |
 | `sophtron` | `@sophtron/sophtron-mcp-server` | 6 | Third-party |
-| `qa-voice` | `bun run ~/Gits/voicelayer/src/mcp-server.ts` | 3 | External: [voicelayer](https://github.com/EtanHey/voicelayer) |
-| `playwright` | `@anthropic-ai/mcp-playwright` | 15+ | Third-party |
+| `qa-voice` | `bun run ~/Gits/voicelayer/src/mcp-server.ts` | 7 | External: [voicelayer](https://github.com/EtanHey/voicelayer) |
+| `playwright` | `@playwright/mcp@latest` | 15+ | Third-party |
 
 ## Standard Structure (Bun servers)
 

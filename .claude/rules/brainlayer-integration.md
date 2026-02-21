@@ -1,6 +1,6 @@
 # BrainLayer Integration
 
-> Memory layer for Claude Code — external repo, 12 MCP tools, 268K+ indexed chunks.
+> Memory layer for Claude Code — external repo, 14 MCP tools, 268K+ indexed chunks.
 
 ## External Repo
 
@@ -12,7 +12,7 @@
 
 **Name:** `brainlayer` | **Command:** `brainlayer-mcp`
 
-### Tools (12)
+### Tools (14)
 
 | Tool | Purpose |
 |------|---------|
@@ -28,6 +28,8 @@
 | `brainlayer_recall` | Proactive retrieval by file or topic |
 | `brainlayer_sessions` | Recent sessions with metadata |
 | `brainlayer_current_context` | Current working context (lightweight) |
+| `brainlayer_session_summary` | Enriched session summary (decisions, learnings, quality score) |
+| `brainlayer_store` | Persistently store memories (ideas, decisions, learnings, mistakes) |
 
 ## Storage Paths
 

@@ -334,7 +334,7 @@ claudeComposer.command("schedule", async (ctx) => {
     return;
   }
 
-  // Set schedule: /schedule sun=golems mon=songscript tue=zikaron ...
+  // Set schedule: /schedule sun=golems mon=songscript tue=brainlayer ...
   if (arg && arg.includes("=")) {
     if (!state.weeklySchedule) {
       state.weeklySchedule = {};

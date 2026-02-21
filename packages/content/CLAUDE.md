@@ -26,7 +26,7 @@ packages/content/
 │   │   ├── scoring.ts           # CLIP Score, LAION Aesthetic, BRISQUE — Python bridge
 │   │   └── index.ts             # Barrel export
 │   ├── dataviz/                 # Data visualization pipeline
-│   │   ├── fetchers/            # Supabase + Zikaron data fetchers (jobs, finance, brain, activity)
+│   │   ├── fetchers/            # Supabase + BrainLayer data fetchers (jobs, finance, brain, activity)
 │   │   ├── charts/              # SVG chart generators (bar, donut, line, stat-card)
 │   │   ├── templates/           # Infographic layouts (linkedin-card, instagram-square, story-format)
 │   │   ├── renderer.ts          # SVG → PNG via sharp
@@ -227,7 +227,7 @@ console.log(result.scoreSummary);
 |---------|--------|-------------|
 | `jobs` | `golem_jobs`, `scrape_activity` | Top tags, status distribution, weekly trends, scrape stats |
 | `finance` | `llm_usage`, `subscriptions` | LLM costs by model, daily costs, subscription totals |
-| `brain` | Zikaron SQLite DB | Chunk growth, project coverage, content types, enrichment % |
+| `brain` | BrainLayer SQLite DB | Chunk growth, project coverage, content types, enrichment % |
 | `activity` | `golem_events`, `service_runs` | Golem activity, event types, service health |
 
 ### Static Infographics (SVG → PNG)

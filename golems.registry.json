@@ -128,7 +128,7 @@
     },
     "sessionArchiver": {
       "plist": "com.golems.session-archiver",
-      "description": "Archive Claude Code sessions to Zikaron",
+      "description": "Archive Claude Code sessions to BrainLayer",
       "type": "interval"
     },
     "storageCleanup": {

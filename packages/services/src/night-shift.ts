@@ -52,7 +52,7 @@ function loadState(): State {
   } catch {
     return {
       nightShiftTarget: "songscript",
-      rotation: ["songscript", "zikaron", "claude-golem"],
+      rotation: ["songscript", "brainlayer", "claude-golem"],
       telegramChatId: null,
     };
   }
@@ -405,7 +405,7 @@ async function cleanupWorktree(repoPath: string, worktreePath: string) {
 
 const repoSouls: Record<string, string> = {
   songscript: `SongScript: Language learning through song lyrics + transliteration. Tech: TanStack Start, Convex, Bun. Check CLAUDE.md for Convex build rules.`,
-  zikaron: `Zikaron: Memory layer that indexes Claude Code conversations for search/retrieval.`,
+  brainlayer: `BrainLayer: Memory layer that indexes Claude Code conversations for search/retrieval.`,
   "claude-golem": `Ralph (claude-golem): Autonomous AI coding loop. Runs PRD stories.`,
 };
 
@@ -537,7 +537,7 @@ If nothing actionable, output: NOTHING_TO_FIX`;
     await $`cd ${worktreePath} && git push -u origin ${branchName}`;
 
     const title = `Night Shift: ${improvement.slice(0, 45)}`;
-    const body = `Automated improvement by GolemsZikaron Night Shift.\n\n${improvement}`;
+    const body = `Automated improvement by Golems Night Shift.\n\n${improvement}`;
 
     const prProc = Bun.spawn(
       [GH_BIN, "pr", "create", "--title", title, "--body", body],
@@ -650,7 +650,7 @@ async function processRepo(
 
 async function nightShift(): Promise<NightShiftResult[]> {
   const state = loadState();
-  const rotation = state.rotation || ["songscript", "zikaron", "claude-golem"];
+  const rotation = state.rotation || ["songscript", "brainlayer", "claude-golem"];
 
   // Check weekly schedule first — if today has an assigned repo, use it
   const DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];

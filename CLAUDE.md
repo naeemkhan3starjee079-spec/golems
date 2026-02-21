@@ -109,7 +109,7 @@ golems wizard          # Guided setup
 | **sophtron** | `@sophtron/sophtron-mcp-server` | Bank account access — transactions, identity |
 | **qa-voice** | `bun run ~/Gits/voicelayer/src/mcp-server.ts` | Voice I/O layer — external repo ([VoiceLayer](https://github.com/EtanHey/voicelayer)) |
 
-### BrainLayer MCP (8 Tools)
+### BrainLayer MCP (14 Tools)
 
 [BrainLayer](https://github.com/EtanHey/brainlayer) provides persistent memory across Claude Code sessions:
 - **`brainlayer_search`**: Search past conversations (with `project`, `content_type`, `source`, `tag`, `intent`, `importance_min` filters)
@@ -120,6 +120,12 @@ golems wizard          # Guided setup
 - **`brainlayer_operations`**: Logical operation groups (read/edit/test cycles)
 - **`brainlayer_regression`**: What changed since a file last worked
 - **`brainlayer_plan_links`**: Session to plan/phase linkage
+- **`brainlayer_think`**: Task-aware context retrieval
+- **`brainlayer_recall`**: Proactive retrieval by file or topic
+- **`brainlayer_sessions`**: Recent sessions with metadata
+- **`brainlayer_current_context`**: Current working context (lightweight)
+- **`brainlayer_session_summary`**: Enriched session summary (decisions, learnings, quality)
+- **`brainlayer_store`**: Persistently store memories (ideas, decisions, learnings)
 
 ---
 

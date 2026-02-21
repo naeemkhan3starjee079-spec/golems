@@ -50,7 +50,7 @@ function loadState(): State {
   } catch {
     return {
       nightShiftTarget: "songscript",
-      rotation: ["songscript", "zikaron", "claude-golem"],
+      rotation: ["songscript", "brainlayer", "claude-golem"],
       telegramChatId: null,
     };
   }

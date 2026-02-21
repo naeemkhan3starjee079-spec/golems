@@ -71,7 +71,7 @@ if (!fs.existsSync(exportPath)) {
 indexWhatsAppChat(exportPath, chatName!, { groupGapMinutes: gapMinutes })
   .then(() => {
     console.log('\n✓ WhatsApp chat indexed successfully');
-    console.log('Search with: zikaron search-fast "query" --project whatsapp');
+    console.log('Search with: brainlayer search-fast "query" --project whatsapp');
     process.exit(0);
   })
   .catch((error) => {

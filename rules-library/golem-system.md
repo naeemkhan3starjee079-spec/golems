@@ -9,7 +9,7 @@
 The "Golem" is the name for our AI-assisted development ecosystem. It consists of:
 
 1. **Ralph** - The autonomous coding loop that executes PRD stories
-2. **Zikaron** (Memory) - The learning and context system that accumulates knowledge
+2. **BrainLayer** (Memory) - The persistent memory layer that indexes conversations for search/retrieval
 3. **Skills** - Reusable capabilities that extend Claude's abilities
 4. **Contexts** - Modular instruction sets that shape Claude's behavior
 
@@ -178,9 +178,9 @@ Skills are invoked via the `Skill` tool, not by reading files directly.
 
 ---
 
-## Zikaron (Memory System)
+## BrainLayer (Memory System)
 
-"Zikaron" is Hebrew for "memory". It's the system that helps Ralph learn over time:
+[BrainLayer](https://github.com/EtanHey/brainlayer) (formerly "Zikaron", Hebrew for "memory") is the persistent memory layer for Claude Code:
 
 ### Current Implementation
 
@@ -214,7 +214,7 @@ Skills are invoked via the `Skill` tool, not by reading files directly.
 
 ### Future Vision
 
-The Zikaron system should evolve to:
+The BrainLayer system should evolve to:
 - Automatically extract learnings from successful iterations
 - Weight learnings by recency and relevance
 - Share learnings across projects when appropriate
