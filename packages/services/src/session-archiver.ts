@@ -449,7 +449,7 @@ function isSessionIndexedInBrainLayer(sessionUuid: string, projectEncodedPath: s
       { encoding: "utf-8", timeout: 5000 }
     );
     if (result.status !== 0) return false;
-    return parseInt((result.stdout || "").trim()) > 0;
+    return parseInt((result.stdout || "").trim(), 10) > 0;
   } catch {
     return false;
   }
