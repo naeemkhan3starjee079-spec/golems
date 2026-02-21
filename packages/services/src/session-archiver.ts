@@ -13,7 +13,7 @@
 import { existsSync, readdirSync, statSync, readFileSync, mkdirSync, renameSync, writeFileSync, unlinkSync, lstatSync, realpathSync, rmSync } from "fs";
 import { join, basename, dirname } from "path";
 import { homedir } from "os";
-import { execSync } from "child_process";
+import { spawnSync } from "child_process";
 
 // Configuration
 // Keep sessions from the last N DAYS of activity (not N sessions!)
@@ -422,36 +422,46 @@ function cleanupExtraDirectories(dryRun: boolean): number {
   return totalCleaned;
 }
 
-// Zikaron DB path (sqlite-vec with indexed sessions)
-const ZIKARON_DB_PATH = join(homedir(), ".local", "share", "zikaron", "zikaron.db");
+// BrainLayer DB path (sqlite-vec with indexed sessions)
+const BRAINLAYER_DB_PATH = (() => {
+  const blPath = join(homedir(), ".local", "share", "brainlayer", "brainlayer.db");
+  if (existsSync(blPath)) return blPath;
+  // Legacy fallback
+  const legacyPath = join(homedir(), ".local", "share", "zikaron", "zikaron.db");
+  if (existsSync(legacyPath)) return legacyPath;
+  return blPath; // Default to new path
+})();
 
 /**
- * Check if a session UUID has been indexed by Zikaron
- * Uses sqlite3 CLI to avoid pulling apsw into the Bun project
+ * Check if a session UUID has been indexed by BrainLayer
+ * Uses sqlite3 CLI with spawnSync to avoid shell injection
  */
-function isSessionIndexedInZikaron(sessionUuid: string, projectEncodedPath: string): boolean {
-  if (!existsSync(ZIKARON_DB_PATH)) return false;
+function isSessionIndexedInBrainLayer(sessionUuid: string, projectEncodedPath: string): boolean {
+  if (!existsSync(BRAINLAYER_DB_PATH)) return false;
 
   try {
-    // Source file path as Zikaron stores it
     const sourcePath = join(CLAUDE_PROJECTS_DIR, projectEncodedPath, `${sessionUuid}.jsonl`);
-    const result = execSync(
-      `sqlite3 "${ZIKARON_DB_PATH}" "SELECT COUNT(*) FROM chunks WHERE source_file = '${sourcePath}'"`,
+    // Escape single quotes for SQL safety (spawnSync already prevents shell injection)
+    const escapedPath = sourcePath.replace(/'/g, "''");
+    const result = spawnSync(
+      "sqlite3",
+      [BRAINLAYER_DB_PATH, `SELECT COUNT(*) FROM chunks WHERE source_file = '${escapedPath}'`],
       { encoding: "utf-8", timeout: 5000 }
-    ).trim();
-    return parseInt(result) > 0;
+    );
+    if (result.status !== 0) return false;
+    return parseInt((result.stdout || "").trim()) > 0;
   } catch {
     return false;
   }
 }
 
 /**
- * Clean up archived sessions that Zikaron has already indexed.
+ * Clean up archived sessions that BrainLayer has already indexed.
  * Deletes local archive copies to free disk space.
  */
 function cleanupVerifiedArchives(dryRun: boolean): { deleted: number; sizeFreed: number } {
   console.log("\n" + "=".repeat(60));
-  console.log("Cleaning Verified Archives (Zikaron-indexed → delete local)");
+  console.log("Cleaning Verified Archives (BrainLayer-indexed → delete local)");
   console.log("=".repeat(60));
 
   if (!existsSync(LOCAL_ARCHIVE_DIR)) {
@@ -459,8 +469,8 @@ function cleanupVerifiedArchives(dryRun: boolean): { deleted: number; sizeFreed:
     return { deleted: 0, sizeFreed: 0 };
   }
 
-  if (!existsSync(ZIKARON_DB_PATH)) {
-    console.log("  Zikaron DB not found — skipping cleanup");
+  if (!existsSync(BRAINLAYER_DB_PATH)) {
+    console.log("  BrainLayer DB not found — skipping cleanup");
     return { deleted: 0, sizeFreed: 0 };
   }
 
@@ -498,7 +508,7 @@ function cleanupVerifiedArchives(dryRun: boolean): { deleted: number; sizeFreed:
       let batchSize = 0;
 
       for (const session of manifest.sessions) {
-        const indexed = isSessionIndexedInZikaron(session.uuid, encodedPath);
+        const indexed = isSessionIndexedInBrainLayer(session.uuid, encodedPath);
         if (!indexed) {
           batchAllIndexed = false;
           break;
@@ -522,7 +532,7 @@ function cleanupVerifiedArchives(dryRun: boolean): { deleted: number; sizeFreed:
           totalSizeFreed += batchSize;
         }
       } else if (!batchAllIndexed) {
-        console.log(`  Keeping: ${batchPath} (not all sessions indexed by Zikaron)`);
+        console.log(`  Keeping: ${batchPath} (not all sessions indexed by BrainLayer)`);
       }
     }
 
@@ -628,7 +638,7 @@ async function main(): Promise<void> {
     }
   }
 
-  // Clean up archived sessions verified in Zikaron
+  // Clean up archived sessions verified in BrainLayer
   const { deleted: verifiedDeleted, sizeFreed: verifiedSizeFreed } = cleanupVerifiedArchives(dryRun);
 
   // Clean up extra directories (debug logs, backups)
