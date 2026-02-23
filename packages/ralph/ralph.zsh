@@ -106,6 +106,7 @@ function ralph() {
   [[ -n "$RALPH_NOTIFY_ENABLED" ]] && notify="--notify"
   local quiet=""
   local verbose=""
+  local parallel=""
   local prd_path="$(pwd)/prd-json"
 
   # Handle --version early
@@ -128,6 +129,7 @@ function ralph() {
       echo "  -G3, --gemini3   Use Gemini 3 Flash Preview (99% quota)"
       echo "  -K, --kiro       Use Kiro model (kiro-cli)"
       echo "  -L, --local      Use local Ollama model (via Aider)"
+      echo "  -P, --parallel [N]  Run N stories in parallel (default: 3, max: 5)"
       echo "  -QN, --notify    Enable ntfy notifications"
       echo "  -q, --quiet      Quiet mode (no UI)"
       echo "  -v, --verbose    Verbose output"
@@ -184,6 +186,15 @@ function ralph() {
         verbose="--verbose"
         shift
         ;;
+      -P|--parallel)
+        if [[ -n "$2" && "$2" =~ ^[0-9]+$ ]]; then
+          parallel="--parallel $2"
+          shift 2
+        else
+          parallel="--parallel"
+          shift
+        fi
+        ;;
       [0-9]*)
         if [[ "$iterations" == "$RALPH_MAX_ITERATIONS" ]]; then
           iterations="$1"
@@ -232,8 +243,13 @@ function ralph() {
   # Generate and export session ID for SessionContext
   export RALPH_SESSION="ralph-$(date +%s)-$$"
 
+  # Export parallel count if set
+  [[ -n "$parallel" ]] && export RALPH_PARALLEL="${parallel##* }"
+
   # Run TypeScript iteration loop
-  echo "🚀 Ralph v${RALPH_VERSION} | Model: $model | Iterations: $iterations"
+  local parallel_info=""
+  [[ -n "$parallel" ]] && parallel_info=" | Parallel: ${RALPH_PARALLEL:-3}"
+  echo "🚀 Ralph v${RALPH_VERSION} | Model: $model | Iterations: $iterations${parallel_info}"
   echo ""
 
   bun "$RALPH_UI_PATH" --run \
@@ -241,7 +257,7 @@ function ralph() {
     --model "$model" \
     --gap "$gap" \
     --prd-path "$prd_path" \
-    $notify $quiet $verbose
+    $notify $quiet $verbose $parallel
 }
 
 # ═══════════════════════════════════════════════════════════════════

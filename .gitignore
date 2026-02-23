@@ -2,6 +2,7 @@ node_modules/
 .env
 .env.local
 .mcp.json
+.ralph-worktrees/
 
 # Claude scratchpads (temp working files)
 claude.scratchpad*.md

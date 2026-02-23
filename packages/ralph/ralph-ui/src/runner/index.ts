@@ -14,6 +14,7 @@ import { DEFAULT_TIMEOUT_MS } from "./types";
 import {
   readIndex,
   getNextStory,
+  getIndependentStories,
   applyUpdateQueue,
   isComplete,
   isAllBlocked,
@@ -52,6 +53,13 @@ import {
   notifyBlocked,
 } from "./ntfy";
 import { SessionContext } from "./session-context";
+import {
+  createStoryWorktree,
+  cleanupStoryWorktree,
+  type WorktreeInfo,
+} from "./worktree";
+import { existsSync } from "fs";
+import { join } from "path";
 
 // AIDEV-NOTE: This is the main iteration loop that replaces the 943-line loop in ralph.zsh
 // The state machine follows the design in docs.local/mp-006-design.md
@@ -86,6 +94,7 @@ export function createConfig(options: Partial<RunnerConfig>): RunnerConfig {
     quiet: options.quiet ?? DEFAULT_CONFIG.quiet!,
     verbose: options.verbose ?? DEFAULT_CONFIG.verbose!,
     usePty: options.usePty,
+    parallelCount: options.parallelCount,
     onOutput: options.onOutput,
     onStrippedOutput: options.onStrippedOutput,
   };
@@ -116,7 +125,7 @@ function scanAndUnblockStories(prdJsonDir: string): void {
   if (!index) return;
 
   const unblockedStories: string[] = [];
-  
+
   for (const blockedStoryId of [...index.blocked]) {
     const blockedStory = readStory(prdJsonDir, blockedStoryId);
     if (!blockedStory || !blockedStory.blockedBy) continue;
@@ -129,15 +138,17 @@ function scanAndUnblockStories(prdJsonDir: string): void {
       writeStory(prdJsonDir, blockedStory);
 
       // Move from blocked to pending
-      index.blocked = index.blocked.filter(id => id !== blockedStoryId);
+      index.blocked = index.blocked.filter((id) => id !== blockedStoryId);
       index.pending.push(blockedStoryId);
-      
+
       // Update stats
       index.stats.blocked = Math.max(0, index.stats.blocked - 1);
       index.stats.pending++;
 
       unblockedStories.push(blockedStoryId);
-      console.log(`[PRD] Startup scan: Auto-unblocked ${blockedStoryId} (blocker ${blockedStory.blockedBy} completed)`);
+      console.log(
+        `[PRD] Startup scan: Auto-unblocked ${blockedStoryId} (blocker ${blockedStory.blockedBy} completed)`,
+      );
     }
   }
 
@@ -146,9 +157,11 @@ function scanAndUnblockStories(prdJsonDir: string): void {
     if (index.pending.length > 0 && !index.nextStory) {
       index.nextStory = index.pending[0];
     }
-    
+
     writeIndex(prdJsonDir, index);
-    console.log(`[PRD] Startup scan: Unblocked ${unblockedStories.length} stories`);
+    console.log(
+      `[PRD] Startup scan: Unblocked ${unblockedStories.length} stories`,
+    );
   }
 }
 
@@ -156,7 +169,7 @@ function scanAndUnblockStories(prdJsonDir: string): void {
 export async function runSingleIteration(
   config: RunnerConfig,
   iteration: number,
-  runStartTime?: number
+  runStartTime?: number,
 ): Promise<IterationResult> {
   const startTime = Date.now();
 
@@ -239,7 +252,7 @@ export async function runSingleIteration(
     story.id,
     config.model,
     config.prdJsonDir,
-    config.workingDir
+    config.workingDir,
   );
 
   // Spawn Claude with full context
@@ -251,7 +264,10 @@ export async function runSingleIteration(
     timeout: DEFAULT_TIMEOUT_MS,
   };
 
-  verbose(config, `Spawning Claude with model ${config.model}${config.usePty ? " (PTY)" : ""}`);
+  verbose(
+    config,
+    `Spawning Claude with model ${config.model}${config.usePty ? " (PTY)" : ""}`,
+  );
 
   // Wrap output callback to also update lastActivity (throttled to avoid excessive disk writes)
   let lastActivityUpdate = 0;
@@ -328,9 +344,161 @@ export async function runSingleIteration(
 
 // AIDEV-NOTE: Prompt building moved to context.ts - buildIterationContext()
 
+// AIDEV-NOTE: Phase 16 — Parallel batch execution using worktree isolation
+/**
+ * Run a batch of independent stories in parallel, each in its own worktree.
+ * Returns results for all stories in the batch.
+ */
+async function runParallelBatch(
+  config: RunnerConfig,
+  iteration: number,
+  runStartTime?: number,
+): Promise<IterationResult[]> {
+  const parallelCount = config.parallelCount ?? 1;
+  const stories = getIndependentStories(config.prdJsonDir, parallelCount);
+
+  if (stories.length === 0) {
+    // Fall back to single iteration (handles completion/blocked detection)
+    return [await runSingleIteration(config, iteration, runStartTime)];
+  }
+
+  if (stories.length === 1) {
+    // Only one story available — run normally without worktree overhead
+    return [await runSingleIteration(config, iteration, runStartTime)];
+  }
+
+  log(config, `[Parallel] Running ${stories.length} stories in parallel`);
+
+  const worktrees: WorktreeInfo[] = [];
+  const results: IterationResult[] = [];
+
+  try {
+    // Create worktrees for each story
+    for (const story of stories) {
+      try {
+        const wt = await createStoryWorktree(config.workingDir, story.id);
+        worktrees.push(wt);
+      } catch (err) {
+        console.error(
+          `[Parallel] Failed to create worktree for ${story.id}:`,
+          err,
+        );
+        // Continue with other stories
+      }
+    }
+
+    if (worktrees.length === 0) {
+      // All worktree creations failed — fall back to sequential
+      log(
+        config,
+        "[Parallel] All worktree creations failed, falling back to sequential",
+      );
+      return [await runSingleIteration(config, iteration, runStartTime)];
+    }
+
+    // Run stories in parallel
+    const promises = worktrees.map(async (wt, idx) => {
+      const story = stories.find((s) => s.id === wt.storyId);
+      if (!story) {
+        return {
+          iteration: iteration + idx,
+          storyId: wt.storyId,
+          success: false,
+          hasComplete: false,
+          hasBlocked: false,
+          durationMs: 0,
+          error: "Story not found",
+        } satisfies IterationResult;
+      }
+
+      const startTime = Date.now();
+
+      try {
+        // Build context for this story — use worktree's prd-json copy to avoid races
+        const worktreePrdDir = join(wt.path, "prd-json");
+        const prdDir = existsSync(worktreePrdDir)
+          ? worktreePrdDir
+          : config.prdJsonDir;
+        const { systemContext, storyPrompt } = buildIterationContext(
+          story.id,
+          config.model,
+          prdDir,
+          wt.path, // Use worktree path as working dir
+        );
+
+        const spawnOptions: SpawnOptions = {
+          model: config.model,
+          prompt: storyPrompt,
+          contextFile: systemContext,
+          workingDir: wt.path, // Each story runs in its own worktree
+          timeout: DEFAULT_TIMEOUT_MS,
+        };
+
+        verbose(
+          config,
+          `[Parallel] Spawning Claude for ${story.id} in ${wt.path}`,
+        );
+
+        const spawnResult = await spawnClaude(spawnOptions);
+        const outcome = analyzeResult(spawnResult);
+        const durationMs = Date.now() - startTime;
+
+        return {
+          iteration: iteration + idx,
+          storyId: story.id,
+          success: spawnResult.success,
+          hasComplete: outcome.hasComplete,
+          hasBlocked: outcome.hasAllBlocked,
+          durationMs,
+          error: spawnResult.success ? undefined : spawnResult.stderr,
+        } satisfies IterationResult;
+      } catch (err) {
+        return {
+          iteration: iteration + idx,
+          storyId: story.id,
+          success: false,
+          hasComplete: false,
+          hasBlocked: false,
+          durationMs: Date.now() - startTime,
+          error: err instanceof Error ? err.message : String(err),
+        } satisfies IterationResult;
+      }
+    });
+
+    const settled = await Promise.allSettled(promises);
+    for (const result of settled) {
+      if (result.status === "fulfilled") {
+        results.push(result.value);
+      } else {
+        results.push({
+          iteration,
+          storyId: "unknown",
+          success: false,
+          hasComplete: false,
+          hasBlocked: false,
+          durationMs: 0,
+          error: result.reason?.message ?? "Unknown parallel execution error",
+        });
+      }
+    }
+
+    log(
+      config,
+      `[Parallel] Batch complete: ${results.filter((r) => r.success).length}/${results.length} succeeded`,
+    );
+  } finally {
+    // Clean up all worktrees
+    for (const wt of worktrees) {
+      await cleanupStoryWorktree(config.workingDir, wt);
+    }
+  }
+
+  return results;
+}
+
 // Main iteration loop as async generator
 export async function* runIterations(
-  config: RunnerConfig
+  config: RunnerConfig,
 ): AsyncGenerator<IterationResult> {
   // Create unified session context
   const sessionContext = SessionContext.create({
@@ -343,7 +511,10 @@ export async function* runIterations(
   });
 
   // Log session context for debugging
-  log(config, `[SESSION] runner=${sessionContext.runner} model=${sessionContext.model} notify=${sessionContext.notifications.enabled}`);
+  log(
+    config,
+    `[SESSION] runner=${sessionContext.runner} model=${sessionContext.model} notify=${sessionContext.notifications.enabled}`,
+  );
 
   let iteration = 1;
   let retryCount = 0;
@@ -361,8 +532,45 @@ export async function* runIterations(
   try {
     // Startup scan: check all blocked stories and unblock if blocker is completed
     scanAndUnblockStories(config.prdJsonDir);
-    
+
+    const isParallel = (config.parallelCount ?? 1) > 1;
+
     while (iteration <= config.iterations && !interrupted) {
+      // Parallel mode: run batch of independent stories
+      if (isParallel) {
+        log(config, `\n=== Parallel Batch (iteration ${iteration}) ===`);
+
+        const batchResults = await runParallelBatch(
+          config,
+          iteration,
+          runStartTime,
+        );
+
+        for (const result of batchResults) {
+          yield result;
+
+          if (result.hasComplete) {
+            log(config, "All stories complete!");
+            setComplete();
+            break;
+          }
+        }
+
+        // Check if all complete after parallel batch
+        if (isComplete(config.prdJsonDir)) {
+          break;
+        }
+
+        // Advance iteration by batch size
+        iteration += batchResults.length;
+
+        if (iteration <= config.iterations && config.gapSeconds > 0) {
+          await sleep(config.gapSeconds * 1000);
+        }
+        continue;
+      }
+
+      // Sequential mode (default)
       log(config, `\n=== Iteration ${iteration} ===`);
 
       const result = await runSingleIteration(config, iteration, runStartTime);
@@ -374,7 +582,10 @@ export async function* runIterations(
       if (result.hasComplete) {
         log(config, "All stories complete!");
         setComplete();
-        if (sessionContext.notifications.enabled && sessionContext.notifications.topic) {
+        if (
+          sessionContext.notifications.enabled &&
+          sessionContext.notifications.topic
+        ) {
           await notifyPRDComplete(sessionContext.notifications.topic);
         }
         break;
@@ -384,8 +595,15 @@ export async function* runIterations(
       if (result.hasBlocked && !result.storyId) {
         log(config, "All remaining stories are blocked");
         setError("All stories blocked");
-        if (sessionContext.notifications.enabled && sessionContext.notifications.topic) {
-          await notifyBlocked(sessionContext.notifications.topic, undefined, "All stories blocked");
+        if (
+          sessionContext.notifications.enabled &&
+          sessionContext.notifications.topic
+        ) {
+          await notifyBlocked(
+            sessionContext.notifications.topic,
+            undefined,
+            "All stories blocked",
+          );
         }
         break;
       }
@@ -401,8 +619,15 @@ export async function* runIterations(
 
           log(config, `Retry ${retryCount}: ${result.error}`);
           setRetry(cooldownSecs);
-          if (sessionContext.notifications.enabled && sessionContext.notifications.topic) {
-            await notifyRetry(sessionContext.notifications.topic, retryCount, cooldownSecs);
+          if (
+            sessionContext.notifications.enabled &&
+            sessionContext.notifications.topic
+          ) {
+            await notifyRetry(
+              sessionContext.notifications.topic,
+              retryCount,
+              cooldownSecs,
+            );
           }
 
           await sleep(cooldown);
@@ -416,12 +641,17 @@ export async function* runIterations(
       // Reset retry count on success
       if (result.success) {
         retryCount = 0;
-        if (sessionContext.notifications.enabled && sessionContext.notifications.topic) {
+        if (
+          sessionContext.notifications.enabled &&
+          sessionContext.notifications.topic
+        ) {
           // Get pending stats for notification
           const index = readIndex(config.prdJsonDir);
           const pendingStories = index?.pending?.length ?? 0;
           const story = readStory(config.prdJsonDir, result.storyId);
-          const pendingCriteria = story ? story.acceptanceCriteria.filter(c => !c.checked).length : 0;
+          const pendingCriteria = story
+            ? story.acceptanceCriteria.filter((c) => !c.checked).length
+            : 0;
 
           await notifyIterationComplete(
             sessionContext.notifications.topic,
@@ -430,7 +660,7 @@ export async function* runIterations(
             config.model,
             pendingStories,
             pendingCriteria,
-            story?.title
+            story?.title,
           );
         }
       }
@@ -456,7 +686,7 @@ export async function* runIterations(
 
 // Convenience function to run all iterations and collect results
 export async function runAllIterations(
-  config: RunnerConfig
+  config: RunnerConfig,
 ): Promise<IterationResult[]> {
   const results: IterationResult[] = [];
 

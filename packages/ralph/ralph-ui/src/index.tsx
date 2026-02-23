@@ -1,15 +1,15 @@
 #!/usr/bin/env bun
-import React from 'react';
-import { render } from 'ink';
-import { existsSync, unlinkSync } from 'fs';
-import { homedir } from 'os';
-import { join } from 'path';
-import { Dashboard } from './components/Dashboard.js';
-import { runIterations, createConfig } from './runner/index.js';
-import { cleanupStatus } from './runner/status.js';
-import type { Model } from './runner/types.js';
-import { isPTYSupported, getPTYUnsupportedReason } from './runner/pty/index.js';
-import { loadConfig as loadRalphConfig } from './utils/config.js';
+import React from "react";
+import { render } from "ink";
+import { existsSync, unlinkSync } from "fs";
+import { homedir } from "os";
+import { join } from "path";
+import { Dashboard } from "./components/Dashboard.js";
+import { runIterations, createConfig } from "./runner/index.js";
+import { cleanupStatus } from "./runner/status.js";
+import type { Model } from "./runner/types.js";
+import { isPTYSupported, getPTYUnsupportedReason } from "./runner/pty/index.js";
+import { loadConfig as loadRalphConfig } from "./utils/config.js";
 
 // AIDEV-NOTE: This is the main entry point for ralph-ui
 // Phase 2 of MP-006 adds --run flag for iteration execution mode
@@ -20,13 +20,15 @@ let exitRequested = false;
 let inkInstance: ReturnType<typeof render> | undefined;
 
 // Cleanup files on exit - use os.homedir() for cross-platform compatibility
-const stopFile = join(homedir(), '.ralph-stop');
+const stopFile = join(homedir(), ".ralph-stop");
 
 function cleanupAndExit(code: number = 0): void {
   exitRequested = true;
 
   // Cleanup status file
-  try { cleanupStatus(); } catch {}
+  try {
+    cleanupStatus();
+  } catch {}
 
   // Cleanup stop file if it exists
   try {
@@ -37,7 +39,9 @@ function cleanupAndExit(code: number = 0): void {
 
   // Unmount Ink UI gracefully before exit
   if (inkInstance) {
-    try { inkInstance.unmount(); } catch {}
+    try {
+      inkInstance.unmount();
+    } catch {}
     inkInstance = undefined;
   }
 
@@ -53,9 +57,9 @@ function cleanupAndExit(code: number = 0): void {
 
 // Force exit on any signal
 const forceExit = () => cleanupAndExit(0);
-process.on('SIGINT', forceExit);
-process.on('SIGTERM', forceExit);
-process.on('SIGHUP', forceExit);
+process.on("SIGINT", forceExit);
+process.on("SIGTERM", forceExit);
+process.on("SIGHUP", forceExit);
 
 // Watchdog: check for ~/.ralph-stop file every 500ms
 // Touch this file to force exit: touch ~/.ralph-stop
@@ -75,8 +79,8 @@ const watchdogInterval = setInterval(() => {
 // CLI configuration interface
 interface CLIConfig {
   // Mode flags
-  run: boolean;  // --run enables iteration runner
-  mode: 'startup' | 'iteration' | 'live';
+  run: boolean; // --run enables iteration runner
+  mode: "startup" | "iteration" | "live";
 
   // Runner options (used when --run is set)
   iterations: number;
@@ -85,14 +89,15 @@ interface CLIConfig {
   quiet: boolean;
   verbose: boolean;
   notify: boolean;
-  usePty: boolean;  // Use PTY for live output (MP-007)
+  usePty: boolean; // Use PTY for live output (MP-007)
+  parallelCount: number; // Number of parallel stories (Phase 16)
 
   // Path options
   prdPath: string;
   workingDir: string;
 
   // Display options
-  iteration: number;  // Current iteration for display
+  iteration: number; // Current iteration for display
   startTime: number;
   ntfyTopic?: string;
 }
@@ -112,15 +117,19 @@ function parseArgs(): CLIConfig {
   // Defaults (config file -> env var -> hardcoded)
   const config: CLIConfig = {
     run: false,
-    mode: 'live',
-    iterations: parseInt(process.env.RALPH_ITERATIONS || '100', 10),
-    gap: parseInt(process.env.RALPH_SLEEP_SECONDS || '5', 10),
-    model: (process.env.RALPH_MODEL as Model) || ralphConfig.defaultModel || 'sonnet',
+    mode: "live",
+    iterations: parseInt(process.env.RALPH_ITERATIONS || "100", 10),
+    gap: parseInt(process.env.RALPH_SLEEP_SECONDS || "5", 10),
+    model:
+      (process.env.RALPH_MODEL as Model) ||
+      ralphConfig.defaultModel ||
+      "sonnet",
     quiet: false,
     verbose: false,
     notify: !!process.env.RALPH_NOTIFY || notifyFromConfig,
     usePty: ptySupported, // Default to PTY mode only if supported
-    prdPath: process.cwd() + '/prd-json',
+    parallelCount: parseInt(process.env.RALPH_PARALLEL || "1", 10),
+    prdPath: process.cwd() + "/prd-json",
     workingDir: process.cwd(),
     iteration: 1,
     startTime: Date.now(),
@@ -131,102 +140,144 @@ function parseArgs(): CLIConfig {
     const arg = args[i];
 
     // --run flag (enables runner mode)
-    if (arg === '--run' || arg === '-r') {
+    if (arg === "--run" || arg === "-r") {
       config.run = true;
-      config.mode = 'iteration';  // Switch to iteration display mode when running
+      config.mode = "iteration"; // Switch to iteration display mode when running
     }
     // --iterations
-    else if (arg === '--iterations' || arg === '-n') {
+    else if (arg === "--iterations" || arg === "-n") {
       config.iterations = parseInt(args[++i], 10) || 100;
-    } else if (arg.startsWith('--iterations=')) {
-      config.iterations = parseInt(arg.split('=')[1], 10) || 100;
+    } else if (arg.startsWith("--iterations=")) {
+      config.iterations = parseInt(arg.split("=")[1], 10) || 100;
     }
     // --gap
-    else if (arg === '--gap' || arg === '-g') {
+    else if (arg === "--gap" || arg === "-g") {
       config.gap = parseInt(args[++i], 10) || 5;
-    } else if (arg.startsWith('--gap=')) {
-      config.gap = parseInt(arg.split('=')[1], 10) || 5;
+    } else if (arg.startsWith("--gap=")) {
+      config.gap = parseInt(arg.split("=")[1], 10) || 5;
     }
     // --model (accepts: haiku, sonnet, opus, gemini-flash, gemini-flash-lite, gemini-3-flash, gemini-pro, kiro, ollama)
-    else if (arg === '--model') {
+    else if (arg === "--model") {
       const modelVal = args[++i];
-      if (['haiku', 'sonnet', 'opus', 'gemini-flash', 'gemini-flash-lite', 'gemini-3-flash', 'gemini-pro', 'kiro', 'ollama'].includes(modelVal)) {
+      if (
+        [
+          "haiku",
+          "sonnet",
+          "opus",
+          "gemini-flash",
+          "gemini-flash-lite",
+          "gemini-3-flash",
+          "gemini-pro",
+          "kiro",
+          "ollama",
+        ].includes(modelVal)
+      ) {
         config.model = modelVal as Model;
       }
-    } else if (arg.startsWith('--model=')) {
-      const modelVal = arg.split('=')[1];
-      if (['haiku', 'sonnet', 'opus', 'gemini-flash', 'gemini-flash-lite', 'gemini-3-flash', 'gemini-pro', 'kiro', 'ollama'].includes(modelVal)) {
+    } else if (arg.startsWith("--model=")) {
+      const modelVal = arg.split("=")[1];
+      if (
+        [
+          "haiku",
+          "sonnet",
+          "opus",
+          "gemini-flash",
+          "gemini-flash-lite",
+          "gemini-3-flash",
+          "gemini-pro",
+          "kiro",
+          "ollama",
+        ].includes(modelVal)
+      ) {
         config.model = modelVal as Model;
       }
     }
     // --quiet
-    else if (arg === '--quiet' || arg === '-q') {
+    else if (arg === "--quiet" || arg === "-q") {
       config.quiet = true;
     }
     // --verbose
-    else if (arg === '--verbose' || arg === '-v') {
+    else if (arg === "--verbose" || arg === "-v") {
       config.verbose = true;
     }
     // --notify
-    else if (arg === '--notify') {
+    else if (arg === "--notify") {
       config.notify = true;
     }
     // --pty / --no-pty (PTY mode toggle)
-    else if (arg === '--pty') {
+    else if (arg === "--pty") {
       if (!ptySupported) {
         const reason = getPTYUnsupportedReason();
-        console.warn(`Warning: --pty requested but PTY is not supported: ${reason}`);
-        console.warn('Falling back to non-PTY mode.');
+        console.warn(
+          `Warning: --pty requested but PTY is not supported: ${reason}`,
+        );
+        console.warn("Falling back to non-PTY mode.");
       }
       config.usePty = ptySupported; // Only enable if supported
-    }
-    else if (arg === '--no-pty') {
+    } else if (arg === "--no-pty") {
       config.usePty = false;
     }
+    // --parallel (Phase 16: parallel story execution)
+    else if (arg === "--parallel" || arg === "-P") {
+      const nextArg = args[i + 1];
+      if (nextArg && /^\d+$/.test(nextArg)) {
+        config.parallelCount = Math.max(
+          1,
+          Math.min(parseInt(args[++i], 10), 5),
+        );
+      } else {
+        config.parallelCount = 3; // Default parallel count
+      }
+    } else if (arg.startsWith("--parallel=")) {
+      config.parallelCount = Math.max(
+        1,
+        Math.min(parseInt(arg.split("=")[1], 10) || 3, 5),
+      );
+    }
     // --mode (display mode)
-    else if (arg === '--mode' || arg === '-m') {
+    else if (arg === "--mode" || arg === "-m") {
       const value = args[++i];
-      if (value === 'startup' || value === 'iteration' || value === 'live') {
+      if (value === "startup" || value === "iteration" || value === "live") {
         config.mode = value;
       }
-    } else if (arg.startsWith('--mode=')) {
-      const value = arg.split('=')[1];
-      if (value === 'startup' || value === 'iteration' || value === 'live') {
+    } else if (arg.startsWith("--mode=")) {
+      const value = arg.split("=")[1];
+      if (value === "startup" || value === "iteration" || value === "live") {
         config.mode = value;
       }
     }
     // --prd-path
-    else if (arg === '--prd-path' || arg === '-p') {
+    else if (arg === "--prd-path" || arg === "-p") {
       config.prdPath = args[++i];
-    } else if (arg.startsWith('--prd-path=')) {
-      config.prdPath = arg.split('=')[1];
+    } else if (arg.startsWith("--prd-path=")) {
+      config.prdPath = arg.split("=")[1];
     }
     // --working-dir
-    else if (arg === '--working-dir' || arg === '-w') {
+    else if (arg === "--working-dir" || arg === "-w") {
       config.workingDir = args[++i];
-    } else if (arg.startsWith('--working-dir=')) {
-      config.workingDir = arg.split('=')[1];
+    } else if (arg.startsWith("--working-dir=")) {
+      config.workingDir = arg.split("=")[1];
     }
     // --iteration (display only)
-    else if (arg === '--iteration' || arg === '-i') {
+    else if (arg === "--iteration" || arg === "-i") {
       config.iteration = parseInt(args[++i], 10) || 1;
-    } else if (arg.startsWith('--iteration=')) {
-      config.iteration = parseInt(arg.split('=')[1], 10) || 1;
+    } else if (arg.startsWith("--iteration=")) {
+      config.iteration = parseInt(arg.split("=")[1], 10) || 1;
     }
     // --start-time
-    else if (arg === '--start-time') {
+    else if (arg === "--start-time") {
       config.startTime = parseInt(args[++i], 10) || Date.now();
-    } else if (arg.startsWith('--start-time=')) {
-      config.startTime = parseInt(arg.split('=')[1], 10) || Date.now();
+    } else if (arg.startsWith("--start-time=")) {
+      config.startTime = parseInt(arg.split("=")[1], 10) || Date.now();
     }
     // --ntfy-topic
-    else if (arg === '--ntfy-topic') {
+    else if (arg === "--ntfy-topic") {
       config.ntfyTopic = args[++i];
-    } else if (arg.startsWith('--ntfy-topic=')) {
-      config.ntfyTopic = arg.split('=')[1];
+    } else if (arg.startsWith("--ntfy-topic=")) {
+      config.ntfyTopic = arg.split("=")[1];
     }
     // --help
-    else if (arg === '--help' || arg === '-h') {
+    else if (arg === "--help" || arg === "-h") {
       console.log(`
 Ralph UI - React Ink Terminal Dashboard & Iteration Runner
 
@@ -241,6 +292,7 @@ Runner Mode (--run):
   --quiet, -q             Suppress UI output (runner only)
   --verbose, -v           Enable verbose logging
   --notify                Send ntfy notifications (env: RALPH_NOTIFY)
+  --parallel, -P [N]      Run N stories in parallel (default: 3, max: 5, env: RALPH_PARALLEL)
   --pty                   Use PTY for live output (default, enables streaming)
   --no-pty                Use child_process spawning (legacy mode)
 
@@ -322,7 +374,7 @@ async function waitForKeypress(timeoutMs: number = 30000): Promise<void> {
       if (process.stdin.isTTY) {
         process.stdin.setRawMode?.(false);
         process.stdin.pause();
-        process.stdin.removeListener('data', handler);
+        process.stdin.removeListener("data", handler);
       }
     };
 
@@ -334,8 +386,8 @@ async function waitForKeypress(timeoutMs: number = 30000): Promise<void> {
     if (process.stdin.isTTY) {
       process.stdin.setRawMode?.(true);
       process.stdin.resume();
-      process.stdin.once('data', handler);
-      console.log('\nPress any key to exit (or wait 30s)...');
+      process.stdin.once("data", handler);
+      console.log("\nPress any key to exit (or wait 30s)...");
     } else {
       // Non-TTY: just wait a short time for messages to be read
       setTimeout(resolve, 2000);
@@ -356,6 +408,7 @@ async function runInRunnerMode(config: CLIConfig) {
     quiet: config.quiet,
     verbose: config.verbose,
     usePty: config.usePty,
+    parallelCount: config.parallelCount > 1 ? config.parallelCount : undefined,
   });
 
   const runStartTime = Date.now();
@@ -399,7 +452,7 @@ async function runInRunnerMode(config: CLIConfig) {
       exitOnCtrlC: false,
       stdin: process.stdin,
       stdout: process.stdout,
-      maxFps: 10,              // Reduce from default 30 FPS
+      maxFps: 10, // Reduce from default 30 FPS
       incrementalRendering: true, // Only update changed lines
       debug: false,
     });
@@ -414,7 +467,8 @@ async function runInRunnerMode(config: CLIConfig) {
   let storiesCompleted = 0;
   let iterationsRun = 0;
   let hasErrors = false;
-  let exitReason: 'complete' | 'blocked' | 'interrupted' | 'iterations' = 'iterations';
+  let exitReason: "complete" | "blocked" | "interrupted" | "iterations" =
+    "iterations";
 
   try {
     // Run iterations
@@ -433,19 +487,19 @@ async function runInRunnerMode(config: CLIConfig) {
 
       // Check for exit request
       if (exitRequested) {
-        exitReason = 'interrupted';
+        exitReason = "interrupted";
         break;
       }
 
       // Handle completion
       if (result.hasComplete) {
-        exitReason = 'complete';
+        exitReason = "complete";
         break;
       }
 
       // Handle all blocked
       if (result.hasBlocked && !result.storyId) {
-        exitReason = 'blocked';
+        exitReason = "blocked";
         break;
       }
     }
@@ -468,22 +522,22 @@ async function runInRunnerMode(config: CLIConfig) {
     const elapsedMs = Date.now() - runStartTime;
     const elapsed = formatElapsed(elapsedMs);
 
-    console.log('\n' + '═'.repeat(60));
-    console.log('📋 RALPH SESSION SUMMARY');
-    console.log('═'.repeat(60));
+    console.log("\n" + "═".repeat(60));
+    console.log("📋 RALPH SESSION SUMMARY");
+    console.log("═".repeat(60));
 
     // Status emoji and message based on exit reason
     switch (exitReason) {
-      case 'complete':
-        console.log('✅ Status: All stories complete!');
+      case "complete":
+        console.log("✅ Status: All stories complete!");
         break;
-      case 'blocked':
-        console.log('⚠️  Status: All remaining stories are blocked');
+      case "blocked":
+        console.log("⚠️  Status: All remaining stories are blocked");
         break;
-      case 'interrupted':
-        console.log('🛑 Status: Interrupted by user');
+      case "interrupted":
+        console.log("🛑 Status: Interrupted by user");
         break;
-      case 'iterations':
+      case "iterations":
         console.log(`📊 Status: Completed ${config.iterations} iterations`);
         break;
     }
@@ -492,9 +546,9 @@ async function runInRunnerMode(config: CLIConfig) {
     console.log(`📚 Stories completed: ${storiesCompleted}`);
     console.log(`⏱  Elapsed time: ${elapsed}`);
     if (hasErrors) {
-      console.log('⚠️  Some iterations had errors (check progress.txt)');
+      console.log("⚠️  Some iterations had errors (check progress.txt)");
     }
-    console.log('═'.repeat(60));
+    console.log("═".repeat(60));
 
     // Wait for keypress before exiting
     await waitForKeypress();
@@ -530,10 +584,10 @@ async function runInDisplayMode(config: CLIConfig) {
       exitOnCtrlC: false,
       stdin: process.stdin,
       stdout: process.stdout,
-      maxFps: 10,              // Reduce from default 30 FPS
+      maxFps: 10, // Reduce from default 30 FPS
       incrementalRendering: true, // Only update changed lines
       debug: false,
-    }
+    },
   );
 
   // Wait for the app to exit, then cleanup
@@ -543,6 +597,6 @@ async function runInDisplayMode(config: CLIConfig) {
 
 // Run main
 main().catch((error) => {
-  console.error('Error:', error);
+  console.error("Error:", error);
   cleanupAndExit(1);
 });

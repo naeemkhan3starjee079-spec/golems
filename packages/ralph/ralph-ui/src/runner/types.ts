@@ -16,11 +16,21 @@ export interface RunnerConfig {
   quiet: boolean;
   verbose: boolean;
   usePty?: boolean; // Use PTY-based spawning (MP-007)
+  parallelCount?: number; // Number of parallel stories to run (Phase 16)
   onOutput?: (data: string) => void; // Callback for live output (PTY mode)
   onStrippedOutput?: (data: string) => void; // Callback for stripped output (PTY mode)
 }
 
-export type Model = "haiku" | "sonnet" | "opus" | "gemini-flash" | "gemini-flash-lite" | "gemini-3-flash" | "gemini-pro" | "kiro" | "ollama";
+export type Model =
+  | "haiku"
+  | "sonnet"
+  | "opus"
+  | "gemini-flash"
+  | "gemini-flash-lite"
+  | "gemini-3-flash"
+  | "gemini-pro"
+  | "kiro"
+  | "ollama";
 
 export interface IterationResult {
   iteration: number;
@@ -44,7 +54,14 @@ export type RunnerState =
 
 // Status file for UI communication
 export interface RalphStatus {
-  state: "running" | "cr_review" | "error" | "retry" | "complete" | "interrupted" | "terminated";
+  state:
+    | "running"
+    | "cr_review"
+    | "error"
+    | "retry"
+    | "complete"
+    | "interrupted"
+    | "terminated";
   iteration: number;
   storyId: string;
   model?: string; // Model being used (haiku, sonnet, opus)

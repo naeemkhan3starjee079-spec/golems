@@ -24,7 +24,9 @@ const CLAUDE_BIN = `${HOME}/.local/bin/claude`;
 const GEMINI_BIN = `${HOME}/.nvm/versions/node/v22.0.0/bin/gemini`;
 const KIRO_BIN = `${HOME}/.local/bin/kiro-cli`;
 const CURSOR_BIN = `${HOME}/.local/bin/cursor`;
-const GH_BIN = ["/opt/homebrew/bin/gh", "/usr/local/bin/gh"].find(p => existsSync(p)) || "gh";
+const GH_BIN =
+  ["/opt/homebrew/bin/gh", "/usr/local/bin/gh"].find((p) => existsSync(p)) ||
+  "gh";
 
 // ─── State Management ──────────────────────────────────────────────
 
@@ -89,9 +91,7 @@ function addFixItem(repo: string, tool: string, error: string) {
 }
 
 function getPendingFixes(repo?: string): FixItem[] {
-  return loadFixList().filter(
-    (f) => !f.resolved && (!repo || f.repo === repo)
-  );
+  return loadFixList().filter((f) => !f.resolved && (!repo || f.repo === repo));
 }
 
 function resolveFixItem(id: string) {
@@ -108,7 +108,7 @@ function getTelegramToken(): string {
   try {
     const envFile = readFileSync(
       join(HOME, "Gits/golems/packages/claude/.env"),
-      "utf-8"
+      "utf-8",
     );
     const match = envFile.match(/TELEGRAM_BOT_TOKEN=(.+)/);
     return match?.[1]?.trim() || "";
@@ -139,7 +139,7 @@ async function sendTelegram(message: string) {
           text: message,
           parse_mode: "Markdown",
         }),
-      }
+      },
     );
 
     if (!res.ok) {
@@ -171,7 +171,7 @@ async function runCliAgent(
   bin: string,
   args: string[],
   cwd: string,
-  timeoutMs: number = 60000
+  timeoutMs: number = 60000,
 ): Promise<string | null> {
   if (!existsSync(bin)) return null;
 
@@ -220,12 +220,14 @@ async function bashPreScan(repoPath: string): Promise<{
 
   // 1. Grep for TODOs/FIXMEs (fast, reliable)
   try {
-    const todoOutput = await $`cd ${repoPath} && grep -rn "TODO\|FIXME\|HACK\|XXX" --include="*.ts" --include="*.tsx" --include="*.py" -l 2>/dev/null | head -20`.text();
+    const todoOutput =
+      await $`cd ${repoPath} && grep -rn "TODO\|FIXME\|HACK\|XXX" --include="*.ts" --include="*.tsx" --include="*.py" -l 2>/dev/null | head -20`.text();
     const files = todoOutput.trim().split("\n").filter(Boolean);
 
     for (const file of files.slice(0, 10)) {
       try {
-        const matches = await $`cd ${repoPath} && grep -n "TODO\|FIXME\|HACK\|XXX" "${file}" 2>/dev/null | head -3`.text();
+        const matches =
+          await $`cd ${repoPath} && grep -n "TODO\|FIXME\|HACK\|XXX" "${file}" 2>/dev/null | head -3`.text();
         for (const match of matches.trim().split("\n").filter(Boolean)) {
           const lineMatch = match.match(/^(\d+):(.*)/);
           if (lineMatch) {
@@ -244,11 +246,14 @@ async function bashPreScan(repoPath: string): Promise<{
   try {
     const hasBunTest = existsSync(join(repoPath, "package.json"));
     if (hasBunTest) {
-      const testProc = Bun.spawn(["bun", "test", "--bail", "--timeout", "30000"], {
-        cwd: repoPath,
-        stdout: "pipe",
-        stderr: "pipe",
-      });
+      const testProc = Bun.spawn(
+        ["bun", "test", "--bail", "--timeout", "30000"],
+        {
+          cwd: repoPath,
+          stdout: "pipe",
+          stderr: "pipe",
+        },
+      );
 
       const testResult = await Promise.race([
         testProc.exited.then(() => "done" as const),
@@ -263,10 +268,14 @@ async function bashPreScan(repoPath: string): Promise<{
         const exitCode = testProc.exitCode;
         if (exitCode !== 0 && stderr) {
           // Extract failing test names
-          const failLines = stderr.split("\n")
-            .filter(l => l.includes("FAIL") || l.includes("✗") || l.includes("error"))
+          const failLines = stderr
+            .split("\n")
+            .filter(
+              (l) =>
+                l.includes("FAIL") || l.includes("✗") || l.includes("error"),
+            )
             .slice(0, 5);
-          testFailures.push(...failLines.map(l => l.trim()).filter(Boolean));
+          testFailures.push(...failLines.map((l) => l.trim()).filter(Boolean));
         }
       }
     }
@@ -274,11 +283,14 @@ async function bashPreScan(repoPath: string): Promise<{
 
   // 3. Recent git log — what changed recently?
   try {
-    const log = await $`cd ${repoPath} && git log --oneline -10 --no-merges`.text();
+    const log =
+      await $`cd ${repoPath} && git log --oneline -10 --no-merges`.text();
     recentChanges.push(...log.trim().split("\n").filter(Boolean).slice(0, 5));
   } catch {}
 
-  console.log(`[BashScan] Found: ${todos.length} TODOs, ${testFailures.length} test failures, ${recentChanges.length} recent changes`);
+  console.log(
+    `[BashScan] Found: ${todos.length} TODOs, ${testFailures.length} test failures, ${recentChanges.length} recent changes`,
+  );
   return { todos, testFailures, recentChanges };
 }
 
@@ -288,11 +300,14 @@ async function bashPreScan(repoPath: string): Promise<{
  */
 async function cliPrioritize(
   repoPath: string,
-  bashFindings: Awaited<ReturnType<typeof bashPreScan>>
+  bashFindings: Awaited<ReturnType<typeof bashPreScan>>,
 ): Promise<string | null> {
   const findingsText = [
     bashFindings.todos.length > 0
-      ? `TODOs found:\n${bashFindings.todos.slice(0, 8).map(t => `  ${t.file}:${t.line} — ${t.text}`).join("\n")}`
+      ? `TODOs found:\n${bashFindings.todos
+          .slice(0, 8)
+          .map((t) => `  ${t.file}:${t.line} — ${t.text}`)
+          .join("\n")}`
       : "No TODOs found.",
     bashFindings.testFailures.length > 0
       ? `Test failures:\n${bashFindings.testFailures.join("\n")}`
@@ -300,7 +315,9 @@ async function cliPrioritize(
     bashFindings.recentChanges.length > 0
       ? `Recent commits:\n${bashFindings.recentChanges.join("\n")}`
       : "",
-  ].filter(Boolean).join("\n\n");
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 
   const prompt = `Here are findings from a codebase scan:\n\n${findingsText}\n\nPick the SINGLE most impactful item to fix. Prioritize: test failures > real bugs in TODOs > missing error handling > type improvements. Output ONLY:\n1. The file path and line number\n2. What exactly to change (1-2 sentences)\n3. Why it matters (1 sentence)`;
 
@@ -311,7 +328,13 @@ async function cliPrioritize(
     ["Kiro", KIRO_BIN, ["-p", prompt], 60000],
     ["Cursor", CURSOR_BIN, ["agent", prompt, "--output-format", "text"], 75000],
   ] as const) {
-    const result = await runCliAgent(name, bin, args as string[], repoPath, timeout as number);
+    const result = await runCliAgent(
+      name,
+      bin,
+      args as string[],
+      repoPath,
+      timeout as number,
+    );
     if (result) {
       console.log(`[${name}] Priority: ${result.slice(0, 200)}...`);
       return result;
@@ -344,7 +367,8 @@ async function deepPreScan(repoPath: string): Promise<PreScanFindings> {
   if (cliSuggestion) {
     parts.push("CLI agent has a specific suggestion");
   }
-  const summary = parts.length > 0 ? parts.join(", ") : "Clean scan — look deeper";
+  const summary =
+    parts.length > 0 ? parts.join(", ") : "Clean scan — look deeper";
 
   return {
     todos: bashFindings.todos,
@@ -367,7 +391,7 @@ interface NightShiftResult {
 
 async function createWorktree(
   repoPath: string,
-  branchName: string
+  branchName: string,
 ): Promise<string> {
   const worktreePath = `${repoPath}-nightshift-${Date.now()}`;
 
@@ -415,7 +439,7 @@ async function runClaudeOnRepo(
   branchName: string,
   repo: string,
   findings: PreScanFindings,
-  fixItems?: FixItem[]
+  fixItems?: FixItem[],
 ): Promise<{ success: boolean; prUrl?: string; improvement?: string }> {
   console.log(`[Claude] Working in ${worktreePath}`);
 
@@ -426,7 +450,7 @@ async function runClaudeOnRepo(
 
   // Test failures are highest priority
   if (findings.testFailures.length > 0) {
-    findingsBlock += `\n## FAILING TESTS (fix these first!)\n${findings.testFailures.map(f => `- ${f}`).join("\n")}\n`;
+    findingsBlock += `\n## FAILING TESTS (fix these first!)\n${findings.testFailures.map((f) => `- ${f}`).join("\n")}\n`;
   }
 
   // CLI agent's specific suggestion
@@ -436,7 +460,10 @@ async function runClaudeOnRepo(
 
   // TODOs with file paths
   if (findings.todos.length > 0) {
-    findingsBlock += `\n## TODOs FOUND IN CODEBASE\n${findings.todos.slice(0, 8).map(t => `- ${t.file}:${t.line} — ${t.text}`).join("\n")}\n`;
+    findingsBlock += `\n## TODOs FOUND IN CODEBASE\n${findings.todos
+      .slice(0, 8)
+      .map((t) => `- ${t.file}:${t.line} — ${t.text}`)
+      .join("\n")}\n`;
   }
 
   // Previous failures
@@ -473,18 +500,13 @@ If nothing actionable, output: NOTHING_TO_FIX`;
     // Strip ANTHROPIC_API_KEY so Claude uses subscription auth (not a potentially stale API key)
     const { ANTHROPIC_API_KEY: _stripKey, ...cleanEnv } = process.env;
     const proc = Bun.spawn(
-      [
-        CLAUDE_BIN,
-        "--dangerously-skip-permissions",
-        "-p",
-        claudePrompt,
-      ],
+      [CLAUDE_BIN, "--dangerously-skip-permissions", "-p", claudePrompt],
       {
         cwd: worktreePath,
         stdout: "pipe",
         stderr: "pipe",
         env: cleanEnv,
-      }
+      },
     );
 
     // 10 minute timeout — Claude needs time to explore, implement, and test
@@ -529,9 +551,7 @@ If nothing actionable, output: NOTHING_TO_FIX`;
       return { success: false, improvement: "No file changes made" };
     }
 
-    console.log(
-      `[Git] Changes: ${diffStat.trim().split("\n").pop()}`
-    );
+    console.log(`[Git] Changes: ${diffStat.trim().split("\n").pop()}`);
 
     // Push and create PR
     await $`cd ${worktreePath} && git push -u origin ${branchName}`;
@@ -545,7 +565,7 @@ If nothing actionable, output: NOTHING_TO_FIX`;
         cwd: worktreePath,
         stdout: "pipe",
         stderr: "pipe",
-      }
+      },
     );
 
     await prProc.exited;
@@ -577,7 +597,7 @@ If nothing actionable, output: NOTHING_TO_FIX`;
 
 async function processRepo(
   repo: string,
-  state: State
+  state: State,
 ): Promise<NightShiftResult> {
   const repoPath = `${REPOS_PATH}/${repo}`;
   const result: NightShiftResult = {
@@ -616,7 +636,7 @@ async function processRepo(
       branchName,
       repo,
       findings,
-      fixes
+      fixes,
     );
 
     result.improvement = improvement;
@@ -650,7 +670,11 @@ async function processRepo(
 
 async function nightShift(): Promise<NightShiftResult[]> {
   const state = loadState();
-  const rotation = state.rotation || ["songscript", "brainlayer", "claude-golem"];
+  const rotation = state.rotation || [
+    "songscript",
+    "brainlayer",
+    "claude-golem",
+  ];
 
   // Check weekly schedule first — if today has an assigned repo, use it
   const DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
@@ -659,7 +683,9 @@ async function nightShift(): Promise<NightShiftResult[]> {
 
   const target = scheduledRepo || state.nightShiftTarget || rotation[0];
   if (scheduledRepo) {
-    console.log(`[Schedule] Using weekly schedule: ${todayDay} → ${scheduledRepo}`);
+    console.log(
+      `[Schedule] Using weekly schedule: ${todayDay} → ${scheduledRepo}`,
+    );
   }
   const targetIdx = rotation.indexOf(target);
   const orderedRepos = [
@@ -667,8 +693,8 @@ async function nightShift(): Promise<NightShiftResult[]> {
     ...rotation.slice(0, targetIdx >= 0 ? targetIdx : 0),
   ];
 
-  console.log(`\n🌙 Night Shift v5 starting...`);
-  console.log(`📁 Repos: ${orderedRepos.join(" → ")}`);
+  console.log(`\n🌙 Night Shift v6 starting (parallel)...`);
+  console.log(`📁 Repos: ${orderedRepos.join(" + ")}`);
   console.log(`⏰ Time: ${new Date().toLocaleString()}`);
 
   const pendingFixes = getPendingFixes();
@@ -678,26 +704,59 @@ async function nightShift(): Promise<NightShiftResult[]> {
   console.log("");
 
   await sendTelegram(
-    `🌙 *Night Shift v5 Starting*\n\nRepos: ${orderedRepos.join(" → ")}\nPending fixes: ${pendingFixes.length}`
+    `🌙 *Night Shift v6 Starting (Parallel)*\n\nRepos: ${orderedRepos.join(" + ")}\nPending fixes: ${pendingFixes.length}`,
   );
+
+  // AIDEV-NOTE: Phase 16 — Process all repos in parallel (max 3 concurrent)
+  // Phase 1: Pre-scan all repos in parallel
+  console.log("[Batch] Phase 1: Pre-scanning all repos in parallel...");
+  const preScanResults = await Promise.allSettled(
+    orderedRepos.map(async (repo) => {
+      const repoPath = `${REPOS_PATH}/${repo}`;
+      if (!existsSync(repoPath)) return { repo, findings: null };
+      const findings = await deepPreScan(repoPath);
+      console.log(`[PreScan] ${repo}: ${findings.summary}`);
+      return { repo, findings };
+    }),
+  );
+
+  // Collect successful pre-scans
+  const reposToProcess: { repo: string; findings: PreScanFindings }[] = [];
+  for (const result of preScanResults) {
+    if (result.status === "fulfilled" && result.value.findings) {
+      reposToProcess.push({
+        repo: result.value.repo,
+        findings: result.value.findings,
+      });
+    }
+  }
+
+  // Phase 2: Process repos in parallel (max 3 concurrent)
+  console.log(
+    `[Batch] Phase 2: Processing ${reposToProcess.length} repos in parallel...`,
+  );
+  const MAX_CONCURRENT = 3;
 
   const results: NightShiftResult[] = [];
 
-  // Process each repo in rotation
-  for (const repo of orderedRepos) {
-    try {
-      const result = await processRepo(repo, state);
-      results.push(result);
+  // Process in batches of MAX_CONCURRENT
+  for (let i = 0; i < reposToProcess.length; i += MAX_CONCURRENT) {
+    const batch = reposToProcess.slice(i, i + MAX_CONCURRENT);
 
-      // Brief pause between repos
-      if (orderedRepos.indexOf(repo) < orderedRepos.length - 1) {
-        console.log("\n[Batch] Moving to next repo in 5s...\n");
-        await Bun.sleep(5000);
+    const batchResults = await Promise.allSettled(
+      batch.map(({ repo }) => processRepo(repo, state)),
+    );
+
+    batchResults.forEach((result, batchIdx) => {
+      if (result.status === "fulfilled") {
+        results.push(result.value);
+      } else {
+        const repo = batch[batchIdx]?.repo ?? "unknown";
+        console.error(`[Batch] Failed on ${repo}:`, result.reason);
+        addFixItem(repo, "batch", String(result.reason).slice(0, 200));
+        results.push({ repo, success: false, error: String(result.reason) });
       }
-    } catch (err) {
-      console.error(`[Batch] Failed on ${repo}:`, err);
-      addFixItem(repo, "batch", String(err).slice(0, 200));
-    }
+    });
   }
 
   // ═══ Summary ═══
@@ -710,7 +769,8 @@ async function nightShift(): Promise<NightShiftResult[]> {
 
   // Sync key state values to Supabase (so dashboard can see night shift data)
   try {
-    const { reportServiceRun, setState: setSupabaseState } = await import("@golems/shared/lib/state-store");
+    const { reportServiceRun, setState: setSupabaseState } =
+      await import("@golems/shared/lib/state-store");
     // reportServiceRun always writes to Supabase regardless of STATE_BACKEND
     await reportServiceRun("lastNightShift");
     // Also sync dashboard-visible values
@@ -731,17 +791,23 @@ async function nightShift(): Promise<NightShiftResult[]> {
     .join("\n");
 
   // Build detailed summary
-  const resultDetails = results.map(r => {
-    const status = r.success ? "✅" : r.improvement?.includes("timed out") ? "⏰" : "—";
-    return `${status} ${r.repo}: ${r.improvement || r.error || "skipped"}`;
-  }).join("\n");
+  const resultDetails = results
+    .map((r) => {
+      const status = r.success
+        ? "✅"
+        : r.improvement?.includes("timed out")
+          ? "⏰"
+          : "—";
+      return `${status} ${r.repo}: ${r.improvement || r.error || "skipped"}`;
+    })
+    .join("\n");
 
   await sendTelegram(
-    `🌙 *Night Shift v5 Complete*\n\n` +
+    `🌙 *Night Shift v6 Complete*\n\n` +
       `${resultDetails}\n\n` +
       `PRs: ${successCount}/${results.length}\n` +
       `${prUrls ? prUrls + "\n" : ""}` +
-      `Next: ${rotation[nextIdx]}`
+      `Next: ${rotation[nextIdx]}`,
   );
 
   return results;
@@ -761,8 +827,8 @@ if (import.meta.main) {
             pr: r.prUrl || "none",
           })),
           null,
-          2
-        )
+          2,
+        ),
       );
       process.exit(success ? 0 : 1);
     })

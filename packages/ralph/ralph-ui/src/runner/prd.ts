@@ -5,7 +5,12 @@
 
 import { existsSync, readFileSync, writeFileSync, unlinkSync } from "fs";
 import { join } from "path";
-import type { PRDIndex, Story, UpdateQueue, AcceptanceCriterion } from "./types";
+import type {
+  PRDIndex,
+  Story,
+  UpdateQueue,
+  AcceptanceCriterion,
+} from "./types";
 
 // AIDEV-NOTE: PRD file operations must match the existing zsh behavior exactly
 // The tests in tests/prd.test.ts verify this behavior
@@ -63,7 +68,7 @@ export function getNextStory(prdJsonDir: string): Story | null {
 export function checkCriterion(
   prdJsonDir: string,
   storyId: string,
-  criterionIndex: number
+  criterionIndex: number,
 ): void {
   const story = readStory(prdJsonDir, storyId);
 
@@ -89,7 +94,7 @@ export function checkCriterion(
 export function completeStory(
   prdJsonDir: string,
   storyId: string,
-  completedBy: string = "opus"
+  completedBy: string = "opus",
 ): void {
   // Update story
   const story = readStory(prdJsonDir, storyId);
@@ -140,7 +145,9 @@ export function completeStory(
     if (unblockedStory) {
       delete unblockedStory.blockedBy;
       writeStory(prdJsonDir, unblockedStory);
-      console.log(`[PRD] Auto-unblocked ${unblockedId}: blocker ${storyId} completed`);
+      console.log(
+        `[PRD] Auto-unblocked ${unblockedId}: blocker ${storyId} completed`,
+      );
     }
   }
 
@@ -153,7 +160,7 @@ export function completeStory(
 export function blockStory(
   prdJsonDir: string,
   storyId: string,
-  reason: string
+  reason: string,
 ): void {
   // Update story
   const story = readStory(prdJsonDir, storyId);
@@ -217,7 +224,10 @@ export function unblockStory(prdJsonDir: string, storyId: string): void {
   writeIndex(prdJsonDir, index);
 }
 
-export function applyUpdateQueue(prdJsonDir: string): { applied: boolean; changes: string[] } {
+export function applyUpdateQueue(prdJsonDir: string): {
+  applied: boolean;
+  changes: string[];
+} {
   const updatePath = join(prdJsonDir, "update.json");
 
   if (!existsSync(updatePath)) {
@@ -388,6 +398,48 @@ export function isAllBlocked(prdJsonDir: string): boolean {
   return index.pending.length === 0 && index.blocked.length > 0;
 }
 
+/**
+ * Get up to `count` independent stories that can run in parallel.
+ * Independent = in pending array, no blockedBy field, not blocking each other.
+ * AIDEV-NOTE: Phase 16 — parallel story execution support
+ */
+export function getIndependentStories(
+  prdJsonDir: string,
+  count: number,
+): Story[] {
+  const index = readIndex(prdJsonDir);
+  if (!index || index.pending.length === 0) return [];
+
+  const stories: Story[] = [];
+  const blockedByIds = new Set<string>();
+
+  for (const storyId of index.pending) {
+    if (stories.length >= count) break;
+
+    const story = readStory(prdJsonDir, storyId);
+    if (!story) continue;
+
+    // Skip stories that are blocked
+    if (story.blockedBy) continue;
+
+    // Skip stories that are blocked by a story we're about to run in parallel
+    if (blockedByIds.has(storyId)) continue;
+
+    stories.push(story);
+
+    // Track stories that depend on this one — they can't run in parallel with it
+    for (const pendingId of index.pending) {
+      if (pendingId === storyId) continue;
+      const pendingStory = readStory(prdJsonDir, pendingId);
+      if (pendingStory?.blockedBy === storyId) {
+        blockedByIds.add(pendingId);
+      }
+    }
+  }
+
+  return stories;
+}
+
 export function getCriteriaProgress(story: Story): {
   total: number;
   checked: number;
@@ -406,7 +458,10 @@ export function getCriteriaProgress(story: Story): {
  *
  * IMPORTANT: If the blocker is already completed, clear blockedBy instead of blocking
  */
-export function autoBlockStoryIfNeeded(prdJsonDir: string, storyId: string): boolean {
+export function autoBlockStoryIfNeeded(
+  prdJsonDir: string,
+  storyId: string,
+): boolean {
   const story = readStory(prdJsonDir, storyId);
   const index = readIndex(prdJsonDir);
 
@@ -417,11 +472,15 @@ export function autoBlockStoryIfNeeded(prdJsonDir: string, storyId: string): boo
   // Check if story has blockedBy but is in pending array
   if (story.blockedBy && index.pending.includes(storyId)) {
     // Check if the blocker is already completed
-    const blockerIsCompleted = (index.completed ?? []).includes(story.blockedBy);
+    const blockerIsCompleted = (index.completed ?? []).includes(
+      story.blockedBy,
+    );
 
     if (blockerIsCompleted) {
       // Blocker is done - clear blockedBy and keep in pending
-      console.log(`[PRD] Auto-unblocked ${storyId}: blocker ${story.blockedBy} is completed`);
+      console.log(
+        `[PRD] Auto-unblocked ${storyId}: blocker ${story.blockedBy} is completed`,
+      );
       delete story.blockedBy;
       writeStory(prdJsonDir, story);
       return false; // Not blocked, can proceed
