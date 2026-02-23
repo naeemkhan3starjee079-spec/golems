@@ -61,14 +61,32 @@ export BRAINLAYER_ENRICH_BACKEND=mlx
 
 MLX_BASE="${MLX_URL:-http://127.0.0.1:8080}"
 MLX_BASE="${MLX_BASE%%/v1/*}"
+MLX_STARTED_BY_US=false
 if ! curl -sf "${MLX_BASE}/v1/models" > /dev/null 2>&1; then
-    log "ERROR: MLX server not reachable at ${MLX_BASE}. Enrichment requires MLX. Exiting."
-    exit 1
+    log "MLX server not running. Starting mlx_lm.server..."
+    nohup mlx_lm.server --model mlx-community/Qwen2.5-Coder-14B-Instruct-4bit --port 8080 > "$LOG_DIR/mlx-server.log" 2>&1 &
+    MLX_PID=$!
+    MLX_STARTED_BY_US=true
+    # Wait up to 60s for MLX to be ready
+    for i in $(seq 1 60); do
+        if curl -sf "${MLX_BASE}/v1/models" > /dev/null 2>&1; then
+            log "MLX server ready after ${i}s"
+            break
+        fi
+        sleep 1
+    done
+    if ! curl -sf "${MLX_BASE}/v1/models" > /dev/null 2>&1; then
+        log "ERROR: MLX server failed to start after 60s. Exiting."
+        kill "$MLX_PID" 2>/dev/null
+        exit 1
+    fi
 else
     log "MLX server OK at ${MLX_BASE}"
 fi
 
-PYTHONUNBUFFERED=1 python3 -m brainlayer.pipeline.enrichment --batch-size 50 --parallel=3 >> "$LOG_DIR/enrichment.log" 2>&1 &
+# Use Python 3.13 explicitly — brainlayer is installed there, not in homebrew python3.14
+PYTHON3="/Library/Frameworks/Python.framework/Versions/3.13/bin/python3"
+PYTHONUNBUFFERED=1 "$PYTHON3" -m brainlayer.pipeline.enrichment --batch-size 50 --parallel=3 >> "$LOG_DIR/enrichment.log" 2>&1 &
 PID=$!
 echo "$PID" > "$LOCK_FILE"
 
@@ -97,6 +115,14 @@ print('ok')
         log "DB verified OK after shutdown."
     else
         log "WARN: DB may be locked after shutdown. Check manually."
+    fi
+
+    # Kill MLX if we started it
+    if [ "$MLX_STARTED_BY_US" = true ] && [ -n "$MLX_PID" ]; then
+        log "Stopping MLX server (PID $MLX_PID)..."
+        kill "$MLX_PID" 2>/dev/null
+        sleep 2
+        kill -9 "$MLX_PID" 2>/dev/null
     fi
 
     log "Enrichment window closed."
