@@ -102,7 +102,7 @@ To use: Read the SKILL.md file and follow instructions.
 ### BrainLayer (Memory Layer)
 Located at `~/Gits/brainlayer/` — indexes Claude Code conversations for search/retrieval.
 - **External repo:** [github.com/EtanHey/brainlayer](https://github.com/EtanHey/brainlayer)
-- **14 MCP tools** for search, context, file timeline, regression detection, persistent storage
+- **3 MCP tools** (+ backward-compat aliases) — brain_search, brain_store, brain_recall for search, context, file timeline, regression detection, persistent storage
 - **Communication Style Analysis**: `brainlayer/data/archives/style-*/master-style-guide.md`
 
 ### Owner Communication Style

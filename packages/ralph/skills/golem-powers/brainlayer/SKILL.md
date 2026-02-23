@@ -6,26 +6,19 @@ description: Memory layer for Claude Code — search past solutions, file histor
 # BrainLayer — Knowledge Pipeline
 
 > **External repo:** [github.com/EtanHey/brainlayer](https://github.com/EtanHey/brainlayer)
-> Formerly "Zikaron". CLI: `brainlayer`. MCP tools: `brainlayer_*` prefix.
+> Formerly "Zikaron". CLI: `brainlayer`. MCP tools: `brain_search`, `brain_store`, `brain_recall`.
 
 BrainLayer indexes Claude Code conversation history into a searchable vector database. Query past solutions, code patterns, and debugging sessions.
 
-## MCP Tools (12 available)
+## MCP Tools (3 available)
 
 | Tool | What It Does |
 |------|-------------|
-| `brainlayer_search` | Semantic search across all sessions (project, content_type, tag, intent, importance filters) |
-| `brainlayer_context` | Get surrounding conversation chunks for a search result |
-| `brainlayer_stats` | Index statistics (chunk count, projects, content types) |
-| `brainlayer_list_projects` | List all indexed projects |
-| `brainlayer_file_timeline` | File interaction history across sessions |
-| `brainlayer_operations` | Logical operation groups (read/edit/test cycles) |
-| `brainlayer_regression` | What changed since a file last worked |
-| `brainlayer_plan_links` | Session to plan/phase linkage |
-| `brainlayer_think` | Task-aware context retrieval (decisions, patterns, bugs) |
-| `brainlayer_recall` | Proactive retrieval by file path or topic |
-| `brainlayer_sessions` | List recent sessions with metadata |
-| `brainlayer_current_context` | What you're currently working on (lightweight) |
+| `brain_search` | Semantic search across past conversations and knowledge |
+| `brain_store` | Persistently store memories (auto-type, auto-importance) |
+| `brain_recall` | Proactive context retrieval by file, topic, or current state |
+
+*Old `brainlayer_*` names still work as backward-compat aliases.*
 
 ## CLI Quick Reference
 

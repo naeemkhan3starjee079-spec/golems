@@ -1,6 +1,6 @@
 ---
 name: voice-sessions
-description: Structured voice sessions via VoiceLayer MCP. 4 modes (announce/brief/consult/converse) + silent think for drilling, coaching, and capturing insights to Obsidian.
+description: Structured voice sessions via VoiceLayer MCP. voice_speak + voice_ask for drilling, coaching, and capturing insights to Obsidian.
 ---
 
 # Voice Sessions
@@ -34,33 +34,35 @@ All workflows follow the same pattern:
 1. Context: what are we doing? (session type, subject)
 2. Walk-through: structured questions or slide-by-slide review
 3. Drill: probe vague answers, test understanding, challenge weak spots
-4. Capture: qa_voice_think logs insights silently
+4. Capture: voice_speak logs insights silently
 5. Output: structured Obsidian note or report
 ```
 
-## Voice Modes
+## Voice Tools
 
-| Mode | Tool | What It Does |
-|------|------|-------------|
-| **announce** | `qa_voice_announce` | Fire-and-forget TTS (status updates, narration) |
-| **brief** | `qa_voice_brief` | One-way explanation (reading back decisions, summaries) |
-| **consult** | `qa_voice_consult` | Checkpoint — speak + hint user may respond |
-| **converse** | `qa_voice_converse` | Full Q&A — speak question, wait for voice response |
-| **think** | `qa_voice_think` | Silent notes to thinking log (insights, red flags, timing) |
+| Tool | What It Does |
+|------|-------------|
+| `voice_speak` | Non-blocking TTS (auto-selects: announce/brief/consult/think based on message) |
+| `voice_ask` | Blocking voice Q&A (speak question, wait for voice response) |
 
-**Aliases:** `qa_voice_ask` → converse, `qa_voice_say` → announce (backward compat)
+Old `qa_voice_*` names still work as backward-compat aliases.
 
-### Which mode to use when
+### `voice_speak` mode routing (auto-detected)
 
-- **Opening/closing a session** → `announce` ("Let's start your debrief")
-- **Explaining something back** → `brief` ("Here's what I captured...")
-- **Asking a question** → `converse` ("Walk me through what happened")
-- **Pre-action checkpoint** → `consult` ("About to save the report, anything to add?")
-- **Taking notes** → `think` (silent markdown log)
+`voice_speak` chooses mode automatically from message style/content. You do not manually select announce/brief/consult/think.
+
+| Detected Mode | Typical Trigger | Example |
+|---------------|-----------------|---------|
+| `announce` | Short start/stop updates | "Let's start your debrief." |
+| `brief` | Concise summaries/read-backs | "Here's what I captured..." |
+| `consult` | Longer guidance/coaching output | "Let's tighten this section by section." |
+| `think` | Silent note capture with `insight:` prefix | "insight: Slide 3 overran by 90 seconds" |
+
+Use `voice_ask` whenever you need a blocking spoken question + microphone response cycle.
 
 ## Session Booking
 
-Voice sessions are locked per-session to prevent mic conflicts. `converse` mode auto-books on first call. Other sessions see "line busy" and fall back to text.
+Voice sessions are locked per-session to prevent mic conflicts. `voice_ask` auto-books on first call. Other sessions see "line busy" and fall back to text.
 
 ## Requirements
 

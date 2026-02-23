@@ -16,16 +16,16 @@ description: Voice-powered presentation/pitch practice with drilling, fact-check
 ## Phase 1: Setup
 
 ```
-qa_voice_converse: "What are we practicing — a presentation, a pitch, or something else?"
-qa_voice_converse: "How long is the talk supposed to be?"
-qa_voice_converse: "What's your main message in one sentence?"
+voice_ask("What are we practicing — a presentation, a pitch, or something else?")
+voice_ask("How long is the talk supposed to be?")
+voice_ask("What's your main message in one sentence?")
 ```
 
 Load the outline (Obsidian file, pptx notes, or user describes it).
 
 Log setup:
 ```
-qa_voice_think(category: "insight", thought: "Talk: {type}, {duration}min, message: {message}")
+voice_speak("insight: Talk: {type}, {duration}min, message: {message}")
 ```
 
 ## Phase 2: Slide-by-Slide Walk-Through
@@ -34,10 +34,10 @@ For each slide/section:
 
 1. **Read back the slide's key point:**
    ```
-   qa_voice_brief: "Slide {N}: {slide title or key point}. Go ahead, present this part."
+   voice_speak("Slide {N}: {slide title or key point}. Go ahead, present this part.")
    ```
 
-2. **Listen to their delivery** (qa_voice_converse with long timeout)
+2. **Listen to their delivery** (voice_ask with long timeout)
 
 3. **Evaluate and drill:**
    - Too long? → "That was about {X} minutes. You need it under {Y}. What can you cut?"
@@ -48,7 +48,7 @@ For each slide/section:
 
 4. **Log silently:**
    ```
-   qa_voice_think(category: "insight", thought: "Slide {N}: {timing}s, {notes}")
+   voice_speak("insight: Slide {N}: {timing}s, {notes}")
    ```
 
 ## Phase 3: Audience Questions
@@ -63,7 +63,7 @@ After full run-through, play devil's advocate:
 
 Log which questions stumped them:
 ```
-qa_voice_think(category: "question", thought: "Stumped on: {question}")
+voice_speak("insight: Stumped on: {question}")
 ```
 
 ## Phase 4: Fact Check
@@ -76,24 +76,24 @@ Review any numbers, dates, or claims mentioned during practice:
 - Comparisons — verify they're fair
 
 ```
-qa_voice_brief: "Let me fact-check a few things you said..."
+voice_speak("Let me fact-check a few things you said...")
 ```
 
 Flag corrections:
 ```
-qa_voice_think(category: "red-flag", thought: "Claimed {X} but actual is {Y}")
+voice_speak("insight: Claimed {X} but actual is {Y}")
 ```
 
 ## Phase 5: Debrief
 
 ```
-qa_voice_converse: "How did that feel? What parts felt natural vs forced?"
-qa_voice_converse: "What do you want to change for the next run?"
+voice_ask("How did that feel? What parts felt natural vs forced?")
+voice_ask("What do you want to change for the next run?")
 ```
 
 Summarize:
 ```
-qa_voice_brief: "Here's what I noticed: {key observations}"
+voice_speak("Here's what I noticed: {key observations}")
 ```
 
 ## Phase 6: Output

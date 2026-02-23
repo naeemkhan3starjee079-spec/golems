@@ -7,16 +7,16 @@ description: Full voice-powered conversation debrief with probing questions
 
 ## Prerequisites
 
-- voicelayer MCP connected (`qa_voice_converse`, `qa_voice_announce`, `qa_voice_brief`, `qa_voice_think`)
+- voicelayer MCP connected (`voice_ask`, `voice_speak`)
 - Obsidian vault accessible
 
 ## Phase 1: Context Setup
 
-Use `qa_voice_converse` for each question. Wait for response before next question.
+Use `voice_ask` for each question. Wait for response before next question.
 
 ### Opening
 ```
-qa_voice_announce: "Let's debrief your conversation. I'll ask you some questions and take notes."
+voice_speak("Let's debrief your conversation. I'll ask you some questions and take notes.")
 ```
 
 ### Context Questions (ask in order, skip if already known)
@@ -25,9 +25,9 @@ qa_voice_announce: "Let's debrief your conversation. I'll ask you some questions
 3. "How long did it go? Where was it?"
 4. "What was the general vibe — casual, formal, intense?"
 
-After each answer, use `qa_voice_think` to silently log key facts:
+After each answer, use `voice_speak` to silently log key facts:
 ```
-qa_voice_think(category: "insight", thought: "Meeting with {name} at {company}, {type}, {duration}")
+voice_speak("insight: Meeting with {name} at {company}, {type}, {duration}")
 ```
 
 ## Phase 2: Content Drilling
@@ -45,7 +45,7 @@ After each answer, evaluate:
 - **Skipped topic** → probe: "Did you talk about {salary/equity/tech stack/team}?"
 - **Strong reaction** → explore: "You sound {excited/concerned} about that. Why?"
 
-Use `qa_voice_think(category: "insight")` to track key points silently.
+Use `voice_speak("insight: ...")` to track key points silently.
 
 ## Phase 3: Signals & Red Flags
 
@@ -56,7 +56,7 @@ Use `qa_voice_think(category: "insight")` to track key points silently.
 
 Log red flags immediately:
 ```
-qa_voice_think(category: "red-flag", thought: "{flag description}")
+voice_speak("insight: {flag description}")
 ```
 
 ## Phase 4: Decisions & Next Steps
@@ -70,7 +70,7 @@ qa_voice_think(category: "red-flag", thought: "{flag description}")
 16. "Anything else you want to remember about this conversation?"
 
 ```
-qa_voice_brief: "Got it. Writing up your debrief now."
+voice_speak("Got it. Writing up your debrief now.")
 ```
 
 ## Phase 6: Generate Journal Entry
