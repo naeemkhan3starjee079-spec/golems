@@ -15,6 +15,9 @@
 
 set -euo pipefail
 
+# AIDEV-NOTE: Must use explicit Python 3.13 — launchd may resolve python3 to homebrew 3.14
+PYTHON313="/Library/Frameworks/Python.framework/Versions/3.13/bin/python3"
+
 GOLEMS_DIR="${HOME}/Gits/golems"
 BRAINLAYER_DIR="${HOME}/Gits/brainlayer"
 LOG_DIR="${HOME}/.golems-zikaron/logs"
@@ -110,9 +113,8 @@ if [ "$ENRICH_ONLY" = false ] && [ "$TABA_ONLY" = false ]; then
   if [ "$FILE_COUNT" -gt 0 ]; then
     log "  Found ${FILE_COUNT} files to index (${SKIPPED_ACTIVE} skipped as active)"
 
-    # Activate venv and run indexing
-    # brainlayer is system-installed (pip install -e ~/Gits/brainlayer)
-    BEFORE=$(python3 -c "
+    # brainlayer is installed in Python 3.13 (pip install -e ~/Gits/brainlayer)
+    BEFORE=$("$PYTHON313" -c "
 from brainlayer.vector_store import VectorStore
 from pathlib import Path
 s = VectorStore(Path.home() / '.local/share/zikaron/zikaron.db')
@@ -121,10 +123,10 @@ s.close()
 " 2>/dev/null || echo "0")
 
     brainlayer index 2>&1 | tail -5 | tee -a "$LOG_FILE" || {
-      log "  WARNING: zikaron index failed (exit $?), continuing..."
+      log "  WARNING: brainlayer index failed (exit $?), continuing..."
     }
 
-    AFTER=$(python3 -c "
+    AFTER=$("$PYTHON313" -c "
 from brainlayer.vector_store import VectorStore
 from pathlib import Path
 s = VectorStore(Path.home() / '.local/share/zikaron/zikaron.db')
@@ -151,7 +153,7 @@ if [ "$INDEX_ONLY" = false ] && [ "$TABA_ONLY" = false ] && [ "$MAX_ENRICH" -gt 
   START_TIME=$(date +%s)
 
   # Run enrichment, capture output and exit code
-  ENRICH_OUTPUT=$(python3 -m brainlayer.pipeline.enrichment \
+  ENRICH_OUTPUT=$("$PYTHON313" -m brainlayer.pipeline.enrichment \
     --batch-size=50 \
     --max="$MAX_ENRICH" \
     2>&1) || ENRICH_OK=false

@@ -11,6 +11,8 @@ SECONDS_TO_RUN=$((HOURS * 3600))
 LOG_DIR="$HOME/.golems-zikaron/logs"
 DB_PATH="$HOME/.local/share/zikaron/zikaron.db"
 LOCK_FILE="/tmp/zikaron-enrichment.lock"
+# AIDEV-NOTE: Must use explicit Python 3.13 — launchd may resolve python3 to 3.14
+PYTHON313="/Library/Frameworks/Python.framework/Versions/3.13/bin/python3"
 BRAINLAYER_DIR="$HOME/Gits/brainlayer"
 
 mkdir -p "$LOG_DIR"
@@ -30,7 +32,7 @@ if [ -f "$LOCK_FILE" ]; then
 fi
 
 # Check DB isn't locked by something else
-if ! python3 -c "
+if ! "$PYTHON313" -c "
 import apsw
 db = apsw.Connection('$DB_PATH', flags=apsw.SQLITE_OPEN_READONLY)
 list(db.cursor().execute('SELECT COUNT(*) FROM chunks LIMIT 1'))
@@ -84,9 +86,8 @@ else
     log "MLX server OK at ${MLX_BASE}"
 fi
 
-# Use Python 3.13 explicitly — brainlayer is installed there, not in homebrew python3.14
-PYTHON3="/Library/Frameworks/Python.framework/Versions/3.13/bin/python3"
-PYTHONUNBUFFERED=1 "$PYTHON3" -m brainlayer.pipeline.enrichment --batch-size 50 --parallel=3 >> "$LOG_DIR/enrichment.log" 2>&1 &
+# Reuse PYTHON313 defined at top of script
+PYTHONUNBUFFERED=1 "$PYTHON313" -m brainlayer.pipeline.enrichment --batch-size 50 --parallel=3 >> "$LOG_DIR/enrichment.log" 2>&1 &
 PID=$!
 echo "$PID" > "$LOCK_FILE"
 
@@ -106,7 +107,7 @@ cleanup() {
     rm -f "$LOCK_FILE"
 
     # Verify DB is accessible
-    if python3 -c "
+    if "$PYTHON313" -c "
 import apsw
 db = apsw.Connection('$DB_PATH', flags=apsw.SQLITE_OPEN_READONLY)
 list(db.cursor().execute('SELECT COUNT(*) FROM chunks LIMIT 1'))
