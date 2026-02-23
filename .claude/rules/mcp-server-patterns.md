@@ -1,6 +1,6 @@
 # MCP Server Patterns
 
-> 8 MCP servers in the golems ecosystem. Standard structure and conventions.
+> 9 MCP servers in the golems ecosystem. Standard structure and conventions.
 
 ## Active Servers
 
@@ -15,6 +15,7 @@
 | `sophtron` | `@sophtron/sophtron-mcp-server` | 6 | Third-party |
 | `qa-voice` | `bun run ~/Gits/voicelayer/src/mcp-server.ts` | 7 | External: [voicelayer](https://github.com/EtanHey/voicelayer) |
 | `playwright` | `@playwright/mcp@latest` | 15+ | Third-party |
+| `kernel` | `mcp-remote https://mcp.onkernel.com/mcp` | 16 | Third-party ([onkernel.com](https://kernel.sh)) |
 
 ## Standard Structure (Bun servers)
 

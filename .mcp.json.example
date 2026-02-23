@@ -1,7 +1,7 @@
 {
   "_comment": "Copy to .mcp.json and replace op:// refs with real values from 1Password",
   "_sync": "KEEP IN SYNC: live config at .mcp.json (gitignored), backup at ~/.golems/.mcp.json.backup, registry at ~/.golems/backup-registry.md",
-  "_updated": "2026-02-21",
+  "_updated": "2026-02-23",
   "_recovery": "If .mcp.json is lost, run: op item get <item-name> --vault <vault> --fields ACCESS_TOKEN",
   "mcpServers": {
     "sophtron": {
@@ -44,6 +44,10 @@
       "env": {
         "EXA_API_KEY": "op://<your-vault>/exa/EXA_API_KEY"
       }
+    },
+    "kernel": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://mcp.onkernel.com/mcp", "--header", "Authorization:Bearer op://<your-vault>/kernel/API_KEY"]
     }
   }
 }

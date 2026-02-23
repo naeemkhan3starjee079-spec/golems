@@ -46,6 +46,14 @@ All workflows work with typed answers if voice isn't available. The skill detect
 - Structured Obsidian notes (via `$OBSIDIAN_VAULT` or obsidian skill)
 - Think log: markdown file with timestamped insights, categorized as insight/question/red-flag/checklist-update
 
+## STT Backend (Local-First)
+
+**Primary:** whisper.cpp via `whisper-cli` binary (free, local, ~200-400ms on Apple Silicon)
+**Fallback:** Wispr Flow cloud API (requires `QA_VOICE_WISPR_KEY`)
+
+**Setup:** `brew install whisper-cpp` + download model to `~/.cache/whisper/`
+**Note:** v1.8.3+ renamed binary from `whisper-cpp` to `whisper-cli`. VoiceLayer detects both.
+
 ## MCP Server
 
 **Name:** `qa-voice` | **Repo:** [github.com/EtanHey/voicelayer](https://github.com/EtanHey/voicelayer) (local clone: `~/Gits/voicelayer`)
