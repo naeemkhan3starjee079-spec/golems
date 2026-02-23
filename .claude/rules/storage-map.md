@@ -1,20 +1,55 @@
 # Storage Map — Where to Find Things
 
-| What You're Looking For | Where to Look |
-|------------------------|---------------|
-| Past decisions, learnings | `brain_search("topic")` |
-| File history | `brain_search(file_path="filename.ts")` |
+> Quick reference for where data lives across the golems ecosystem.
+
+## Memory & Knowledge
+
+| What | Where |
+|------|-------|
+| Past decisions, learnings | `brain_search(query="topic")` |
+| File history / changes | `brain_search(file_path="filename.ts")` |
 | Current work context | `brain_recall()` (mode=context, default) |
-| Stored memories by tag | `brain_search(tag="decision")` |
+| Stored memories by tag | `brain_search(query="topic", tag="decision")` |
+| Session transcript | BrainLayer auto-indexed (search with `brain_search`) |
+| BrainLayer DB | `~/.local/share/brainlayer/brainlayer.db` |
+| Deduplicated prompts | `~/.local/share/brainlayer/prompts/` |
+
+## Plans & Documentation
+
+| What | Where |
+|------|-------|
 | Plan progress | `docs.local/plan/<name>/README.md` |
-| Scratchpad / temp notes | `claude.scratchpad.md` |
-| Session transcript | BrainLayer auto-indexed |
-| Voice session notes | `/tmp/voicelayer-thinking.md` |
 | Architecture decisions | `docs/architecture/*.md` |
-| Learnings | `docs.local/learnings/` or `~/.claude/learnings/` |
-| Auto-memory | `~/.claude/projects/<project>/memory/MEMORY.md` |
+| Learnings (project) | `docs.local/learnings/` |
+| Learnings (global) | `~/.claude/learnings/` |
+| Research files | `docs.local/research/` |
+| Agent prompts | `docs.local/prompts/` |
+
+## Configuration & Rules
+
+| What | Where |
+|------|-------|
 | Rules (always loaded) | `.claude/rules/*.md` |
 | Skills (on demand) | `~/.claude/commands/golem-powers/` |
-| Voice profiles | `~/.voicelayer/voices.json` |
-| BrainLayer DB | `~/.local/share/brainlayer/brainlayer.db` |
+| Auto-memory | `~/.claude/projects/<project>/memory/MEMORY.md` |
+| MCP config | `.mcp.json` (live) / `.mcp.json.example` (template) |
+| Agent profiles | `.claude/agents/*.md` |
+
+## Runtime State
+
+| What | Where |
+|------|-------|
 | Golems runtime state | `~/.golems-zikaron/` (state.json, event-log.json) |
+| Scratchpad / temp notes | `claude.scratchpad.md` |
+| Voice session notes | `/tmp/voicelayer-thinking.md` |
+| Voice profiles | `~/.voicelayer/voices.json` |
+| Voice toggle | `/tmp/.claude_voice_disabled` |
+
+## Services & Infrastructure
+
+| What | Where |
+|------|-------|
+| launchd plists | `launchd/` + `~/Library/LaunchAgents/com.golems*` |
+| Railway config | `railway.json` + `Dockerfile` |
+| Vercel (dashboard) | `packages/dashboard/` |
+| Supabase project | `mkijzwkuubtfjqcemorx` |
