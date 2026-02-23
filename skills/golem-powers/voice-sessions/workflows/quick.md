@@ -1,12 +1,12 @@
 ---
 name: quick
-description: Quick text-based debrief without voice (when qa-voice unavailable or user prefers typing)
+description: Quick text-based debrief without voice (when voicelayer unavailable or user prefers typing)
 ---
 
 # Quick Text Debrief
 
 ## When to Use
-- qa-voice MCP not connected
+- voicelayer MCP not connected
 - User is in a quiet environment / can't talk
 - User just wants to dump info quickly
 

@@ -107,7 +107,7 @@ golems wizard          # Guided setup
 | **exa** | `exa-mcp-server` | Web search — code context, company research |
 | **golems-glm** | `bun run packages/shared/src/glm/mcp-server.ts` | Local GLM-4.7-Flash — summarize text, score/classify with JSON output |
 | **sophtron** | `@sophtron/sophtron-mcp-server` | Bank account access — transactions, identity |
-| **qa-voice** | `bun run ~/Gits/voicelayer/src/mcp-server.ts` | Voice I/O layer — external repo ([VoiceLayer](https://github.com/EtanHey/voicelayer)) |
+| **voicelayer** | `bun run ~/Gits/voicelayer/src/mcp-server.ts` | Voice I/O layer — external repo ([VoiceLayer](https://github.com/EtanHey/voicelayer)) |
 
 ### BrainLayer MCP (14 Tools)
 

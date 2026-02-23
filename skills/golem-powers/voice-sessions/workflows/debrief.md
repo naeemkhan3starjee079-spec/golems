@@ -7,7 +7,7 @@ description: Full voice-powered conversation debrief with probing questions
 
 ## Prerequisites
 
-- qa-voice MCP connected (`qa_voice_converse`, `qa_voice_announce`, `qa_voice_brief`, `qa_voice_think`)
+- voicelayer MCP connected (`qa_voice_converse`, `qa_voice_announce`, `qa_voice_brief`, `qa_voice_think`)
 - Obsidian vault accessible
 
 ## Phase 1: Context Setup

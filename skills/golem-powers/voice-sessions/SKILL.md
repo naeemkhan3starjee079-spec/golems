@@ -11,7 +11,7 @@ description: Structured voice sessions via VoiceLayer MCP. 4 modes (announce/bri
 
 - After an interview or meeting → **debrief**
 - Practicing a presentation or pitch → **practice**
-- QA testing a website → **qa** (uses qa-voice schemas)
+- QA testing a website → **qa** (uses voicelayer schemas)
 - Quick capture without voice → **quick**
 - Reviewing past sessions → **review**
 

@@ -9,7 +9,7 @@ description: Voice-powered presentation/pitch practice with drilling, fact-check
 
 ## Prerequisites
 
-- qa-voice MCP connected
+- voicelayer MCP connected
 - Presentation file (pptx, Obsidian outline, or verbal description)
 - Know the talk structure (chapters, main message, time limit)
 

@@ -56,5 +56,5 @@ All workflows work with typed answers if voice isn't available. The skill detect
 
 ## MCP Server
 
-**Name:** `qa-voice` | **Repo:** [github.com/EtanHey/voicelayer](https://github.com/EtanHey/voicelayer) (local clone: `~/Gits/voicelayer`)
+**Name:** `voicelayer` | **Repo:** [github.com/EtanHey/voicelayer](https://github.com/EtanHey/voicelayer) (local clone: `~/Gits/voicelayer`)
 **Tools (7):** `qa_voice_announce`, `qa_voice_brief`, `qa_voice_consult`, `qa_voice_converse`, `qa_voice_think`, `qa_voice_say` (alias), `qa_voice_ask` (alias)

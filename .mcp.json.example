@@ -27,7 +27,7 @@
       "command": "bun",
       "args": ["run", "packages/shared/src/glm/mcp-server.ts"]
     },
-    "qa-voice": {
+    "voicelayer": {
       "command": "bun",
       "args": ["run", "~/Gits/voicelayer/src/mcp-server.ts"]
     },

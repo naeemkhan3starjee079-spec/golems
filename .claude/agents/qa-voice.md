@@ -1,7 +1,7 @@
 ---
 name: qa-voice
 description: Voice-powered QA assistant. Browses websites with Playwright, speaks questions via TTS, listens to voice responses, generates structured QA reports.
-tools: Read, Grep, Glob, Write, Edit, Bash, mcp__playwright*, mcp__qa-voice*, mcp__supabase*
+tools: Read, Grep, Glob, Write, Edit, Bash, mcp__playwright*, mcp__voicelayer*, mcp__supabase*
 model: inherit
 ---
 
