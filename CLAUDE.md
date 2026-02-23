@@ -140,6 +140,18 @@ All 9 old `qa_voice_*` tool names still work as backward-compat aliases.
 | `docs/plan/` | Active plans and phase tracking |
 | `launchd/` | macOS launchd service plists |
 
+### Worktree-Isolated Agents
+
+Some agents run with `isolation: worktree` — they get their own git worktree to prevent file conflicts with the main workspace:
+
+| Agent | Purpose |
+|-------|---------|
+| `migration-worker` | Database migrations and schema changes |
+| `qa-voice` | Voice-powered QA testing with Playwright |
+| `discovery-voice` | Client discovery call assistant |
+
+Use these for tasks that modify files heavily or run in parallel with main workspace work.
+
 ---
 
 ## Communication Style

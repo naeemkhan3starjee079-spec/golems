@@ -28,9 +28,15 @@ git checkout -b feature/phase-<N>-<name>
 
 Follow the phase README steps. For each step:
 - Check if research is needed first (use specified CLI helper)
-- Implement the code changes
-- Write tests for logic-heavy code
+- Implement using **one-test-at-a-time TDD** for logic-heavy code:
+  1. Write ONE failing test for the next behavior
+  2. Write minimal code to make it pass
+  3. Refactor while tests stay green
+  4. Repeat for the next behavior
+- Do NOT batch-write many tests then one-shot the implementation — this produces low-quality tests that don't guide the design
 - Update findings.md with decisions and learnings
+
+**Parallel execution with worktrees:** For phases with independent sub-tasks, spawn Task agents with `isolation: worktree` to work in parallel without file conflicts. Each agent gets its own git worktree and branch. Merge worktree branches back before the PR step.
 
 ### 4. Pre-Commit Checks
 
