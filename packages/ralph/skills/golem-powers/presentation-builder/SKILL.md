@@ -1,6 +1,6 @@
 ---
 name: presentation-builder
-description: Build and polish presentations using Michal's workshop method + Oren Efraim's rules. Guides users through premise, framing, drafting, polishing, opening/closing, and practice. Works with voice (QA Voice) or text.
+description: Build and polish presentations using Michal's workshop method + Oren Efraim's rules. Guides users through premise, framing, drafting, polishing, opening/closing, and practice. Works with voice (VoiceLayer) or text.
 ---
 
 # Presentation Builder Skill
@@ -122,7 +122,7 @@ This is where you take the wireframe from Session 2 and turn it into a performan
 - Time it: 1 minute = ~150 words
 - Have water nearby — drinking = strategic pause
 
-If voice is available (VoiceLayer), use `qa_voice_converse` for practice runs:
+If voice is available (VoiceLayer), use `voice_ask` for practice runs:
 - Speak the opening, get feedback
 - Time the full run
 - Note where energy drops
@@ -204,10 +204,10 @@ Show your opening, get live feedback, iterate. This is the final polish before t
 ## Voice Integration
 
 When VoiceLayer is available, use it for:
-- **Practice runs:** `qa_voice_converse` — speak the opening, get timed feedback
-- **Debrief after presenting:** `qa_voice_converse` — "How did it go? What would you change?"
-- **Quick notes during review:** `qa_voice_think` — capture insights silently
-- **Reading back the premise:** `qa_voice_brief` — hear it spoken, check if it sounds natural
+- **Practice runs:** `voice_ask` — speak the opening, get timed feedback
+- **Debrief after presenting:** `voice_ask` — "How did it go? What would you change?"
+- **Quick notes during review:** `voice_speak` — capture insights silently (use `insight:` prefix)
+- **Reading back the premise:** `voice_speak` — hear it spoken, check if it sounds natural
 
 ---
 

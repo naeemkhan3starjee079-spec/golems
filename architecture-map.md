@@ -198,7 +198,7 @@ Job MCP (`packages/autonomous/src/job-golem/mcp-server.ts`):
 - `jobs_getHot`, `jobs_getRecent`, `jobs_search`, `jobs_watchlist`, `jobs_stats`
 
 BrainLayer MCP (external: `brainlayer-mcp`):
-- `brainlayer_search`, `brainlayer_stats`, `brainlayer_list_projects`
+- `brain_search`, `brain_store`, `brain_recall`
 
 ## CLI Commands
 
