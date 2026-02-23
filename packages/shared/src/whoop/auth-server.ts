@@ -92,6 +92,24 @@ async function main() {
       writeFileSync("/tmp/whoop-tokens.json", tokenData);
       console.log("  Tokens written to /tmp/whoop-tokens.json");
 
+      // Persist refresh token to Supabase (survives reboots + deploys)
+      try {
+        const { getSupabase } = await import("../../lib/supabase-factory");
+        const sb = getSupabase();
+        const { error: sbError } = await sb.from("golem_state").upsert(
+          {
+            key: "whoop_refresh_token",
+            value: tokens.refresh_token,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "key" },
+        );
+        if (sbError) console.error("  Supabase save failed:", sbError.message);
+        else console.log("  Refresh token persisted to Supabase");
+      } catch (e) {
+        console.error("  Could not save to Supabase:", e);
+      }
+
       // Store refresh token in 1Password
       try {
         execSync(
@@ -100,9 +118,7 @@ async function main() {
         );
         console.log("Refresh token saved to 1Password");
       } catch {
-        console.error(
-          "Could not save to 1Password, printing token instead:",
-        );
+        console.error("Could not save to 1Password, printing token instead:");
         console.log(`  WHOOP_REFRESH_TOKEN=${tokens.refresh_token}`);
       }
 
@@ -118,9 +134,7 @@ async function main() {
     },
   });
 
-  console.log(
-    `Waiting for callback on http://localhost:3000/callback\n`,
-  );
+  console.log(`Waiting for callback on http://localhost:3000/callback\n`);
 }
 
 if (import.meta.main) {

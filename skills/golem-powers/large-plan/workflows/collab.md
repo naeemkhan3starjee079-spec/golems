@@ -78,6 +78,35 @@ Use the synthesized findings to:
 - Write code informed by research
 - Update the phase README with new information
 
+## Collab Update Gates (MANDATORY)
+
+Collab updates are NOT optional etiquette. They are workflow gates — like tests.
+
+**Before `git commit`:** Update collab.md with what you did and what you learned.
+**Before `git push`:** Verify your Agent status and Task Board row are current.
+**Before creating PR:** Read other agents' Messages. Cross-reference if relevant.
+**After PR merges:** Update Task Board status to `done` with PR link.
+
+If you skip these, the orchestrator and other agents have no visibility into your work. This defeats the purpose of parallel execution.
+
+### When to Update (4 mandatory checkpoints)
+
+| Checkpoint | What to Write |
+|------------|---------------|
+| Pre-flight done | Status → `learning`. "Pre-flight passed. N tests green." |
+| Starting implementation | Status → `working`. "Starting [phase/task]." |
+| Before each commit | One-line summary of what changed. Decisions made. |
+| Phase complete | Status → `done`. Task Board updated. PR link added. |
+
+### Common Rationalizations for Skipping
+
+| Excuse | Reality |
+|--------|---------|
+| "I'll update after I finish" | You'll forget. Update NOW, before commit. |
+| "The human can see my spinner" | Other AGENTS can't. Collab.md is for cross-agent visibility. |
+| "Coding is the priority" | 10 seconds to write a line vs hours of lost coordination. |
+| "Nobody's reading it anyway" | The orchestrator reads it. Future sessions read it. You would read it if you were the one waiting. |
+
 ## Agent Communication Rules
 
 1. **Short updates** in findings.md — one line per update, timestamped
@@ -85,6 +114,19 @@ Use the synthesized findings to:
 3. **Decisions** are final once written — don't revisit without new information
 4. **Conflicts** escalate to the orchestrator (Opus) for resolution
 5. **Build on each other** — agent B should read agent A's findings before starting
+
+## Two-Claude Plan Review
+
+Before executing a complex phase, have one Claude write the plan and a second review it as a staff engineer:
+
+```bash
+# Claude 1 writes plan
+# Claude 2 (subagent or separate terminal):
+"Review this plan as a staff engineer. Challenge assumptions, find gaps,
+suggest simpler alternatives. Be critical — don't rubber-stamp."
+```
+
+This catches architectural mistakes before implementation starts.
 
 ## Example Collab Session
 

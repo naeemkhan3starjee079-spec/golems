@@ -1,18 +1,39 @@
 #!/bin/bash
 # Process a recorded Twitch stream — multi-signal gem detection pipeline.
-# Usage: process-stream.sh <video-file> [chat-log]
+# Usage: process-stream.sh <video-file> [chat-log] [--json-output] [--chat-json]
 #
 # Pipeline:
 #   Pass 1: Audio → transcript + silence boundaries + volume spikes
 #   Pass 2: Video → frames at candidate timestamps + 10s clips at gems
 #   Pass 3: Score via Gemini CLI or local LLM (combines all signals)
+#   Pass 4: Clip extraction (if gems.md exists)
+#   Pass 5: Generate gems-manifest.json (if --json-output)
 #
 # All output goes next to the video file (data stays together).
 
 set -euo pipefail
 
-VIDEO="${1:?Usage: process-stream.sh <video-file> [chat-log]}"
-CHAT_LOG="${2:-}"
+# Parse positional + flag arguments
+VIDEO=""
+CHAT_LOG=""
+JSON_OUTPUT=false
+CHAT_IS_JSON=false
+
+for arg in "$@"; do
+    case "$arg" in
+        --json-output) JSON_OUTPUT=true ;;
+        --chat-json)   CHAT_IS_JSON=true ;;
+        *)
+            if [ -z "$VIDEO" ]; then
+                VIDEO="$arg"
+            elif [ -z "$CHAT_LOG" ]; then
+                CHAT_LOG="$arg"
+            fi
+            ;;
+    esac
+done
+
+[ -z "$VIDEO" ] && { echo "Usage: process-stream.sh <video-file> [chat-log] [--json-output] [--chat-json]"; exit 1; }
 STREAMER=$(basename "$VIDEO" | sed 's/twitch-//;s/-[0-9]*\..*//')
 DATE=$(date +%Y-%m-%d)
 OUT_DIR="$(dirname "$VIDEO")"
@@ -25,6 +46,27 @@ VOLUME_SPIKE_RATIO="1.3"  # flag timestamps where volume > 1.3x average
 mkdir -p "$OUT_DIR/frames" "$OUT_DIR/clips"
 
 log() { echo "[$(date '+%H:%M:%S')] $1"; }
+
+# --- Convert JSON chat to text format if needed ---
+if [ -n "$CHAT_LOG" ] && [ "$CHAT_IS_JSON" = true ] && [ -f "$CHAT_LOG" ]; then
+    CHAT_TEXT="$OUT_DIR/chat-converted.txt"
+    if [ ! -f "$CHAT_TEXT" ]; then
+        log "Converting JSON chat to text format..."
+        python3 -c "
+import json
+with open('$CHAT_LOG') as f:
+    messages = json.load(f)
+with open('$CHAT_TEXT', 'w') as f:
+    for m in messages:
+        secs = int(m.get('time_s', 0))
+        h, rem = divmod(secs, 3600)
+        mins, s = divmod(rem, 60)
+        f.write(f'[{h:02d}:{mins:02d}:{s:02d}] {m[\"user\"]}: {m[\"message\"]}\n')
+print(f'  Converted {len(messages)} messages')
+" 2>/dev/null
+    fi
+    CHAT_LOG="$CHAT_TEXT"
+fi
 
 # ============================================================
 # PASS 1: AUDIO ANALYSIS (transcript + volume + silence)
@@ -45,7 +87,7 @@ SILENCES="$OUT_DIR/silences.txt"
 if [ ! -f "$SILENCES" ]; then
     log "Pass 1b: Detecting silence boundaries..."
     ffmpeg -i "$AUDIO" -af "silencedetect=noise=${SILENCE_THRESHOLD}dB:d=${SILENCE_DURATION}" -f null - 2>&1 \
-      | grep "silence_end" \
+      | { grep "silence_end" || true; } \
       | awk '{print $5}' \
       > "$SILENCES"
     log "  Found $(wc -l < "$SILENCES") silence boundaries"
@@ -180,7 +222,7 @@ for t in quiet_starts:
 " > "$OUT_DIR/quiet-frames.txt" 2>/dev/null
 
 FRAME_COUNT=0
-for TS in "${SPIKE_TIMESTAMPS[@]}"; do
+for TS in ${SPIKE_TIMESTAMPS[@]+"${SPIKE_TIMESTAMPS[@]}"}; do
     MINS=$((TS / 60))
     SECS=$((TS % 60))
     FNAME="frame-${MINS}m${SECS}s.jpg"
@@ -393,15 +435,114 @@ else
 fi
 
 # ============================================================
-# SUMMARY
+# PASS 5: GENERATE GEMS-MANIFEST.JSON (if --json-output)
 # ============================================================
+
+MANIFEST_FILE="$OUT_DIR/gems-manifest.json"
+if [ "$JSON_OUTPUT" = true ] && [ -f "$GEMS_FILE" ] && [ ! -f "$MANIFEST_FILE" ]; then
+    log "Pass 5: Generating gems-manifest.json..."
+    DURATION=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$VIDEO" 2>/dev/null | cut -d. -f1 || echo "0")
+
+    python3 -c "
+import json, re, os
+
+gems_path = '$GEMS_FILE'
+manifest_path = '$MANIFEST_FILE'
+spikes_path = '$SPIKES_FILE'
+volume_path = '$VOLUME_FILE'
+
+with open(gems_path) as f:
+    text = f.read()
+
+# Parse gems from markdown
+pattern = r'### \[([^\]]+)\]\s+(.+?)$\n\*\*Score:\*\*\s+(\d+)/10\s+\|\s+\*\*Type:\*\*\s+(\S+)'
+gems = []
+for match in re.finditer(pattern, text, re.MULTILINE):
+    ts, title, score, gtype = match.groups()
+
+    # Parse timestamp to seconds
+    parts = ts.split(':')
+    secs = 0
+    for p in parts:
+        secs = secs * 60 + int(p)
+
+    gem_id = f'gem-{len(gems)+1:03d}'
+
+    # Check for volume spike at this timestamp
+    volume_spike = False
+    if os.path.exists(spikes_path):
+        with open(spikes_path) as f:
+            for line in f:
+                if line.startswith('#'): continue
+                parts_v = line.strip().split()
+                if parts_v and abs(int(parts_v[0]) - secs) <= 10:
+                    volume_spike = True
+                    break
+
+    # Check for clip and frame
+    mins, s = divmod(secs, 60)
+    clip_name = f'clip-{ts.replace(\":\", \"m\")}s.mp4'
+    clip_path = f'clips/{clip_name}' if os.path.exists(os.path.join('$OUT_DIR', 'clips', clip_name)) else None
+    frame_name = f'frame-{mins}m{s}s.jpg'
+    frame_path = f'frames/{frame_name}' if os.path.exists(os.path.join('$OUT_DIR', 'frames', frame_name)) else None
+
+    # Extract transcript snippet from gems.md
+    idx = text.find(f'### [{ts}]')
+    transcript = ''
+    if idx >= 0:
+        block = text[idx:idx+1000]
+        lines = block.split('\n')
+        for line in lines[3:]:
+            if line.startswith('### [') or line.startswith('---'):
+                break
+            if line.strip() and not line.startswith('**'):
+                transcript += line.strip() + ' '
+        transcript = transcript.strip()[:300]
+
+    gems.append({
+        'id': gem_id,
+        'timestamp': ts,
+        'start_s': max(0, secs - 5),
+        'end_s': secs + 5,
+        'score': int(score),
+        'type': gtype,
+        'title': title.strip(),
+        'signals': {
+            'volume_spike': volume_spike,
+        },
+        'transcript': transcript,
+        'clip_path': clip_path,
+        'frame_path': frame_path
+    })
+
+manifest = {
+    'version': 1,
+    'vod_url': '',
+    'streamer': '$STREAMER',
+    'date': '$DATE',
+    'duration_s': int('$DURATION' or 0),
+    'gem_count': len(gems),
+    'gems': sorted(gems, key=lambda g: -g['score'])
+}
+
+with open(manifest_path, 'w') as f:
+    json.dump(manifest, f, indent=2, ensure_ascii=False)
+
+print(f'  Manifest: {len(gems)} gems written to gems-manifest.json')
+" 2>/dev/null
+
+elif [ "$JSON_OUTPUT" = true ] && [ -f "$MANIFEST_FILE" ]; then
+    log "Pass 5: Manifest already exists, skipping"
+elif [ "$JSON_OUTPUT" = true ]; then
+    log "Pass 5: No gems.md yet — manifest generation deferred"
+fi
 
 # ============================================================
 # CLEANUP: Remove segment WAVs (regeneratable from full-audio.wav)
 # ============================================================
 
 SEGMENT_SIZE=$(du -sh "$OUT_DIR"/segment-*.wav 2>/dev/null | tail -1 | cut -f1 || echo "0")
-SEGMENT_COUNT_FILES=$(ls "$OUT_DIR"/segment-*.wav 2>/dev/null | wc -l | tr -d ' ')
+SEGMENT_COUNT_FILES=$(find "$OUT_DIR" -maxdepth 1 -name "segment-*.wav" 2>/dev/null | wc -l | tr -d ' ')
 if [ "$SEGMENT_COUNT_FILES" -gt 0 ]; then
     log "Cleanup: Removing $SEGMENT_COUNT_FILES segment WAVs ($SEGMENT_SIZE total)"
     rm -f "$OUT_DIR"/segment-*.wav
