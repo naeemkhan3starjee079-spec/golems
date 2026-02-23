@@ -28,7 +28,7 @@ Ralph is an autonomous coding loop that executes PRD stories. The user runs `ral
 
 ## Voice Sessions
 
-Ralph PRD stories can use voice-sessions for QA and review. See `.claude/rules/skills-voice-sessions.md`.
+Ralph PRD stories can use voice-sessions for QA and review. See `.claude/rules/voicelayer-usage.md`.
 
 ## JQ Escaping Bug Workaround
 
