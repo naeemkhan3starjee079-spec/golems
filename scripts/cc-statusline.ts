@@ -3,10 +3,10 @@
  * Lightweight Claude Code status line — replaces ccstatusline (60K lines, 85% CPU)
  *
  * Reads JSON from stdin (piped by Claude Code), formats two status lines.
- * No React, no Ink, no deps. ~120 lines.
+ * No React, no Ink, no deps. ~200 lines.
  *
  * Output (with ANSI colors):
- *   ⎇ master | (+1786,-179)
+ *   ⎇ master | (+1786,-179) | 🔧 3 services
  *   🤖 Opus 4.6 | 💰 $3.49 | ⏱️  17m | 📦 4hr 3m | 🧠 64.8%
  *
  * Install: Update ~/.claude/settings.json statusLine.command
@@ -71,6 +71,43 @@ try {
   gitBranch = Bun.spawnSync(["git", "branch", "--show-current"], { cwd }).stdout.toString().trim() || "detached";
 } catch {}
 
+// --- Active launchd services count ---
+let activeServices = 0;
+try {
+  const result = Bun.spawnSync(["launchctl", "list"], { cwd: "/" });
+  const output = result.stdout.toString();
+  activeServices = (output.match(/com\.golems\.|com\.golemszikaron\./g) || []).length;
+} catch {}
+
+// --- Night Shift result (from state file) ---
+let nightShiftResult = "";
+try {
+  const stateFile = Bun.file(`${process.env.HOME}/.golems-zikaron/state.json`);
+  if (await stateFile.exists()) {
+    const state = JSON.parse(await stateFile.text());
+    if (state.nightShift?.lastResult) {
+      const ns = state.nightShift;
+      const ageMs = Date.now() - new Date(ns.lastRun || 0).getTime();
+      if (ageMs < 24 * 60 * 60 * 1000) { // Only show if from today
+        nightShiftResult = ns.lastResult === "success" ? "✅" : "❌";
+      }
+    }
+  }
+} catch {}
+
+// --- BrainLayer enrichment progress ---
+let enrichmentPct = "";
+try {
+  const result = Bun.spawnSync(
+    ["python3", "-c", "import sqlite3; db=sqlite3.connect('" + process.env.HOME + "/.local/share/brainlayer/brainlayer.db'); total=db.execute('SELECT COUNT(*) FROM chunks').fetchone()[0]; enriched=db.execute(\"SELECT COUNT(*) FROM chunks WHERE summary IS NOT NULL\").fetchone()[0]; print(f'{enriched/total*100:.0f}' if total>0 else '0')"],
+    { cwd: "/", timeout: 3000 }
+  );
+  const pct = result.stdout.toString().trim();
+  if (pct && pct !== "0") {
+    enrichmentPct = `${pct}%`;
+  }
+} catch {}
+
 // --- Context % from transcript ---
 let contextPct = "";
 let contextColor = c.green;
@@ -96,7 +133,6 @@ if (status.transcript_path) {
             const cacheCreate = usage.cache_creation_input_tokens || 0;
             const contextTokens = inputTokens + cacheRead + cacheCreate;
 
-            const modelId = typeof status.model === "object" ? status.model.id : status.model;
             const maxCtx = 200000; // all current Claude models
 
             const pct = (contextTokens / maxCtx) * 100;
@@ -125,7 +161,16 @@ if (status.transcript_path) {
 const linesStr = added || removed
   ? ` ${c.gray}|${c.reset} ${c.green}+${added}${c.reset}${c.gray},${c.reset}${c.red}-${removed}${c.reset}`
   : "";
-const line1 = `${c.cyan}⎇${c.reset} ${c.bold}${gitBranch}${c.reset}${linesStr}`;
+
+const servicesStr = activeServices > 0
+  ? ` ${c.gray}|${c.reset} ${c.green}🔧 ${activeServices}${c.reset}`
+  : "";
+
+const nightStr = nightShiftResult
+  ? ` ${c.gray}|${c.reset} 🌙${nightShiftResult}`
+  : "";
+
+const line1 = `${c.cyan}⎇${c.reset} ${c.bold}${gitBranch}${c.reset}${linesStr}${servicesStr}${nightStr}`;
 
 const sep = ` ${c.gray}|${c.reset} `;
 const parts = [
@@ -135,6 +180,8 @@ const parts = [
 ];
 if (blockStr) parts.push(`${c.yellow}📦 ${blockStr}${c.reset}`);
 if (contextPct) parts.push(`${contextColor}🧠 ${contextPct}${c.reset}`);
+if (enrichmentPct) parts.push(`${c.cyan}📚 ${enrichmentPct}${c.reset}`);
+
 const line2 = parts.join(sep);
 
 process.stdout.write(`${line1}\n${line2}\n`);

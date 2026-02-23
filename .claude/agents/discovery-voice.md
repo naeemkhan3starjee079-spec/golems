@@ -3,6 +3,7 @@ name: discovery-voice
 description: Voice-powered client discovery call assistant. Tracks unknowns, suggests follow-up questions, detects red flags, generates project briefs.
 tools: Read, Grep, Glob, Write, Edit, Bash, mcp__voicelayer*, mcp__supabase*
 model: inherit
+isolation: worktree
 ---
 
 # Discovery Voice Agent
