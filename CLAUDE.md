@@ -162,3 +162,88 @@ Based on Zikaron analysis of owner's patterns:
 - **Tone:** Friendly, sometimes playful
 
 See `packages/claude/SOUL.md` for bot persona.
+
+---
+
+## Learned Mistakes
+
+
+### 2026-02-23 — PR #242
+**Source:** greptile-apps[bot] on PR #242
+**PR:** feat: Phase 17 — PR auto-learning GitHub Action
+
+` tags to automatically extract learnings and create PRs updating CLAUDE.md files. The workflow uses `issue_comment` events, parses HIGH/bug/security keywords from CodeRabbit comments, determines target package CLAUDE.md files, and creates a new PR for human approval before merge.
+
+Major changes:
+- Triggers on `issue_comment` with filters for `coderabbitai` user + severity keywords or `@claude` tags
+- Extracts 15 lines of context from CodeRabbit comments containing HIGH/bug/security patterns
+- Determines target CLAUDE.md based on PR title pattern matching (root fallback)
+- Appends formatted learning entry with date, source, and content
+- Creates new branch and PR with `auto-learning` label
+
+Issues found:
+- **Package detection logic** only checks PR title, misses actual changed files, excludes `golems-tui` and `autonomous` packages
+- **Shell comparison bug** on line 164 will never match (compares against wrong value)
+- **Heredoc formatting** may have issues with multiline content expansion
+- **No duplicate check** before creating PR (could create empty commits)
+- **Shallow checkout** prevents inspecting PR diff for better package detection
+</details>
+
+
+<h3>Confidence Score: 3/5</h3>
+
+- This PR is moderately safe to merge but has several logic bugs that will prevent it from working correctly in production.
+- The workflow has sound architecture (creates PRs rather than direct commits, requires human approval) but contains multiple implementation bugs: the shell comparison on line 164 will never match the actual source value, the package detection misses several packages and doesn't check actual file changes, the heredoc may have expansion issues, and there's no check for duplicate/empty commits. These are not security issues but will cause runtime failures or incorrect behavior.
+- `.github/workflows/claude-learning.yml` requires fixes to the shell comparison logic, package detection, and commit validation before this will work correctly in production.
+
+<details open><summary><h3>Important Files Changed</h3></summary>
+
+
+
+
+| Filename | Overview |
+|----------|----------|
+| .github/workflows/claude-learning.yml | New GitHub Action to auto-extract learnings from CodeRabbit/team comments and create PRs to update CLAUDE.md files. Has logic bug in package detection and potential heredoc issues. |
+
+</details>
+
+
+</details>
+
+
+<h3>Flowchart</h3>
+
+```mermaid
+%%{init: {'theme': 'neutral'}}%%
+flowchart TD
+    A[PR Comment Created] --> B{Is PR comment?}
+    B -->|No| Z[Skip]
+    B -->|Yes| C{CodeRabbit user?}
+    C -->|Yes| D{Contains HIGH/bug/security?}
+    C -->|No| E{Contains @claude tag?}
+    D -->|Yes| F[Extract 15 lines context]
+    D -->|No| E
+    E -->|Yes| G[Extract content after @claude]
+    E -->|No| Z
+    F --> H[Match package from PR title]
+    G --> H
+    H --> I{Package found?}
+    I -->|Yes| J[Target: packages/PKG/CLAUDE.md]
+    I -->|No| K[Target: root CLAUDE.md]
+    J --> L{Target file exists?}
+    K --> L
+    L -->|No| M[Fallback to root CLAUDE.md]
+    L -->|Yes| N[Check for Learned Mistakes section]
+    M --> N
+    N -->|Missing| O[Create section]
+    N -->|Exists| P[Append learning entry]
+    O --> P
+    P --> Q[Create new branch]
+    Q --> R[Commit changes]
+    R --> S[Push to remote]
+    S --> T[Create PR with auto-learning label]
+    T --> U[Human review required]
+```
+
+<sub>Last reviewed commit: da7f1de</sub>
+
