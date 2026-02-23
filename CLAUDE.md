@@ -109,23 +109,22 @@ golems wizard          # Guided setup
 | **sophtron** | `@sophtron/sophtron-mcp-server` | Bank account access — transactions, identity |
 | **voicelayer** | `bun run ~/Gits/voicelayer/src/mcp-server.ts` | Voice I/O layer — external repo ([VoiceLayer](https://github.com/EtanHey/voicelayer)) |
 
-### BrainLayer MCP (14 Tools)
+### BrainLayer MCP (3 Tools)
 
 [BrainLayer](https://github.com/EtanHey/brainlayer) provides persistent memory across Claude Code sessions:
-- **`brainlayer_search`**: Search past conversations (with `project`, `content_type`, `source`, `tag`, `intent`, `importance_min` filters)
-- **`brainlayer_context`**: Get surrounding chunks for a search result
-- **`brainlayer_stats`**: Knowledge base statistics
-- **`brainlayer_list_projects`**: List indexed projects
-- **`brainlayer_file_timeline`**: File interaction history across sessions
-- **`brainlayer_operations`**: Logical operation groups (read/edit/test cycles)
-- **`brainlayer_regression`**: What changed since a file last worked
-- **`brainlayer_plan_links`**: Session to plan/phase linkage
-- **`brainlayer_think`**: Task-aware context retrieval
-- **`brainlayer_recall`**: Proactive retrieval by file or topic
-- **`brainlayer_sessions`**: Recent sessions with metadata
-- **`brainlayer_current_context`**: Current working context (lightweight)
-- **`brainlayer_session_summary`**: Enriched session summary (decisions, learnings, quality)
-- **`brainlayer_store`**: Persistently store memories (ideas, decisions, learnings)
+- **`brain_search`**: Unified search — pass query, file_path, chunk_id, or filters. Auto-routes to the right view.
+- **`brain_store`**: Save decisions, learnings, mistakes, ideas. Type and importance auto-detected from content.
+- **`brain_recall`**: Current context, sessions, operations, plan links. Mode defaults to "context".
+
+All 14 old `brainlayer_*` tool names still work as backward-compat aliases.
+
+### VoiceLayer MCP (2 Tools)
+
+[VoiceLayer](https://github.com/EtanHey/voicelayer) provides voice I/O:
+- **`voice_speak`**: NON-BLOCKING TTS with auto-mode detection (announce/brief/consult/think). Also handles replay and toggle.
+- **`voice_ask`**: BLOCKING — speaks question, records mic, returns transcription via Silero VAD + whisper.cpp.
+
+All 9 old `qa_voice_*` tool names still work as backward-compat aliases.
 
 ---
 

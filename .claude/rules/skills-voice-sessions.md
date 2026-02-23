@@ -1,60 +1,59 @@
-# Voice Sessions Rules
+# VoiceLayer Integration
 
-> Voice-powered sessions via VoiceLayer MCP ([github.com/EtanHey/voicelayer](https://github.com/EtanHey/voicelayer)). 5 modes (announce, brief, consult, converse, think) for drilling, coaching, QA, and insights.
+> Voice I/O for Claude Code — 2 tools. [github.com/EtanHey/voicelayer](https://github.com/EtanHey/voicelayer)
 
-## Voice Modes
+## Tools (2)
 
-| Mode | MCP Tool | What |
-|------|----------|------|
-| **announce** | `qa_voice_announce` | Fire-and-forget TTS (status updates, narration) |
-| **brief** | `qa_voice_brief` | One-way explanation (reading back summaries, slower rate) |
-| **consult** | `qa_voice_consult` | Checkpoint — speak + hint user may respond (non-blocking) |
-| **converse** | `qa_voice_converse` | Full Q&A — speak question, wait for voice response (blocking) |
-| **think** | `qa_voice_think` | Silent notes to thinking log (insights, red flags) |
+| Tool | What | Key Params |
+|------|------|------------|
+| `voice_speak` | Speak or log silently. NON-BLOCKING. | `message` (required), `mode` (auto-detected), `voice`, `rate` |
+| `voice_ask` | Speak question + record voice answer. BLOCKING. | `message` (required), `timeout_seconds`, `silence_mode` |
 
-### Aliases
+All 9 old `qa_voice_*` tool names still work as backward-compat aliases.
 
-| Alias | Maps To | Use |
-|-------|---------|-----|
-| `qa_voice_say` | `qa_voice_announce` | Short form for announce |
-| `qa_voice_ask` | `qa_voice_converse` | Short form for converse |
+## voice_speak Auto-Detection
 
-## Workflows (6)
+Mode is auto-detected from message content when omitted:
+- Starts with `insight:`, `note:`, `TODO:` → **think** (silent log)
+- Ends with `?`, contains "about to", "should I" → **consult** (checkpoint)
+- Length > 280 chars → **brief** (slower TTS for long content)
+- Default → **announce** (fast status update)
 
-| Workflow | When |
-|----------|------|
-| **debrief** | After interview/meeting — structured recap |
-| **practice** | Presenting/pitching — rehearsal with feedback |
-| **qa** | Testing a website — voice-guided QA |
-| **quick** | Fast capture — text-only, no voice |
-| **review** | Review past sessions — summary + insights |
-| **code** | Live code review (future stub) |
+Override with `mode` param: `voice_speak("hello", mode="brief")`
+
+## voice_speak Special Modes
+
+- **Toggle:** `voice_speak("", enabled=false)` → disable voice. `enabled=true` → re-enable
+- **Replay:** `voice_speak("", replay_index=0)` → replay most recent audio
+
+## Voice Selection
+
+Pass `voice` param to change TTS voice:
+- Profile name: `voice_speak("hello", voice="andrew")` → resolves from `~/.voicelayer/voices.json`
+- Raw edge-tts: `voice_speak("hello", voice="en-US-BrianNeural")`
+- Default: jenny (en-US-JennyNeural)
+
+## When to Use
+
+- **Status update:** `voice_speak("Starting phase 3...")` → announce (default)
+- **Explain a decision:** `voice_speak("I chose X because...")` → brief (auto, >280 chars)
+- **Checkpoint:** `voice_speak("About to commit. Want to review?")` → consult (auto, has "about to")
+- **Silent note:** `voice_speak("insight: found a pattern in the auth code")` → think (auto)
+- **Ask for input:** `voice_ask("Which database should we use?")` → blocks for answer
 
 ## Session Booking
 
-- Sessions lock mic access per-session (lockfile-based)
+- `voice_ask` auto-books mic on first call
 - Other sessions see "line busy" and fall back to text
-- `converse` mode auto-books on first call
-- User-controlled stop is PRIMARY — silence detection is fallback only
+- User-controlled stop: `touch /tmp/voicelayer-stop`
+- Silero VAD for smart silence detection
 
-## Text Fallback
+## Toggle Safety
 
-All workflows work with typed answers if voice isn't available. The skill detects voice availability and adapts.
+PreToolUse hook blocks all voice tools when `/tmp/.claude_voice_disabled` exists.
+Only `qa_voice_toggle` is allowed through to re-enable.
 
-## Output
+## STT Backend
 
-- Structured Obsidian notes (via `$OBSIDIAN_VAULT` or obsidian skill)
-- Think log: markdown file with timestamped insights, categorized as insight/question/red-flag/checklist-update
-
-## STT Backend (Local-First)
-
-**Primary:** whisper.cpp via `whisper-cli` binary (free, local, ~200-400ms on Apple Silicon)
-**Fallback:** Wispr Flow cloud API (requires `QA_VOICE_WISPR_KEY`)
-
-**Setup:** `brew install whisper-cpp` + download model to `~/.cache/whisper/`
-**Note:** v1.8.3+ renamed binary from `whisper-cpp` to `whisper-cli`. VoiceLayer detects both.
-
-## MCP Server
-
-**Name:** `voicelayer` | **Repo:** [github.com/EtanHey/voicelayer](https://github.com/EtanHey/voicelayer) (local clone: `~/Gits/voicelayer`)
-**Tools (7):** `qa_voice_announce`, `qa_voice_brief`, `qa_voice_consult`, `qa_voice_converse`, `qa_voice_think`, `qa_voice_say` (alias), `qa_voice_ask` (alias)
+**Primary:** whisper.cpp via `whisper-cli` (local, ~200-400ms)
+**Fallback:** Wispr Flow cloud API (`QA_VOICE_WISPR_KEY`)

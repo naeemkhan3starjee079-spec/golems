@@ -6,14 +6,14 @@
 
 | Server | Command | Tools | Package/Source |
 |--------|---------|-------|----------------|
-| `brainlayer` | `brainlayer-mcp` | 14 | External repo (`~/Gits/brainlayer`) |
+| `brainlayer` | `brainlayer-mcp` | 3 (+14 aliases) | External repo (`~/Gits/brainlayer`) |
 | `golems-email` | `bun run packages/shared/src/email/mcp-server.ts` | 11 | `@golems/shared` |
 | `golems-jobs` | `bun run packages/jobs/src/mcp-server.ts` | 12 | `@golems/jobs` |
 | `golems-glm` | `bun run packages/shared/src/glm/mcp-server.ts` | 2 | `@golems/shared` |
 | `supabase` | `@supabase/mcp-server-supabase` | 20+ | Third-party |
 | `exa` | `exa-mcp-server` | 3 | Third-party |
 | `sophtron` | `@sophtron/sophtron-mcp-server` | 6 | Third-party |
-| `voicelayer` | `bun run ~/Gits/voicelayer/src/mcp-server.ts` | 7 | External: [voicelayer](https://github.com/EtanHey/voicelayer) |
+| `voicelayer` | `bun run ~/Gits/voicelayer/src/mcp-server.ts` | 2 (+9 aliases) | External: [voicelayer](https://github.com/EtanHey/voicelayer) |
 | `playwright` | `@playwright/mcp@latest` | 15+ | Third-party |
 | `kernel` | `mcp-remote https://mcp.onkernel.com/mcp` | 16 | Third-party ([onkernel.com](https://kernel.sh)) |
 

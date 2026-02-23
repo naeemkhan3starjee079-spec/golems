@@ -1,72 +1,44 @@
 # BrainLayer Integration
 
-> Memory layer for Claude Code — external repo, 14 MCP tools, 268K+ indexed chunks.
+> Memory layer for Claude Code — 3 tools, 268K+ indexed chunks. [github.com/EtanHey/brainlayer](https://github.com/EtanHey/brainlayer)
 
-## External Repo
+## Tools (3)
 
-**Repo:** [github.com/EtanHey/brainlayer](https://github.com/EtanHey/brainlayer) (`~/Gits/brainlayer/`)
-**Install:** `pip install brainlayer` or `pip install git+https://github.com/EtanHey/brainlayer.git`
-**Formerly:** Zikaron (renamed Feb 2026)
+| Tool | What | Key Params |
+|------|------|------------|
+| `brain_search` | Find past decisions, code, patterns | `query` (required), `project`, `file_path`, `chunk_id`, `tag`, `importance_min` |
+| `brain_store` | Save decisions, learnings, mistakes, ideas | `content` (required), `type` (auto-detected), `importance` (auto-scored) |
+| `brain_recall` | Current context, sessions, operations | `mode` (default: context), `session_id`, `plan_name` |
 
-## MCP Server
+All 14 old `brainlayer_*` tool names still work as backward-compat aliases.
 
-**Name:** `brainlayer` | **Command:** `brainlayer-mcp`
+## When to Use
 
-### Tools (14)
+- **Start of task:** `brain_search("topic")` — retrieve past decisions and patterns before starting
+- **Made a decision:** `brain_store("Chose X because Y")` — type auto-detected as "decision"
+- **Hit a bug:** `brain_store("Bug: X caused by Y, fixed with Z")` — type auto-detected as "mistake"
+- **Learned something:** `brain_store("TIL: X works by Y")` — type auto-detected as "learning"
+- **File context:** `brain_search(file_path="auth.ts")` — auto-routes to file timeline
+- **What am I working on:** `brain_recall()` — defaults to current context mode
+- **Expand a result:** `brain_search(chunk_id="abc123")` — auto-routes to context view
 
-| Tool | Purpose |
-|------|---------|
-| `brainlayer_search` | Semantic search (project, content_type, tag, intent, importance filters) |
-| `brainlayer_context` | Surrounding chunks for a search result |
-| `brainlayer_stats` | Index statistics |
-| `brainlayer_list_projects` | Indexed projects |
-| `brainlayer_file_timeline` | File interaction history across sessions |
-| `brainlayer_operations` | Logical operation groups (read/edit/test cycles) |
-| `brainlayer_regression` | What changed since a file last worked |
-| `brainlayer_plan_links` | Session to plan/phase linkage |
-| `brainlayer_think` | Task-aware context retrieval |
-| `brainlayer_recall` | Proactive retrieval by file or topic |
-| `brainlayer_sessions` | Recent sessions with metadata |
-| `brainlayer_current_context` | Current working context (lightweight) |
-| `brainlayer_session_summary` | Enriched session summary (decisions, learnings, quality score) |
-| `brainlayer_store` | Persistently store memories (ideas, decisions, learnings, mistakes) |
+## Auto-Routing in brain_search
+
+Pass different params → different views. No need to pick the right sub-tool:
+- `chunk_id` → context expansion
+- `file_path` + no query → file timeline
+- `file_path` + regression flag → regression detection
+- `query` with session/plan keywords → recall modes
+- `query` (default) → semantic search
 
 ## Storage Paths
 
-| Path | What | Notes |
-|------|------|-------|
-| `~/.local/share/brainlayer/brainlayer.db` | Main database (~1.4GB) | sqlite-vec + bge-large-en-v1.5 (1024 dims) |
-| `~/.local/share/brainlayer/prompts/` | Deduplicated system prompts | |
-| `~/.golems-zikaron/` | Golems runtime state (NOT BrainLayer) | state.json, event-log.json — legacy name, still valid |
-| `/tmp/brainlayer.sock` | Daemon socket | FastAPI daemon, keeps model hot |
+| Path | What |
+|------|------|
+| `~/.local/share/brainlayer/brainlayer.db` | Main database (~1.4GB) |
+| `~/.local/share/brainlayer/prompts/` | Deduplicated system prompts |
+| `~/.golems-zikaron/` | Golems runtime state (NOT BrainLayer) |
 
-## Enrichment
+## External Repo
 
-- **Backend:** Local LLM (Ollama GLM-4.7-Flash or MLX)
-- **What:** Generates summary, tags, importance (1-10), intent classification per chunk
-- **CLI:** `brainlayer enrich` (resumable, ~13s/chunk with GLM)
-- **Status:** ~53% enriched (268K total chunks)
-- **Launchd:** `com.golems.enrichment.plist` (background)
-
-## Launchd Services
-
-| Plist | Purpose |
-|-------|---------|
-| `com.golems.auto-index.plist` | Auto-index new conversations |
-| `com.golems.enrichment.plist` | Background enrichment pipeline |
-
-## Common Patterns
-
-```python
-# Search past decisions
-mcp__brainlayer__brainlayer_search(query="topic", project="-Users-etanheyman-Gits-golems")
-
-# Get context for a search result
-mcp__brainlayer__brainlayer_context(chunk_id="<id>")
-
-# File history
-mcp__brainlayer__brainlayer_file_timeline(file_path="telegram-bot.ts")
-
-# Task-aware recall
-mcp__brainlayer__brainlayer_think(context="implementing JWT auth")
-```
+**Repo:** `~/Gits/brainlayer/` | **Install:** `pip install brainlayer` | **MCP:** `brainlayer-mcp`
