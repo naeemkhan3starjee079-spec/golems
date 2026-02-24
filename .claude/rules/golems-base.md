@@ -1,80 +1,32 @@
 # Golems Base Rules
 
-> Auto-loaded for all Claude sessions in the golems monorepo.
-
 ## AIDEV-NOTE Guidelines
 
-Use `AIDEV-NOTE:`, `AIDEV-TODO:`, or `AIDEV-QUESTION:` (all-caps prefix) for comments aimed at AI and developers.
-
-- **Before scanning files**: Grep for existing `AIDEV-*` anchors in relevant subdirectories
-- **Update relevant anchors** when modifying associated code
-- **Never remove** AIDEV-NOTEs without explicit human instruction
-
-```typescript
-// AIDEV-NOTE: This function handles X because of Y constraint
-// AIDEV-TODO: Refactor when Z is implemented
-// AIDEV-QUESTION: Should we handle edge case W?
-```
+Use `AIDEV-NOTE:`, `AIDEV-TODO:`, or `AIDEV-QUESTION:` (all-caps prefix) for AI-facing comments.
+- Grep for existing `AIDEV-*` anchors before scanning files
+- Update anchors when modifying associated code
+- Never remove AIDEV-NOTEs without explicit human instruction
 
 ## SVG and Icon Rules
 
-- **NEVER make SVGs** - use `lucide-react` (web) or `lucide-react-native` (mobile)
-- Only create custom SVGs if 100% certain you need to
-- **NEVER use**: MaterialCommunityIcons, @expo/vector-icons, or other icon libraries
+- **NEVER make SVGs** — use `lucide-react`
+- **NEVER use** MaterialCommunityIcons or other icon libraries
 
 ## TypeScript Safety
 
-**NEVER USE NON-NULL ASSERTIONS WITHOUT VALIDATION**
-
-```typescript
-// NEVER: const key = process.env.API_KEY!;
-// ALWAYS:
-const key = process.env.API_KEY;
-if (!key) throw new Error('API_KEY environment variable is required');
-```
-
-- Always validate external data (env vars, API responses, user input)
-- Use TypeScript strict mode, never bypass with assertions
-- Prefer explicit error handling over assumptions
+- **NEVER** use non-null assertions (`!`) without validation — always check + throw
+- Validate external data (env vars, API responses, user input)
 
 ## Spawning Other Claudes
 
-**Don't spawn raw `claude` CLI from within Claude sessions.**
-- Use proper scripts (night-shift.ts, ralph.zsh) that handle lifecycle
+- **Don't spawn raw `claude` CLI** — use proper scripts (night-shift.ts, ralph.zsh)
+- Worktree setup: `ln -s ../node_modules node_modules`, `cp ../.env .env`, verify NOT on master/main
 
-**Worktree setup for spawned Claudes:**
-- Link node_modules: `ln -s ../node_modules node_modules`
-- Copy .env: `cp ../.env .env`
-- Verify branch: `git branch` (must NOT be master/main)
-
-## Documentation Fetching
-
-**Always fetch real documentation — never rely on memory or approximations.**
-
-- Before using any function/method you're not 100% certain about
-- When implementing features with external dependencies
-- When debugging issues involving library behavior
-- Always fetch docs for the specific version in package.json
-- Never synthesize or guess API signatures
-
-## Formatting Rules
+## Formatting
 
 - **NEVER format the whole project** unless explicitly asked
-- Do not make changes that are solely formatting changes
 - Only format code you are actively modifying
-
-## Thinking Before Doing
-
-When presented with any task:
-1. **Understand first** — what's the actual problem? Check the codebase for existing patterns
-2. **Explore options** — think about multiple approaches before choosing one
-3. **Be honest** — if unsure, investigate rather than guessing
-4. **Avoid anti-patterns**: jumping to code without understanding, adding deps without checking what exists
 
 ## Architecture Decisions
 
-When making architecture decisions in this repo:
-1. Document the decision in `docs/architecture/` as a markdown file
-2. Include: context, options considered, decision, rationale
-3. These get indexed into BrainLayer for future retrieval
-4. Search past decisions: `mcp__brainlayer__brain_search(query="topic", project="-Users-etanheyman-Gits-golems")`
+Document in `docs/architecture/` as Markdown. Search past decisions via BrainLayer: `brain_search(query="topic")`.

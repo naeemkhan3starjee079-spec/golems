@@ -1,10 +1,10 @@
 ---
 name: notify
-description: Send Telegram notification to user when task completes
+description: Use when sending Telegram notifications after task completion, blockers, or checkpoints. Covers notify, alert, ping user.
 ---
 
 ```bash
-curl -s -X POST http://localhost:3847/notify -H "Content-Type: application/json" -d '{"title":"TITLE","body":"BODY","priority":"default"}'
+curl -s -X POST http://localhost:3847/notify -H "Content-Type: application/json" -d '{"title":"TITLE","body":"BODY","source":"claude","priority":"default"}'
 ```
 
 Use after significant tasks. Keep title 2-4 words, body 1 sentence max.
