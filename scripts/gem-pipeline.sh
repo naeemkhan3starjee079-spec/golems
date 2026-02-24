@@ -221,12 +221,14 @@ if step_done "process" && [ -f "$OUTPUT_DIR/transcript.md" ]; then
 else
     log "Step 3: Running stream processing pipeline..."
 
-    # process-stream.sh expects: <video-file> [chat-log]
-    if [ -n "$CHAT_ARG" ]; then
-        "$SCRIPT_DIR/process-stream.sh" "$VIDEO_FILE" "$CHAT_ARG"
-    else
-        "$SCRIPT_DIR/process-stream.sh" "$VIDEO_FILE"
-    fi
+    # process-stream.sh expects: <video-file> [chat-log] [--json-output] [--chat-json]
+    STREAM_ARGS=("$VIDEO_FILE")
+    [ -n "$CHAT_ARG" ] && STREAM_ARGS+=("$CHAT_ARG")
+    STREAM_ARGS+=("--json-output")
+    # If chat was from fetch-chat.sh (JSON format), pass --chat-json
+    [[ "$CHAT_ARG" == *.json ]] && STREAM_ARGS+=("--chat-json")
+
+    "$SCRIPT_DIR/process-stream.sh" "${STREAM_ARGS[@]}"
 
     mark_done "process"
 fi
@@ -321,10 +323,47 @@ else
 fi
 
 # ============================================================
-# STEP 5: CLEANUP
+# STEP 5: COMPILE HIGHLIGHT REEL (if clips exist)
 # ============================================================
 
-log "Step 5: Cleaning up intermediates..."
+REEL_FILE="$OUTPUT_DIR/highlight-reel.mp4"
+COMPILE_SCRIPT="$SCRIPT_DIR/compile-gems.sh"
+
+if [ -x "$COMPILE_SCRIPT" ] && [ -d "$OUTPUT_DIR/clips" ]; then
+    CLIP_COUNT=$(find "$OUTPUT_DIR/clips" -name "*.mp4" 2>/dev/null | wc -l | tr -d ' ')
+    if [ "$CLIP_COUNT" -gt 0 ] && [ ! -f "$REEL_FILE" ]; then
+        log "Step 5: Compiling $CLIP_COUNT clips into highlight reel..."
+        "$COMPILE_SCRIPT" "$OUTPUT_DIR" "$REEL_FILE" || log "  Warning: compilation failed (non-fatal)"
+    elif [ -f "$REEL_FILE" ]; then
+        log "Step 5: Highlight reel already exists, skipping"
+    else
+        log "Step 5: No clips to compile"
+    fi
+else
+    log "Step 5: No compile script or clips directory"
+fi
+
+# ============================================================
+# STEP 6: INGEST INTO BRAINLAYER
+# ============================================================
+
+INGEST_SCRIPT="$SCRIPT_DIR/ingest-gems.sh"
+INGESTED_MARKER="$OUTPUT_DIR/.brainlayer-ingested"
+
+if [ -x "$INGEST_SCRIPT" ] && [ -f "$MANIFEST_FILE" ] && [ ! -f "$INGESTED_MARKER" ]; then
+    log "Step 6: Ingesting gems into BrainLayer..."
+    "$INGEST_SCRIPT" "$OUTPUT_DIR" || log "  Warning: ingestion failed (non-fatal)"
+elif [ -f "$INGESTED_MARKER" ]; then
+    log "Step 6: Already ingested into BrainLayer, skipping"
+elif [ ! -f "$MANIFEST_FILE" ]; then
+    log "Step 6: No manifest yet — BrainLayer ingestion deferred"
+fi
+
+# ============================================================
+# STEP 7: CLEANUP
+# ============================================================
+
+log "Step 7: Cleaning up intermediates..."
 
 # Remove segment WAVs (already done by process-stream.sh, but double-check)
 SEGMENT_COUNT=$(find "$OUTPUT_DIR" -maxdepth 1 -name "segment-*.wav" 2>/dev/null | wc -l | tr -d ' ')
@@ -365,7 +404,9 @@ log "Output: $OUTPUT_DIR"
 log "Total disk: $(du -sh "$OUTPUT_DIR" | cut -f1)"
 log ""
 log "Key files:"
-[ -f "$OUTPUT_DIR/gems-manifest.json" ] && log "  gems-manifest.json — structured gem data (for Phase 12)"
+[ -f "$OUTPUT_DIR/gems-manifest.json" ] && log "  gems-manifest.json — structured gem data"
+[ -f "$OUTPUT_DIR/highlight-reel.mp4" ] && log "  highlight-reel.mp4 — compiled highlight reel"
+[ -f "$OUTPUT_DIR/thumbnail.jpg" ] && log "  thumbnail.jpg — reel thumbnail"
 [ -f "$OUTPUT_DIR/gems.md" ] && log "  gems.md — human-readable gem list"
 [ -f "$OUTPUT_DIR/transcript.md" ] && log "  transcript.md — full transcript"
 [ -f "$OUTPUT_DIR/metadata.json" ] && log "  metadata.json — VOD metadata"

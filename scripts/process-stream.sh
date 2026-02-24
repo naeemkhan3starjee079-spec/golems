@@ -329,20 +329,174 @@ echo "## Frames Extracted" >> "$SIGNALS_FILE"
 ls "$OUT_DIR/frames/" >> "$SIGNALS_FILE" 2>/dev/null || echo "None" >> "$SIGNALS_FILE"
 
 log "  Combined signals written to $SIGNALS_FILE"
-log "  Next: Run scoring manually or via Gemini CLI"
-log ""
-log "  Manual scoring:"
-log "    Read $SIGNALS_FILE + view frames in $OUT_DIR/frames/"
-log "    Write gems to $OUT_DIR/gems.md"
-log ""
-log "  After scoring, extract clips for each gem:"
-log "    ffmpeg -ss \$((\$TIMESTAMP - 5)) -i $VIDEO -t 10 -c:v libx264 -preset fast -crf 28 -c:a aac -b:a 64k clip.mp4"
+
+# --- 3b: Auto-score with Gemini ---
+source "$HOME/Gits/golems/.env" 2>/dev/null || true
+GEMINI_KEY="${GOOGLE_GENERATIVE_AI_API_KEY:-}"
+
+GEMS_FILE="$OUT_DIR/gems.md"
+if [ -n "$GEMINI_KEY" ] && [ ! -f "$GEMS_FILE" ]; then
+    log "Pass 3b: Auto-scoring transcript segments with Gemini..."
+
+    # Build volume spike lookup and chat spike lookup
+    SPIKE_TIMES=""
+    if [ -f "$SPIKES_FILE" ]; then
+        SPIKE_TIMES=$(grep -v "^#" "$SPIKES_FILE" | awk '{print $1}' | tr '\n' ',' || echo "")
+    fi
+    CHAT_SPIKE_TIMES=""
+    if [ -f "$OUT_DIR/chat-velocity.txt" ]; then
+        CHAT_SPIKE_TIMES=$(grep "<<<" "$OUT_DIR/chat-velocity.txt" | awk '{print $1}' | tr '\n' ',' || echo "")
+    fi
+
+    SCORING_PROMPT="You are scoring Twitch/YouTube stream moments for a highlight reel.
+
+Score for ENTERTAINMENT VALUE — moments viewers would want to see in a highlights compilation:
+- Funny reactions, rage moments, hype moments
+- Hot takes, controversial opinions, rants
+- Impressive gameplay, clutch plays, fails
+- Unexpected events, surprise reveals, pranks
+- Wholesome interactions, viewer call-outs
+- Tech drama, industry gossip, juicy takes
+- Memes born, catchphrases created, inside jokes
+
+Signals boosting the score:
+- VOLUME_SPIKE=true means the streamer got loud here (excitement/rage)
+- CHAT_SPIKE=true means chat went wild here (hype/reaction)
+- Both together = almost certainly a gem
+
+Score 1-10 for entertainment value. 7+ = gem worthy. Reply ONLY with JSON:
+{\"score\": N, \"type\": \"reaction/take/gameplay/fail/hype/wholesome/drama/meme/rant/other\", \"title\": \"short catchy title (5-8 words)\"}"
+
+    echo "# Gems: ${STREAMER} (${DATE})" > "$GEMS_FILE"
+    echo "" >> "$GEMS_FILE"
+
+    CURRENT_HEADER=""
+    CURRENT_TEXT=""
+    CURRENT_TS_SECS=0
+    GEM_COUNT=0
+
+    score_segment() {
+        local header="$1"
+        local text="$2"
+        local ts_secs="$3"
+        [ -z "$text" ] && return
+
+        # Check if this timestamp has volume/chat spikes (within 10s window)
+        local vol_spike=false
+        local chat_spike=false
+        for spike_t in ${SPIKE_TIMES//,/ }; do
+            [ -z "$spike_t" ] && continue
+            local diff=$((ts_secs - spike_t))
+            [ $diff -lt 0 ] && diff=$((-diff))
+            [ $diff -le 10 ] && vol_spike=true && break
+        done
+        for spike_t in ${CHAT_SPIKE_TIMES//,/ }; do
+            [ -z "$spike_t" ] && continue
+            local diff=$((ts_secs - spike_t))
+            [ $diff -lt 0 ] && diff=$((-diff))
+            [ $diff -le 10 ] && chat_spike=true && break
+        done
+
+        local signal_text="VOLUME_SPIKE=${vol_spike}, CHAT_SPIKE=${chat_spike}"
+
+        # Build JSON payload safely via Python json.dumps (avoids injection from transcript text)
+        local clean_text
+        clean_text=$(echo "$text" | tr '\n' ' ' | LC_ALL=C tr -cd '[:print:] ' | cut -c1-2000)
+
+        RESULT=$(/Library/Frameworks/Python.framework/Versions/3.13/bin/python3 -c "
+import sys, json, urllib.request
+prompt = sys.argv[1]
+signals = sys.argv[2]
+segment = sys.argv[3]
+api_key = sys.argv[4]
+
+full_text = f'{prompt}\n\nSignals: {signals}\n\nSegment:\n{segment}'
+payload = json.dumps({
+    'contents': [{'parts': [{'text': full_text}]}],
+    'generationConfig': {'maxOutputTokens': 100}
+}).encode()
+
+req = urllib.request.Request(
+    f'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent',
+    data=payload,
+    headers={'Content-Type': 'application/json', 'x-goog-api-key': api_key}
+)
+try:
+    with urllib.request.urlopen(req, timeout=15) as resp:
+        r = json.load(resp)
+    text = r['candidates'][0]['content']['parts'][0]['text'].strip()
+    if '{' in text:
+        text = text[text.index('{'):text.rindex('}')+1]
+    d = json.loads(text)
+    print(f\"{d.get('score',0)}|{d.get('type','other')}|{d.get('title','untitled')}\")
+except:
+    print('5|other|api error')
+" "$SCORING_PROMPT" "$signal_text" "$clean_text" "$GEMINI_KEY" 2>/dev/null || echo "5|other|api error")
+
+        SCORE=$(echo "$RESULT" | cut -d'|' -f1)
+        TYPE=$(echo "$RESULT" | cut -d'|' -f2)
+        TITLE=$(echo "$RESULT" | cut -d'|' -f3-)
+
+        local signals=""
+        [ "$vol_spike" = true ] && signals="${signals}VOL "
+        [ "$chat_spike" = true ] && signals="${signals}CHAT "
+        log "  [$SCORE/10 $TYPE ${signals}] $(echo "$header" | sed 's/## //' | cut -c1-40)"
+
+        if [ "${SCORE:-0}" -ge 7 ] 2>/dev/null; then
+            GEM_COUNT=$((GEM_COUNT + 1))
+            # header is "## [MM:SS]" — strip "## " prefix to match downstream ### [MM:SS] format
+            local ts_tag="${header#\#\# }"
+            echo "### ${ts_tag} ${TITLE}" >> "$GEMS_FILE"
+            echo "**Score:** $SCORE/10 | **Type:** $TYPE" >> "$GEMS_FILE"
+            [ "$vol_spike" = true ] && echo "**Volume spike:** yes" >> "$GEMS_FILE"
+            [ "$chat_spike" = true ] && echo "**Chat spike:** yes" >> "$GEMS_FILE"
+            echo "" >> "$GEMS_FILE"
+            echo "**Transcript:** $(echo "$text" | head -3 | tr '\n' ' ' | cut -c1-300)" >> "$GEMS_FILE"
+            echo "" >> "$GEMS_FILE"
+            log "  ^ GEM!"
+        fi
+
+        # Rate limit: 15 req/min free tier
+        sleep 5
+    }
+
+    while IFS= read -r line; do
+        if [[ "$line" == "## ["* ]]; then
+            [ -n "$CURRENT_TEXT" ] && score_segment "$CURRENT_HEADER" "$CURRENT_TEXT" "$CURRENT_TS_SECS"
+            CURRENT_HEADER="$line"
+            CURRENT_TEXT=""
+            # Extract timestamp seconds from "## [MM:SS]"
+            TS_RAW=$(echo "$line" | sed 's/## \[\([0-9:]*\)\].*/\1/')
+            CURRENT_TS_SECS=0
+            for P in $(echo "$TS_RAW" | tr ':' ' '); do
+                CURRENT_TS_SECS=$(( CURRENT_TS_SECS * 60 + ${P#0} ))
+            done
+        elif [[ "$line" != "# Stream"* ]] && [[ -n "$line" ]]; then
+            CURRENT_TEXT="$CURRENT_TEXT $line"
+        fi
+    done < "$TRANSCRIPT"
+    [ -n "$CURRENT_TEXT" ] && score_segment "$CURRENT_HEADER" "$CURRENT_TEXT" "$CURRENT_TS_SECS"
+
+    echo "" >> "$GEMS_FILE"
+    echo "---" >> "$GEMS_FILE"
+    echo "Source: $VIDEO" >> "$GEMS_FILE"
+    echo "Gems found: $GEM_COUNT" >> "$GEMS_FILE"
+    echo "Scored: $(date)" >> "$GEMS_FILE"
+
+    log "  Auto-scoring complete: $GEM_COUNT gems found"
+
+elif [ -f "$GEMS_FILE" ]; then
+    log "Pass 3b: Gems file exists, skipping scoring"
+elif [ -z "$GEMINI_KEY" ]; then
+    log "Pass 3b: No GOOGLE_GENERATIVE_AI_API_KEY — skipping auto-scoring"
+    log "  Set the key in ~/Gits/golems/.env or score manually using signals-combined.md"
+fi
 
 # ============================================================
 # PASS 4: CLIP EXTRACTION (runs if gems.md already has timestamps)
 # ============================================================
 
-GEMS_FILE="$OUT_DIR/gems.md"
+# GEMS_FILE already set above
 if [ -f "$GEMS_FILE" ]; then
     log "Pass 4: Extracting clips for existing gems..."
     # Parse gem timestamps from gems.md (format: ### [MM:SS] or ### [HH:MM:SS])
