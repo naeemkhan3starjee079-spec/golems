@@ -120,8 +120,7 @@ echo "=== Directories ==="
 check "~/.config/claude-golem exists" "test -d ~/.config/claude-golem"
 check "~/.claude/commands exists" "test -d ~/.claude/commands"
 check_warn "~/.claude/CLAUDE.md exists" "test -f ~/.claude/CLAUDE.md"
-check_warn "~/.claude/contexts exists" "test -d ~/.claude/contexts"
-check_warn "~/.claude/contexts/base.md exists" "test -f ~/.claude/contexts/base.md"
+check_warn ".claude/rules/ exists in golems repo" "test -d ~/Gits/golems/.claude/rules"
 echo ""
 
 # Section: Skills

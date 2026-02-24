@@ -87,7 +87,7 @@ else
 fi
 
 # Reuse PYTHON313 defined at top of script
-PYTHONUNBUFFERED=1 "$PYTHON313" -m brainlayer.pipeline.enrichment --batch-size 50 --parallel=3 >> "$LOG_DIR/enrichment.log" 2>&1 &
+PYTHONUNBUFFERED=1 "$PYTHON313" -m brainlayer.pipeline.enrichment --batch-size 40 --parallel=2 >> "$LOG_DIR/enrichment.log" 2>&1 &
 PID=$!
 echo "$PID" > "$LOCK_FILE"
 

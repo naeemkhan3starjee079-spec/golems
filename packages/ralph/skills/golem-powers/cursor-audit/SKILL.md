@@ -1,24 +1,29 @@
-# Cursor Audit Workflow
+---
+name: cursor-audit
+description: Use when a PR is ready to merge but needs deeper review beyond CodeRabbit/Bugbot — stale references, missing docs, security, test gaps, dependency hygiene. Run after bot reviews pass, before merge.
+---
+
+# Cursor Audit
 
 > Structured pre-merge audit using Cursor IDE agent. Write domain-specific prompts, run in Cursor, read results, triage, fix, verify, then merge.
 
 ## When to Use
 
-Run this **after PR bot review is addressed** but **before merging**. The PR bots catch surface issues; the cursor audit catches deeper problems: stale references, missing docs, code quality gaps, security, test coverage, dependency hygiene.
+- **After PR bot review is addressed** but **before merging**
+- PR bots catch surface issues; this catches deeper problems
+- Skip for trivial phases (docs-only, config changes, single-file fixes)
 
 ## Lifecycle
 
 ```
 PR bot review → fix bot issues → push
-  → Write audit prompts (10+)
+  → Write audit prompts (8-12)
   → User runs in Cursor IDE
   → Read results from docs.local/logs/
   → Triage: fix now vs skip/defer
   → Fix real issues → commit → push
-  → PR bots re-review (should be clean)
   → Write verification prompts (3-5)
   → User runs in Cursor IDE
-  → Read verification results
   → All pass → MERGE
 ```
 
@@ -65,21 +70,9 @@ Every prompt should have:
 5. **Anti-patterns** — What NOT to flag (known intentional decisions, style preferences)
 6. **Output format** — Table with consistent columns (File, Line, Issue, Fix)
 
-### Output Files Table
-
-Include a table mapping prompt number to output file:
-
-```markdown
-| # | File | Content |
-|---|------|---------|
-| 1 | docs.local/logs/audit-1-stale.md | Stale references |
-| 2 | docs.local/logs/audit-2-docs.md | Documentation coverage |
-...
-```
-
 ## Step 2: User Runs in Cursor
 
-Hand off to the user. They paste each prompt into Cursor agent mode. Results land in `docs.local/logs/` automatically.
+Hand off to the user. They paste each prompt into Cursor agent mode. Results land in `docs.local/logs/`.
 
 ## Step 3: Read and Triage Results
 
@@ -102,34 +95,28 @@ Present triage as two tables: "Fix Now" and "Skip/Defer".
 - Run tests
 - Commit with descriptive message listing all fixes
 - Push to PR branch
-- Wait for PR bots (should be clean since changes are fixes only)
 
 ## Step 5: Write Verification Prompts
 
-Create `docs.local/prompts/<feature>-final-verification.md` with 3-5 smaller prompts. These are fast checks (Composer 1.5 for all) that confirm fixes landed:
+Create `docs.local/prompts/<feature>-final-verification.md` with 3-5 prompts. Fast checks (Composer 1.5) that confirm fixes landed:
 
-1. **Stale refs gone** — Re-run the search patterns, expect zero matches
+1. **Stale refs gone** — Re-run search patterns, expect zero matches
 2. **Docs complete** — Check each surface, expect PASS on all
 3. **Code fixes applied** — Check specific line numbers for each fix
 
-Each verification prompt outputs to `docs.local/logs/verify-N-name.md`.
+Each outputs to `docs.local/logs/verify-N-name.md`. Format: "PASS" or "FAIL: [detail]", then summary.
 
-Format: One line per check, "PASS" or "FAIL: [detail]", then summary count.
+## Step 6: Confirm and Merge
 
-## Step 6: User Runs Verification
+Read `docs.local/logs/verify-*.md`. All pass → merge PR. Any fail → fix and re-verify.
 
-User runs 3-5 verification prompts in Cursor (fast, all Composer 1.5).
+## Templates
 
-## Step 7: Confirm and Merge
-
-Read `docs.local/logs/verify-*.md`. If all pass → merge PR. If any fail → fix and re-verify.
-
-## Template: Audit Prompt
+### Audit Prompt
 
 ```markdown
 ## Prompt N: [Category Name]
 
-` ` `
 WRITE YOUR FULL OUTPUT TO: docs.local/logs/audit-N-name.md
 
 GOAL: [One sentence describing what to check]
@@ -143,24 +130,21 @@ Read these files:
 Check:
 1. [Specific check]
 2. [Specific check]
-3. ...
 
 DO NOT flag: [Known intentional decisions, style preferences]
 
 OUTPUT FORMAT:
-| # | [Column] | [Column] | [Column] |
-|---|----------|----------|----------|
+| # | File | Issue | Fix |
+|---|------|-------|-----|
 
 If clean, say "[Category] is clean."
-` ` `
 ```
 
-## Template: Verification Prompt
+### Verification Prompt
 
 ```markdown
 ## Prompt N: Verify [Category]
 
-` ` `
 WRITE YOUR FULL OUTPUT TO: docs.local/logs/verify-N-name.md
 
 GOAL: Confirm [specific fixes] are applied.
@@ -168,18 +152,6 @@ GOAL: Confirm [specific fixes] are applied.
 Check:
 1. [File:line] — [expected state]
 2. [File:line] — [expected state]
-...
 
 OUTPUT: One line per check. "PASS" or "FAIL: [detail]". Then summary.
-` ` `
-```
-
-## Integration with execute-phase
-
-This workflow slots in between steps 8 (Review Cycle) and 9 (Merge) of execute-phase.md:
-
-```
-Step 8: PR bot review cycle → bots clean
-Step 8.5: Cursor audit workflow (THIS)
-Step 9: Merge
 ```

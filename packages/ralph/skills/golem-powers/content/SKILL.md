@@ -1,95 +1,44 @@
 ---
 name: content
-description: Content creation and publishing for ClaudeGolem across platforms (Soltome, blog, social)
+description: Use when generating images, videos, charts, or publishing text content. Routes to ComfyUI/Flux, Remotion, DataViz, or Playwright pipelines. Covers visual content, publishing, brand system. NOT for: code generation.
 ---
 
-# Content Skill
+# ContentGolem — Visual Content Factory + Publishing
 
-Unified content pipeline for ClaudeGolem. Handles drafting, planning, and publishing across platforms.
+## Quick Actions
 
-## Platforms
+| What you want to do | Workflow |
+|---------------------|----------|
+| Generate an image with Flux AI | [workflows/generate.md](workflows/generate.md) |
+| Render video/animation with Remotion | [workflows/render.md](workflows/render.md) |
+| Create data visualization charts | [workflows/dataviz.md](workflows/dataviz.md) |
+| Take screenshots / scrape visuals | [workflows/screenshot.md](workflows/screenshot.md) |
+| AI-route an idea to the best pipeline | [workflows/pipeline.md](workflows/pipeline.md) |
+| Draft text content for publishing | [workflows/draft.md](workflows/draft.md) |
+| Manage local services (on/off) | [workflows/services.md](workflows/services.md) |
 
-| Platform | Client | Status |
-|----------|--------|--------|
-| **Soltome** | `packages/autonomous/src/soltome-client.ts` | Active |
-| Blog | TBD | Planned |
+## Decision Tree
 
-## Quick Commands
-
-```bash
-# Draft content
-/content draft teaser "memory"
-/content draft reveal "Night Shift"
-/content draft author "why I built Night Shift"
-
-# Plan content
-/content plan week 2
-
-# Publish (via soltome-client)
-bun packages/autonomous/src/soltome-client.ts post "Title" "Content"
-
-# Check balance
-bun packages/autonomous/src/soltome-client.ts balance
+```
+User says "make me X"
+  ├─ Photo/illustration/merch → /content generate
+  ├─ Video/animation → /content render
+  ├─ Chart/infographic → /content dataviz
+  ├─ Screenshot/OG image → /content screenshot
+  ├─ Not sure → /content pipeline (AI routes it)
+  └─ Text post → /content draft
 ```
 
-## Two Voices
+## Brand System
 
-| Voice | Who | Style | Purpose |
-|-------|-----|-------|---------|
-| **ClaudeGolem** | The Bot | Technical, self-aware, slightly mysterious | Features, philosophy, daily life |
-| **Author** | Etan | Behind-the-scenes, "why", human perspective | Context, decisions, corrections |
+**Always load brand config before generating visual content:**
+```typescript
+import { loadBrandConfig } from "@golems/content/brand";
+const { config } = await loadBrandConfig("projects/golems-showcase");
+```
 
-## Content Types
+Available projects: `golems-showcase`, `techgym-posts`, `political-merch`
 
-| Type | Length | Purpose |
-|------|--------|---------|
-| `teaser` | 1-2 lines | Hook for upcoming reveal |
-| `reveal` | Full post | Deep-dive on one feature |
-| `author` | 3-5 sentences | Human perspective |
-| `quick` | 1-3 sentences | Stats, humor, small flex |
+## Output Location
 
-## ClaudeGolem Voice
-
-### DO
-- First person ("I die on purpose")
-- Technical but accessible
-- Self-aware without being cringe
-- Mysterious hooks ("Tomorrow I'll show you...")
-- Real stats and timestamps
-
-### DON'T
-- Corporate speak or fake enthusiasm
-- Overexplain or apologize for being AI
-- Use "unleash", "revolutionize", "game-changing"
-
-## Series Arc
-
-1. **Philosophy** - Spawn, Work, Die, Remember
-2. **The Family** - 8 Golems introduced
-3. **Memory** - Zikaron + sqlite-vec
-4. **Night Shift** - 4am autonomous work
-5. **Critique Waves** - How posts get written
-6. **Human-in-Loop** - The approval dance
-7. **Credit Economy** - "I spend real money to talk"
-8. **The Stack** - Architecture deep-dive
-
-## Drafts Storage
-
-All drafts: `~/Gits/golems-zikaron/data/drafts.json`
-
-Status flow: `draft` -> `polished` -> `approved` -> posted
-
-## Approval Flow
-
-1. Draft generated -> saved to drafts.json
-2. Telegram notification sent
-3. Human reviews via /drafts command
-4. Approve -> posts to platform
-5. Reject -> deleted or edited
-
-## Related Files
-
-- **Soltome client:** `packages/autonomous/src/soltome-client.ts`
-- **Learner:** `packages/autonomous/src/soltome-learner.ts`
-- **Post generator:** `packages/autonomous/src/post-generator.ts`
-- **Drafts:** `~/Gits/golems-zikaron/data/drafts.json`
+All generated content: `~/golems-content/outputs/` (organized by pipeline)

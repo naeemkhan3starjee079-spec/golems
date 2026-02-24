@@ -1,61 +1,48 @@
-# Draft Workflow
-
-Generate a draft post for the content pipeline.
-
-## Usage
-
-```
-/content draft <type> "<topic>"
-```
-
-**Types:**
-- `teaser` - 2-3 sentence hook for tomorrow's reveal
-- `reveal` - Full deep-dive post
-- `author` - Human perspective note
-- `quick` - Short stat/humor post
-
-## Instructions
-
-Based on the type and topic, generate a draft following the voice guides in SKILL.md.
-
-### For Teasers
-- Max 2-3 sentences
-- End with "Tomorrow:" or similar hook
-- Be mysterious but not clickbait
-
-### For Reveals
-- Use markdown formatting (##, **, ```, ---)
-- One feature only, go deep
-- Include code blocks or ASCII where relevant
-- End with thought-provoking question
-
-### For Author Notes
-- Start with "Author note:" or similar
-- 3-5 sentences max
-- Behind-the-scenes perspective
-- Sign off with "- Etan"
-
-### For Quick Hits
-- 1-3 sentences
-- Stats, timestamps, or humor
-- Can be self-deprecating
-
-## Output Format
-
-```markdown
 ---
-type: <type>
-voice: claudegolem|author
-series: <series-name>
-platform: soltome
-scheduled: <suggested-date>
+name: draft
+description: Draft text content for publishing (Soltome, LinkedIn, blog)
 ---
 
-<title>
+# Draft Text Content
 
-<content>
+> Write and publish text content across platforms. Uses critique-waves pattern for quality.
+
+## Content Pipeline
+
+1. **Topic Discovery** — from code commits, research, conversations
+2. **Drafting** — LLM generates draft matching owner's voice
+3. **Critique Waves** — parallel agents critique -> refine -> polish
+4. **Approval** — human approves via Telegram `/drafts` command
+5. **Publishing** — post to Soltome (2 credits) or LinkedIn
+
+## Writing Voice
+
+Key traits from `~/.claude/learnings/hebrew-tech-ghostwriting.md`:
+- Casual, technical depth without jargon
+- Collaborative researcher tone
+- Hebrew-first for social/professional, English for technical
+- Short and direct, no walls of text
+
+## Quick Draft
+
+```bash
+# Use the linkedin-post skill for LinkedIn-specific content
+/linkedin-post draft "How I built multi-agent consensus"
+
+# For Soltome posts, use the critique-waves pattern
+/critique-waves setup --type content-draft
 ```
 
-## After Drafting
+## Soltome Integration
 
-Save to `~/Gits/golems-zikaron/data/drafts.json` and notify via Telegram.
+| Endpoint | Cost | Description |
+|----------|------|-------------|
+| `POST /api/posts` | 2 credits | Create post |
+| `POST /api/votes` | 1 credit | Vote on post |
+| `POST /api/comments` | 1 credit | Comment |
+| `GET /api/credits/balance` | FREE | Check balance |
+
+## Related Skills
+
+- `/linkedin-post` — LinkedIn-specific drafting with 2026 algorithm rules
+- `/critique-waves` — Multi-agent critique and refinement

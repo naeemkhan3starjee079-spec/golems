@@ -205,18 +205,14 @@ source ~/.config/ralphtools/launchers.zsh
 cat ~/.config/ralphtools/launchers.zsh | grep myproject
 ```
 
-### Contexts not loading
+### Rules not loading
 
-Check the contexts exist:
+Rules auto-load from `.claude/rules/` in the repo root:
 ```bash
-ls ~/.claude/contexts/base.md
-ls ~/.claude/contexts/workflow/interactive.md
+ls .claude/rules/  # Should show golems-base.md, ralph-workflow.md, etc.
 ```
 
-If missing, symlink from claude-golem:
-```bash
-ln -sf ~/.config/claude-golem/contexts/* ~/.claude/contexts/
-```
+If missing, ensure you're working from the golems repo root (not a subdirectory).
 
 ### MCPs not connecting
 

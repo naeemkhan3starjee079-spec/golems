@@ -1,6 +1,6 @@
 #!/bin/bash
 # Context Audit Script
-# Diagnoses missing contexts in a project
+# Diagnoses missing rules/contexts in a project
 
 set -eo pipefail
 
@@ -11,9 +11,9 @@ YELLOW='\033[0;33m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
-# Context locations
-GLOBAL_CONTEXTS="${HOME}/.claude/contexts"
-REPO_CONTEXTS="./contexts"
+# Locations
+RULES_DIR="./.claude/rules"
+CONTEXTS_DIR="./rules-library"
 CLAUDE_MD="./CLAUDE.md"
 
 echo ""
@@ -21,45 +21,64 @@ echo "=== CONTEXT AUDIT ==="
 echo ""
 
 # ─────────────────────────────────────────────────────────────
-# 1. AVAILABLE CONTEXTS
+# 1. AUTO-LOADED RULES (.claude/rules/)
 # ─────────────────────────────────────────────────────────────
-echo -e "${CYAN}AVAILABLE CONTEXTS:${NC}"
+echo -e "${CYAN}AUTO-LOADED RULES (.claude/rules/):${NC}"
 
-AVAILABLE=()
-
-# Check global contexts
-if [ -d "$GLOBAL_CONTEXTS" ]; then
-    while IFS= read -r ctx; do
-        rel_path="${ctx#$GLOBAL_CONTEXTS/}"
-        rel_path="${rel_path%.md}"
-        AVAILABLE+=("$rel_path")
-        echo "  $rel_path"
-    done < <(find "$GLOBAL_CONTEXTS" -name "*.md" -type f 2>/dev/null | grep -v README | sort)
-fi
-
-# Check repo contexts (if different from global)
-if [ -d "$REPO_CONTEXTS" ] && [ "$(realpath "$REPO_CONTEXTS" 2>/dev/null)" != "$(realpath "$GLOBAL_CONTEXTS" 2>/dev/null)" ]; then
-    echo "  (repo contexts/)"
-    while IFS= read -r ctx; do
-        rel_path="${ctx#$REPO_CONTEXTS/}"
-        rel_path="${rel_path%.md}"
-        if [[ ! " ${AVAILABLE[*]} " =~ " ${rel_path} " ]]; then
-            AVAILABLE+=("$rel_path")
-            echo "  $rel_path"
+if [ -d "$RULES_DIR" ]; then
+    RULE_COUNT=0
+    while IFS= read -r rule; do
+        name="${rule#$RULES_DIR/}"
+        # Check for globs frontmatter (format: "globs: pattern")
+        globs=$(head -5 "$rule" 2>/dev/null | grep "^globs:" | sed 's/^globs:[[:space:]]*//' | tr -d '"' || true)
+        if [ -n "$globs" ]; then
+            echo -e "  ${GREEN}[x]${NC} $name (targets: $globs)"
+        else
+            echo -e "  ${GREEN}[x]${NC} $name (all paths)"
         fi
-    done < <(find "$REPO_CONTEXTS" -name "*.md" -type f 2>/dev/null | grep -v README | sort)
+        RULE_COUNT=$((RULE_COUNT + 1))
+    done < <(find "$RULES_DIR" -name "*.md" -type f 2>/dev/null | sort)
+
+    if [ $RULE_COUNT -eq 0 ]; then
+        echo -e "  ${RED}(no rules found)${NC}"
+    fi
+else
+    echo -e "  ${RED}(no .claude/rules/ directory)${NC}"
 fi
 
 echo ""
 
 # ─────────────────────────────────────────────────────────────
-# 2. DETECT TECH STACK
+# 2. EXPORTABLE CONTEXTS (rules-library/)
+# ─────────────────────────────────────────────────────────────
+echo -e "${CYAN}EXPORTABLE CONTEXTS (rules-library/):${NC}"
+
+if [ -d "$CONTEXTS_DIR" ]; then
+    CTX_COUNT=0
+    while IFS= read -r ctx; do
+        rel_path="${ctx#$CONTEXTS_DIR/}"
+        echo "  $rel_path"
+        CTX_COUNT=$((CTX_COUNT + 1))
+    done < <(find "$CONTEXTS_DIR" -name "*.md" -type f 2>/dev/null | grep -v README | grep -v CLAUDE | sort)
+
+    if [ $CTX_COUNT -eq 0 ]; then
+        echo "  (none)"
+    fi
+else
+    echo "  (no rules-library/ directory)"
+fi
+
+echo ""
+
+# ─────────────────────────────────────────────────────────────
+# 3. DETECT TECH STACK
 # ─────────────────────────────────────────────────────────────
 echo -e "${CYAN}DETECTED TECH STACK:${NC}"
 
-NEEDED=("base" "skill-index")  # Always needed
+NEEDED_RULES=()
+NEEDED_CONTEXTS=()
 
-# Helper function to check for dependency in package.json
+# Helper function
 check_pkg_for_dep() {
     local pkg_file="$1"
     local dep_pattern="$2"
@@ -69,15 +88,25 @@ check_pkg_for_dep() {
     return 1
 }
 
-# Collect all package.json files (root, packages/*, apps/*)
+# Collect all package.json files
 PKG_FILES=()
 [ -f "package.json" ] && PKG_FILES+=("package.json")
-# Use find to handle missing directories gracefully
 while IFS= read -r f; do
     [ -f "$f" ] && PKG_FILES+=("$f")
 done < <(find packages apps -maxdepth 2 -name "package.json" 2>/dev/null || true)
 
-# Next.js - check all package.json files
+# Ralph/Ink
+if [ -d "packages/ralph" ] || [ -f "ralph.zsh" ]; then
+    echo -e "  ${GREEN}[x]${NC} Ralph"
+    NEEDED_RULES+=("ralph-workflow.md")
+fi
+
+if [ -d "ralph-ui" ] || [ -d "packages/ralph/ralph-ui" ]; then
+    echo -e "  ${GREEN}[x]${NC} Ink CLI (ralph-ui)"
+    NEEDED_RULES+=("tech-ink.md")
+fi
+
+# Next.js
 NEXTJS_FOUND=""
 for pkg in "${PKG_FILES[@]}"; do
     if check_pkg_for_dep "$pkg" '"next"'; then
@@ -85,15 +114,14 @@ for pkg in "${PKG_FILES[@]}"; do
         break
     fi
 done
-
 if [ -n "$NEXTJS_FOUND" ]; then
     echo -e "  ${GREEN}[x]${NC} Next.js (found in $NEXTJS_FOUND)"
-    NEEDED+=("tech/nextjs")
+    NEEDED_CONTEXTS+=("tech/nextjs.md")
 else
     echo -e "  ${YELLOW}[ ]${NC} Next.js"
 fi
 
-# React Native / Expo - check all package.json files (POSIX-safe separate checks)
+# React Native / Expo
 RN_FOUND=""
 for pkg in "${PKG_FILES[@]}"; do
     if check_pkg_for_dep "$pkg" '"react-native"' || check_pkg_for_dep "$pkg" '"expo"'; then
@@ -101,174 +129,68 @@ for pkg in "${PKG_FILES[@]}"; do
         break
     fi
 done
-
 if [ -n "$RN_FOUND" ]; then
     echo -e "  ${GREEN}[x]${NC} React Native/Expo (found in $RN_FOUND)"
-    NEEDED+=("tech/react-native")
+    NEEDED_CONTEXTS+=("tech/react-native.md")
 else
     echo -e "  ${YELLOW}[ ]${NC} React Native"
 fi
 
 # Convex
 if [ -d "convex" ] || [ -f "convex.json" ]; then
-    echo -e "  ${GREEN}[x]${NC} Convex (found convex/)"
-    NEEDED+=("tech/convex")
+    echo -e "  ${GREEN}[x]${NC} Convex"
+    NEEDED_CONTEXTS+=("tech/convex.md")
 else
     echo -e "  ${YELLOW}[ ]${NC} Convex"
 fi
 
 # Supabase
 if [ -d "supabase" ] || [ -f "supabase/config.toml" ]; then
-    echo -e "  ${GREEN}[x]${NC} Supabase (found supabase/)"
-    NEEDED+=("tech/supabase")
+    echo -e "  ${GREEN}[x]${NC} Supabase"
+    NEEDED_CONTEXTS+=("tech/supabase.md")
 else
     echo -e "  ${YELLOW}[ ]${NC} Supabase"
 fi
 
-# RTL (Hebrew/Arabic) - check for Hebrew characters or rtl in code
-if grep -rq '[\u0590-\u05FF]' . --include="*.tsx" --include="*.ts" --include="*.js" 2>/dev/null || \
-   grep -rq 'dir="rtl"\|direction.*rtl\|rtl:' . --include="*.tsx" --include="*.css" 2>/dev/null; then
-    echo -e "  ${GREEN}[x]${NC} RTL (found Hebrew/Arabic or RTL patterns)"
-    NEEDED+=("workflow/rtl")
-else
-    echo -e "  ${YELLOW}[ ]${NC} RTL"
-fi
-
-# UI Components - check standard locations and monorepo patterns
-UI_FOUND=""
-if [ -d "src/components" ]; then
-    UI_FOUND="src/components"
-elif [ -d "components" ]; then
-    UI_FOUND="components"
-else
-    # Check monorepo patterns: packages/ui, packages/ui-web, packages/ui-native
-    for ui_dir in packages/ui packages/ui-web packages/ui-native; do
-        if [ -d "$ui_dir" ]; then
-            UI_FOUND="$ui_dir"
-            break
-        fi
-    done
-fi
-
-if [ -n "$UI_FOUND" ]; then
-    echo -e "  ${GREEN}[x]${NC} UI Components (found $UI_FOUND)"
-    NEEDED+=("workflow/design-system")
-else
-    echo -e "  ${YELLOW}[ ]${NC} UI Components"
-fi
-
-# Tests
-if [ -d "tests" ] || [ -d "__tests__" ] || ls *.test.ts *.spec.ts 2>/dev/null | head -1 | grep -q .; then
-    echo -e "  ${GREEN}[x]${NC} Tests (found test files)"
-    NEEDED+=("workflow/testing")
-else
-    echo -e "  ${YELLOW}[ ]${NC} Tests"
-fi
-
-# PRD/Ralph
-if [ -d "prd-json" ] || [ -f "PRD.md" ]; then
-    echo -e "  ${GREEN}[x]${NC} Ralph PRD (found prd-json/)"
-    # Ralph context handled separately
-fi
-
-# Interactive mode (always for interactive Claude)
-NEEDED+=("workflow/interactive")
-
 echo ""
 
 # ─────────────────────────────────────────────────────────────
-# 3. CHECK CURRENT CLAUDE.MD
+# 4. GAP ANALYSIS
 # ─────────────────────────────────────────────────────────────
-echo -e "${CYAN}CURRENT CLAUDE.MD CONTEXTS:${NC}"
+echo -e "${CYAN}GAP ANALYSIS:${NC}"
 
-HAS=()
+# Always need golems-base
+NEEDED_RULES+=("golems-base.md")
 
-if [ -f "$CLAUDE_MD" ]; then
-    # Look for @context: lines
-    while IFS= read -r line; do
-        ctx=$(echo "$line" | sed 's/.*@context:[[:space:]]*//' | tr -d ' ')
-        if [ -n "$ctx" ]; then
-            HAS+=("$ctx")
-            echo "  $ctx"
-        fi
-    done < <(grep -E "@context:" "$CLAUDE_MD" 2>/dev/null || true)
-
-    if [ ${#HAS[@]} -eq 0 ]; then
-        echo -e "  ${RED}(none found)${NC}"
-    fi
-else
-    echo -e "  ${RED}(no CLAUDE.md file)${NC}"
-fi
-
-echo ""
-
-# ─────────────────────────────────────────────────────────────
-# 4. RECOMMENDED BLOCK
-# ─────────────────────────────────────────────────────────────
-echo -e "${CYAN}RECOMMENDED @context: BLOCK:${NC}"
-echo ""
-echo "  ## Contexts"
-
-# Deduplicate NEEDED (bash 3 compatible)
-UNIQUE_NEEDED=()
-for ctx in "${NEEDED[@]}"; do
-    duplicate=false
-    for existing in "${UNIQUE_NEEDED[@]}"; do
-        if [ "$existing" = "$ctx" ]; then
-            duplicate=true
-            break
-        fi
-    done
-    if [ "$duplicate" = false ]; then
-        UNIQUE_NEEDED+=("$ctx")
+MISSING_RULES=()
+for rule in "${NEEDED_RULES[@]}"; do
+    if [ ! -f "$RULES_DIR/$rule" ]; then
+        MISSING_RULES+=("$rule")
     fi
 done
 
-for ctx in "${UNIQUE_NEEDED[@]}"; do
-    echo "  @context: $ctx"
-done
-
-echo ""
-
-# ─────────────────────────────────────────────────────────────
-# 5. GAP SUMMARY
-# ─────────────────────────────────────────────────────────────
-echo -e "${CYAN}GAP SUMMARY:${NC}"
-
-MISSING=()
-for ctx in "${UNIQUE_NEEDED[@]}"; do
-    if [[ ! " ${HAS[*]} " =~ " ${ctx} " ]]; then
-        MISSING+=("$ctx")
+MISSING_CONTEXTS=()
+for ctx in "${NEEDED_CONTEXTS[@]}"; do
+    if [ ! -f "$CONTEXTS_DIR/$ctx" ]; then
+        MISSING_CONTEXTS+=("$ctx")
     fi
 done
 
-if [ ${#MISSING[@]} -eq 0 ]; then
-    echo -e "  ${GREEN}All recommended contexts are present!${NC}"
+if [ ${#MISSING_RULES[@]} -eq 0 ] && [ ${#MISSING_CONTEXTS[@]} -eq 0 ]; then
+    echo -e "  ${GREEN}All rules and contexts present!${NC}"
 else
-    echo -e "  ${RED}Missing ${#MISSING[@]} contexts:${NC}"
-    for ctx in "${MISSING[@]}"; do
-        echo -e "    - $ctx"
-    done
-    echo ""
-    echo -e "  ${YELLOW}Action: Add the recommended block above to CLAUDE.md${NC}"
-fi
-
-echo ""
-
-# ─────────────────────────────────────────────────────────────
-# 6. SETUP HEADER CHECK
-# ─────────────────────────────────────────────────────────────
-echo -e "${CYAN}SETUP HEADER CHECK:${NC}"
-
-if [ -f "$CLAUDE_MD" ]; then
-    if grep -q "AI: Read This First\|SETUP.*Read.*First\|🔧 SETUP" "$CLAUDE_MD" 2>/dev/null; then
-        echo -e "  ${GREEN}[x]${NC} Setup header found"
-    else
-        echo -e "  ${RED}[ ]${NC} No setup header - AI won't know the meta-purpose"
-        echo -e "      ${YELLOW}Add a '## SETUP (AI: Read This First)' section${NC}"
+    if [ ${#MISSING_RULES[@]} -gt 0 ]; then
+        echo -e "  ${RED}Missing rules (.claude/rules/):${NC}"
+        for rule in "${MISSING_RULES[@]}"; do
+            echo -e "    - $rule"
+        done
     fi
-else
-    echo -e "  ${RED}[ ]${NC} No CLAUDE.md - create one with setup header"
+    if [ ${#MISSING_CONTEXTS[@]} -gt 0 ]; then
+        echo -e "  ${YELLOW}Missing contexts (rules-library/):${NC}"
+        for ctx in "${MISSING_CONTEXTS[@]}"; do
+            echo -e "    - $ctx"
+        done
+    fi
 fi
 
 echo ""

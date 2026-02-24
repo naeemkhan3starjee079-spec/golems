@@ -1,16 +1,14 @@
 ---
 name: context-audit
-description: Use to diagnose missing contexts in a project. Compares what contexts SHOULD be loaded vs what IS loaded. Covers context check, missing contexts, setup audit. NOT for: listing skills (use /skills), detecting tools (use /project-context).
+description: Use to diagnose missing rules/contexts in a project. Compares what rules SHOULD be loaded vs what IS loaded. Covers .claude/rules/ check, context gaps, setup audit. NOT for: listing skills (use /skills), detecting tools (use /project-context).
 user-invocable: true
 ---
 
 # Context Audit
 
-Diagnoses what contexts a project SHOULD have vs what it currently HAS.
+Diagnoses what rules/contexts a project SHOULD have vs what it currently HAS.
 
 ## Quick Audit
-
-Run the audit script to see gaps:
 
 ```bash
 bash ~/.claude/commands/golem-powers/context-audit/scripts/audit.sh
@@ -18,86 +16,54 @@ bash ~/.claude/commands/golem-powers/context-audit/scripts/audit.sh
 
 ## What This Audits
 
-1. **Available contexts** - What's in `~/.claude/contexts/` or repo `contexts/`
-2. **Project tech stack** - Detected from package.json, file patterns
-3. **Current CLAUDE.md** - What `@context:` refs exist
+1. **Auto-loaded rules** - What's in `.claude/rules/` (auto-loaded by Claude Code)
+2. **Available contexts** - What's in `rules-library/` (exportable reference library)
+3. **Project tech stack** - Detected from package.json, file patterns
 4. **Gap analysis** - What's missing
 
 ## Manual Audit Steps
 
-If the script isn't available, follow these steps:
-
-### Step 1: Check Available Contexts
+### Step 1: Check Auto-Loaded Rules
 
 ```bash
-find ~/.claude/contexts -name "*.md" -o -name "*.md" 2>/dev/null | sort
-# Or in repo:
-find contexts -name "*.md" 2>/dev/null | sort
+# Rules in current repo (auto-loaded):
+ls .claude/rules/*.md 2>/dev/null || echo "No .claude/rules/ found"
 ```
 
-### Step 2: Detect Project Needs
-
-| If Project Has | Should Include |
-|----------------|----------------|
-| Any project | `base`, `skill-index` |
-| Interactive Claude | `workflow/interactive` |
-| Ralph/PRD work | `workflow/ralph` |
-| Next.js (package.json) | `tech/nextjs` |
-| React Native/Expo | `tech/react-native` |
-| Convex (convex/) | `tech/convex` |
-| Supabase (supabase/) | `tech/supabase` |
-| Hebrew/Arabic UI | `workflow/rtl` |
-| UI components | `workflow/design-system` |
-| Test files | `workflow/testing` |
-
-### Step 3: Check CLAUDE.md
+### Step 2: Check Exportable Contexts
 
 ```bash
-grep -E "@context:|contexts/" CLAUDE.md 2>/dev/null || echo "No @context: refs found"
+# Master context library (for export to other projects):
+ls rules-library/*.md rules-library/**/*.md 2>/dev/null || echo "No rules-library/ found"
 ```
+
+### Step 3: Detect Project Needs
+
+| If Project Has | Should Have Rule/Context |
+|----------------|------------------------|
+| Any golems work | `.claude/rules/golems-base.md` |
+| Ralph/PRD work | `.claude/rules/ralph-workflow.md` |
+| Ink CLI (ralph-ui) | `.claude/rules/tech-ink.md` |
+| Next.js | `rules-library/tech/nextjs.md` (export to project) |
+| React Native/Expo | `rules-library/tech/react-native.md` (export) |
+| Convex | `rules-library/tech/convex.md` (export) |
+| Supabase | `rules-library/tech/supabase.md` (export) |
+| Hebrew/Arabic UI | `rules-library/workflow/rtl.md` (export) |
 
 ### Step 4: Report Gaps
 
-Compare Step 2 (needed) vs Step 3 (has). Missing = gap.
+Compare needed vs has. Missing = gap.
 
-## Output Format
+## Two Systems
 
-The audit produces:
-
-```
-=== CONTEXT AUDIT ===
-
-AVAILABLE CONTEXTS:
-  base.md
-  skill-index.md
-  tech/nextjs.md
-  ...
-
-DETECTED TECH STACK:
-  [x] Next.js (found next in package.json)
-  [x] RTL (found Hebrew text)
-  [ ] Convex (no convex/ dir)
-
-CURRENT CLAUDE.md CONTEXTS:
-  (none found)
-
-RECOMMENDED @context: BLOCK:
-  ## Contexts
-  @context: base
-  @context: skill-index
-  @context: tech/nextjs
-  @context: workflow/rtl
-  @context: workflow/interactive
-
-GAP SUMMARY:
-  Missing 5 contexts. Add the block above to CLAUDE.md.
-```
+| System | Location | Loading | Purpose |
+|--------|----------|---------|---------|
+| **Rules** | `.claude/rules/` | Auto-loaded by Claude Code | Repo-specific, survives compaction |
+| **Contexts** | `rules-library/` | Manual reference / export | Reusable library for any project |
 
 ## Self-Improvement Loop
 
 If you find gaps:
-1. **Ask the user** if they want to fix it
-2. **Create a PRD story** with `/golem-powers:prd` if it's a systemic issue
-3. **Fix immediately** if it's a simple CLAUDE.md update
-
-This is how claude-golem improves itself.
+1. Fix immediately if it's a simple rules file addition
+2. Create a PRD story with `/golem-powers:prd` if it's systemic
+3. For other projects: copy relevant contexts to their `.claude/rules/`
