@@ -9,7 +9,7 @@ Use `AIDEV-NOTE:`, `AIDEV-TODO:`, or `AIDEV-QUESTION:` (all-caps prefix) for AI-
 
 ## SVG and Icon Rules
 
-- **NEVER make SVGs** — use `lucide-react`
+- **NEVER make SVGs** — use `lucide-react` *(enforced by hook: .claude/hooks/block-dangerous-commands.py)*
 - **NEVER use** MaterialCommunityIcons or other icon libraries
 
 ## TypeScript Safety

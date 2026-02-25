@@ -14,6 +14,7 @@ nohup.out
 .claude/*
 !.claude/rules/
 !.claude/agents/
+!.claude/hooks/
 
 # Personal profile symlink (real data lives in golem-profiles private repo)
 .claude/rules/owner-profile.md
