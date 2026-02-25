@@ -32,6 +32,7 @@ Large plans are folder-based: one folder per phase, each containing a README.md 
 ```
 plan-dir/
   README.md              # Index: progress table, routing, execution rules
+  collab.md              # Created when parallel phases exist (see below)
   phase-1-name/
     README.md            # Steps for this phase
     findings.md          # Shared knowledge room (agents write here)
@@ -41,13 +42,51 @@ plan-dir/
   ...
 ```
 
+### Execution Decision: Sequential vs Parallel
+
+**EVERY plan must decide this at scaffold time.** Analyze the dependency graph:
+
+```
+Phases with NO cross-dependencies  →  Parallel (collab.md + multiple agents)
+Phases that depend on each other   →  Sequential (execute-phase, one at a time)
+Mixed                              →  Rounds (parallel within round, sequential between rounds)
+```
+
+**Decision tree:**
+1. Draw the dependency graph from phase `Depends On` fields
+2. Group independent phases into **rounds** (phases in the same round can run in parallel)
+3. If ANY round has 2+ phases → create `collab.md` at plan root
+4. Add `## Execution Strategy` to the main README.md showing rounds and parallelism
+
+Example:
+```markdown
+## Execution Strategy
+
+| Round | Phases | Mode | Agents |
+|-------|--------|------|--------|
+| 1 | Phase 1, Phase 2 | **parallel** (collab) | brainClaude, golemsClaude |
+| 2 | Phase 3 (depends on 1+2) | sequential | mainClaude |
+| 3 | Phase 4, Phase 5 | **parallel** (collab) | brainClaude, golemsClaude |
+```
+
+When a round has parallel phases, the orchestrator:
+1. Creates/updates `collab.md` using the [collab protocol](workflows/collab.md)
+2. Spawns one agent per phase (Task tool or CLI agents)
+3. Each agent's kickoff prompt includes the collab.md path
+4. Orchestrator monitors collab.md and advances rounds when all phases are done
+
 ### Plan Lifecycle
 
 ```
-Scaffold plan  ->  Execute phase 1  ->  PR + merge  ->  Execute phase 2  ->  ...
-                       |                                     |
-                   Branch lifecycle              Branch lifecycle
-                   (one branch per phase)        (one branch per phase)
+Scaffold plan  →  Analyze dependencies  →  Group into rounds
+                                                |
+                    ┌───────────────────────────┘
+                    ▼
+              Round has 1 phase?  →  Execute sequentially (execute-phase)
+              Round has 2+ phases? → Create collab.md, spawn agents in parallel
+                    |
+                    ▼
+              All round phases done  →  Advance to next round  →  Repeat
 ```
 
 ### Branch Lifecycle (per phase)
@@ -69,6 +108,9 @@ Each phase README follows this template:
 
 ## Goal
 One sentence describing what this phase achieves.
+
+## Round
+Round M (parallel with Phase X, Phase Y) OR Round M (sequential).
 
 ## Tools
 - **Research:** [gemini|cursor|codex] — what to research
@@ -110,39 +152,24 @@ Each phase findings.md is the shared collaboration room:
 
 ---
 
-## Async Collab Protocol
+## Parallel Execution (Collab Protocol)
 
-For phases that benefit from multi-agent collaboration:
+When a round has 2+ independent phases, use the **full collab protocol** defined in [workflows/collab.md](workflows/collab.md).
 
-### Rules for Agents
+**The orchestrator MUST:**
+1. Create `collab.md` at plan root using the template from the collab workflow
+2. Fill in all mandatory sections (Goal, Agents, Task Board, Constraints, Gates)
+3. Spawn agents with collab path in their kickoff prompt
+4. Monitor collab.md and advance rounds when all agents report `done`
 
-1. **You have your OWN data file** — dump detailed findings to `findings.md` or `agent-{name}.md`
-2. **Append short updates** to the phase `findings.md` under the appropriate section
-3. **Check back** — see what others found, build on it
-4. **Pick a name** — identify yourself in updates
-5. **Timestamp everything** — `[HH:MM]` prefix
-6. **React to each other** — this is COLLAB not parallel work
+**Key rule:** If the human has to tell you to update the collab file, the collab has failed. Agents must self-coordinate.
 
-### Collab File Structure
+**Complexity tiers** (from collab workflow):
+- **Lightweight** (~40 lines): 2 agents, fully independent work
+- **Standard** (~100 lines): 2-3 agents, some dependencies
+- **Complex** (~200 lines): 3+ agents, multi-repo, round-based
 
-```markdown
-# Phase N Findings
-
-## Decisions
-- [14:30] gemini: Recommends approach A over B because...
-- [14:45] cursor: Agrees, approach A is cleaner. Implementing.
-
-## Task Board
-| Task | Owner | Status |
-|------|-------|--------|
-| Research best auth pattern | gemini | done |
-| Implement auth middleware | cursor | in progress |
-| Write tests | haiku | pending |
-
-## Notes
-- [14:32] gemini: Important: the existing middleware uses X pattern
-- [14:50] cursor: Found a gotcha — Y doesn't support Z, using W instead
-```
+See [workflows/collab.md](workflows/collab.md) for the full protocol, mandatory sections, update gates, message format, and anti-patterns.
 
 ---
 

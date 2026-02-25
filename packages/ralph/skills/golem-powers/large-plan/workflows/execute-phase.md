@@ -1,6 +1,6 @@
 # Execute a Plan Phase
 
-> Run through a single phase: branch, implement, audit, PR, review cycle, merge.
+> Run through a single phase: branch, implement, audit, PR, review cycle, merge. Works for both sequential phases and parallel phases (with collab).
 
 ## Inputs
 
@@ -9,13 +9,29 @@
 
 ## Steps
 
-### 1. Read Plan State
+### 1. Read Plan State + Collab Check
 
 ```
 Read <plan-dir>/README.md
 Find the first phase that is NOT marked as done
 Read that phase's README.md for steps
 ```
+
+**Collab awareness check:**
+1. Does `<plan-dir>/README.md` have an `## Execution Strategy` section?
+2. Does any round show "parallel"?
+3. Does `<plan-dir>/collab.md` exist?
+
+| Condition | Action |
+|-----------|--------|
+| No Execution Strategy section | This is a sequential-only plan. Proceed normally. |
+| Parallel rounds exist + collab.md exists | You are part of a collab. Read collab.md FIRST. Follow its update gates at every checkpoint below. |
+| Parallel rounds exist + NO collab.md | **STOP.** Run scaffold workflow step 6 to create collab.md before proceeding. |
+
+**If running as part of a collab:**
+- Update your agent status to `learning` in collab.md
+- Run pre-flight checks and report: "Pre-flight: N tests green" in Messages
+- Update status to `working` before starting implementation
 
 ### 2. Create Branch
 
@@ -31,6 +47,8 @@ Follow the phase README steps. For each step:
 - Implement the code changes
 - Write tests for logic-heavy code
 - Update findings.md with decisions and learnings
+
+**If collab:** Update collab.md Messages before every commit with a one-line summary.
 
 ### 4. Pre-Commit Checks
 
@@ -71,12 +89,16 @@ git commit -m "<type>(scope): description"
 git push -u origin feature/phase-<N>-<name>
 ```
 
+**If collab:** Update collab.md Messages BEFORE committing. Verify your agent status is current BEFORE pushing.
+
 ### 7. Create PR
 
 Use `/create-pr` skill or:
 ```bash
 gh pr create --title "<type>(scope): phase N description" --body "..."
 ```
+
+**If collab:** Read other agents' Messages in collab.md for cross-references before creating PR.
 
 ### 8. Review Cycle
 
@@ -106,7 +128,20 @@ In `<plan-dir>/README.md`, mark the phase as done:
 
 Update findings.md with final notes.
 
+**If collab:**
+1. Update Task Board in collab.md — status → `done`, add PR link
+2. Post in Messages: "Phase N done. PR #XX merged. **Next: [what's unblocked].**"
+3. If ALL your assigned phases are done → status → `signed-off`
+4. If this completes a round → orchestrator advances to next round
+
 ### 11. Continue
 
-Check if there's a next phase. If yes, go back to step 2.
+**Sequential plan:** Check if there's a next phase. If yes, go back to step 2.
+
+**Collab plan:** Check collab.md:
+- Do you have more phases assigned in the current round? → Go to step 2
+- Is the current round complete (all agents done)? → Wait for orchestrator to advance round
+- Is the next round yours? → Wait for round advancement, then go to step 2
+- All your phases done? → Sign off in collab.md
+
 If all phases done, the plan is complete.
