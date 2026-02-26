@@ -1,9 +1,0 @@
-{
-  "sync": {
-    "files": [
-      "docs.local/learnings"
-    ],
-    "symlinks": [],
-    "commands": []
-  }
-}

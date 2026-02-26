@@ -1,1 +1,0 @@
-"use strict";(globalThis.webpackChunk_golems_docsite=globalThis.webpackChunk_golems_docsite||[]).push([[4250],{1869(e,s,a){a.d(s,{createGitGraphServices:()=>c.b});var c=a(7539);a(7960)}}]);
