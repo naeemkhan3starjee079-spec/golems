@@ -1,6 +1,6 @@
 # Golems Monorepo
 
-> Autonomous AI agent ecosystem — Bun workspace with 13 packages + 2 external repos. Each golem is a self-contained CC plugin.
+> Autonomous AI agent ecosystem — Bun workspace with 16 packages + 2 external repos. Each golem is a self-contained CC plugin.
 
 ## Packages
 
