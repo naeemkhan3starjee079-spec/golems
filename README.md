@@ -35,7 +35,7 @@ Golems is a personal AI agent ecosystem built as a **Bun workspace monorepo**. E
 
 It's not a Telegram bot — it's a **collection of skills, rules, MCP tools, and agent profiles** bundled into an ecosystem. Telegram is just one surface. A Codex agent, a Cursor session, or a fresh Claude Code instance can all use golems by pointing at the plugin directory.
 
-Your Mac runs the brain (Telegram bot, Night Shift, memory). Railway runs the body (email polling, job scraping, briefings). Every conversation gets indexed into searchable memory via [BrainLayer](https://github.com/EtanHey/brainlayer) (260K+ chunks).
+Your Mac runs the brain (Telegram bot, Night Shift, memory). Railway runs the body (email polling, job scraping, briefings). Every conversation gets indexed into searchable memory via [BrainLayer](https://github.com/EtanHey/brainlayer) (328K+ chunks).
 
 ---
 
@@ -125,11 +125,11 @@ golems/
 | **Runtime** | Bun + TypeScript |
 | **LLM** | Claude Code (Opus/Sonnet/Haiku), Gemini CLI, Cursor CLI |
 | **Database** | Supabase (Postgres + RLS) |
-| **Memory** | sqlite-vec + bge-large-en-v1.5 embeddings (238K+ chunks) |
+| **Memory** | sqlite-vec + bge-large-en-v1.5 embeddings (328K+ chunks) |
 | **Cloud** | Railway (Docker) |
 | **Local** | macOS launchd services |
 | **Bot** | grammY (Telegram) |
-| **Testing** | Bun test (1,148 tests, 3,990 assertions) |
+| **Testing** | Bun test (1,196 tests, 2,914 assertions) |
 | **CI/CD** | GitHub Actions + CodeRabbit + DeepSource |
 
 ---
@@ -225,11 +225,14 @@ The plugin brings its CLAUDE.md, skills, MCP tools, and rules automatically.
 
 | Server | What it does |
 |--------|-------------|
-| **[brainlayer](https://github.com/EtanHey/brainlayer)** | Search 260K+ indexed conversation chunks — persistent memory across sessions |
+| **[brainlayer](https://github.com/EtanHey/brainlayer)** | 7 MCP tools — search 328K+ indexed chunks, knowledge graph, entity extraction, person lookup |
+| **[voicelayer](https://github.com/EtanHey/voicelayer)** | 2 MCP tools — voice_speak (TTS) and voice_ask (STT Q&A) with session booking |
 | **golems-email** | Email triage — recent, search, subscriptions, urgent, draft replies |
 | **golems-jobs** | Job discovery — recent matches, search, stats |
+| **golems-glm** | Local LLM inference — glm_summarize, glm_score via Ollama (GLM-4.7-Flash) |
 | **supabase** | Database access — tables, SQL, migrations |
 | **exa** | Web search — code context, company research |
+| **kernel** | Browser automation — Playwright, profile management, extensions |
 | **sophtron** | Bank account and transaction access — feeds TellerGolem tax categorization |
 
 ---
