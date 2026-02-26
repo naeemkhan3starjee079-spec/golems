@@ -1,3 +1,0 @@
-# Backfill JSONL files are large and transient
-*.jsonl
-*.json

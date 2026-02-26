@@ -1,7 +1,0 @@
-{
-  "name": "@golems/ralph",
-  "private": true,
-  "dependencies": {
-    "puppeteer": "^24.37.2"
-  }
-}

@@ -1,4 +1,0 @@
-[test]
-# Tests must be run with scripts/test-isolated.sh to avoid cross-file
-# env pollution (bun 1.0.x runs all test files in one process).
-# TODO: Upgrade to bun 1.2+ where test isolation is native.

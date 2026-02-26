@@ -1,1 +1,0 @@
-"use strict";(globalThis.webpackChunk_golems_docsite=globalThis.webpackChunk_golems_docsite||[]).push([[6366],{6366(e,s,c){c.d(s,{createArchitectureServices:()=>i.S});var i=c(8980);c(7960)}}]);
