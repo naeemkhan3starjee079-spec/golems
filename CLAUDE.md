@@ -49,16 +49,6 @@ Some agents run with `isolation: worktree` for parallel work without file confli
 | `qa-voice` | Voice-powered QA testing with Playwright |
 | `discovery-voice` | Client discovery call assistant |
 
-## Deterministic Hooks
-
-Some rules are enforced by pre-tool-use hooks (can't be bypassed by the LLM):
-
-| Hook | Blocks | Bypass |
-|------|--------|--------|
-| `.claude/hooks/block-dangerous-commands.py` | git push, git commit, npm (use bun), python (use python3), Chrome/Safari (use Brave), git status -uall, Supabase DDL via execute_sql, Kilo in golems dirs, SVG file creation | `AUTONOMOUS=1` env var for git push/commit |
-
-Setup: Hook must be registered in `~/.claude/settings.json` under `hooks.PreToolUse`. See `.claude/hooks/` for scripts.
-
 ## Communication Style
 
 - **Formality:** 2/10 — Very casual

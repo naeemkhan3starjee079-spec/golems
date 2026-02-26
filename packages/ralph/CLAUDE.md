@@ -80,12 +80,10 @@ Always run tests before committing:
 **Notify user when finishing significant tasks:**
 
 ```bash
-curl -s -X POST http://localhost:3847/notify \
-  -H "Content-Type: application/json" \
-  -d '{"title":"Task Complete","body":"Brief description","source":"claude","priority":"default"}'
+notify "Task Complete" "Brief description"
 ```
 
-Sources: `claude` (🤖), `ralph` (🔄), `nightshift` (🌙). Keep title 2-4 words, body 1 sentence max.
+Keep title 2-4 words, body 1 sentence max.
 
 ## Skills Reference
 

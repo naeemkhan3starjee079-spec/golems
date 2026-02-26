@@ -1,7 +1,6 @@
 # Kilo CLI Safety Rules
 
 > Kilo Code sends code to external APIs via the Kilo Gateway. NEVER use with personal or golems data.
-> *(Directory blocking enforced by hook: .claude/hooks/block-dangerous-commands.py)*
 
 ## Allowed Directories
 

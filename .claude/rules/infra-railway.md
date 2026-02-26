@@ -8,7 +8,7 @@
 
 ## NEVER Delete the Service
 
-`railway down` DELETES the service. We lost 2 days rebuilding in Feb 2026. *(enforced by global hook: ~/.claude/hooks/pre_tool_use.py RED_PATTERNS)*
+`railway down` DELETES the service. We lost 2 days rebuilding in Feb 2026.
 - Use `railway service restart -y` to restart
 - NEVER run `railway down -y`
 
