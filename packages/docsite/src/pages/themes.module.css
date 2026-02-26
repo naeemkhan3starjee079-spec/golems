@@ -1,0 +1,419 @@
+/* ═══════════════════════════════════════════════════════════════
+   Theme Picker Hub + Full-page themed previews
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Hub page ── */
+.hub {
+  background: #080807;
+  min-height: 100vh;
+  padding: 3rem 2rem;
+}
+
+.hubHeader {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.hubLogo {
+  width: 64px;
+  height: 64px;
+  min-width: 64px;
+  min-height: 64px;
+  margin: 0 auto 1rem;
+  display: block;
+  filter: drop-shadow(0 0 20px rgba(229, 149, 0, 0.3));
+}
+
+.hubLogo svg { width: 64px; height: 64px; display: block; }
+
+.hubTitle {
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: #f0ebe0;
+  margin: 0 0 0.5rem;
+  letter-spacing: -0.03em;
+}
+
+.hubSubtitle {
+  color: #7c6f5e;
+  font-size: 1rem;
+}
+
+.hubGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.25rem;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.hubCard {
+  background: #0e0d0c;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: left;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.hubCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  border-color: var(--swatch, rgba(255,255,255,0.1));
+}
+
+.hubSwatch {
+  height: 6px;
+  width: 100%;
+}
+
+.hubCardContent {
+  padding: 1.25rem 1.25rem 0.75rem;
+}
+
+.hubCardContent h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0 0 0.25rem;
+}
+
+.hubCardContent p {
+  font-size: 0.82rem;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.hubPreview {
+  margin: 0 1rem 1rem;
+  border-radius: 8px;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.hubPreviewBar {
+  height: 4px;
+  width: 40%;
+  border-radius: 2px;
+}
+
+.hubPreviewLines {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hubFooter {
+  text-align: center;
+  margin-top: 3rem;
+}
+
+.hubBackLink {
+  color: #7c6f5e;
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+.hubBackLink:hover {
+  color: #e59500;
+}
+
+/* ── Floating back button ── */
+.backButton {
+  position: fixed;
+  top: 80px;
+  left: 1.5rem;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid;
+  border-radius: 10px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.82rem;
+}
+
+.backButton:hover {
+  transform: translateX(-2px);
+  background: rgba(0, 0, 0, 0.95);
+}
+
+/* ── Themed hero section ── */
+.themeHero {
+  position: relative;
+  overflow: hidden;
+  padding: 0;
+}
+
+.themeHeroInner {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 1rem;
+  padding: 1.5rem 2rem 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  align-items: stretch;
+}
+
+.themeTermArea {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.themeHeader {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.themeLogo {
+  width: 56px;
+  height: 56px;
+  min-width: 56px;
+  min-height: 56px;
+}
+
+.themeLogo svg { width: 56px; height: 56px; display: block; }
+
+.themeTitle {
+  font-size: 1.8rem;
+  font-weight: 900;
+  margin: 0;
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+}
+
+.themeTagline {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.78rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* Terminal */
+.themeTerm {
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.themeTermTitle {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  gap: 0.5rem;
+  border-bottom: 1px solid;
+}
+
+.themeTermDots {
+  display: flex;
+  gap: 6px;
+}
+
+.themeTermDots span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: block;
+}
+
+.themeTermContent {
+  padding: 1rem 1.25rem;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.76rem;
+  line-height: 1.55;
+  height: 380px;
+  overflow-y: auto;
+}
+
+.themeWizardGrid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.themeWizardMascot {
+  opacity: 0.9;
+}
+
+.themeTermLine {
+  white-space: pre;
+}
+
+/* Buttons */
+.themeButtons {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.themeBtn {
+  padding: 0.65rem 1.4rem;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+/* Phone */
+.themePhone {
+  display: flex;
+  align-items: stretch;
+}
+
+.themePhoneFrame {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #000;
+  border-radius: 44px;
+  border: 2px solid #3a3a3c;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(255,255,255,0.04);
+  overflow: hidden;
+}
+
+.themePhoneDI {
+  width: 92px;
+  height: 28px;
+  background: #000;
+  border-radius: 20px;
+  margin: 10px auto 0;
+  flex-shrink: 0;
+}
+
+.themePhoneHome {
+  width: 100px;
+  height: 4px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 2px;
+  margin: 6px auto 8px;
+  flex-shrink: 0;
+}
+
+/* ── Sections ── */
+.themeSection {
+  padding: 4rem 0;
+  border-top: 1px solid;
+}
+
+.themeSectionInner {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0 2rem;
+  text-align: center;
+}
+
+.themeSectionInner h2 {
+  font-size: 2rem;
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+}
+
+.themeSectionInner p {
+  margin-bottom: 2rem;
+}
+
+.themeInstallGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.themeInstallStep {
+  border: 1px solid;
+  border-radius: 12px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.themeStepNum {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-weight: 800;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.themeGolemGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+  text-align: left;
+}
+
+.themeGolemCard {
+  border: 1px solid;
+  border-radius: 12px;
+  padding: 1.25rem;
+  transition: transform 0.2s ease;
+}
+
+.themeGolemCard:hover {
+  transform: translateY(-2px);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Responsive
+   ═══════════════════════════════════════════════════════════════ */
+
+@media screen and (max-width: 996px) {
+  .themeHeroInner {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .themePhone {
+    max-width: 320px;
+    margin: 0 auto;
+    max-height: 450px;
+  }
+
+  .themeInstallGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .hub { padding: 2rem 1rem; }
+  .hubGrid { grid-template-columns: 1fr; }
+
+  .themeHeroInner { padding: 1rem; }
+  .themeTermContent { height: 280px; font-size: 0.7rem; }
+  .themeWizardGrid { grid-template-columns: 1fr; }
+  .themeWizardMascot { display: none; }
+  .themeButtons { flex-direction: column; }
+  .themeBtn { text-align: center; width: 100%; }
+  .themeInstallGrid { grid-template-columns: 1fr; }
+  .themeGolemGrid { grid-template-columns: 1fr; }
+
+  .backButton {
+    top: auto;
+    bottom: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .backButton:hover {
+    transform: translateX(-50%) translateY(-2px);
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .hubTitle { font-size: 1.6rem; }
+  .themeTermContent { height: 240px; font-size: 0.65rem; }
+}

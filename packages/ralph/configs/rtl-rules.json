@@ -1,0 +1,52 @@
+{
+  "$schema": "https://ralph.dev/schemas/rtl-rules.schema.json",
+  "version": "1.0",
+  "enabled": false,
+  "description": "RTL layout rules for Hebrew/Arabic projects",
+  "terminology": {
+    "START": "Beginning of reading direction (RIGHT in RTL, LEFT in LTR)",
+    "END": "End of reading direction (LEFT in RTL, RIGHT in LTR)"
+  },
+  "rules": [
+    {
+      "id": "use-start-end",
+      "title": "Use START/END, not LEFT/RIGHT",
+      "description": "Direction-agnostic terms prevent RTL bugs"
+    },
+    {
+      "id": "rtl-propagation",
+      "title": "RTL Must Propagate to ALL Children",
+      "description": "Inner flex containers may not inherit dir='rtl'",
+      "fix": "Add dir='rtl' to inner flex containers explicitly"
+    },
+    {
+      "id": "text-alignment",
+      "title": "Text Alignment in RTL",
+      "rules": [
+        "Hebrew text should be text-right",
+        "Use items-end for flex column alignment in RTL"
+      ]
+    },
+    {
+      "id": "button-icons",
+      "title": "Button Icons - Use END for trailing icons",
+      "description": "Icons typically go at END (after text in reading order)",
+      "rtl": "Use rightIcon for icon at END (LEFT in RTL)"
+    },
+    {
+      "id": "price-direction",
+      "title": "Prices need dir='ltr'",
+      "description": "Wrap prices in <span dir='ltr'> to prevent symbol reversal"
+    },
+    {
+      "id": "justify-end",
+      "title": "justify-end Pushes to LEFT in RTL",
+      "description": "Remove justify-end for natural RTL flow from RIGHT"
+    },
+    {
+      "id": "flex-overflow",
+      "title": "Add min-w-0 to Flex Items",
+      "description": "Prevents overflow, especially for inputs"
+    }
+  ]
+}

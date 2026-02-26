@@ -1,0 +1,21 @@
+{
+  "id": "US-105",
+  "title": "Moltbook Context in Thread Memory",
+  "description": "Log Moltbook interactions (posts read, reactions, comments) into thread memory. Bot remembers what it browsed. TDD: write failing tests first.",
+  "acceptanceCriteria": [
+    {"text": "RED: Write failing test for logging Moltbook post read to thread", "checked": false},
+    {"text": "GREEN: Implement post read logging to pass", "checked": false},
+    {"text": "RED: Write failing test for logging reactions with post context", "checked": false},
+    {"text": "GREEN: Implement reaction logging to pass", "checked": false},
+    {"text": "RED: Write failing test for including Moltbook context in compaction", "checked": false},
+    {"text": "GREEN: Implement Moltbook-aware compaction to pass", "checked": false},
+    {"text": "RED: Write failing test for /memory command showing Moltbook activity", "checked": false},
+    {"text": "GREEN: Implement /memory command to pass", "checked": false},
+    {"text": "REFACTOR: Hook into ollama-moltbook-surfer.ts", "checked": false},
+    {"text": "Verify all tests pass, output pristine", "checked": false},
+    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": false},
+    {"text": "Commit: feat: US-105 Moltbook context in thread memory", "checked": false}
+  ],
+  "passes": false,
+  "blockedBy": ["US-101", "US-104"]
+}

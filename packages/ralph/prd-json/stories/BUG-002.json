@@ -1,0 +1,23 @@
+{
+  "id": "BUG-002",
+  "title": "-QN notification flag not working",
+  "description": "The -QN/--notify flag doesn't enable ntfy notifications. Need to trace the flag through ralph.zsh -> ralph-ui to find where it's being lost.",
+  "acceptanceCriteria": [
+    {"text": "Trace -QN flag from ralph.zsh through to ralph-ui runner", "checked": true},
+    {"text": "Verify RALPH_NOTIFY env var is set when -QN passed", "checked": true},
+    {"text": "Verify ralph-ui reads --notify flag and enables notifications", "checked": true},
+    {"text": "Fix the broken link in the notification chain", "checked": true},
+    {"text": "Add verbose log when ntfy called: `[NTFY] Sending to {topic}: {title}`", "checked": true},
+    {"text": "TEST: Add bun/tests/ntfy.test.ts with sendNotification tests", "checked": true},
+    {"text": "TEST: Verify sendNotification builds correct curl args (topic, title, body)", "checked": true},
+    {"text": "TEST: Run `bun test bun/tests/ntfy.test.ts` - all tests pass", "checked": true},
+    {"text": "TEST: Direct curl test: `curl -s ntfy.sh/etanheys-ralph-claude-golem-notify -d 'BUG-002 test'`", "checked": true},
+    {"text": "Typecheck passes", "checked": true},
+    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": true},
+    {"text": "Commit: fix: BUG-002 restore -QN notification flag functionality", "checked": true}
+  ],
+  "storyType": "bug",
+  "passes": true,
+  "completedAt": "2026-01-26T10:14:47.652Z",
+  "completedBy": "kiro"
+}

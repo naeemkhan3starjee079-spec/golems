@@ -1,0 +1,17 @@
+{
+  "id": "RS-101",
+  "title": "Research Advanced Telegram Bot Features",
+  "description": "Web search for modern Telegram bot features in 2026. Look for: inline keyboards, progress animations, file/image sharing, voice messages, scheduled messages, reactions, threads, mini apps. Document which ones could enhance Ralph/GolemsZikaron notifications.",
+  "acceptanceCriteria": [
+    {"text": "Search for 'Telegram bot features 2026' and 'grammy advanced features'", "checked": true},
+    {"text": "Document 5+ features with implementation effort rating", "checked": true},
+    {"text": "Prioritize by value: which would make notifications most useful", "checked": true},
+    {"text": "Save to docs.local/research/telegram-advanced-features.md", "checked": true},
+    {"text": "Update US-107 criteria based on findings", "checked": true},
+    {"text": "Commit: docs: RS-101 research advanced Telegram features", "checked": true}
+  ],
+  "passes": true,
+  "blockedBy": null,
+  "completedAt": "2026-02-02T09:28:00.000Z",
+  "completedBy": "sonnet"
+}

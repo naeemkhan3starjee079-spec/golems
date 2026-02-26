@@ -1,1 +1,12 @@
-not json
+{
+  "name": "golems",
+  "private": true,
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "test": "bun test packages/autonomous/src/__tests__/",
+    "test:all": "bun test packages/*/src/__tests__/"
+  },
+  "dependencies": {
+    "@axiomhq/js": "^1.4.0"
+  }
+}

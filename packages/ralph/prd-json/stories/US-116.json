@@ -1,0 +1,23 @@
+{
+  "id": "US-116",
+  "title": "Add timestamp tracking to PRD criteria",
+  "description": "Track when each criterion is completed and when iterations start/end. This helps debug slow stories and measure model performance.",
+  "acceptanceCriteria": [
+    {"text": "SETUP: Create worktree at ~/worktrees/claude-golem/us-116-timestamps", "checked": true, "completedAt": "2026-01-26T11:32:51.783Z"},
+    {"text": "SETUP: Log worktree location to execution.log", "checked": true, "completedAt": "2026-01-26T11:32:51.783Z"},
+    {"text": "Add `completedAt` field to criteria in story JSON when checked", "checked": true, "completedAt": "2026-01-26T11:32:51.783Z"},
+    {"text": "Log iteration start time to execution.log: `[ISO] ITERATION START: {story} (criteria X/Y)`", "checked": true, "completedAt": "2026-01-26T11:32:51.783Z"},
+    {"text": "Log iteration end time: `[ISO] ITERATION END: {story} (criteria X/Y) - {duration}`", "checked": true, "completedAt": "2026-01-26T11:32:51.783Z"},
+    {"text": "Update bun/core/stories.ts checkCriterion() to add timestamp", "checked": true, "completedAt": "2026-01-26T11:32:51.783Z"},
+    {"text": "Update ralph-ui runner to log start/end times", "checked": true, "completedAt": "2026-01-26T11:32:51.783Z"},
+    {"text": "Typecheck passes", "checked": true, "completedAt": "2026-01-26T11:32:51.783Z"},
+    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": true, "completedAt": "2026-01-26T11:32:51.783Z"},
+    {"text": "CLEANUP: Commit in worktree: feat: US-116 add timestamp tracking to PRD criteria", "checked": true, "completedAt": "2026-01-26T11:32:51.783Z"},
+    {"text": "CLEANUP: Push worktree branch to origin", "checked": true, "completedAt": "2026-01-26T11:32:51.783Z"},
+    {"text": "CLEANUP: Return to master branch in main repo before completing", "checked": true, "completedAt": "2026-01-26T11:32:51.783Z"}
+  ],
+  "storyType": "feature",
+  "passes": true,
+  "completedAt": "2026-01-26T11:35:51.783Z",
+  "completedBy": "kiro"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "AUDIT-129",
+  "title": "Verify Notify System Works End-to-End",
+  "description": "Audit story to verify MP-129 notify system. Tests that agents can successfully notify user via ntfy.",
+  "acceptanceCriteria": [
+    {"text": "Verify bun/tests/notify.test.ts exists and all tests pass", "checked": false},
+    {"text": "Verify buildTopic() in notify.ts returns correct format", "checked": false},
+    {"text": "Direct test: curl -s ntfy.sh/etanheys-ralph-claude-golem-notify -d 'AUDIT-129 test' returns 200", "checked": false},
+    {"text": "Verify ~/.claude/CLAUDE.md has 'NOTIFY USER' section with examples", "checked": false},
+    {"text": "Verify [NTFY] log appears when sendNotification called", "checked": false},
+    {"text": "Run full test suite: bun test - all tests pass", "checked": false},
+    {"text": "Typecheck passes", "checked": false},
+    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": false},
+    {"text": "Commit: test: AUDIT-129 verify notify system end-to-end", "checked": false}
+  ],
+  "storyType": "audit",
+  "blockedBy": "TEST-129",
+  "passes": false
+}

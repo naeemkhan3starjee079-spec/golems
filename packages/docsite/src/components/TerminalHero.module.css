@@ -1,0 +1,341 @@
+/* iTerm2-style terminal — Zed theme colors */
+.terminal {
+  border-radius: 10px;
+  overflow: hidden;
+  background: #000000;
+  border: 1px solid rgba(196, 109, 60, 0.15);
+  box-shadow:
+    0 12px 48px rgba(0, 0, 0, 0.7),
+    0 0 80px rgba(229, 149, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  font-family: 'IBM Plex Mono', 'Fira Code', Monaco, monospace;
+  width: 100%;
+  transition: box-shadow 0.4s ease;
+}
+
+.terminal:hover {
+  box-shadow:
+    0 16px 56px rgba(0, 0, 0, 0.8),
+    0 0 100px rgba(229, 149, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+/* Title bar — macOS window chrome */
+.titleBar {
+  display: flex;
+  align-items: center;
+  padding: 10px 14px;
+  background: #1c1c1c;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.trafficLights {
+  display: flex;
+  gap: 7px;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.dot[data-color='red'] {
+  background: #ff5f57;
+}
+
+.dot[data-color='yellow'] {
+  background: #febc2e;
+}
+
+.dot[data-color='green'] {
+  background: #28c840;
+}
+
+.titleText {
+  flex: 1;
+  text-align: center;
+  font-size: 0.75rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.titleSpacer {
+  width: 54px;
+}
+
+/* Tab bar */
+.tabBar {
+  display: flex;
+  background: #141414;
+  border-bottom: 1px solid #2a2a2a;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tabBar::-webkit-scrollbar {
+  display: none;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 14px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #666;
+  font-family: inherit;
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.tab:hover {
+  color: #999;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.tabActive {
+  color: #e8e2d6;
+  border-bottom-color: #e59500;
+  background: rgba(229, 149, 0, 0.1);
+  transform: scale(1.05);
+  transform-origin: center bottom;
+  font-weight: 700;
+  box-shadow: 0 2px 12px rgba(229, 149, 0, 0.15);
+  z-index: 1;
+}
+
+.tabEmoji {
+  font-size: 0.85rem;
+}
+
+.tabName {
+  font-weight: 500;
+}
+
+/* Terminal content area — fixed height prevents CLS on tab switch */
+.content {
+  padding: 16px 18px;
+  height: 320px;
+  overflow: hidden;
+  transition: opacity 0.3s ease;
+}
+
+/* ═══ Neofetch layout ═══ */
+.neofetch {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.neofetchArt {
+  flex-shrink: 0;
+  padding-top: 4px;
+}
+
+.neofetchInfo {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.neofetchTitle {
+  font-size: 0.82rem;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.neofetchSep {
+  color: #333;
+  font-size: 0.7rem;
+  margin: 4px 0;
+}
+
+.neofetchLine {
+  display: flex;
+  gap: 8px;
+  animation: fadeIn 0.3s ease forwards;
+  opacity: 0;
+}
+
+.neofetchLabel {
+  font-weight: 700;
+  white-space: nowrap;
+  min-width: 100px;
+}
+
+.neofetchValue {
+  color: #999;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ═══ Standard terminal lines ═══ */
+.prompt {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  font-size: 0.82rem;
+}
+
+.promptSymbol {
+  color: #e59500;
+  font-size: 0.9rem;
+}
+
+.promptPath {
+  color: #28c840;
+  font-weight: 600;
+}
+
+.promptCaret {
+  color: #BBBBBB;
+}
+
+.line {
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: #BBBBBB;
+  animation: fadeIn 0.3s ease forwards;
+  opacity: 0;
+}
+
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+  }
+}
+
+.cursor {
+  color: #BBBBBB;
+  font-size: 0.82rem;
+  animation: blink 1s step-end infinite;
+  margin-top: 4px;
+  display: inline-block;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* Light mode */
+:global([data-theme='light']) .terminal {
+  background: #1a1a2e;
+  border-color: rgba(196, 109, 60, 0.25);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.15), 0 0 40px rgba(180, 120, 0, 0.05);
+}
+
+:global([data-theme='light']) .titleBar {
+  background: #252540;
+}
+
+:global([data-theme='light']) .tabBar {
+  background: #1e1e35;
+}
+
+/* ═══ Responsive ═══ */
+@media screen and (max-width: 768px) {
+  .terminal {
+    max-width: 100%;
+  }
+
+  .tab {
+    padding: 8px 10px;
+    font-size: 0.68rem;
+    min-height: 44px;
+  }
+
+  .tabEmoji {
+    font-size: 0.8rem;
+  }
+
+  .content {
+    padding: 14px 16px;
+    height: 300px;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .line {
+    font-size: 0.75rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .prompt {
+    font-size: 0.78rem;
+  }
+
+  /* Neofetch stacks vertically on mobile */
+  .neofetch {
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .neofetchInfo {
+    font-size: 0.7rem;
+    width: 100%;
+  }
+
+  .neofetchLabel {
+    min-width: 80px;
+  }
+
+  .neofetchLine {
+    flex-wrap: wrap;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .tabName {
+    display: none;
+  }
+
+  .tab {
+    padding: 8px 10px;
+    min-height: 44px;
+  }
+
+  .content {
+    height: 260px;
+    padding: 12px 14px;
+  }
+
+  .line {
+    font-size: 0.72rem;
+  }
+
+  .neofetchArt {
+    display: none;
+  }
+
+  .neofetchLabel {
+    min-width: 70px;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .line,
+  .neofetchLine {
+    animation: none;
+    opacity: 1;
+  }
+
+  .cursor {
+    animation: none;
+  }
+
+  .tabActive {
+    transform: none;
+  }
+}

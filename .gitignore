@@ -1,0 +1,34 @@
+node_modules/
+.env
+.env.local
+.mcp.json
+.ralph-worktrees/
+
+# Claude scratchpads (temp working files)
+claude.scratchpad*.md
+**/claude.scratchpad*.md
+nohup.out
+**/nohup.out
+
+# Project-level Claude config (may have keys)
+.claude/*
+!.claude/rules/
+!.claude/agents/
+!.claude/hooks/
+
+# Personal profile symlink (real data lives in golem-profiles private repo)
+.claude/rules/owner-profile.md
+
+# Local research docs (cherry-pick to real docs when ready)
+research.docs.local/
+docs.local/
+
+# WIP - Tax Helper
+packages/tax-helper/
+skills/golem-powers/tax-helper/
+packages/ralph/skills/golem-powers/tax-helper
+docs/tax-helper-plan.md
+
+# DeepSource CLI
+packages/docsite/bin/
+.vercel

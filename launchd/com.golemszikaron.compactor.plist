@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.golemszikaron.compactor</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/etanheyman/.bun/bin/bun</string>
+        <string>/Users/etanheyman/Gits/golems/packages/services/src/run-compaction.ts</string>
+    </array>
+
+    <!-- Run every hour (3600 seconds) -->
+    <key>StartInterval</key>
+    <integer>3600</integer>
+
+    <key>StandardOutPath</key>
+    <string>/tmp/golemszikaron-compactor.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/tmp/golemszikaron-compactor.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HOME</key>
+        <string>/Users/etanheyman</string>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/Users/etanheyman/.bun/bin:/opt/homebrew/bin</string>
+    </dict>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/etanheyman/Gits/golems</string>
+
+    <key>RunAtLoad</key>
+    <false/>
+</dict>
+</plist>

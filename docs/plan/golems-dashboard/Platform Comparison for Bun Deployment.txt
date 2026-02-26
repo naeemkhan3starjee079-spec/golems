@@ -1,0 +1,207 @@
+﻿Technical Evaluation and Architectural Analysis: Transitioning Bun-Based Monorepo Workloads from Railway PaaS to Self-Hosted Coolify v4 on Hetzner Infrastructure
+The evolution of cloud deployment platforms has reached a pivotal juncture in 2026. While the convenience of high-abstraction platforms like Railway.app continues to provide significant developer experience benefits, the economic and operational realities of scaling low-margin or high-complexity microservices have driven many engineering teams toward self-hosted orchestration layers. The focus of this evaluation centers on the transition of a specific Bun monorepo architecture, characterized by its minimal resource footprint but high reliance on scheduled task precision and consistent deployment cycles, from a managed PaaS model to a self-managed instance of Coolify v4 hosted on Hetzner Cloud.
+Core Workload Profile and the Case for Infrastructure Migration
+The current production environment on Railway involves a Bun monorepo comprising ten distinct packages, all encapsulated within a single Dockerfile utilizing the oven/bun:1.2-alpine base image. The operational efficiency of Bun as a runtime is evident in the workload's memory consumption, which typically oscillates between 50MB and 100MB, accompanied by minimal CPU utilization primarily dedicated to HTTP request handling and periodic LLM API interactions. This lean profile is highly suitable for the shared-CPU environments typical of budget-tier VPS offerings, provided that the underlying hypervisor maintains low latency and predictable performance.
+A significant portion of the application's value is derived from its scheduled orchestration, which manages four critical cron jobs aligned with the Israel Standard Time (IST) and Israel Daylight Time (IDT) zones. These include hourly email polling during business hours, thrice-daily job scraping on a Sunday-to-Thursday schedule, and specialized learner and briefing tasks during off-peak hours. On Railway, this is handled through a usage-based billing model that typically incurs a cost of $5 to $10 per month. The objective of the transition is to reduce this recurring expenditure to a fixed baseline of under $10 while maintaining—or improving—the reliability of auto-deployments, health monitoring, and zero-downtime execution.
+The Hetzner CX22 Infrastructure Foundation
+Evaluating the suitability of the Hetzner CX22 instance requires an analysis of its underlying KVM virtualization and hardware specifications. The CX22 plan provides 2 vCPUs, 4GB of RAM, and 40GB of NVMe SSD storage, a configuration that appears disproportionately large for the Bun worker alone but is necessitated by the resource requirements of the Coolify management plane.
+Technical Specifications of the CX22 Platform
+The CX22 instance is part of Hetzner’s cost-optimized shared-CPU range, which leverages modern Intel Xeon or AMD EPYC processors in a redundant RAID 10 configuration for storage fault tolerance.1
+
+
+Component
+	Specification
+	Operational Context
+	CPU
+	2 vCPUs (Shared)
+	Intel Xeon Skylake/Cascade Lake architecture 2
+	Memory
+	4 GB DDR4
+	ECC protected for production stability
+	Disk
+	40 GB NVMe
+	SSD performance with RAID 10 protection 1
+	Network
+	20 TB Transfer
+	1 Gbit/s uplink with EU/US data center options 3
+	Base Cost
+	€3.49 - €4.50/mo
+	Approximately $4.10 - $5.10 based on exchange rates 4
+	Backup
+	20% of Server Price
+	Weekly automated backups with 7 slots 1
+	The performance profile of the CX22 indicates strong single-core and multi-core capabilities, which are essential when the Coolify management container initiates build processes for the Bun monorepo.2 However, because this is a shared-resource environment, the presence of other tenants on the same physical host can lead to "CPU Steal".6 For timing-sensitive cron jobs, monitoring the steal percentage via mpstat or top is a critical maintenance task, as high steal can delay task execution or cause the management layer to become unresponsive during 4 AM job spikes.
+Resource Fit for Coolify and Bun
+A primary concern is whether the CX22 can comfortably host both the orchestration layer and the application. Coolify v4 is not a single binary; it is a suite of services including a PHP/Laravel backend, a PostgreSQL database, a Redis cache, and a Traefik reverse proxy.7 This management stack typically consumes between 1GB and 2GB of RAM. Given that the Bun worker only requires 100MB, the 4GB ceiling of the CX22 provides ample headroom for these services to coexist, allowing for additional background workers or staging environments if necessary.9 The 40GB disk space is sufficient for the initial OS and Coolify installation, though it will require aggressive pruning of Docker images and build logs to prevent saturation.9
+Coolify v4 as a Production Orchestration Layer
+Coolify v4 presents a compelling value proposition as a "self-hosted Railway." It provides a sophisticated web interface for managing Docker containers, databases, and services, effectively abstracting the complexity of the Docker CLI while retaining full root access to the underlying VPS.3
+Deployment and Build Pack Configuration
+For the Bun monorepo, Coolify utilizes a Dockerfile build pack. This approach is superior to generic build packs as it allows the user to define the exact environment using the oven/bun:1.2-alpine image. The setup requires defining a Base Directory in the Coolify dashboard—typically the root of the monorepo—while specifying the relative path to the Dockerfile.10
+The auto-deployment workflow is facilitated through a GitHub App or webhooks.12 The GitHub App method is recommended for its deeper integration, enabling automatic pull request previews and streamlined secret management. When a push occurs on the master branch, Coolify triggers a build. During this phase, the CX22’s CPU will see a significant spike. If multiple deployments or cron jobs coincide, the builder may experience resource contention, a phenomenon reported by users on similar budget hardware.13
+Zero-Downtime Mechanics and Traefik Integration
+Zero-downtime deployments are a non-negotiable requirement for the modern worker. Coolify achieves this through rolling updates.11 When a new build is completed, Coolify initiates a new container while the existing one remains active. The Traefik proxy routes traffic to the new instance only after it passes the configured health check.11
+
+
+Feature
+	Mechanism
+	Constraint
+	Rollout Strategy
+	Rolling Release
+	Only for Dockerfile/Nixpacks deployments 11
+	Traffic Routing
+	Traefik Reverse Proxy
+	Requires container health confirmation 11
+	Conflict Prevention
+	Dynamic Port Binding
+	Avoid host-level port mapping for zero-downtime 11
+	Health Monitoring
+	GET /health
+	Requires curl or wget in the container 11
+	A critical caveat for the Bun monorepo is the reliance on the default container naming convention. If a custom name is applied, Coolify’s internal logic for managing the transition between the old and new instances may fail, resulting in service interruption.11 Furthermore, if the workload is expanded to use Docker Compose, zero-downtime support is currently absent due to the static nature of Compose container names.8
+Cron Orchestration and Timezone Management
+The scheduling of the four cron jobs—email polling, job scraping, morning briefings, and the Soltome learner—represents the most complex aspect of the Coolify migration. Coolify supports standard cron syntax (e.g., * * * * *) and allows tasks to be defined either at the server level or within individual containers.12
+Implementing Israel Timezone Support
+Standard Linux cron and Coolify’s internal scheduler typically default to Coordinated Universal Time (UTC). For a user in the Israel timezone (Asia/Jerusalem), the transition from Railway (which handles timezone offsets gracefully) to a VPS requires manual configuration. While Coolify v4 includes a "Server Timezone" setting in the dashboard, historical reports from 2025-2026 indicate that this setting primarily affects the UI display, while metrics and internal logs may remain anchored to UTC.15
+To ensure the morning briefing triggers at exactly 8:00 AM IST/IDT, the user must:
+1. Configure the host VPS timezone using timedatectl set-timezone Asia/Jerusalem.
+2. Set the GENERIC_TIMEZONE and TZ environment variables within the Bun worker container.
+3. Audit the execution logs via the Coolify dashboard or the Axiom integration to verify the drift, particularly during the transition between IST and IDT.
+Resilience and Error Handling at 4 AM
+Failures occurring during off-peak hours are a primary concern for self-hosted infrastructure. On Railway, the platform manages the restart policy and health monitoring with zero user intervention. On Coolify, the user must rely on the Docker daemon's restart policies (e.g., unless-stopped or always).16 If the Bun worker crashes at 2:00 AM during a learner task, Docker will attempt a restart. If the crash is persistent, the health check will eventually fail, and Traefik will cease routing traffic.11
+Coolify’s "Sentinel" monitoring tool provides a lightweight way to watch for resource spikes, but it does not offer the same level of managed proactive recovery as Railway.18 If the entire VPS goes down—due to a Hetzner router upgrade or a rare hardware failure—the user must rely on Hetzner's infrastructure-level alerts. Uptime for Hetzner has been generally excellent, with maintenance windows often announced weeks in advance.19
+Stability, Bugs, and Technical Debt (2025-2026)
+The experience of self-hosting with Coolify v4 in 2026 is characterized by a "beta" stability profile. While the feature set is exhaustive, the rapid pace of development has led to frequent regressions and resource management issues.
+Critical Performance and Stability Regressions
+User reports from late 2025 highlight a catastrophic CPU overload bug linked to the Laravel Horizon queue worker used by Coolify.6 In some instances, the management container entered an infinite loop, driving CPU usage to 400% and rendering the entire VPS unresponsive.
+
+
+Bug/Issue
+	Root Cause
+	Impact
+	Session Table Bloat
+	Daily cleanup fails to purge encrypted sessions 6
+	58GB database tables causing CPU spikes
+	Docker v29 Incompatibility
+	Traefik image version mismatch 20
+	All applications become unreachable (502)
+	GitHub Token Failure
+	Installation token errors during deployment 21
+	Deployment failures requiring manual retries
+	White Screen Regression
+	Deployment logic in beta v4.41 22
+	React/Frontend apps failing after "successful" build
+	The session table growth issue is particularly relevant for the Bun monorepo user. Because the Coolify database shares the same 2 vCPUs as the application, a slow PostgreSQL query against a massive session table can delay the execution of the 8:00 AM briefing or the hourly email polling. Mitigation strategies include manually truncating the session table (TRUNCATE sessions;) or switching the session driver to Redis.6
+Security and CVE Management
+Self-hosting places the burden of security on the user. Throughout 2025, Coolify addressed several critical vulnerabilities, including command injection CVEs and stored XSS issues.23 Maintaining a regular update schedule is essential, but it carries the risk of introducing new "beta" bugs. The recommended approach for 2026 is to restrict the Coolify admin interface to a VPN or IP whitelist and to monitor for unusual API calls.23
+Comparative Analysis: The 2026 Hosting Ecosystem
+A strategic evaluation requires comparing the self-hosted Hetzner/Coolify approach against managed alternatives like Fly.io and Render.
+Coolify on Hetzner vs. Fly.io
+Fly.io utilizes a unique Firecracker microVM architecture. For a 100MB Bun worker, Fly.io is technically superior in its isolation and scaling capabilities, but its pricing model has shifted significantly by 2026.
+
+
+Metric
+	Coolify (Hetzner)
+	Fly.io (2026)
+	Pricing Model
+	Fixed ($4.50/mo)
+	Usage-based ($5.00/mo min) 24
+	Cron Support
+	Native/Dashboard
+	Supercronic/Cron Manager 26
+	IP Addresses
+	1x IPv4 Included 1
+	$2.00/mo for Dedicated IPv4 24
+	Storage
+	40 GB NVMe
+	$0.15/GB/mo (Volumes) 24
+	Failover
+	Manual/Backup
+	Standby Machines 16
+	Fly.io does not offer a native cron scheduler. The Bun worker must either include supercronic in its Dockerfile—a container-friendly cron runner that handles environment variables correctly—or the user must deploy a separate "Cron Manager" application.26 While Fly.io offers a $5 credit, once this is exhausted, a baseline "hobby" plan of $5 per month becomes mandatory, making it more expensive than the CX22 for the same resource footprint.25
+Render and Railway Comparison
+Render provides a robust PaaS experience with first-class support for background workers and cron jobs.29 However, Render’s free tier is prone to restarts and lacks the persistence required for complex monorepo builds. Railway remains the most user-friendly option, with usage-based billing that scales to zero for staging environments, but it offers the least transparency regarding the underlying hardware.30
+Fly.io as a Hot Standby for Railway Failover
+A sophisticated requirement for high-availability workers is the implementation of a cross-platform failover strategy. Fly.io's architecture is uniquely suited to act as a standby for Railway or Hetzner.
+Standby Machine Mechanics
+Fly.io's "Standby Machine" feature allows a stopped machine to be paired with a running machine. The standby remains inactive—and incurs no compute charges—until the primary machine becomes unavailable.17 For a Railway-to-Fly failover, the user can deploy a clone of the Bun worker to Fly.io and configure it using fly machines update --standby-for.16
+However, the implementation of a cross-platform failover requires a global traffic manager, such as a Cloudflare Load Balancer. This introduces a "chicken-and-egg" problem with SSL certificates. Railway often struggles to issue or renew Let's Encrypt certificates if a Cloudflare proxy is detected, as the ACME challenge may be intercepted.33 The recommended configuration is a DNS-only setup or utilizing Fly.io's internal AAAA records for IPv6 routing while managing the primary certificate at the edge.34
+Synchronizing State and Secrets
+A failover is only as effective as the data it accesses. Since the Bun worker relies on Supabase for data and Axiom for logs, the state is managed externally, making a hot standby viable. Secrets must be synchronized across both platforms; for Fly.io, this is performed via fly secrets set KEY=value, which stores secrets in an encrypted volume accessible only at runtime.26 The setup time for someone already using a Dockerfile on Railway is approximately 1 hour, primarily spent configuring the fly.toml and setting secrets.
+Maintenance Burden and Operational Checklist
+Transitioning to Coolify on Hetzner effectively makes the user a part-time DevOps engineer. The maintenance burden is substantially higher than Railway but offers total transparency.
+Weekly and Monthly Maintenance Tasks
+To prevent the common 4 AM failures, a routine maintenance schedule is required.9
+
+
+Frequency
+	Task
+	Goal
+	Weekly
+	sudo apt update && sudo apt upgrade
+	Patch kernel and Docker vulnerabilities 23
+	Weekly
+	docker system prune -af
+	Recover disk space from failed/old builds 9
+	Monthly
+	Rotate GitHub App Secrets
+	Maintain security hygiene 23
+	Monthly
+	Review Session Table Size
+	Prevent PostgreSQL-related CPU spikes 6
+	On-Demand
+	Update Coolify via UI
+	Patch beta regressions and CVEs 36
+	Backup and Recovery Strategy
+Hetzner’s automated backup service is the primary defense against data loss. Costing 20% of the instance price, it takes weekly snapshots and retains seven historical copies.1 This protects against OS-level corruption or platform-level bugs in Coolify. For the application itself, Coolify supports database backups to S3-compatible storage, which should be configured for the internal PostgreSQL database.37
+Synthesis and Recommendations
+The evaluation of Coolify v4 on a Hetzner CX22 as a replacement for Railway.app for a Bun-based monorepo reveals a powerful but demanding alternative.
+Summary of Requirements Satisfaction
+1. Cron Scheduling: Coolify supports the 4 required schedules natively. However, the Israel timezone must be manually configured at the OS and container level to avoid drift. There is a non-zero risk of task execution failure due to internal scheduler bugs reported in late 2025.12
+2. Dockerfile Support: The oven/bun:1.2-alpine monorepo setup is fully supported. Performance during builds on the CX22 will be slower than Railway’s managed builders but remains acceptable.10
+3. Health Check Monitoring: Integrated Traefik-based monitoring is present. It requires the presence of curl or wget within the Bun container.11
+4. Auto-Deploy: GitHub App integration provides a "Railway-like" experience, though it requires more initial setup and secret management.12
+5. Zero-Downtime: Rolling updates are supported for Dockerfile deployments, ensuring no interruption during the 10:00 AM master branch push.11
+6. Cost: Total cost is approximately $5.10/mo ($4.25 for CX22 + $0.85 for backups), successfully meeting the under-$10 requirement.1
+Final Recommendation
+For the specified Bun monorepo, the transition to Hetzner and Coolify v4 is recommended only if the user is prepared to manage the underlying infrastructure. The CX22 provides a vastly superior resource-to-price ratio, offering 4GB of dedicated RAM compared to Railway’s shared usage model. This extra headroom allows for future expansion into more complex LLM processing or the addition of local Redis/PostgreSQL instances without increasing the monthly bill.
+However, the "stability tax" of Coolify v4 in 2026 cannot be ignored. The potential for catastrophic CPU spikes and the need for manual database maintenance (session truncation) means that 4 AM failures may occur without the automated platform recovery provided by Railway. For a mission-critical workload where downtime results in financial loss, maintaining Railway as the primary host while utilizing Fly.io as a hot standby provides the best balance of reliability and modern PaaS features. For a developer focused on cost-optimization and ownership, the Hetzner/Coolify stack is the most robust self-hosted solution in the current market.
+The setup time is estimated at 3 hours for a complete migration, including domain configuration and secret synchronization. This investment results in a more predictable monthly cost and eliminates the opaque "usage-based" surprises often encountered on managed platforms. The Bun runtime's efficiency ensures that even with the overhead of the Coolify management plane, the CX22 will operate with significant thermal and computational margin.
+Works cited
+1. Hetzner Cloud VPS Review 2026 - Hostings.info, accessed February 13, 2026, https://hostings.info/hosting/schools/hetzner-vps
+2. Hetzner CX22 VPS Performance Trial - VPSBenchmarks, accessed February 13, 2026, https://www.vpsbenchmarks.com/trials/hetzner_performance_trial_02Sep2024
+3. Hetzner VPS Review 2026: How Good Is the Cloud Server Performance? - EXPERTE.com, accessed February 13, 2026, https://www.experte.com/server/hetzner
+4. Hetzner Cloud VPS Pricing Calculator (Feb 2026) - CostGoat, accessed February 13, 2026, https://costgoat.com/pricing/hetzner
+5. Flexible Cloud Hosting Services und VPS Server - Hetzner, accessed February 13, 2026, https://www.hetzner.com/cloud
+6. [Bug]: Critical CPU Overload (~400%) Caused by Scheduler/Queue ..., accessed February 13, 2026, https://github.com/coollabsio/coolify/issues/7394
+7. Show HN: Mushak – Zero config zero downtime Docker/Compose to server deployment, accessed February 13, 2026, https://news.ycombinator.com/item?id=46344546
+8. Zero Downtime Deploys, At Last - Martin Hähnel, accessed February 13, 2026, https://blog.martin-haehnel.de/2025/11/26/zero-downtime-deploys-at-last/
+9. How To Install And Run Coolify On UpCloud Developer Plan Cloud Servers, accessed February 13, 2026, https://upcloud.com/resources/tutorials/run-coolify-upcloud-developer-cloud-servers/
+10. Docker Compose Build Packs | Coolify Docs, accessed February 13, 2026, https://coolify.io/docs/applications/build-packs/docker-compose
+11. Rolling updates | Coolify Docs, accessed February 13, 2026, https://coolify.io/docs/knowledge-base/rolling-updates
+12. Supported Cron Syntax | Coolify Docs, accessed February 13, 2026, https://coolify.io/docs/knowledge-base/cron-syntax
+13. [Bug]: Increased cpu usage during build on v4.0.0-beta.379 · Issue #4637 · coollabsio/coolify, accessed February 13, 2026, https://github.com/coollabsio/coolify/issues/4637
+14. [Bug]: Unexplained High CPU Usage Spike in Coolify Following Deployment Attempt #2110, accessed February 13, 2026, https://github.com/coollabsio/coolify/issues/2110
+15. [Bug]: Metrics UI ignores Server Timezone setting (always shows UTC) · Issue #6193 · coollabsio/coolify - GitHub, accessed February 13, 2026, https://github.com/coollabsio/coolify/issues/6193
+16. Machines and Deployment Strategies - Fly.io Community, accessed February 13, 2026, https://community.fly.io/t/machines-and-deployment-strategies/13626
+17. App Availability and Resiliency · Fly Docs - Fly.io, accessed February 13, 2026, https://fly.io/docs/apps/app-availability/
+18. Getting 502 Gateway Errors on Hetzner CX22 server with Coolify - Reddit, accessed February 13, 2026, https://www.reddit.com/r/hetzner/comments/1nxoyqx/getting_502_gateway_errors_on_hetzner_cx22_server/
+19. Beginner Guide to VPS Hetzner and Coolify - Hacker News, accessed February 13, 2026, https://news.ycombinator.com/item?id=45480506
+20. [Bug]: Coolify does not work after upgrading container.io to 2.x / docker-ce to 29.x #7216, accessed February 13, 2026, https://github.com/coollabsio/coolify/issues/7216
+21. [Bug]: Regular github deployment failures · Issue #8004 · coollabsio/coolify, accessed February 13, 2026, https://github.com/coollabsio/coolify/issues/8004
+22. [Bug]: Application crashed after update · Issue #7142 · coollabsio/coolify - GitHub, accessed February 13, 2026, https://github.com/coollabsio/coolify/issues/7142
+23. Coolify CVE Overview 2025/2026: Critical Vulnerabilities and Urgent ..., accessed February 13, 2026, https://wz-it.com/en/blog/coolify-cve-security-vulnerabilities-update-2025-2026/
+24. Cost Management on Fly.io · Fly Docs, accessed February 13, 2026, https://fly.io/docs/about/cost-management/
+25. Free plan clarification - Questions / Help - Fly.io Community, accessed February 13, 2026, https://community.fly.io/t/free-plan-clarification/18661
+26. Task scheduling guide with Cron Manager and friends · Fly Docs, accessed February 13, 2026, https://fly.io/docs/blueprints/task-scheduling/
+27. Crontab with Supercronic · Fly Docs - Fly.io, accessed February 13, 2026, https://fly.io/docs/blueprints/supercronic/
+28. Run periodic jobs on Fly with supercronic - GitHub, accessed February 13, 2026, https://github.com/fly-apps/supercronic
+29. Fly.io vs Render: How they handle jobs, scaling, and production workloads in 2026 | Blog, accessed February 13, 2026, https://northflank.com/blog/flyio-vs-render
+30. 10 Best Next.js Hosting Providers in 2026 - MakerKit, accessed February 13, 2026, https://makerkit.dev/blog/tutorials/best-hosting-nextjs
+31. Fly.io vs Railway - GetDeploying, accessed February 13, 2026, https://getdeploying.com/flyio-vs-railway
+32. Railway vs. Fly | Railway Docs, accessed February 13, 2026, https://docs.railway.com/platform/compare-to-fly
+33. Cloudflare Load Balance + Certificate - Railway Help Station, accessed February 13, 2026, https://station.railway.com/questions/cloudflare-load-balance-certificate-b771ef58
+34. Understanding Cloudflare · Fly Docs - Fly.io, accessed February 13, 2026, https://fly.io/docs/networking/understanding-cloudflare/
+35. Best Coolify Alternatives in 2026 for Developers and Teams | Kuberns Blog, accessed February 13, 2026, https://kuberns.com/blogs/post/coolify-alternatives/
+36. coolify/CHANGELOG.md at v4.x - GitHub, accessed February 13, 2026, https://github.com/coollabsio/coolify/blob/main/CHANGELOG.md
+37. MCP server for Coolify. 35 tools for managing self-hosted PaaS through AI assistants. - GitHub, accessed February 13, 2026, https://github.com/StuMason/coolify-mcp
+38. [Bug]: schedule(cron) jobs stopped working · Issue #6638 · coollabsio/coolify - GitHub, accessed February 13, 2026, https://github.com/coollabsio/coolify/issues/6638

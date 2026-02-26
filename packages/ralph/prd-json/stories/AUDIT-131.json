@@ -1,0 +1,17 @@
+{
+  "id": "AUDIT-131",
+  "title": "Audit: Ink UI Rendering Stability",
+  "description": "Audit MP-131 implementation against US-130 research recommendations.",
+  "acceptanceCriteria": [
+    {"text": "Read US-130 research recommendations", "checked": false},
+    {"text": "Verify each recommendation was implemented or justified as skipped", "checked": false},
+    {"text": "Check for any new render-triggering patterns introduced", "checked": false},
+    {"text": "Verify no performance regressions", "checked": false},
+    {"text": "Document audit findings in docs.local/research/AUDIT-131-results.md", "checked": false},
+    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": false},
+    {"text": "Commit: audit: AUDIT-131 ink ui rendering stability audit", "checked": false}
+  ],
+  "storyType": "audit",
+  "blockedBy": "TEST-131",
+  "passes": false
+}

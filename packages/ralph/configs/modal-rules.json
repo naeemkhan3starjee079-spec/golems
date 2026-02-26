@@ -1,0 +1,32 @@
+{
+  "$schema": "https://ralph.dev/schemas/modal-rules.schema.json",
+  "version": "1.0",
+  "description": "Rules for modal and dynamic state testing",
+  "storyStructure": {
+    "description": "Each modal state = separate story",
+    "example": [
+      "US-005: Create Contact Modal",
+      "US-006: Create Message Form Modal",
+      "US-007: Create Success State Modal",
+      "US-008: Create Cancelled State Modal",
+      "US-009: Wire up modal flow (state management)"
+    ]
+  },
+  "testingRule": {
+    "description": "When verifying a modal or dynamic state",
+    "steps": [
+      "Trigger the action that opens/shows the state",
+      "Take screenshot WITH the state visible",
+      "Compare against design",
+      "Do NOT just verify code exists - verify it RENDERS correctly"
+    ]
+  },
+  "backNavigation": {
+    "description": "Back buttons should navigate to previous modal, NOT just close",
+    "pattern": "Close current modal AND open previous modal"
+  },
+  "rtlHeaders": {
+    "description": "In RTL modal headers",
+    "layout": "Title at START (RIGHT), Back button at END (LEFT)"
+  }
+}

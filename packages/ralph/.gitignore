@@ -1,0 +1,29 @@
+# Local documentation (per-project learnings, not shared)
+docs.local/
+
+# Personal configuration (not shared)
+ralph-config.local
+
+# Editor files
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.log
+
+# Node.js (for brave-manager puppeteer)
+node_modules/
+
+# Screenshots
+screenshot.png
+claude.scratchpad.md
+.claude/
+.aider*
+session-*.md
+
+
+scripts/hooks/notify-stop.sh
+.cursor/

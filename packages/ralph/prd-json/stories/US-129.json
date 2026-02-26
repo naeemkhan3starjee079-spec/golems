@@ -1,0 +1,54 @@
+{
+  "id": "US-129",
+  "title": "Research: Notify System Architecture",
+  "description": "Research how agent-to-user notification should work. Document current ntfy.ts, gaps, and recommended approach for MP-129.",
+  "acceptanceCriteria": [
+    {
+      "text": "Use /context7 to look up ntfy.sh API and notification patterns",
+      "checked": false
+    },
+    {
+      "text": "Map current ntfy flow: where is sendNotification called? What triggers it?",
+      "checked": false
+    },
+    {
+      "text": "Document ralph-ui/src/runner/ntfy.ts current implementation",
+      "checked": false
+    },
+    {
+      "text": "Identify gaps: how should topic be auto-derived? What about priority?",
+      "checked": false
+    },
+    {
+      "text": "Research: What should agents know about notifying user? (CLAUDE.md section)",
+      "checked": false
+    },
+    {
+      "text": "Write findings to docs.local/research/US-129-notify-system.md",
+      "checked": false
+    },
+    {
+      "text": "Include recommended functions: buildTopic(), sendNotification()",
+      "checked": false
+    },
+    {
+      "text": "Draft CLAUDE.md 'NOTIFY USER' section content",
+      "checked": false
+    },
+    {
+      "text": "List files that will need changes for MP-129",
+      "checked": false
+    },
+    {
+      "text": "Run CodeRabbit review - must pass (or create BUG if unfixable)",
+      "checked": false
+    },
+    {
+      "text": "Commit: docs: US-129 research notify system architecture",
+      "checked": false
+    }
+  ],
+  "storyType": "research",
+  "notes": "Build on session context from MP-128. Notify should use ctx.notifications from SessionContext.",
+  "passes": false
+}
