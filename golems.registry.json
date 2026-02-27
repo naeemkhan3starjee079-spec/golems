@@ -17,8 +17,8 @@
       }
     },
     "ralph": {
-      "path": "packages/ralph",
-      "description": "Autonomous AI coding loop for PRD execution",
+      "path": "external:github.com/EtanHey/ralph",
+      "description": "Autonomous AI coding loop for PRD execution (external repo)",
       "runtime": "zsh",
       "entrypoints": {
         "main": "ralph.zsh"
@@ -45,12 +45,12 @@
       "runtime": "node",
       "entrypoints": {}
     },
-"taxHelper": {
+    "taxHelper": {
       "path": "packages/tax-helper",
       "description": "Tax analysis golem (Schedule C categorization)",
       "runtime": "node",
       "entrypoints": {}
-    },
+    }
   },
 
   "golems": {

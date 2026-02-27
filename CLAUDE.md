@@ -2,7 +2,7 @@
 
 @~/Gits/orchestrator/standards/autonomous-workflow.md
 
-> Autonomous AI agent ecosystem — Bun workspace with 13 packages + 2 external repos. Each golem is a self-contained CC plugin.
+> Autonomous AI agent ecosystem — Bun workspace with 12 packages + 3 external repos. Each golem is a self-contained CC plugin.
 
 ## Packages
 
@@ -20,7 +20,7 @@
 | **docsite** | Docusaurus documentation site |
 | **golems-tui** | React Ink terminal dashboard |
 | **tax-helper** | Schedule C transaction categorization (Sophtron MCP) |
-| **ralph** | Autonomous coding loop (PRD execution) |
+| **ralph** | Autonomous coding loop — external repo (zsh + Ink TUI) |
 | **brainlayer** | Memory layer — external repo (Python + sqlite-vec, 268K+ chunks) |
 | **voicelayer** | Voice I/O layer — external repo (MCP server, edge-tts, whisper.cpp) |
 

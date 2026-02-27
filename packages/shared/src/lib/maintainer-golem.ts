@@ -46,7 +46,12 @@ export function checkOutdatedDeps(packageDir: string): MaintenanceCheck {
   const packageJson = join(packageDir, "package.json");
 
   if (!existsSync(packageJson)) {
-    return { name, category: "deps", severity: "ok", message: "No package.json" };
+    return {
+      name,
+      category: "deps",
+      severity: "ok",
+      message: "No package.json",
+    };
   }
 
   try {
@@ -57,14 +62,26 @@ export function checkOutdatedDeps(packageDir: string): MaintenanceCheck {
     }).trim();
 
     if (!output || output.includes("All dependencies are up to date")) {
-      return { name, category: "deps", severity: "ok", message: "All dependencies up to date" };
+      return {
+        name,
+        category: "deps",
+        severity: "ok",
+        message: "All dependencies up to date",
+      };
     }
 
-    const lines = output.split("\n").filter((l) => l.includes("→") || l.includes("->"));
+    const lines = output
+      .split("\n")
+      .filter((l) => l.includes("→") || l.includes("->"));
     const count = lines.length;
 
     if (count === 0) {
-      return { name, category: "deps", severity: "ok", message: "Dependencies current" };
+      return {
+        name,
+        category: "deps",
+        severity: "ok",
+        message: "Dependencies current",
+      };
     }
 
     return {
@@ -75,16 +92,29 @@ export function checkOutdatedDeps(packageDir: string): MaintenanceCheck {
       detail: lines.slice(0, 5).join("\n"),
     };
   } catch {
-    return { name, category: "deps", severity: "ok", message: "Could not check (non-critical)" };
+    return {
+      name,
+      category: "deps",
+      severity: "ok",
+      message: "Could not check (non-critical)",
+    };
   }
 }
 
 /** Check for stale log files */
-export function checkStaleLogs(logsDir: string, maxAgeDays = 7): MaintenanceCheck {
+export function checkStaleLogs(
+  logsDir: string,
+  maxAgeDays = 7,
+): MaintenanceCheck {
   const name = "Stale log files";
 
   if (!existsSync(logsDir)) {
-    return { name, category: "files", severity: "ok", message: "No logs directory" };
+    return {
+      name,
+      category: "files",
+      severity: "ok",
+      message: "No logs directory",
+    };
   }
 
   try {
@@ -106,7 +136,12 @@ export function checkStaleLogs(logsDir: string, maxAgeDays = 7): MaintenanceChec
     }
 
     if (staleFiles.length === 0) {
-      return { name, category: "files", severity: "ok", message: "No stale logs" };
+      return {
+        name,
+        category: "files",
+        severity: "ok",
+        message: "No stale logs",
+      };
     }
 
     return {
@@ -117,7 +152,12 @@ export function checkStaleLogs(logsDir: string, maxAgeDays = 7): MaintenanceChec
       detail: staleFiles.slice(0, 5).join(", "),
     };
   } catch {
-    return { name, category: "files", severity: "ok", message: "Could not check logs" };
+    return {
+      name,
+      category: "files",
+      severity: "ok",
+      message: "Could not check logs",
+    };
   }
 }
 
@@ -126,17 +166,27 @@ export function checkLargeFiles(dir: string, maxSizeMB = 50): MaintenanceCheck {
   const name = "Large files";
 
   if (!existsSync(dir)) {
-    return { name, category: "files", severity: "ok", message: "Directory not found" };
+    return {
+      name,
+      category: "files",
+      severity: "ok",
+      message: "Directory not found",
+    };
   }
 
   try {
     const output = execSync(
       `find "${dir}" -type f -size +${maxSizeMB}M 2>/dev/null | head -10`,
-      { encoding: "utf-8", timeout: 10000 }
+      { encoding: "utf-8", timeout: 10000 },
     ).trim();
 
     if (!output) {
-      return { name, category: "files", severity: "ok", message: `No files >${maxSizeMB}MB` };
+      return {
+        name,
+        category: "files",
+        severity: "ok",
+        message: `No files >${maxSizeMB}MB`,
+      };
     }
 
     const files = output.split("\n");
@@ -148,7 +198,12 @@ export function checkLargeFiles(dir: string, maxSizeMB = 50): MaintenanceCheck {
       detail: files.map((f) => f.replace(dir + "/", "")).join(", "),
     };
   } catch {
-    return { name, category: "files", severity: "ok", message: "Could not scan" };
+    return {
+      name,
+      category: "files",
+      severity: "ok",
+      message: "Could not scan",
+    };
   }
 }
 
@@ -158,7 +213,12 @@ export function checkEnvVars(requiredVars: string[]): MaintenanceCheck {
   const missing = requiredVars.filter((v) => !process.env[v]);
 
   if (missing.length === 0) {
-    return { name, category: "config", severity: "ok", message: "All env vars set" };
+    return {
+      name,
+      category: "config",
+      severity: "ok",
+      message: "All env vars set",
+    };
   }
 
   return {
@@ -186,16 +246,34 @@ export function checkConfigFile(configPath: string): MaintenanceCheck {
   try {
     const stat = statSync(configPath);
     if (stat.size === 0) {
-      return { name, category: "config", severity: "error", message: "Config file is empty" };
+      return {
+        name,
+        category: "config",
+        severity: "error",
+        message: "Config file is empty",
+      };
     }
-    return { name, category: "config", severity: "ok", message: `Config OK (${stat.size}B)` };
+    return {
+      name,
+      category: "config",
+      severity: "ok",
+      message: `Config OK (${stat.size}B)`,
+    };
   } catch {
-    return { name, category: "config", severity: "error", message: "Cannot read config file" };
+    return {
+      name,
+      category: "config",
+      severity: "error",
+      message: "Cannot read config file",
+    };
   }
 }
 
 /** Check if a service process is running */
-export function checkServiceRunning(processName: string, label: string): MaintenanceCheck {
+export function checkServiceRunning(
+  processName: string,
+  label: string,
+): MaintenanceCheck {
   const name = `Service: ${label}`;
 
   try {
@@ -212,9 +290,19 @@ export function checkServiceRunning(processName: string, label: string): Mainten
         message: `Running (PID: ${pids[0]})`,
       };
     }
-    return { name, category: "services", severity: "warn", message: "Not running" };
+    return {
+      name,
+      category: "services",
+      severity: "warn",
+      message: "Not running",
+    };
   } catch {
-    return { name, category: "services", severity: "warn", message: "Not running" };
+    return {
+      name,
+      category: "services",
+      severity: "warn",
+      message: "Not running",
+    };
   }
 }
 
@@ -229,7 +317,7 @@ export function runMaintenanceChecks(options: {
   const checks: MaintenanceCheck[] = [];
 
   // Dependency checks
-  const packageDirs = ["packages/autonomous", "packages/docsite", "packages/ralph"];
+  const packageDirs = ["packages/autonomous", "packages/docsite"];
   for (const dir of packageDirs) {
     const fullPath = join(options.reposPath, "golems", dir);
     if (existsSync(fullPath)) {
@@ -246,11 +334,7 @@ export function runMaintenanceChecks(options: {
   // Config checks
   checks.push(checkConfigFile(options.configPath));
   checks.push(
-    checkEnvVars([
-      "TELEGRAM_BOT_TOKEN",
-      "SUPABASE_URL",
-      "SUPABASE_ANON_KEY",
-    ])
+    checkEnvVars(["TELEGRAM_BOT_TOKEN", "SUPABASE_URL", "SUPABASE_ANON_KEY"]),
   );
 
   // Service checks
@@ -317,7 +401,7 @@ export function formatReport(report: MaintenanceReport): string {
   lines.push("─".repeat(40));
   const { ok, warn, error, total } = report.summary;
   lines.push(
-    `Summary: ${total} checks — ${ok} ok, ${warn} warnings, ${error} errors`
+    `Summary: ${total} checks — ${ok} ok, ${warn} warnings, ${error} errors`,
   );
 
   return lines.join("\n");
