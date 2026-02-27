@@ -254,7 +254,7 @@ Cloud worker schedule in `src/cloud-worker.ts` (Asia/Jerusalem):
 ### packages/ralph
 - **Role**: Autonomous coding loop wrapper around Claude Code.
 - **Entry**: `ralph.zsh`, `lib/`, `ralph-ui/`, `bun/`.
-- **Key data**: `~/.config/ralphtools/` (config, registry, costs).
+- **Key data**: `~/.config/ralph/` (config, registry, costs).
 - **Skills**: uses `skills/golem-powers/` and `.claude/rules/`.
 - **Connection to golems**: NightShift reuses Ralph worktree and PR patterns.
 

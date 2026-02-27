@@ -112,7 +112,7 @@ function ralph() {
   # Handle --version early
   case "$1" in
     --version|-V)
-      echo "ralphtools v${RALPH_VERSION}"
+      echo "ralph v${RALPH_VERSION}"
       return 0
       ;;
     --help|-h)
@@ -266,7 +266,7 @@ function ralph() {
 # These provide quick access to common operations
 
 function ralph-version() {
-  echo "ralphtools v${RALPH_VERSION}"
+  echo "ralph v${RALPH_VERSION}"
 }
 
 # ralph-help is defined in lib/ralph-commands.zsh with comprehensive documentation

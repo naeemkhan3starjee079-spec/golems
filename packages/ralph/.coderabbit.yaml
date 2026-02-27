@@ -1,5 +1,5 @@
 # yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
-# CodeRabbit configuration for ralphtools
+# CodeRabbit configuration for ralph
 # Docs: https://docs.coderabbit.ai/reference/configuration
 
 language: "en-US"

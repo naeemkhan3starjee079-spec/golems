@@ -1,0 +1,43 @@
+WARNING:  [02-02-2026 08:07:39] chroma_server_nofile is set to 65535, but this is less than current soft limit of 9223372036854775807. chroma_server_nofile will not be set.
+INFO:     [02-02-2026 08:07:39] Anonymized telemetry enabled. See                     https://docs.trychroma.com/telemetry for more information.
+DEBUG:    [02-02-2026 08:07:39] Starting component System
+DEBUG:    [02-02-2026 08:07:39] Starting component OpenTelemetryClient
+DEBUG:    [02-02-2026 08:07:39] Starting component SimpleAssignmentPolicy
+DEBUG:    [02-02-2026 08:07:39] Starting component SqliteDB
+DEBUG:    [02-02-2026 08:07:39] Starting component QuotaEnforcer
+DEBUG:    [02-02-2026 08:07:39] Starting component Posthog
+DEBUG:    [02-02-2026 08:07:39] Starting component LocalSegmentManager
+DEBUG:    [02-02-2026 08:07:39] Starting component SegmentAPI
+INFO:     [02-02-2026 08:07:39] Started server process [53587]
+INFO:     [02-02-2026 08:07:39] Waiting for application startup.
+INFO:     [02-02-2026 08:07:39] Application startup complete.
+INFO:     [02-02-2026 08:07:39] Uvicorn running on http://localhost:8000 (Press CTRL+C to quit)
+INFO:     [02-02-2026 08:07:48] 127.0.0.1:49434 - "GET /api/v1/heartbeat HTTP/1.1" 200
+INFO:     [02-02-2026 08:08:04] 127.0.0.1:49441 - "GET /api/v2/tenants/default_tenant/databases/default_database/collections HTTP/1.1" 404
+INFO:     [02-02-2026 08:08:09] 127.0.0.1:49446 - "GET /api/v2/tenants/default_tenant/databases/default_database/collections HTTP/1.1" 404
+INFO:     [02-02-2026 08:08:21] 127.0.0.1:49450 - "GET /api/v2/tenants/default_tenant/databases/default_database/collections HTTP/1.1" 404
+INFO:     [02-02-2026 08:08:37] 127.0.0.1:49456 - "GET /api/v2/tenants/default_tenant/databases/default_database/collections HTTP/1.1" 404
+INFO:     [02-02-2026 08:08:42] 127.0.0.1:49462 - "GET /api/v1 HTTP/1.1" 200
+INFO:     [02-02-2026 08:08:49] 127.0.0.1:49464 - "GET /api/v1/collections HTTP/1.1" 200
+INFO:     [02-02-2026 08:08:58] 127.0.0.1:49468 - "POST /api/v1/collections HTTP/1.1" 200
+INFO:     [02-02-2026 08:09:03] 127.0.0.1:49471 - "GET /api/v1/collections HTTP/1.1" 200
+INFO:     [02-02-2026 08:09:27] 127.0.0.1:49480 - "GET /api/v1/collections HTTP/1.1" 200
+INFO:     [02-02-2026 08:09:27] 127.0.0.1:49480 - "POST /api/v1/collections HTTP/1.1" 200
+DEBUG:    [02-02-2026 08:09:27] Starting component PersistentLocalHnswSegment
+INFO:     [02-02-2026 08:09:27] 127.0.0.1:49480 - "POST /api/v1/collections/d922178f-862b-4449-a6fe-8766c7042a24/add HTTP/1.1" 201
+INFO:     [02-02-2026 08:09:42] 127.0.0.1:49487 - "GET /api/v1/collections HTTP/1.1" 200
+INFO:     [02-02-2026 08:09:42] 127.0.0.1:49487 - "POST /api/v1/collections/d922178f-862b-4449-a6fe-8766c7042a24/add HTTP/1.1" 201
+INFO:     [02-02-2026 08:31:53] 127.0.0.1:49600 - "GET /api/v1/collections HTTP/1.1" 200
+INFO:     [02-02-2026 08:31:53] 127.0.0.1:49600 - "POST /api/v1/collections/d922178f-862b-4449-a6fe-8766c7042a24/add HTTP/1.1" 201
+INFO:     [02-02-2026 08:32:29] 127.0.0.1:49613 - "GET /api/v1/collections HTTP/1.1" 200
+INFO:     [02-02-2026 08:32:29] 127.0.0.1:49613 - "POST /api/v1/collections/d922178f-862b-4449-a6fe-8766c7042a24/add HTTP/1.1" 201
+INFO:     [02-02-2026 08:33:20] 127.0.0.1:49630 - "GET /api/v1/collections HTTP/1.1" 200
+INFO:     [02-02-2026 08:33:20] 127.0.0.1:49630 - "POST /api/v1/collections/d922178f-862b-4449-a6fe-8766c7042a24/add HTTP/1.1" 201
+INFO:     [02-02-2026 08:33:34] 127.0.0.1:49638 - "GET /api/v1/collections HTTP/1.1" 200
+INFO:     [02-02-2026 08:33:34] 127.0.0.1:49638 - "POST /api/v1/collections/d922178f-862b-4449-a6fe-8766c7042a24/add HTTP/1.1" 201
+INFO:     [02-02-2026 08:36:28] 127.0.0.1:49702 - "GET /api/v1/collections HTTP/1.1" 200
+INFO:     [02-02-2026 08:36:28] 127.0.0.1:49702 - "POST /api/v1/collections/d922178f-862b-4449-a6fe-8766c7042a24/add HTTP/1.1" 201
+INFO:     [02-02-2026 08:38:44] 127.0.0.1:49744 - "GET /api/v1/collections HTTP/1.1" 200
+INFO:     [02-02-2026 08:38:44] 127.0.0.1:49744 - "POST /api/v1/collections/d922178f-862b-4449-a6fe-8766c7042a24/add HTTP/1.1" 201
+INFO:     [02-02-2026 22:40:06] 127.0.0.1:64488 - "GET /api/v1/collections HTTP/1.1" 200
+INFO:     [02-02-2026 22:40:06] 127.0.0.1:64488 - "POST /api/v1/collections/d922178f-862b-4449-a6fe-8766c7042a24/add HTTP/1.1" 201

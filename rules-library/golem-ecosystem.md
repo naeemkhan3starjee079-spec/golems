@@ -140,7 +140,7 @@ ralph --prd path # Use specific PRD
 | Location | Purpose | Managed By |
 |----------|---------|------------|
 | `~/.golems-zikaron/` | Telegram bridge state | golems-zikaron |
-| `~/.config/ralphtools/` | Ralph runtime config | ralph |
+| `~/.config/ralph/` | Ralph runtime config | ralph |
 | `~/.claude/` | Claude Code state | Claude Code |
 | `~/.claude/agent_states/` | Subagent tracking | hooks |
 
@@ -151,7 +151,7 @@ ralph --prd path # Use specific PRD
 | Symlink | Target |
 |---------|--------|
 | `~/.config/claude-golem` | `~/Gits/claude-golem` |
-| `~/.config/ralphtools/*` | `~/Gits/claude-golem/*` |
+| `~/.config/ralph/*` | `~/Gits/golems/packages/ralph/*` |
 | `~/.claude/skill-index.md` | `~/Gits/claude-golem/contexts/skill-index.md` |
 
 ---

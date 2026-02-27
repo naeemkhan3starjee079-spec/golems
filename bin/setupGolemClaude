@@ -121,7 +121,7 @@ This project is part of the Golem ecosystem. Key components:
 
 ### State Locations
 - \`~/.golems-zikaron/\` - Telegram inbox/outbox, state.json
-- \`~/.config/ralphtools/\` - Ralph runtime config
+- \`~/.config/ralph/\` - Ralph runtime config
 - \`~/.claude/\` - Claude Code state
 
 ### Skills

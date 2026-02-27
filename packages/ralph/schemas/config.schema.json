@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://ralphtools.dev/schemas/config.schema.json",
-  "title": "ralphtools config",
-  "description": "Configuration for ralphtools autonomous coding loop",
+  "$id": "https://ralph.dev/schemas/config.schema.json",
+  "title": "ralph config",
+  "description": "Configuration for ralph autonomous coding loop",
   "type": "object",
   "required": ["modelStrategy"],
 
@@ -43,11 +43,26 @@
       "type": "object",
       "description": "Model assignment per task type (when modelStrategy is 'smart')",
       "properties": {
-        "US": { "$ref": "#/$defs/model", "description": "User Stories - feature implementation" },
-        "V": { "$ref": "#/$defs/model", "description": "Verification - browser/visual checks" },
-        "TEST": { "$ref": "#/$defs/model", "description": "Testing - E2E test creation" },
-        "BUG": { "$ref": "#/$defs/model", "description": "Bug fixes - debugging" },
-        "AUDIT": { "$ref": "#/$defs/model", "description": "Audits - security/code review" }
+        "US": {
+          "$ref": "#/$defs/model",
+          "description": "User Stories - feature implementation"
+        },
+        "V": {
+          "$ref": "#/$defs/model",
+          "description": "Verification - browser/visual checks"
+        },
+        "TEST": {
+          "$ref": "#/$defs/model",
+          "description": "Testing - E2E test creation"
+        },
+        "BUG": {
+          "$ref": "#/$defs/model",
+          "description": "Bug fixes - debugging"
+        },
+        "AUDIT": {
+          "$ref": "#/$defs/model",
+          "description": "Audits - security/code review"
+        }
       },
       "additionalProperties": { "$ref": "#/$defs/model" }
     },
@@ -110,7 +125,7 @@
         "haiku": { "input": 1, "output": 5 },
         "sonnet": { "input": 3, "output": 15 },
         "opus": { "input": 15, "output": 75 },
-        "gemini-flash": { "input": 0.075, "output": 0.30 },
+        "gemini-flash": { "input": 0.075, "output": 0.3 },
         "gemini-pro": { "input": 1.25, "output": 5 }
       }
     },
@@ -145,7 +160,14 @@
     "model": {
       "anyOf": [
         {
-          "enum": ["haiku", "sonnet", "opus", "gemini-flash", "gemini-pro", "kiro"],
+          "enum": [
+            "haiku",
+            "sonnet",
+            "opus",
+            "gemini-flash",
+            "gemini-pro",
+            "kiro"
+          ],
           "description": "Known models with editor autocomplete"
         },
         {
