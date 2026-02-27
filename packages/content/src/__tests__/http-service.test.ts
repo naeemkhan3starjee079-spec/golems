@@ -1,12 +1,14 @@
 /**
- * Render Service — Route Contract Tests
+ * HTTP Service — Route Contract Tests
  *
  * Tests HTTP route validation (400 for missing fields), 404 fallback, CORS headers, health endpoint.
  * Uses the exported handleRequest function directly — no server startup needed.
+ *
+ * Moved from packages/orchestrator/ during Phase 9 componentization.
  */
 
 import { describe, it, expect } from "bun:test";
-import { handleRequest } from "../render-service";
+import { handleRequest } from "../http-service";
 
 function makeRequest(method: string, path: string, body?: unknown): Request {
   const opts: RequestInit = { method };

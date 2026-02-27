@@ -21,7 +21,6 @@ jobs:
     strategy:
       matrix:
         package:
-          - packages/autonomous
           - packages/ralph
           - packages/docsite
       fail-fast: false
@@ -38,33 +37,6 @@ jobs:
       - name: Run bun audit
         working-directory: ${{ matrix.package }}
         run: bun audit
-        continue-on-error: true
-
-  pip-audit:
-    name: Python Dependency Audit
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        package:
-          - packages/zikaron
-      fail-fast: false
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.11"
-
-      - name: Install pip-audit
-        run: pip install pip-audit
-
-      - name: Install project dependencies
-        working-directory: ${{ matrix.package }}
-        run: pip install -e "." 2>/dev/null || pip install -r requirements.txt 2>/dev/null || echo "No installable deps found"
-
-      - name: Run pip audit
-        working-directory: ${{ matrix.package }}
-        run: pip-audit --desc
         continue-on-error: true
 
   secret-scan:
@@ -94,7 +66,6 @@ jobs:
     strategy:
       matrix:
         package:
-          - packages/autonomous
           - packages/ralph
       fail-fast: false
     steps:
@@ -115,7 +86,7 @@ jobs:
   summary:
     name: Security Summary
     runs-on: ubuntu-latest
-    needs: [bun-audit, pip-audit, secret-scan, typescript-lint]
+    needs: [bun-audit, secret-scan, typescript-lint]
     if: always()
     steps:
       - name: Check security status

@@ -35,7 +35,10 @@
     "pipeline": "bun run scripts/pipeline.ts",
     "pipeline:route": "bun run scripts/pipeline.ts route",
     "pipeline:stats": "bun run scripts/pipeline.ts stats",
-    "pipeline:list": "bun run scripts/pipeline.ts list"
+    "pipeline:list": "bun run scripts/pipeline.ts list",
+    "serve": "bun run src/http-service.ts",
+    "workflows:backup": "bash scripts/backup-workflows.sh",
+    "workflows:restore": "bash scripts/restore-workflows.sh"
   },
   "exports": {
     "./*": "./src/*.ts",
@@ -53,7 +56,8 @@
     "./dataviz/charts/*": "./src/dataviz/charts/*.ts",
     "./dataviz/templates/*": "./src/dataviz/templates/*.ts",
     "./pipeline": "./src/pipeline/index.ts",
-    "./pipeline/*": "./src/pipeline/*.ts"
+    "./pipeline/*": "./src/pipeline/*.ts",
+    "./http-service": "./src/http-service.ts"
   },
   "dependencies": {
     "@golems/shared": "workspace:*",

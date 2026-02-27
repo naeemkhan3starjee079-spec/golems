@@ -31,27 +31,10 @@ config = {
   }
 }
 
-# Python Analyzer (for zikaron package)
-[[analyzers]]
-name = "python"
-enabled = true
-config = {
-  options = {
-    # Bug detection
-    "detectBugPatterns" = true,
-    # Security issues
-    "detectSecurityIssues" = true,
-    # Anti-patterns
-    "detectAntiPatterns" = true,
-    # Code duplication
-    "detectDuplication" = true,
-    # Lint configuration
-    "lint" = {
-      # Enable ruff linter (compatible with zikaron's pyproject.toml)
-      "enable" = true
-    }
-  }
-}
+# Python Analyzer (disabled — zikaron removed in Phase 9)
+# [[analyzers]]
+# name = "python"
+# enabled = true
 
 # Ignore patterns (common in monorepos)
 [ignore]
@@ -103,15 +86,7 @@ path = "packages/services"
 analyzers = ["javascript"]
 
 [[pathConfigs]]
-path = "packages/autonomous"
-analyzers = ["javascript"]
-
-[[pathConfigs]]
 path = "packages/ralph"
-analyzers = ["javascript"]
-
-[[pathConfigs]]
-path = "packages/admin-ui"
 analyzers = ["javascript"]
 
 [[pathConfigs]]
@@ -122,10 +97,9 @@ analyzers = ["javascript"]
 path = "packages/tax-helper"
 analyzers = ["javascript"]
 
-# Python package
 [[pathConfigs]]
-path = "packages/zikaron"
-analyzers = ["python"]
+path = "packages/golems-tui"
+analyzers = ["javascript"]
 
 # Issue Rules (optional - configure issue severity)
 [[rules]]

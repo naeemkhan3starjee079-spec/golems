@@ -21,9 +21,9 @@ import {
   generate,
   isServerReady as isComfyReady,
   type GenerateOptions,
-} from "@golems/content/comfyui";
-import type { FluxWorkflowStyle } from "@golems/content/comfyui/workflows/flux-base";
-import type { QualityPreset } from "@golems/content/quality";
+} from "./comfyui/index";
+import type { FluxWorkflowStyle } from "./comfyui/workflows/flux-base";
+import type { QualityPreset } from "./quality/index";
 
 const PORT = parseInt(process.env.RENDER_SERVICE_PORT ?? "3001", 10);
 
@@ -78,7 +78,7 @@ async function handleRemotionRender(
 ): Promise<Response> {
   // Dynamic import to avoid loading Remotion deps if not needed
   try {
-    const { renderVideo } = await import("@golems/content/render");
+    const { renderVideo } = await import("./render/index");
 
     const compositionId = body.compositionId as string;
     if (!compositionId) {
@@ -104,7 +104,7 @@ async function handleRemotionStill(
   body: Record<string, unknown>,
 ): Promise<Response> {
   try {
-    const { renderThumbnail } = await import("@golems/content/render");
+    const { renderThumbnail } = await import("./render/index");
 
     const compositionId = body.compositionId as string;
     if (!compositionId) {
@@ -139,7 +139,7 @@ function handleHealth(): Response {
 }
 
 async function handlePipelines(): Promise<Response> {
-  const { getRegistry } = await import("@golems/content/pipeline");
+  const { getRegistry } = await import("./pipeline/index");
   const registry = getRegistry();
   return Response.json({
     pipelines: registry.pipelines.map((p) => ({
@@ -160,7 +160,7 @@ async function handlePipelines(): Promise<Response> {
 async function handlePipelineRoute(
   body: Record<string, unknown>,
 ): Promise<Response> {
-  const { routeIdea } = await import("@golems/content/pipeline");
+  const { routeIdea } = await import("./pipeline/index");
 
   const idea = body.idea as string;
   if (!idea) {
@@ -180,7 +180,7 @@ async function handlePipelineRoute(
 async function handlePipelineExecute(
   body: Record<string, unknown>,
 ): Promise<Response> {
-  const { routeIdea, executePlan } = await import("@golems/content/pipeline");
+  const { routeIdea, executePlan } = await import("./pipeline/index");
 
   const idea = body.idea as string;
   if (!idea) {
@@ -207,7 +207,7 @@ async function handlePipelineExecute(
 }
 
 async function handlePipelineStats(): Promise<Response> {
-  const { getPerformanceStats } = await import("@golems/content/pipeline");
+  const { getPerformanceStats } = await import("./pipeline/index");
   const stats = await getPerformanceStats();
   return Response.json({ stats });
 }
@@ -219,25 +219,17 @@ async function handleDataVizRender(
   const format = (body.format as string) ?? "linkedin";
 
   // Dynamic import to avoid loading dataviz deps at startup
-  const { fetchJobMarketData } =
-    await import("@golems/content/dataviz/fetchers/jobs");
-  const { fetchFinanceData } =
-    await import("@golems/content/dataviz/fetchers/finance");
-  const { fetchBrainData } =
-    await import("@golems/content/dataviz/fetchers/brain");
-  const { fetchActivityData } =
-    await import("@golems/content/dataviz/fetchers/activity");
-  const { renderBarChart } = await import("@golems/content/dataviz/charts/bar");
-  const { renderDonutChart } =
-    await import("@golems/content/dataviz/charts/donut");
-  const { renderLineChart } =
-    await import("@golems/content/dataviz/charts/line");
-  const { renderStatCards } =
-    await import("@golems/content/dataviz/charts/stat-card");
+  const { fetchJobMarketData } = await import("./dataviz/fetchers/jobs");
+  const { fetchFinanceData } = await import("./dataviz/fetchers/finance");
+  const { fetchBrainData } = await import("./dataviz/fetchers/brain");
+  const { fetchActivityData } = await import("./dataviz/fetchers/activity");
+  const { renderBarChart } = await import("./dataviz/charts/bar");
+  const { renderDonutChart } = await import("./dataviz/charts/donut");
+  const { renderLineChart } = await import("./dataviz/charts/line");
+  const { renderStatCards } = await import("./dataviz/charts/stat-card");
   const { renderLinkedInCard } =
-    await import("@golems/content/dataviz/templates/linkedin-card");
-  const { renderSvgToBuffer } =
-    await import("@golems/content/dataviz/renderer");
+    await import("./dataviz/templates/linkedin-card");
+  const { renderSvgToBuffer } = await import("./dataviz/renderer");
 
   let chartSvg: string;
   let title: string;
