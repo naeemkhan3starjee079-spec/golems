@@ -2,7 +2,7 @@
  * Activity data fetchers — golem events and service run stats.
  */
 
-import { getSupabaseClient } from "@golems/shared";
+import { getSupabase } from "@golems/shared/lib/supabase-factory";
 
 export interface GolemActivity {
   actor: string;
@@ -39,7 +39,7 @@ export interface ActivityData {
 }
 
 export async function fetchActivityData(): Promise<ActivityData> {
-  const supabase = getSupabaseClient();
+  const supabase = getSupabase();
 
   // Golem events
   const { data: events } = await supabase
@@ -54,7 +54,10 @@ export async function fetchActivityData(): Promise<ActivityData> {
 
   for (const e of events ?? []) {
     // By actor
-    const existing = actorStats.get(e.actor) ?? { count: 0, lastActive: e.created_at };
+    const existing = actorStats.get(e.actor) ?? {
+      count: 0,
+      lastActive: e.created_at,
+    };
     existing.count++;
     actorStats.set(e.actor, existing);
 
@@ -77,11 +80,21 @@ export async function fetchActivityData(): Promise<ActivityData> {
 
   const serviceMap = new Map<
     string,
-    { runs: number; success: number; fail: number; totalMs: number; lastRun: string }
+    {
+      runs: number;
+      success: number;
+      fail: number;
+      totalMs: number;
+      lastRun: string;
+    }
   >();
   for (const r of runs ?? []) {
     const existing = serviceMap.get(r.service) ?? {
-      runs: 0, success: 0, fail: 0, totalMs: 0, lastRun: r.started_at,
+      runs: 0,
+      success: 0,
+      fail: 0,
+      totalMs: 0,
+      lastRun: r.started_at,
     };
     existing.runs++;
     if (r.status === "success") existing.success++;

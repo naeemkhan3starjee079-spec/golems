@@ -22,6 +22,17 @@ nohup.out
 research.docs.local/
 docs.local/
 
+# Coach one-off calendar scripts (personal, not for repo)
+packages/coach/_book-*.ts
+packages/coach/_fix-*.ts
+packages/coach/_cleanup-*.ts
+packages/coach/_check-*.ts
+packages/coach/_delete-*.ts
+packages/coach/_list-*.ts
+
+# Test artifacts
+packages/shared/.test-state-store/
+
 # WIP - Tax Helper
 packages/tax-helper/
 skills/golem-powers/tax-helper/

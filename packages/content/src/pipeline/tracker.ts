@@ -5,7 +5,7 @@
  * Table: pipeline_runs (created via Supabase migration)
  */
 
-import { getSupabaseClient } from "@golems/shared";
+import { getSupabase } from "@golems/shared/lib/supabase-factory";
 
 export interface PipelineRunLog {
   pipelineId: string;
@@ -31,7 +31,7 @@ export interface PipelineStats {
 
 /** Log a pipeline run to Supabase. */
 export async function logPipelineRun(run: PipelineRunLog): Promise<void> {
-  const supabase = getSupabaseClient();
+  const supabase = getSupabase();
 
   await supabase.from("pipeline_runs").insert({
     pipeline_id: run.pipelineId,
@@ -52,7 +52,7 @@ export async function updateUserFeedback(
   runId: string,
   feedback: number,
 ): Promise<void> {
-  const supabase = getSupabaseClient();
+  const supabase = getSupabase();
 
   await supabase
     .from("pipeline_runs")
@@ -62,7 +62,7 @@ export async function updateUserFeedback(
 
 /** Get aggregate performance stats per pipeline. */
 export async function getPerformanceStats(): Promise<PipelineStats[]> {
-  const supabase = getSupabaseClient();
+  const supabase = getSupabase();
 
   const { data: runs } = await supabase
     .from("pipeline_runs")
@@ -118,8 +118,7 @@ export async function getPerformanceStats(): Promise<PipelineStats[]> {
     totalRuns: s.total,
     successfulRuns: s.successful,
     successRate: s.total > 0 ? s.successful / s.total : 0,
-    avgQualityScore:
-      s.qualityCount > 0 ? s.qualitySum / s.qualityCount : 0,
+    avgQualityScore: s.qualityCount > 0 ? s.qualitySum / s.qualityCount : 0,
     avgDurationMs: s.total > 0 ? s.durationSum / s.total : 0,
     topIdeaTypes: [...s.ideaTypes.entries()]
       .sort((a, b) => b[1] - a[1])
@@ -133,7 +132,7 @@ export async function getRecentRuns(
   pipelineId: string,
   limit = 20,
 ): Promise<PipelineRunLog[]> {
-  const supabase = getSupabaseClient();
+  const supabase = getSupabase();
 
   const { data } = await supabase
     .from("pipeline_runs")

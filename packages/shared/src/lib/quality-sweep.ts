@@ -46,7 +46,12 @@ function findFiles(dir: string, ext: string, maxDepth: number = 5): string[] {
     try {
       const entries = readdirSync(current);
       for (const entry of entries) {
-        if (entry.startsWith(".") || entry === "node_modules" || entry === "dist") continue;
+        if (
+          entry.startsWith(".") ||
+          entry === "node_modules" ||
+          entry === "dist"
+        )
+          continue;
         const fullPath = join(current, entry);
         try {
           const stat = statSync(fullPath);
@@ -84,12 +89,20 @@ function countLines(filepath: string): number {
 export function checkTestFiles(srcDir: string): CheckResult {
   const testDir = join(srcDir, "__tests__");
   if (!existsSync(testDir)) {
-    return { name: "Test directory", severity: "fail", message: "No __tests__ directory found" };
+    return {
+      name: "Test directory",
+      severity: "fail",
+      message: "No __tests__ directory found",
+    };
   }
 
   const testFiles = findFiles(testDir, ".ts");
   if (testFiles.length === 0) {
-    return { name: "Test files", severity: "fail", message: "No test files found" };
+    return {
+      name: "Test files",
+      severity: "fail",
+      message: "No test files found",
+    };
   }
 
   const totalLines = testFiles.reduce((sum, f) => sum + countLines(f), 0);
@@ -113,7 +126,11 @@ export function checkTestFiles(srcDir: string): CheckResult {
 export function checkSourceFiles(srcDir: string): CheckResult {
   const libDir = join(srcDir, "lib");
   if (!existsSync(libDir)) {
-    return { name: "Lib directory", severity: "warn", message: "No lib/ directory found" };
+    return {
+      name: "Lib directory",
+      severity: "warn",
+      message: "No lib/ directory found",
+    };
   }
 
   const libFiles = findFiles(libDir, ".ts");
@@ -130,7 +147,11 @@ export function checkSourceFiles(srcDir: string): CheckResult {
 export function checkPackageJson(pkgDir: string): CheckResult {
   const pkgPath = join(pkgDir, "package.json");
   if (!existsSync(pkgPath)) {
-    return { name: "package.json", severity: "fail", message: "No package.json found" };
+    return {
+      name: "package.json",
+      severity: "fail",
+      message: "No package.json found",
+    };
   }
 
   try {
@@ -163,12 +184,20 @@ export function checkPackageJson(pkgDir: string): CheckResult {
 export function checkClaudeMd(pkgDir: string): CheckResult {
   const claudeMdPath = join(pkgDir, "CLAUDE.md");
   if (!existsSync(claudeMdPath)) {
-    return { name: "CLAUDE.md", severity: "warn", message: "No CLAUDE.md found" };
+    return {
+      name: "CLAUDE.md",
+      severity: "warn",
+      message: "No CLAUDE.md found",
+    };
   }
 
   const lines = countLines(claudeMdPath);
   if (lines < 20) {
-    return { name: "CLAUDE.md", severity: "warn", message: `Only ${lines} lines — might be sparse` };
+    return {
+      name: "CLAUDE.md",
+      severity: "warn",
+      message: `Only ${lines} lines — might be sparse`,
+    };
   }
 
   return { name: "CLAUDE.md", severity: "pass", message: `${lines} lines` };
@@ -176,15 +205,39 @@ export function checkClaudeMd(pkgDir: string): CheckResult {
 
 export function checkGitStatus(repoDir: string): CheckResult {
   try {
-    const output = execSync("git status --porcelain", { cwd: repoDir, stdio: "pipe" }).toString();
+    // Check for bare repo first (git status doesn't work on bare repos)
+    const isBare = execSync("git rev-parse --is-bare-repository", {
+      cwd: repoDir,
+      stdio: "pipe",
+    })
+      .toString()
+      .trim();
+    if (isBare === "true") {
+      return {
+        name: "Git status",
+        severity: "pass",
+        message: "Bare repository",
+      };
+    }
+
+    const output = execSync("git status --porcelain", {
+      cwd: repoDir,
+      stdio: "pipe",
+    }).toString();
     const lines = output.trim().split("\n").filter(Boolean);
 
     if (lines.length === 0) {
-      return { name: "Git status", severity: "pass", message: "Clean working tree" };
+      return {
+        name: "Git status",
+        severity: "pass",
+        message: "Clean working tree",
+      };
     }
 
     const untracked = lines.filter((l) => l.startsWith("??")).length;
-    const modified = lines.filter((l) => l.startsWith(" M") || l.startsWith("M ")).length;
+    const modified = lines.filter(
+      (l) => l.startsWith(" M") || l.startsWith("M "),
+    ).length;
 
     return {
       name: "Git status",
@@ -192,7 +245,11 @@ export function checkGitStatus(repoDir: string): CheckResult {
       message: `${lines.length} changes (${modified} modified, ${untracked} untracked)`,
     };
   } catch {
-    return { name: "Git status", severity: "fail", message: "Not a git repo or git unavailable" };
+    return {
+      name: "Git status",
+      severity: "fail",
+      message: "Not a git repo or git unavailable",
+    };
   }
 }
 
@@ -201,7 +258,11 @@ export function checkTypeScript(srcDir: string): CheckResult {
   const jsFiles = findFiles(srcDir, ".js");
 
   if (tsFiles.length === 0) {
-    return { name: "TypeScript", severity: "warn", message: "No .ts files found" };
+    return {
+      name: "TypeScript",
+      severity: "warn",
+      message: "No .ts files found",
+    };
   }
 
   const totalTs = tsFiles.reduce((sum, f) => sum + countLines(f), 0);
@@ -226,7 +287,11 @@ export function checkEnvFile(pkgDir: string): CheckResult {
   const envExamplePath = join(pkgDir, ".env.example");
 
   if (!existsSync(envPath) && !existsSync(envExamplePath)) {
-    return { name: "Environment", severity: "pass", message: "No .env files (ok for libraries)" };
+    return {
+      name: "Environment",
+      severity: "pass",
+      message: "No .env files (ok for libraries)",
+    };
   }
 
   if (existsSync(envPath) && !existsSync(envExamplePath)) {
@@ -237,18 +302,30 @@ export function checkEnvFile(pkgDir: string): CheckResult {
     };
   }
 
-  return { name: "Environment", severity: "pass", message: ".env and .env.example both present" };
+  return {
+    name: "Environment",
+    severity: "pass",
+    message: ".env and .env.example both present",
+  };
 }
 
 export function checkReadme(pkgDir: string): CheckResult {
   const readmePath = join(pkgDir, "README.md");
   if (!existsSync(readmePath)) {
-    return { name: "README.md", severity: "warn", message: "No README.md found" };
+    return {
+      name: "README.md",
+      severity: "warn",
+      message: "No README.md found",
+    };
   }
 
   const lines = countLines(readmePath);
   if (lines < 10) {
-    return { name: "README.md", severity: "warn", message: `Only ${lines} lines — might be sparse` };
+    return {
+      name: "README.md",
+      severity: "warn",
+      message: `Only ${lines} lines — might be sparse`,
+    };
   }
 
   return { name: "README.md", severity: "pass", message: `${lines} lines` };
@@ -259,16 +336,28 @@ export function checkLicense(repoDir: string): CheckResult {
   const licMdPath = join(repoDir, "LICENSE.md");
 
   if (existsSync(licensePath) || existsSync(licMdPath)) {
-    return { name: "License", severity: "pass", message: "License file present" };
+    return {
+      name: "License",
+      severity: "pass",
+      message: "License file present",
+    };
   }
 
-  return { name: "License", severity: "warn", message: "No LICENSE file found" };
+  return {
+    name: "License",
+    severity: "warn",
+    message: "No LICENSE file found",
+  };
 }
 
 export function checkBinExecutable(pkgDir: string): CheckResult {
   const binDir = join(pkgDir, "bin");
   if (!existsSync(binDir)) {
-    return { name: "CLI binary", severity: "pass", message: "No bin/ directory (ok for libraries)" };
+    return {
+      name: "CLI binary",
+      severity: "pass",
+      message: "No bin/ directory (ok for libraries)",
+    };
   }
 
   const files = readdirSync(binDir);
@@ -295,7 +384,11 @@ export function checkBinExecutable(pkgDir: string): CheckResult {
     };
   }
 
-  return { name: "CLI binary", severity: "pass", message: `${files.length} bin files, all executable` };
+  return {
+    name: "CLI binary",
+    severity: "pass",
+    message: `${files.length} bin files, all executable`,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -364,7 +457,9 @@ export function formatSweepReport(report: SweepReport): string {
 
   lines.push("");
   lines.push("Summary:");
-  lines.push(`  ${report.summary.pass} pass, ${report.summary.warn} warn, ${report.summary.fail} fail`);
+  lines.push(
+    `  ${report.summary.pass} pass, ${report.summary.warn} warn, ${report.summary.fail} fail`,
+  );
 
   const score = Math.round((report.summary.pass / report.summary.total) * 100);
   lines.push(`  Score: ${score}%`);

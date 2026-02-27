@@ -2,7 +2,7 @@
  * Finance data fetchers — pulls from llm_usage, subscriptions, payments.
  */
 
-import { getSupabaseClient } from "@golems/shared";
+import { getSupabase } from "@golems/shared/lib/supabase-factory";
 
 export interface LLMCostByModel {
   model: string;
@@ -42,7 +42,7 @@ export interface FinanceData {
 }
 
 export async function fetchFinanceData(): Promise<FinanceData> {
-  const supabase = getSupabaseClient();
+  const supabase = getSupabase();
 
   // LLM usage
   const { data: usage } = await supabase
@@ -89,22 +89,22 @@ export async function fetchFinanceData(): Promise<FinanceData> {
     .from("subscriptions")
     .select("service_name, amount, currency, frequency, status");
 
-  const subscriptions: SubscriptionSummary[] = (subs ?? []).map((s: Record<string, unknown>) => ({
-    service: s.service_name,
-    amount: Number(s.amount) || 0,
-    currency: s.currency ?? "USD",
-    frequency: s.frequency ?? "monthly",
-    status: s.status ?? "active",
-  }));
+  const subscriptions: SubscriptionSummary[] = (subs ?? []).map(
+    (s: Record<string, unknown>) => ({
+      service: s.service_name,
+      amount: Number(s.amount) || 0,
+      currency: s.currency ?? "USD",
+      frequency: s.frequency ?? "monthly",
+      status: s.status ?? "active",
+    }),
+  );
 
   const monthlySubscriptionTotal = subscriptions
     .filter((s) => s.status === "active")
     .reduce((sum, s) => sum + s.amount, 0);
 
   // Email categories
-  const { data: emails } = await supabase
-    .from("emails")
-    .select("category");
+  const { data: emails } = await supabase.from("emails").select("category");
 
   const catCounts = new Map<string, number>();
   for (const e of emails ?? []) {
@@ -112,11 +112,15 @@ export async function fetchFinanceData(): Promise<FinanceData> {
     catCounts.set(cat, (catCounts.get(cat) ?? 0) + 1);
   }
 
-  const totalLLMCost = [...modelStats.values()].reduce((s, m) => s + m.totalCost, 0);
+  const totalLLMCost = [...modelStats.values()].reduce(
+    (s, m) => s + m.totalCost,
+    0,
+  );
 
   return {
-    llmCostsByModel: [...modelStats.values()]
-      .sort((a, b) => b.totalCost - a.totalCost),
+    llmCostsByModel: [...modelStats.values()].sort(
+      (a, b) => b.totalCost - a.totalCost,
+    ),
     totalLLMCost: Math.round(totalLLMCost * 100) / 100,
     dailyCosts,
     subscriptions,

@@ -94,52 +94,111 @@ cleanup() {
 }
 trap cleanup EXIT SIGTERM SIGINT
 
-# --- Wait for stream to go live (poll every 2 min) ---
-log "Checking if ${CHANNEL} is live..."
+# --- Adaptive polling: 15 min idle → 3 min cooldown after stream ends → 15 min ---
+POLL_IDLE=900       # 15 minutes between checks when no stream detected
+POLL_COOLDOWN=180   # 3 minutes between checks after stream ends
+COOLDOWN_MAX=5      # Check 5 times at 3-min intervals (= 15 min) before reverting to idle
+
+poll_interval=$POLL_IDLE
+cooldown_count=0
+
+log "Checking if ${CHANNEL} is live (poll: ${poll_interval}s)..."
 while true; do
     if yt-dlp --simulate --no-download "https://www.twitch.tv/${CHANNEL}" 2>/dev/null; then
         log "${CHANNEL} is LIVE! Starting recording..."
         break
     fi
-    log "${CHANNEL} is offline. Checking again in 2 minutes..."
-    sleep 120
-done
 
-# --- Start recording (blocks until stream ends) ---
-log "Recording to $VIDEO_FILE..."
-# Disable errexit for yt-dlp — non-zero exit is normal when stream ends
-set +e
-yt-dlp --no-part -f "$QUALITY" -o "$VIDEO_FILE" "https://www.twitch.tv/${CHANNEL}" 2>&1 | while IFS= read -r line; do
-    if [[ "$line" == *"Downloading"* ]] || [[ "$line" == *"ERROR"* ]] || [[ "$line" == *"Finished"* ]]; then
-        log "$line"
+    if [ "$cooldown_count" -gt 0 ]; then
+        cooldown_count=$((cooldown_count - 1))
+        if [ "$cooldown_count" -eq 0 ]; then
+            poll_interval=$POLL_IDLE
+            log "${CHANNEL} offline. Cooldown done — back to ${poll_interval}s polling."
+        else
+            log "${CHANNEL} offline. Cooldown check ${cooldown_count} remaining (${poll_interval}s)..."
+        fi
+    else
+        log "${CHANNEL} offline. Next check in ${poll_interval}s..."
     fi
+    sleep "$poll_interval"
 done
 
-YTDLP_EXIT=$?
-set -e
-log "Recording ended (exit code: $YTDLP_EXIT)"
+# --- Main loop: record → process → cooldown → watch again ---
+while true; do
+    # Refresh date for each stream (might span midnight)
+    DATE=$(date +%Y-%m-%d)
+    STREAM_DIR="$HOME/Gits/golems/docs.local/stalker-golem/${CHANNEL}-${DATE}"
+    VIDEO_FILE="$STREAM_DIR/video.mp4"
+    CHAT_FILE="$STREAM_DIR/chat.log"
+    mkdir -p "$STREAM_DIR"
 
-# --- Kill lurker ---
-kill "$LURKER_PID" 2>/dev/null || true
-log "Chat lurker stopped."
+    # --- Start recording (blocks until stream ends) ---
+    log "Recording to $VIDEO_FILE..."
+    set +e
+    yt-dlp --no-part -f "$QUALITY" -o "$VIDEO_FILE" "https://www.twitch.tv/${CHANNEL}" 2>&1 | while IFS= read -r line; do
+        if [[ "$line" == *"Downloading"* ]] || [[ "$line" == *"ERROR"* ]] || [[ "$line" == *"Finished"* ]]; then
+            log "$line"
+        fi
+    done
 
-# --- Check if we got anything ---
-if [ ! -f "$VIDEO_FILE" ] || [ "$(stat -f%z "$VIDEO_FILE" 2>/dev/null || echo 0)" -lt 1000000 ]; then
-    log "Recording too small or missing — stream might not have been live. Exiting."
-    exit 0
-fi
+    YTDLP_EXIT=$?
+    set -e
+    log "Recording ended (exit code: $YTDLP_EXIT)"
 
-VIDEO_SIZE=$(du -sh "$VIDEO_FILE" | cut -f1)
-CHAT_LINES=$(wc -l < "$CHAT_FILE" 2>/dev/null || echo 0)
-log "Captured: ${VIDEO_SIZE} video, ${CHAT_LINES} chat messages"
+    # --- Kill lurker (will restart on next stream) ---
+    kill "$LURKER_PID" 2>/dev/null || true
+    log "Chat lurker stopped."
 
-# --- Auto-process ---
-log "Starting post-stream processing..."
-"$SCRIPTS_DIR/process-stream.sh" "$VIDEO_FILE" "$CHAT_FILE"
+    # --- Check if we got anything ---
+    if [ ! -f "$VIDEO_FILE" ] || [ "$(stat -f%z "$VIDEO_FILE" 2>/dev/null || echo 0)" -lt 1000000 ]; then
+        log "Recording too small or missing — false positive or brief stream."
+    else
+        VIDEO_SIZE=$(du -sh "$VIDEO_FILE" | cut -f1)
+        CHAT_LINES=$(wc -l < "$CHAT_FILE" 2>/dev/null || echo 0)
+        log "Captured: ${VIDEO_SIZE} video, ${CHAT_LINES} chat messages"
 
-log "=== Done! Check gems at: $STREAM_DIR/ ==="
+        # --- Auto-process ---
+        log "Starting post-stream processing..."
+        "$SCRIPTS_DIR/process-stream.sh" "$VIDEO_FILE" "$CHAT_FILE" || log "WARNING: process-stream.sh failed (exit $?)"
 
-# --- Notify ---
-if command -v notify &> /dev/null; then
-    notify "Stream Processed" "${CHANNEL} stream: ${VIDEO_SIZE} video, ${CHAT_LINES} chat msgs. Gems extracted."
-fi
+        log "=== Done! Check gems at: $STREAM_DIR/ ==="
+
+        # --- Notify ---
+        if command -v notify &> /dev/null; then
+            notify "Stream Processed" "${CHANNEL} stream: ${VIDEO_SIZE} video, ${CHAT_LINES} chat msgs. Gems extracted."
+        fi
+    fi
+
+    # --- Enter cooldown: 3 min x 5 checks, then back to 15 min idle ---
+    log "Stream ended. Entering cooldown (${POLL_COOLDOWN}s x ${COOLDOWN_MAX} checks)..."
+    poll_interval=$POLL_COOLDOWN
+    cooldown_count=$COOLDOWN_MAX
+
+    # Restart chat lurker for next stream
+    TWITCH_CHANNEL="$CHANNEL" CHAT_OUTPUT="$CHAT_FILE" \
+      nohup bun run "$LURKER_SCRIPT" > /dev/null 2>&1 &
+    LURKER_PID=$!
+    disown
+
+    # Back to polling loop (top of the adaptive polling while loop)
+    log "Watching for next stream..."
+    while true; do
+        if yt-dlp --simulate --no-download "https://www.twitch.tv/${CHANNEL}" 2>/dev/null; then
+            log "${CHANNEL} is LIVE again! Starting recording..."
+            break
+        fi
+
+        if [ "$cooldown_count" -gt 0 ]; then
+            cooldown_count=$((cooldown_count - 1))
+            if [ "$cooldown_count" -eq 0 ]; then
+                poll_interval=$POLL_IDLE
+                log "Cooldown done — back to ${poll_interval}s polling."
+            else
+                log "${CHANNEL} offline. Cooldown ${cooldown_count} remaining..."
+            fi
+        else
+            log "${CHANNEL} offline. Next check in ${poll_interval}s..."
+        fi
+        sleep "$poll_interval"
+    done
+done

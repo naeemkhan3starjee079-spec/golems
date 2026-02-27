@@ -2,7 +2,7 @@
  * Job market data fetchers — pulls stats from golem_jobs + scrape_activity.
  */
 
-import { getSupabaseClient } from "@golems/shared";
+import { getSupabase } from "@golems/shared/lib/supabase-factory";
 
 export interface JobStatusDistribution {
   status: string;
@@ -43,7 +43,7 @@ export interface JobMarketData {
 }
 
 export async function fetchJobMarketData(): Promise<JobMarketData> {
-  const supabase = getSupabaseClient();
+  const supabase = getSupabase();
 
   // Status distribution
   const { data: jobs } = await supabase
@@ -70,10 +70,13 @@ export async function fetchJobMarketData(): Promise<JobMarketData> {
     const score = job.match_score;
     if (score != null) {
       const bucket =
-        score >= 8 ? "8-10 (Excellent)" :
-        score >= 6 ? "6-7 (Good)" :
-        score >= 4 ? "4-5 (Fair)" :
-        "1-3 (Low)";
+        score >= 8
+          ? "8-10 (Excellent)"
+          : score >= 6
+            ? "6-7 (Good)"
+            : score >= 4
+              ? "4-5 (Fair)"
+              : "1-3 (Low)";
       scoreBuckets.set(bucket, (scoreBuckets.get(bucket) ?? 0) + 1);
     }
   }
@@ -108,9 +111,16 @@ export async function fetchJobMarketData(): Promise<JobMarketData> {
     .order("run_at", { ascending: false })
     .limit(200);
 
-  const sourceStats = new Map<string, { runs: number; totalNew: number; lastRun: string }>();
+  const sourceStats = new Map<
+    string,
+    { runs: number; totalNew: number; lastRun: string }
+  >();
   for (const s of scrapes ?? []) {
-    const existing = sourceStats.get(s.source) ?? { runs: 0, totalNew: 0, lastRun: s.run_at };
+    const existing = sourceStats.get(s.source) ?? {
+      runs: 0,
+      totalNew: 0,
+      lastRun: s.run_at,
+    };
     existing.runs++;
     existing.totalNew += s.new_saved ?? 0;
     sourceStats.set(s.source, existing);
@@ -129,13 +139,13 @@ export async function fetchJobMarketData(): Promise<JobMarketData> {
       .map(([range, count]) => ({ range, count }))
       .sort((a, b) => a.range.localeCompare(b.range)),
     weeklyTrend,
-    scrapeStats: [...sourceStats.entries()]
-      .map(([source, stats]) => ({
-        source,
-        totalRuns: stats.runs,
-        avgNewPerRun: stats.runs > 0 ? Math.round(stats.totalNew / stats.runs) : 0,
-        lastRun: stats.lastRun,
-      })),
+    scrapeStats: [...sourceStats.entries()].map(([source, stats]) => ({
+      source,
+      totalRuns: stats.runs,
+      avgNewPerRun:
+        stats.runs > 0 ? Math.round(stats.totalNew / stats.runs) : 0,
+      lastRun: stats.lastRun,
+    })),
     fetchedAt: new Date().toISOString(),
   };
 }

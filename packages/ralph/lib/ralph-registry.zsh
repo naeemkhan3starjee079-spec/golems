@@ -728,6 +728,15 @@ function repoGolem() {
           claude_args+=(\"--continue\")
           shift
           ;;
+        -w|--worktree)
+          if [[ -n \"\$2\" && \"\$2\" != -* ]]; then
+            claude_args+=(\"--worktree\" \"\$2\")
+            shift 2
+          else
+            claude_args+=(\"--worktree\")
+            shift
+          fi
+          ;;
         --web)
           remote_mode=true
           shift
@@ -816,6 +825,18 @@ function repoGolem() {
       disable_chrome=\$(jq -r --arg proj \"$lowercase_name\" '.projects[\$proj].disableChrome // false' \"\$registry\" 2>/dev/null)
       if [[ \"\$disable_chrome\" == \"true\" ]]; then
         claude_args+=(\"--no-chrome\")
+      fi
+
+      # Inherit MCP config from another project (cross-repo MCP access)
+      local inherit_from
+      inherit_from=\$(jq -r --arg proj \"$lowercase_name\" '.projects[\$proj].mcpInheritFrom // \"\"' \"\$registry\" 2>/dev/null)
+      if [[ -n \"\$inherit_from\" ]]; then
+        local inherit_path
+        inherit_path=\$(jq -r --arg proj \"\$inherit_from\" '.projects[\$proj].path // \"\"' \"\$registry\" 2>/dev/null)
+        inherit_path=\"\${inherit_path/#\\~/$HOME}\"
+        if [[ -n \"\$inherit_path\" && -f \"\${inherit_path}/.mcp.json\" ]]; then
+          claude_args+=(\"--mcp-config\" \"\${inherit_path}/.mcp.json\")
+        fi
       fi
     fi
 

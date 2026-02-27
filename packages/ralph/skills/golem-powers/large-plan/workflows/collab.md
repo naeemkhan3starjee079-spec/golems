@@ -197,6 +197,8 @@ Short. Timestamped. Bold status keywords. One line per update.
 12. **Dual sources of truth** — collab Task Board says one thing, plan README says another. The collab Task Board is authoritative during execution. Plan README gets updated after merge.
 13. **Concurrent edit clobbering** — two agents edit collab.md simultaneously, one overwrites the other. Messages section is append-only. For the rest, each agent edits only their own rows.
 14. **Stale `working` status** — agent crashes or hangs, status stays `working` forever. If no Messages update for 30+ min from a `working` agent, orchestrator should check on them.
+15. **Missing MCP servers in cross-repo agents** — agent launched in repo B has no access to MCP servers configured in repo A's `.mcp.json`. ALWAYS use `--mcp-config` when launching agents in different repos. See scaffold step 9 for CLI template.
+16. **Registering hooks before creating the file** — Agent adds a hook to `settings.json` pointing to a file that doesn't exist yet. Hook runner returns exit code 2 (file not found), which blocks ALL tool calls for ALL agents in the repo. **Rule: create the hook file first, register it second. Never the reverse.**
 
 ---
 

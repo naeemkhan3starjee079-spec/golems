@@ -1,5 +1,7 @@
 # Golems Monorepo
 
+@~/Gits/orchestrator/standards/autonomous-workflow.md
+
 > Autonomous AI agent ecosystem — Bun workspace with 16 packages + 2 external repos. Each golem is a self-contained CC plugin.
 
 ## Packages

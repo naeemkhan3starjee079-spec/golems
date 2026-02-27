@@ -1,6 +1,22 @@
 # PR Review Loop Rules
 
-> How to wait for CodeRabbit/Cursor Bugbot reviews after pushing a PR.
+> Full autonomous PR lifecycle: push → create PR → poll reviews → fix issues → merge → clean branch.
+
+## "PR loop" = Fully Autonomous Through Merge
+
+When the user says "PR loop" or "do a PR loop", execute the ENTIRE cycle without stopping to ask:
+
+1. **Branch** — create feature branch from master
+2. **Commit** — stage + commit with conventional message
+3. **Push** — `git push -u origin <branch>`
+4. **Create PR** — `gh pr create` with summary + test plan
+5. **Poll reviews** — wait for CodeRabbit/Greptile/DeepSource (see below)
+6. **Fix issues** — triage comments, fix HIGH/MEDIUM, push fixes
+7. **Re-poll** — check for new issues after fix push
+8. **Merge** — `gh pr merge --squash` when clean
+9. **Clean up** — `git checkout master && git pull && git branch -d <branch> && git push origin --delete <branch>`
+
+**DO NOT stop to ask "want me to merge?" — that defeats the purpose. Merge when reviews are clean.**
 
 ## Timer Management
 

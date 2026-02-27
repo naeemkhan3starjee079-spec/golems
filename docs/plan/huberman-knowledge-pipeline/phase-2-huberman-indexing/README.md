@@ -47,26 +47,33 @@ Index 8-10 key Huberman Lab episodes into Zikaron, creating a searchable knowled
 - [ ] Verify search quality with test queries
 - [ ] Log final stats + update findings.md
 
-### Indexed Episodes (16/~455)
+### Indexed Episodes (21/~455)
 
-| Video ID | Chunks | Chars |
-|----------|--------|-------|
-| t6RCTP4fc9Q | 221 | 253,258 |
-| bdsc3Spm6Sw | 185 | 210,367 |
-| gbQFSMayJxk | 179 | 205,687 |
-| qzXU390N3vs | 172 | 191,123 |
-| lEULFeUVYf0 | 163 | 182,231 |
-| qGb7hYMlA3o | 160 | 178,447 |
-| VPi_eWiaqdg | 160 | 181,892 |
-| rAbJC-Qaw7Q | 154 | 175,900 |
-| _Q4XT82yd-Q | 147 | 157,385 |
-| fh2dBmLN-ZM | 42 | 42,272 |
-| iNL_BFlHYZ8 | 37 | 38,896 |
-| RmwbNdyrilk | 37 | 36,917 |
-| NEkUNahduWY | 36 | 38,174 |
-| BRG4_KfTxbs | 36 | 37,097 |
-| JsICN9ZiSjA | 35 | 36,255 |
-| 23t_ynq2tmk | 35 | 36,431 |
+| Video ID | Title | Chunks |
+|----------|-------|--------|
+| t6RCTP4fc9Q | — | 221 |
+| bdsc3Spm6Sw | — | 185 |
+| gbQFSMayJxk | — | 179 |
+| qzXU390N3vs | — | 172 |
+| lEULFeUVYf0 | — | 163 |
+| qGb7hYMlA3o | — | 160 |
+| VPi_eWiaqdg | — | 160 |
+| rAbJC-Qaw7Q | — | 154 |
+| _Q4XT82yd-Q | — | 147 |
+| fh2dBmLN-ZM | — | 42 |
+| iNL_BFlHYZ8 | — | 37 |
+| RmwbNdyrilk | — | 37 |
+| NEkUNahduWY | — | 36 |
+| BRG4_KfTxbs | — | 36 |
+| JsICN9ZiSjA | — | 35 |
+| 23t_ynq2tmk | — | 35 |
+| **QmOF0crdyRU** | **Controlling Your Dopamine (#39)** | **2,237** |
+| **K-TW2Chpz4k** | **Leverage Dopamine to Overcome Procrastination** | **1,395** |
+| **Wcs2PFz5q6g** | **Making & Breaking Habits** | **1,577** |
+| **LAwBdRR4wQk** | **ADHD & How Anyone Can Improve Focus (Essentials)** | **234** |
+| **OLQRAMZi--c** | **How to Increase Motivation & Drive (Essentials)** | **228** |
 
-**To index full channel:** `python3 packages/zikaron/scripts/index_youtube.py --channel UC2D2CMWXMOVWx7giW1n3LIg --resume`
+**Coach Protocol v2 episodes (Feb 25):** 5 new episodes added, 5,671 chunks — dopamine, procrastination, habits, ADHD focus, motivation.
+
+**To index full channel:** `python3 scripts/index_youtube.py --channel UC2D2CMWXMOVWx7giW1n3LIg --resume`
 (10s delay between videos for rate limiting. ~7-8 hours for full channel. Run overnight.)

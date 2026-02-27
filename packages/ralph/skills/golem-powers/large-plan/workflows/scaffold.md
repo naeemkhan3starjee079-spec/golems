@@ -203,7 +203,40 @@ Tell the user:
 
 **Skip if fully sequential.**
 
-For each agent that will work in parallel, generate a ready-to-use kickoff prompt:
+For each agent that will work in parallel, generate:
+
+1. **A CLI command** the human can paste into a new terminal
+2. **A kickoff prompt** the human pastes after launch
+
+#### CLI Command Template
+
+```bash
+cd [agent-repo-path] && claude -w --dangerously-skip-permissions [mcp-flags]
+```
+
+**MCP flag rules (CRITICAL):**
+- If agent works in the **same repo** as the plan → no extra flags needed (`.mcp.json` is local)
+- If agent works in a **different repo** → add `--mcp-config [plan-repo]/.mcp.json` to inherit MCP servers
+- If agent needs MCP from **multiple repos** → chain: `--mcp-config /repo1/.mcp.json --mcp-config /repo2/.mcp.json`
+
+**Examples:**
+```bash
+# Same repo (golems agent working in golems)
+cd ~/Gits/golems && claude -w --dangerously-skip-permissions
+
+# Different repo (brainClaude working in brainlayer, needs golems MCPs)
+cd ~/Gits/brainlayer && claude -w --dangerously-skip-permissions --mcp-config ~/Gits/golems/.mcp.json
+
+# Different repo + continue previous session
+cd ~/Gits/brainlayer && claude -w -c --dangerously-skip-permissions --mcp-config ~/Gits/golems/.mcp.json
+```
+
+**Other useful flags:**
+- `-c` — continue from previous session (useful for Round 2+ when agent already has context)
+- `-w [name]` — named worktree (e.g., `-w phase-2-extraction`)
+- `--mcp-config` — load MCP servers from another project's `.mcp.json`
+
+#### Kickoff Prompt Template
 
 ```markdown
 ## Agent: [agentName]
@@ -225,11 +258,12 @@ Rules:
 4. Update Messages BEFORE every git commit.
 5. Before creating PR, read other agents' Messages for cross-references.
 6. Update Task Board with PR link when creating PRs.
-7. If blocked, set status → `blocked:reason` with exactly what's needed and from whom.
-8. When done with all your phases, status → `done`, then `signed-off`.
-9. Read this collab file every [N] minutes for updates from other agents.
+7. Full PR loop: push → create PR → poll reviews → fix issues → merge → clean branch.
+8. If blocked, set status → `blocked:reason` with exactly what's needed and from whom.
+9. When done with all your phases, status → `done`, then `signed-off`.
+10. Read this collab file every [N] minutes for updates from other agents.
 
 Start now.
 ```
 
-This removes the need for the human to write kickoff prompts manually.
+This removes the need for the human to write kickoff prompts or figure out CLI flags manually.
