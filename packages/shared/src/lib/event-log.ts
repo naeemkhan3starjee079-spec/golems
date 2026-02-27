@@ -18,7 +18,11 @@ import { homedir } from "os";
 import { getSupabase } from "./supabase-factory";
 
 // Default event log path
-const DEFAULT_EVENT_LOG_PATH = join(homedir(), ".golems-zikaron", "event-log.json");
+const DEFAULT_EVENT_LOG_PATH = join(
+  homedir(),
+  ".golems-zikaron",
+  "event-log.json",
+);
 
 // Maximum events to keep
 const MAX_EVENTS = 100;
@@ -40,9 +44,15 @@ function persistEventToSupabase(event: GolemEvent): void {
       created_at: event.timestamp,
     })
     .then(({ error }) => {
-      if (error) console.error("[EventLog] Supabase insert failed:", error.message);
+      if (error)
+        console.error("[EventLog] Supabase insert failed:", error.message);
     })
-    .catch(() => {});
+    .catch((err: unknown) => {
+      console.error(
+        "[EventLog] Supabase network error:",
+        err instanceof Error ? err.message : err,
+      );
+    });
 }
 
 /** Golem actors that can produce events */
@@ -100,7 +110,7 @@ export async function logEvent(
   type: EventType,
   data: Record<string, any>,
   actor: GolemActor = "claudegolem",
-  logPath: string = DEFAULT_EVENT_LOG_PATH
+  logPath: string = DEFAULT_EVENT_LOG_PATH,
 ): Promise<void> {
   // Ensure directory exists
   const dir = dirname(logPath);
@@ -149,7 +159,7 @@ export async function logEvent(
  */
 export async function getRecentEvents(
   hours: number = 24,
-  logPath: string = DEFAULT_EVENT_LOG_PATH
+  logPath: string = DEFAULT_EVENT_LOG_PATH,
 ): Promise<GolemEvent[]> {
   if (!existsSync(logPath)) {
     return [];
@@ -182,7 +192,7 @@ export function formatEventsForClaude(events: GolemEvent[]): string {
 
   // Sort by timestamp descending (most recent first)
   const sorted = [...events].sort(
-    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
   );
 
   const lines = sorted.map((event) => {

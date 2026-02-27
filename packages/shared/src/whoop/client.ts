@@ -80,7 +80,8 @@ async function loadRefreshTokenFromSupabase(): Promise<string | null> {
       .eq("key", "whoop_refresh_token")
       .single();
     if (data?.value) {
-      let token = typeof data.value === "string" ? data.value : String(data.value);
+      let token =
+        typeof data.value === "string" ? data.value : String(data.value);
       // Strip double-encoding quotes if present (bug in initial version)
       if (token.startsWith('"') && token.endsWith('"')) {
         token = token.slice(1, -1);
@@ -108,11 +109,20 @@ function saveRefreshTokenToSupabase(refreshToken: string): void {
           { onConflict: "key" },
         )
         .then(({ error }) => {
-          if (error) console.error("[Whoop] Failed to save refresh token to Supabase:", error.message);
+          if (error)
+            console.error(
+              "[Whoop] Failed to save refresh token to Supabase:",
+              error.message,
+            );
           else console.log("[Whoop] Refresh token persisted to Supabase");
         });
     })
-    .catch(() => {});
+    .catch((err: unknown) => {
+      console.error(
+        "[Whoop] Supabase token persist error:",
+        err instanceof Error ? err.message : err,
+      );
+    });
 }
 
 /** Get the best available refresh token: memory > Supabase > env var */
@@ -163,9 +173,7 @@ async function getAccessToken(): Promise<string> {
 
   if (!response.ok) {
     const err = await response.text();
-    throw new Error(
-      `Whoop token refresh failed (${response.status}): ${err}`,
-    );
+    throw new Error(`Whoop token refresh failed (${response.status}): ${err}`);
   }
 
   const data = (await response.json()) as {
@@ -310,9 +318,7 @@ export async function getTodayStrain(): Promise<WhoopCycle | null> {
 }
 
 /** Get recent workouts */
-export async function getRecentWorkouts(
-  limit = 5,
-): Promise<WhoopWorkout[]> {
+export async function getRecentWorkouts(limit = 5): Promise<WhoopWorkout[]> {
   const workouts = await whoopGet<WhoopPaginatedResponse<any>>(
     "/activity/workout",
     { limit: String(limit) },

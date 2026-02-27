@@ -57,7 +57,7 @@ export interface FreeStats {
   totalCalls: number;
   byHelper: Record<string, number>;
   bySource: Record<string, number>;
-  estimatedValueSaved: number;  // What free calls would have cost at Haiku rates
+  estimatedValueSaved: number; // What free calls would have cost at Haiku rates
 }
 
 export interface FullUsageStats {
@@ -89,9 +89,15 @@ function persistToSupabase(entry: CostEntry): void {
       created_at: entry.timestamp,
     })
     .then(({ error }) => {
-      if (error) console.error("[CostTracker] Supabase insert failed:", error.message);
+      if (error)
+        console.error("[CostTracker] Supabase insert failed:", error.message);
     })
-    .catch(() => {});
+    .catch((err: unknown) => {
+      console.error(
+        "[CostTracker] Supabase network error:",
+        err instanceof Error ? err.message : err,
+      );
+    });
 }
 
 /**
@@ -99,14 +105,16 @@ function persistToSupabase(entry: CostEntry): void {
  * Returns empty array if Supabase is unavailable.
  */
 export async function readFromSupabase(
-  period: "today" | "week" | "month" | "all" = "all"
+  period: "today" | "week" | "month" | "all" = "all",
 ): Promise<CostEntry[]> {
   const sb = getSupabase();
   if (!sb) return [];
 
   let query = sb
     .from("llm_usage")
-    .select("model, source, input_tokens, output_tokens, cost_usd, tier, duration_ms, created_at")
+    .select(
+      "model, source, input_tokens, output_tokens, cost_usd, tier, duration_ms, created_at",
+    )
     .order("created_at", { ascending: false });
 
   if (period !== "all") {
@@ -148,7 +156,7 @@ export async function readFromSupabase(
  * Get full usage stats from Supabase (persistent, survives deploys).
  */
 export async function getSupabaseUsageStats(
-  period: "today" | "week" | "month" | "all" = "all"
+  period: "today" | "week" | "month" | "all" = "all",
 ): Promise<FullUsageStats & { subscription: SubscriptionStats }> {
   const entries = await readFromSupabase(period);
 
@@ -191,8 +199,8 @@ export async function getSupabaseUsageStats(
 export const CC_SUBSCRIPTION_MONTHLY = 200;
 
 /** Haiku 4.5 pricing for value estimation */
-const HAIKU_INPUT_PER_MTOK = 0.80;
-const HAIKU_OUTPUT_PER_MTOK = 4.00;
+const HAIKU_INPUT_PER_MTOK = 0.8;
+const HAIKU_OUTPUT_PER_MTOK = 4.0;
 
 /**
  * Estimate what free CLI helper calls would have cost at Haiku rates.
@@ -201,7 +209,7 @@ const HAIKU_OUTPUT_PER_MTOK = 4.00;
  */
 export function estimateValueSaved(
   paidEntries: CostEntry[],
-  freeCallCount: number
+  freeCallCount: number,
 ): number {
   if (freeCallCount === 0) return 0;
 
@@ -289,7 +297,7 @@ function startOfMonth(date: Date): Date {
 export function filterByPeriod(
   entries: CostEntry[],
   period: "today" | "week" | "month" | "all",
-  now = new Date()
+  now = new Date(),
 ): CostEntry[] {
   if (period === "all") return entries;
 
@@ -405,7 +413,7 @@ export function formatSummary(summary: CostSummary): string {
 
 export function formatBySource(bySource: CostBySource): string {
   const entries = Object.entries(bySource).sort(
-    (a, b) => b[1].totalCost - a[1].totalCost
+    (a, b) => b[1].totalCost - a[1].totalCost,
   );
 
   if (entries.length === 0) return "No data.";
@@ -424,7 +432,7 @@ export function formatBySource(bySource: CostBySource): string {
 
 export function formatByModel(byModel: CostByModel): string {
   const entries = Object.entries(byModel).sort(
-    (a, b) => b[1].totalCost - a[1].totalCost
+    (a, b) => b[1].totalCost - a[1].totalCost,
   );
 
   if (entries.length === 0) return "No data.";
@@ -448,7 +456,8 @@ export function formatDaily(daily: DailyCost[]): string {
   const separator = "─".repeat(header.length);
 
   const rows = daily.map(
-    (d) => `${d.date}  ${String(d.calls).padStart(5)}  ${formatUSD(d.cost).padStart(9)}`
+    (d) =>
+      `${d.date}  ${String(d.calls).padStart(5)}  ${formatUSD(d.cost).padStart(9)}`,
   );
 
   const total = daily.reduce((sum, d) => sum + d.cost, 0);
@@ -469,9 +478,13 @@ export function formatFullStats(stats: FullUsageStats): string {
   lines.push("");
 
   // Paid
-  lines.push(`Paid API: ${stats.paid.totalCalls} calls, ${formatUSD(stats.paid.totalCost)}`);
+  lines.push(
+    `Paid API: ${stats.paid.totalCalls} calls, ${formatUSD(stats.paid.totalCost)}`,
+  );
   if (stats.paid.totalCalls > 0) {
-    lines.push(`  Tokens: ${formatTokens(stats.paid.totalInputTokens)} in / ${formatTokens(stats.paid.totalOutputTokens)} out`);
+    lines.push(
+      `  Tokens: ${formatTokens(stats.paid.totalInputTokens)} in / ${formatTokens(stats.paid.totalOutputTokens)} out`,
+    );
   }
 
   // Free
@@ -481,13 +494,17 @@ export function formatFullStats(stats: FullUsageStats): string {
       .map(([name, count]) => `${name}(${count})`)
       .join(", ");
     lines.push(`  Helpers: ${helpers}`);
-    lines.push(`  Value saved: ~${formatUSD(stats.free.estimatedValueSaved)} (at Haiku rates)`);
+    lines.push(
+      `  Value saved: ~${formatUSD(stats.free.estimatedValueSaved)} (at Haiku rates)`,
+    );
   }
 
   // Bottom line
   lines.push("");
   const totalValue = stats.paid.totalCost + stats.free.estimatedValueSaved;
-  lines.push(`Total value: ${formatUSD(totalValue)} (paid ${formatUSD(stats.paid.totalCost)} + saved ~${formatUSD(stats.free.estimatedValueSaved)})`);
+  lines.push(
+    `Total value: ${formatUSD(totalValue)} (paid ${formatUSD(stats.paid.totalCost)} + saved ~${formatUSD(stats.free.estimatedValueSaved)})`,
+  );
 
   return lines.join("\n");
 }
@@ -499,7 +516,7 @@ export function formatFullStats(stats: FullUsageStats): string {
  */
 export function getFullUsageStats(
   costLogPath: string,
-  period: "today" | "week" | "month" | "all" = "all"
+  period: "today" | "week" | "month" | "all" = "all",
 ): FullUsageStats {
   const allEntries = readCostLog(costLogPath);
   const entries = filterByPeriod(allEntries, period);

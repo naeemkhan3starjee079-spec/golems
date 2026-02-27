@@ -25,7 +25,8 @@ const GEMINI_MODEL = "gemini-2.5-flash-lite";
 const GROQ_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
 
 // Cost log
-const COST_LOG_DIR = process.env.GOLEMS_STATE_DIR || join(homedir(), ".golems-zikaron");
+const COST_LOG_DIR =
+  process.env.GOLEMS_STATE_DIR || join(homedir(), ".golems-zikaron");
 const COST_LOG_PATH = join(COST_LOG_DIR, "api_costs.jsonl");
 
 // Provider instances (lazy init)
@@ -35,7 +36,10 @@ let groqProvider: ReturnType<typeof createGroq> | null = null;
 function getGeminiProvider() {
   if (!geminiProvider) {
     const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
-    if (!apiKey) throw new Error("GOOGLE_GENERATIVE_AI_API_KEY required for LLM_BACKEND=gemini");
+    if (!apiKey)
+      throw new Error(
+        "GOOGLE_GENERATIVE_AI_API_KEY required for LLM_BACKEND=gemini",
+      );
     geminiProvider = createGoogleGenerativeAI({ apiKey });
   }
   return geminiProvider;
@@ -66,7 +70,13 @@ let consecutiveErrors = 0;
 let alertSentForBatch = false;
 const ERROR_ALERT_THRESHOLD = 5; // Alert after 5 consecutive failures
 
-function trackUsage(model: string, source: string, inputTokens: number, outputTokens: number, durationMs = 0) {
+function trackUsage(
+  model: string,
+  source: string,
+  inputTokens: number,
+  outputTokens: number,
+  durationMs = 0,
+) {
   totalInputTokens += inputTokens;
   totalOutputTokens += outputTokens;
   totalCalls++;
@@ -102,7 +112,7 @@ function trackUsage(model: string, source: string, inputTokens: number, outputTo
 
   if (totalCalls % 10 === 0) {
     console.log(
-      `[Cloud LLM] ${totalCalls} calls | ${totalInputTokens} in + ${totalOutputTokens} out tokens (free tier)`
+      `[Cloud LLM] ${totalCalls} calls | ${totalInputTokens} in + ${totalOutputTokens} out tokens (free tier)`,
     );
   }
 }
@@ -111,17 +121,28 @@ function trackUsage(model: string, source: string, inputTokens: number, outputTo
  * Run a prompt through a free cloud LLM (Gemini or Groq).
  * Same interface as runHaiku — drop-in replacement.
  */
-export async function runCloudFree(prompt: string, source = "unknown"): Promise<string> {
+export async function runCloudFree(
+  prompt: string,
+  source = "unknown",
+): Promise<string> {
   const backendEnv = process.env.LLM_BACKEND || "gemini";
-  const providers = backendEnv === "groq"
-    ? [{ name: "groq", get: getGroqProvider, model: GROQ_MODEL }]
-    : [{ name: "gemini", get: getGeminiProvider, model: GEMINI_MODEL }];
+  const providers =
+    backendEnv === "groq"
+      ? [{ name: "groq", get: getGroqProvider, model: GROQ_MODEL }]
+      : [{ name: "gemini", get: getGeminiProvider, model: GEMINI_MODEL }];
 
   // Add fallback: if primary is gemini, fallback to groq and vice versa
   if (backendEnv === "gemini" && process.env.GROQ_API_KEY) {
     providers.push({ name: "groq", get: getGroqProvider, model: GROQ_MODEL });
-  } else if (backendEnv === "groq" && process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-    providers.push({ name: "gemini", get: getGeminiProvider, model: GEMINI_MODEL });
+  } else if (
+    backendEnv === "groq" &&
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY
+  ) {
+    providers.push({
+      name: "gemini",
+      get: getGeminiProvider,
+      model: GEMINI_MODEL,
+    });
   }
 
   for (const p of providers) {
@@ -145,7 +166,10 @@ export async function runCloudFree(prompt: string, source = "unknown"): Promise<
 
       return result.text.trim();
     } catch (err: any) {
-      const isRateLimit = err?.statusCode === 429 || err?.message?.includes("429") || err?.message?.includes("rate limit");
+      const isRateLimit =
+        err?.statusCode === 429 ||
+        err?.message?.includes("429") ||
+        err?.message?.includes("rate limit");
       const isLastProvider = providers.indexOf(p) >= providers.length - 1;
       if (isRateLimit && !isLastProvider) {
         console.warn(`[Cloud LLM] ${p.name} rate limited, trying fallback...`);
@@ -153,20 +177,39 @@ export async function runCloudFree(prompt: string, source = "unknown"): Promise<
       }
       // Only count terminal failures (no more fallbacks remaining)
       if (isLastProvider) consecutiveErrors++;
-      console.error(`[Cloud LLM] Error from ${p.name} (source: ${source}):`, err?.message || err);
-      logError({ service: source, error_message: err?.message || String(err), error_type: `${p.name}_api_error` });
+      console.error(
+        `[Cloud LLM] Error from ${p.name} (source: ${source}):`,
+        err?.message || err,
+      );
+      logError({
+        service: source,
+        error_message: err?.message || String(err),
+        error_type: `${p.name}_api_error`,
+      });
 
       // Alert on consecutive failures (once per batch)
       if (consecutiveErrors >= ERROR_ALERT_THRESHOLD && !alertSentForBatch) {
         alertSentForBatch = true;
-        import("./telegram-direct").then(({ sendNotification }) => {
-          sendNotification({
-            title: "LLM Quota Alert",
-            body: `${consecutiveErrors} consecutive LLM failures (${p.name}). Jobs/emails may be degraded. Error: ${err?.message?.slice(0, 100) ?? "unknown"}`,
-            source: "healthcheck",
-            priority: "high",
-          }).catch(() => {});
-        }).catch(() => {});
+        import("./telegram-direct")
+          .then(({ sendNotification }) => {
+            sendNotification({
+              title: "LLM Quota Alert",
+              body: `${consecutiveErrors} consecutive LLM failures (${p.name}). Jobs/emails may be degraded. Error: ${err?.message?.slice(0, 100) ?? "unknown"}`,
+              source: "healthcheck",
+              priority: "high",
+            }).catch((notifyErr: unknown) => {
+              console.warn(
+                "[Cloud LLM] Alert notification failed:",
+                notifyErr instanceof Error ? notifyErr.message : notifyErr,
+              );
+            });
+          })
+          .catch((importErr: unknown) => {
+            console.warn(
+              "[Cloud LLM] Failed to import telegram-direct:",
+              importErr instanceof Error ? importErr.message : importErr,
+            );
+          });
       }
 
       if (!isLastProvider) continue;
@@ -181,7 +224,10 @@ export async function runCloudFree(prompt: string, source = "unknown"): Promise<
  * Run a prompt through a free cloud LLM and parse JSON from response.
  * Same interface as runHaikuJSON — drop-in replacement.
  */
-export async function runCloudFreeJSON<T>(prompt: string, source = "unknown"): Promise<T | null> {
+export async function runCloudFreeJSON<T>(
+  prompt: string,
+  source = "unknown",
+): Promise<T | null> {
   const result = await runCloudFree(prompt, source);
   if (!result) return null;
 

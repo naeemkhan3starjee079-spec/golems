@@ -6,11 +6,23 @@
  */
 
 import { Keyboard } from "grammy";
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync } from "fs";
+import {
+  readFileSync,
+  writeFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  statSync,
+} from "fs";
 import { join } from "path";
 import { homedir } from "os";
 import { $ } from "bun";
-import { logEvent, getRecentEvents, formatEventsForClaude } from "@golems/shared/lib/event-log";
+import {
+  logEvent,
+  getRecentEvents,
+  formatEventsForClaude,
+} from "@golems/shared/lib/event-log";
+import { logMessagePipeline } from "@golems/shared/lib/axiom";
 import { getSupabase } from "@golems/shared/lib/supabase-factory";
 import {
   shouldSuggestForking,
@@ -27,7 +39,9 @@ export const HOME = process.env.HOME || homedir();
 export const GITS = join(HOME, "Gits");
 export const STATE_FILE = join(HOME, ".golems-zikaron/state.json");
 export const SOUL_FILE = join(GITS, "golems/packages/claude/SOUL.md");
-export const RAILWAY_HEALTH_URL = process.env.RAILWAY_HEALTH_URL || "https://helpful-empathy-production-482d.up.railway.app/health";
+export const RAILWAY_HEALTH_URL =
+  process.env.RAILWAY_HEALTH_URL ||
+  "https://helpful-empathy-production-482d.up.railway.app/health";
 
 // Re-export for composers that need forking
 export { shouldSuggestForking, extractTaskName, createForkSession };
@@ -55,7 +69,10 @@ export function loadState(): State {
   try {
     return JSON.parse(readFileSync(STATE_FILE, "utf-8"));
   } catch (err) {
-    console.warn("[State] Failed to load, using defaults:", (err as Error).message);
+    console.warn(
+      "[State] Failed to load, using defaults:",
+      (err as Error).message,
+    );
     return {
       nightShiftTarget: "songscript",
       rotation: ["songscript", "brainlayer", "claude-golem"],
@@ -95,7 +112,10 @@ export const GOLEM_REGISTRY: Record<string, GolemConfig> = {
 
 // Per-golem topic routing is disabled (only General + Alerts topics exist).
 // All chat goes to ClaudeGolem in General. Kept for future per-golem topics.
-export function getGolemFromThreadId(_threadId: number | undefined, _state: State): GolemConfig | null {
+export function getGolemFromThreadId(
+  _threadId: number | undefined,
+  _state: State,
+): GolemConfig | null {
   return null;
 }
 
@@ -103,7 +123,10 @@ export function getGolemFromThreadId(_threadId: number | undefined, _state: Stat
 // Personas
 // ═══════════════════════════════════════════════════════
 
-export const PERSONAS: Record<string, { name: string; emoji: string; prompt: string }> = {
+export const PERSONAS: Record<
+  string,
+  { name: string; emoji: string; prompt: string }
+> = {
   default: {
     name: "ClaudeGolem",
     emoji: "🤖",
@@ -139,9 +162,11 @@ export function setActivePersona(persona: string) {
 // ═══════════════════════════════════════════════════════
 
 export const menuKeyboard = new Keyboard()
-  .text("📊 Status").text("📋 Plan")
+  .text("📊 Status")
+  .text("📋 Plan")
   .row()
-  .text("🌙 Tonight").text("🤖 Golems")
+  .text("🌙 Tonight")
+  .text("🤖 Golems")
   .resized()
   .persistent();
 
@@ -170,7 +195,7 @@ export function setIsProcessing(value: boolean) {
 export async function notify(title: string, message: string) {
   try {
     const escaped = message.replace(/["'\\]/g, " ").slice(0, 100);
-    await $`osascript -e ${"display notification \"" + escaped + "\" with title \"" + title + "\""}`.quiet();
+    await $`osascript -e ${'display notification "' + escaped + '" with title "' + title + '"'}`.quiet();
   } catch (e) {
     console.error("Notify error:", e);
   }
@@ -182,8 +207,8 @@ export function findLatestSessionId(cwd: string): string | null {
   try {
     if (!existsSync(projectPath)) return null;
     const files = readdirSync(projectPath)
-      .filter(f => f.endsWith(".jsonl"))
-      .map(f => ({
+      .filter((f) => f.endsWith(".jsonl"))
+      .map((f) => ({
         name: f.replace(".jsonl", ""),
         mtime: statSync(join(projectPath, f)).mtimeMs,
       }))
@@ -200,16 +225,26 @@ function getSystemPromptContent(): string {
     console.log(`[Soul] Loaded ${content.length} chars from ${SOUL_FILE}`);
     return content;
   } catch (err) {
-    console.error(`[Soul] Failed to load ${SOUL_FILE}:`, (err as Error).message);
+    console.error(
+      `[Soul] Failed to load ${SOUL_FILE}:`,
+      (err as Error).message,
+    );
     return "";
   }
 }
 
 export async function checkRailwayHealth(): Promise<string> {
   try {
-    const res = await fetch(RAILWAY_HEALTH_URL, { signal: AbortSignal.timeout(3000) });
+    const res = await fetch(RAILWAY_HEALTH_URL, {
+      signal: AbortSignal.timeout(3000),
+    });
     if (res.ok) {
-      const data = await res.json() as { golemStatus?: string; isWorkHours?: boolean; uptime?: number; israelTime?: string };
+      const data = (await res.json()) as {
+        golemStatus?: string;
+        isWorkHours?: boolean;
+        uptime?: number;
+        israelTime?: string;
+      };
       return `${data.golemStatus || "ok"} (up ${Math.round((data.uptime || 0) / 60)}min)`;
     }
     return "down";
@@ -218,15 +253,28 @@ export async function checkRailwayHealth(): Promise<string> {
   }
 }
 
-export async function getDailyStats(): Promise<{ emailStats: string; jobStats: string }> {
+export async function getDailyStats(): Promise<{
+  emailStats: string;
+  jobStats: string;
+}> {
   try {
     const supabase = getSupabase();
     if (!supabase) return { emailStats: "", jobStats: "" };
     const today = new Date().toISOString().slice(0, 10);
     const [emailsToday, urgentEmails, jobsToday] = await Promise.all([
-      supabase.from("emails").select("id", { count: "exact", head: true }).gte("received_at", today),
-      supabase.from("emails").select("id", { count: "exact", head: true }).gte("score", 8).eq("notified", false),
-      supabase.from("golem_jobs").select("id", { count: "exact", head: true }).gte("created_at", today),
+      supabase
+        .from("emails")
+        .select("id", { count: "exact", head: true })
+        .gte("received_at", today),
+      supabase
+        .from("emails")
+        .select("id", { count: "exact", head: true })
+        .gte("score", 8)
+        .eq("notified", false),
+      supabase
+        .from("golem_jobs")
+        .select("id", { count: "exact", head: true })
+        .gte("created_at", today),
     ]);
     return {
       emailStats: `\n📧 Emails today: ${emailsToday.count || 0}${(urgentEmails.count || 0) > 0 ? ` (${urgentEmails.count} urgent!)` : ""}`,
@@ -244,11 +292,21 @@ export async function getDailyStats(): Promise<{ emailStats: string; jobStats: s
 export async function askGolem(
   config: GolemConfig,
   message: string,
-  onHeartbeat?: () => void
+  onHeartbeat?: () => void,
 ): Promise<string> {
   const now = new Date();
-  const timeStr = now.toLocaleString("en-IL", { timeZone: "Asia/Jerusalem", hour: "2-digit", minute: "2-digit", hour12: false });
-  const dateStr = now.toLocaleDateString("en-IL", { timeZone: "Asia/Jerusalem", weekday: "short", month: "short", day: "numeric" });
+  const timeStr = now.toLocaleString("en-IL", {
+    timeZone: "Asia/Jerusalem",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  const dateStr = now.toLocaleDateString("en-IL", {
+    timeZone: "Asia/Jerusalem",
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
   const prompt = `[${dateStr} ${timeStr} IL] ${message}`;
 
   const telegramPrompt = `You are chatting on Telegram. Keep responses SHORT (mobile). Always reply in your topic thread only. Casual tone. Hebrew/English ok.`;
@@ -266,11 +324,14 @@ export async function askGolem(
       "--dangerously-skip-permissions",
       "--print",
       ...(sessionId ? ["--resume", sessionId] : []),
-      "--append-system-prompt", telegramPrompt,
+      "--append-system-prompt",
+      telegramPrompt,
       prompt,
     ];
 
-    console.log(`[${config.name}] Spawning claude ${sessionId ? `--resume ${sessionId.slice(0, 8)}...` : "(new session)"}`);
+    console.log(
+      `[${config.name}] Spawning claude ${sessionId ? `--resume ${sessionId.slice(0, 8)}...` : "(new session)"}`,
+    );
 
     const { ANTHROPIC_API_KEY: _, ...cleanEnv } = process.env;
     const proc = Bun.spawn(args, {
@@ -285,10 +346,12 @@ export async function askGolem(
       console.error(`[${config.name}] Timeout (5 min)`);
     }, 300000);
 
-    const heartbeat = onHeartbeat ? setInterval(() => {
-      console.log(`[${config.name}] Still working...`);
-      onHeartbeat();
-    }, 60000) : null;
+    const heartbeat = onHeartbeat
+      ? setInterval(() => {
+          console.log(`[${config.name}] Still working...`);
+          onHeartbeat();
+        }, 60000)
+      : null;
 
     const [, output, stderr] = await Promise.all([
       proc.exited,
@@ -312,7 +375,9 @@ export async function askGolem(
         if (!freshState.golemSessions) freshState.golemSessions = {};
         freshState.golemSessions[config.name] = newSessionId;
         saveState(freshState);
-        console.log(`[${config.name}] Stored session UUID: ${newSessionId.slice(0, 8)}...`);
+        console.log(
+          `[${config.name}] Stored session UUID: ${newSessionId.slice(0, 8)}...`,
+        );
       }
     }
 
@@ -325,11 +390,21 @@ export async function askGolem(
 
 export async function askClaude(
   message: string,
-  onHeartbeat?: () => void
+  onHeartbeat?: () => void,
 ): Promise<string> {
   const now = new Date();
-  const timeStr = now.toLocaleString("en-IL", { timeZone: "Asia/Jerusalem", hour: "2-digit", minute: "2-digit", hour12: false });
-  const dateStr = now.toLocaleDateString("en-IL", { timeZone: "Asia/Jerusalem", weekday: "short", month: "short", day: "numeric" });
+  const timeStr = now.toLocaleString("en-IL", {
+    timeZone: "Asia/Jerusalem",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  const dateStr = now.toLocaleDateString("en-IL", {
+    timeZone: "Asia/Jerusalem",
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
   const prompt = `Be brief (under 500 chars). You are ClaudeGolem.\n\n[${dateStr} ${timeStr} IL] ${message}`;
 
   const BOT_WORKING_DIR = join(HOME, "Gits");
@@ -353,7 +428,8 @@ ${eventSummary}`;
       "--dangerously-skip-permissions",
       "--print",
       "--continue",
-      "--system-prompt", systemPrompt,
+      "--system-prompt",
+      systemPrompt,
       prompt,
     ];
 
@@ -370,10 +446,12 @@ ${eventSummary}`;
       console.error("Claude timeout (5 min)");
     }, 300000);
 
-    const heartbeat = onHeartbeat ? setInterval(() => {
-      console.log("[Claude] Still working...");
-      onHeartbeat();
-    }, 60000) : null;
+    const heartbeat = onHeartbeat
+      ? setInterval(() => {
+          console.log("[Claude] Still working...");
+          onHeartbeat();
+        }, 60000)
+      : null;
 
     await proc.exited;
     clearTimeout(timeout);
@@ -397,11 +475,21 @@ ${eventSummary}`;
 export async function askClaudeForked(
   sessionId: string,
   message: string,
-  onHeartbeat?: () => void
+  onHeartbeat?: () => void,
 ): Promise<string> {
   const now = new Date();
-  const timeStr = now.toLocaleString("en-IL", { timeZone: "Asia/Jerusalem", hour: "2-digit", minute: "2-digit", hour12: false });
-  const dateStr = now.toLocaleDateString("en-IL", { timeZone: "Asia/Jerusalem", weekday: "short", month: "short", day: "numeric" });
+  const timeStr = now.toLocaleString("en-IL", {
+    timeZone: "Asia/Jerusalem",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  const dateStr = now.toLocaleDateString("en-IL", {
+    timeZone: "Asia/Jerusalem",
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
   const prompt = `[${dateStr} ${timeStr} IL] ${message}`;
 
   const BOT_WORKING_DIR = join(HOME, "Gits");
@@ -427,8 +515,10 @@ This is a forked session for a specific task. Work on this task independently, t
       "/Users/etanheyman/.local/bin/claude",
       "--dangerously-skip-permissions",
       "--print",
-      "--resume", sessionId,
-      "--system-prompt", systemPrompt,
+      "--resume",
+      sessionId,
+      "--system-prompt",
+      systemPrompt,
       prompt,
     ];
 
@@ -443,10 +533,12 @@ This is a forked session for a specific task. Work on this task independently, t
       console.error("Claude forked session timeout (10 min)");
     }, 600000);
 
-    const heartbeat = onHeartbeat ? setInterval(() => {
-      console.log(`[Claude Fork ${sessionId}] Still working...`);
-      onHeartbeat();
-    }, 60000) : null;
+    const heartbeat = onHeartbeat
+      ? setInterval(() => {
+          console.log(`[Claude Fork ${sessionId}] Still working...`);
+          onHeartbeat();
+        }, 60000)
+      : null;
 
     await proc.exited;
     clearTimeout(timeout);
@@ -458,7 +550,10 @@ This is a forked session for a specific task. Work on this task independently, t
       console.error(`[Claude Fork ${sessionId}] stderr:`, stderr.slice(0, 200));
     }
     if (!output.trim()) {
-      console.warn(`[Claude Fork ${sessionId}] Empty stdout, exit code:`, proc.exitCode);
+      console.warn(
+        `[Claude Fork ${sessionId}] Empty stdout, exit code:`,
+        proc.exitCode,
+      );
     }
     return output.trim() || "No response.";
   } catch (error) {
@@ -476,6 +571,18 @@ export async function processQueue() {
 
   setIsProcessing(true);
   const { ctx, text } = queue.shift()!;
+  const messageId = ctx.message?.message_id
+    ? `tg-${ctx.message.message_id}`
+    : `msg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  const pipelineStart = Date.now();
+
+  logMessagePipeline({
+    message_id: messageId,
+    golem_name: "claudegolem",
+    phase: "receive",
+    latency_ms: 0,
+    success: true,
+  });
 
   try {
     await ctx.replyWithChatAction("typing");
@@ -483,18 +590,40 @@ export async function processQueue() {
     console.log(`🤖 Spawning Claude for: "${text.slice(0, 50)}..."`);
     await notify("🤖 ClaudeGolem", `Processing: ${text.slice(0, 50)}...`);
 
+    const processStart = Date.now();
     const response = await askClaude(text, async () => {
       await ctx.replyWithChatAction("typing");
     });
+    const processMs = Date.now() - processStart;
 
-    console.log(`✅ Claude responded (${response.length} chars)`);
+    logMessagePipeline({
+      message_id: messageId,
+      golem_name: "claudegolem",
+      phase: "process",
+      latency_ms: processMs,
+      success: true,
+      response_length: response.length,
+    });
+
+    console.log(
+      `✅ Claude responded (${response.length} chars, ${processMs}ms)`,
+    );
     await notify("✅ Claude Done", response.slice(0, 80));
 
-    logEvent("telegram_message_out", {
-      preview: response.slice(0, 120),
-      length: response.length,
-      prompt: text.slice(0, 80),
-    }, "claudegolem").catch(() => {});
+    logEvent(
+      "telegram_message_out",
+      {
+        preview: response.slice(0, 120),
+        length: response.length,
+        prompt: text.slice(0, 80),
+      },
+      "claudegolem",
+    ).catch((err: unknown) => {
+      console.warn(
+        "[BotShared] Event log failed:",
+        err instanceof Error ? err.message : err,
+      );
+    });
 
     if (response.length > 4000) {
       const chunks = response.match(/.{1,4000}/gs) || [response];
@@ -504,8 +633,30 @@ export async function processQueue() {
     } else {
       await ctx.reply(response);
     }
+
+    logMessagePipeline({
+      message_id: messageId,
+      golem_name: "claudegolem",
+      phase: "respond",
+      latency_ms: Date.now() - pipelineStart,
+      success: true,
+      response_length: response.length,
+    });
   } catch (error) {
+    const totalMs = Date.now() - pipelineStart;
+    const errMsg = error instanceof Error ? error.message : String(error);
     console.error("Error:", error);
+
+    logMessagePipeline({
+      message_id: messageId,
+      golem_name: "claudegolem",
+      phase: "respond",
+      latency_ms: totalMs,
+      success: false,
+      error_type: "processing_error",
+      error_message: errMsg,
+    });
+
     await ctx.reply("⚠️ Error processing message.");
   }
 

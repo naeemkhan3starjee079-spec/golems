@@ -91,7 +91,24 @@ export interface CCUsageEvent {
   branch?: string;
 }
 
-type AxiomEvent = LLMCallEvent | ServiceEvent | ErrorEvent | CCUsageEvent;
+export interface MessagePipelineEvent {
+  _type: "message_pipeline";
+  message_id: string;
+  golem_name: string;
+  phase: "receive" | "process" | "respond";
+  latency_ms: number;
+  success: boolean;
+  error_type?: string;
+  error_message?: string;
+  response_length?: number;
+}
+
+type AxiomEvent =
+  | LLMCallEvent
+  | ServiceEvent
+  | ErrorEvent
+  | CCUsageEvent
+  | MessagePipelineEvent;
 
 // ─── Ingest Helpers ─────────────────────────────────────────────
 
@@ -110,7 +127,12 @@ function ingest(events: AxiomEvent[]): void {
 
   client.ingest(axiomDataset, timestamped);
   // Flush is async but we don't await — fire and forget
-  client.flush().catch(() => {});
+  client.flush().catch((err: unknown) => {
+    console.warn(
+      "[Axiom] Flush failed:",
+      err instanceof Error ? err.message : err,
+    );
+  });
 }
 
 /**
@@ -132,6 +154,16 @@ export function logServiceEvent(event: Omit<ServiceEvent, "_type">): void {
  */
 export function logError(event: Omit<ErrorEvent, "_type">): void {
   ingest([{ _type: "error", ...event }]);
+}
+
+/**
+ * Log a message pipeline event to Axiom.
+ * Tracks receive → process → respond lifecycle.
+ */
+export function logMessagePipeline(
+  event: Omit<MessagePipelineEvent, "_type">,
+): void {
+  ingest([{ _type: "message_pipeline", ...event }]);
 }
 
 /**

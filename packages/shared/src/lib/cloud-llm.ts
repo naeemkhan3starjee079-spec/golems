@@ -14,11 +14,13 @@ import { join } from "path";
 import { homedir } from "os";
 import { logCost, type CostEntry } from "./cost-tracker";
 import { logLLMCall, logError } from "./axiom";
+import { classifyLLMError, withRetry, LLMErrorType } from "./llm-errors";
 
 const MODEL = "claude-haiku-4-5-20251001";
 
 // Persistent JSONL cost log — survives restarts, matches SongScript format
-const COST_LOG_DIR = process.env.GOLEMS_STATE_DIR || join(homedir(), ".golems-zikaron");
+const COST_LOG_DIR =
+  process.env.GOLEMS_STATE_DIR || join(homedir(), ".golems-zikaron");
 const COST_LOG_PATH = join(COST_LOG_DIR, "api_costs.jsonl");
 
 let client: Anthropic | null = null;
@@ -29,7 +31,7 @@ function getClient(): Anthropic {
     if (!apiKey) {
       throw new Error(
         "ANTHROPIC_API_KEY is required when LLM_BACKEND=haiku. " +
-        "Set it in your environment or .env file."
+          "Set it in your environment or .env file.",
       );
     }
     client = new Anthropic({ apiKey });
@@ -107,7 +109,7 @@ function trackUsage(source: string, inputTokens: number, outputTokens: number) {
   // Log every 10 calls for visibility
   if (totalCalls % 10 === 0) {
     console.log(
-      `[Haiku Usage] ${totalCalls} calls | ${totalInputTokens} input + ${totalOutputTokens} output tokens | ~$${estimateCost().toFixed(4)}`
+      `[Haiku Usage] ${totalCalls} calls | ${totalInputTokens} input + ${totalOutputTokens} output tokens | ~$${estimateCost().toFixed(4)}`,
     );
   }
 }
@@ -132,8 +134,14 @@ export function getUsageStats() {
 }
 
 /** Get usage breakdown by source */
-export function getUsageBySource(): Record<string, { calls: number; inputTokens: number; outputTokens: number }> {
-  const bySource: Record<string, { calls: number; inputTokens: number; outputTokens: number }> = {};
+export function getUsageBySource(): Record<
+  string,
+  { calls: number; inputTokens: number; outputTokens: number }
+> {
+  const bySource: Record<
+    string,
+    { calls: number; inputTokens: number; outputTokens: number }
+  > = {};
 
   for (const entry of usageLog) {
     if (!bySource[entry.source]) {
@@ -154,28 +162,44 @@ export function getUsageBySource(): Record<string, { calls: number; inputTokens:
 /**
  * Run a prompt through Haiku and return the text response.
  * Drop-in replacement for runOllama().
+ * Retries transient errors (rate limits, overloaded) with exponential backoff.
  */
-export async function runHaiku(prompt: string, source = "unknown"): Promise<string> {
+export async function runHaiku(
+  prompt: string,
+  source = "unknown",
+): Promise<string> {
   try {
-    const response = await getClient().messages.create({
-      model: MODEL,
-      max_tokens: 1024,
-      messages: [{ role: "user", content: prompt }],
-    });
+    const response = await withRetry(
+      () =>
+        getClient().messages.create({
+          model: MODEL,
+          max_tokens: 1024,
+          messages: [{ role: "user", content: prompt }],
+        }),
+      { maxRetries: 2, baseDelayMs: 1000 },
+    );
 
     // Track usage from response
     if (response.usage) {
-      trackUsage(source, response.usage.input_tokens, response.usage.output_tokens);
+      trackUsage(
+        source,
+        response.usage.input_tokens,
+        response.usage.output_tokens,
+      );
     }
 
     const textBlock = response.content.find((b) => b.type === "text");
     return textBlock?.text?.trim() ?? "";
   } catch (err) {
-    console.error(`[Haiku] Error (source: ${source}):`, err);
+    const errorType = classifyLLMError(err);
+    console.error(
+      `[Haiku] ${errorType} error (source: ${source}):`,
+      (err as Error).message,
+    );
     logError({
       service: source,
       error_message: (err as Error).message,
-      error_type: "haiku_api_error",
+      error_type: `haiku_${errorType}`,
     });
     return "";
   }
@@ -185,7 +209,10 @@ export async function runHaiku(prompt: string, source = "unknown"): Promise<stri
  * Run a prompt through Haiku and parse JSON from response.
  * Drop-in replacement for runOllamaJSON().
  */
-export async function runHaikuJSON<T>(prompt: string, source = "unknown"): Promise<T | null> {
+export async function runHaikuJSON<T>(
+  prompt: string,
+  source = "unknown",
+): Promise<T | null> {
   const result = await runHaiku(prompt, source);
 
   if (!result) return null;

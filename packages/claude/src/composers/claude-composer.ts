@@ -44,7 +44,8 @@ claudeComposer.command("start", (ctx) => {
   state.telegramChatId = ctx.chat.id;
   saveState(state);
 
-  ctx.reply(`🤖 *ClaudeGolem v6*
+  ctx.reply(
+    `🤖 *ClaudeGolem v6*
 
 *System*
 /status — Health + stats
@@ -66,10 +67,12 @@ claudeComposer.command("start", (ctx) => {
 /schedule — Weekly rotation
 /trigger — Manual golem runs
 
-Or just chat — I'll spawn Claude.`, {
-    parse_mode: "Markdown",
-    reply_markup: menuKeyboard
-  });
+Or just chat — I'll spawn Claude.`,
+    {
+      parse_mode: "Markdown",
+      reply_markup: menuKeyboard,
+    },
+  );
 });
 
 // /status command
@@ -81,7 +84,8 @@ claudeComposer.command("status", async (ctx) => {
     getDailyStats(),
   ]);
 
-  await ctx.reply(`📊 *Status*
+  await ctx.reply(
+    `📊 *Status*
 
 🎯 Night Shift: \`${state.nightShiftTarget}\`
 📬 Queue: ${queueLen} messages
@@ -89,25 +93,31 @@ claudeComposer.command("status", async (ctx) => {
 🚂 Railway: ${railwayStatus}
 🧠 Bot: ${Math.round(process.uptime() / 60)}min uptime${emailStats}${jobStats}
 
-[Dashboard](https://etanheyman.com/admin/golem) • /trigger email • /trigger jobs`, { parse_mode: "Markdown" });
+[Dashboard](https://etanheyman.com/admin/golem) • /trigger email • /trigger jobs`,
+    { parse_mode: "Markdown" },
+  );
 });
 
 // /admin command
 claudeComposer.command("admin", (ctx) => {
-  ctx.reply(`🖥️ *Admin Dashboard*
+  ctx.reply(
+    `🖥️ *Admin Dashboard*
 
 [Open Dashboard](https://etanheyman.com/admin/golem)
 
-Pages: Overview • Jobs • Emails • Activity • Outreach • Night Shift • Content`, {
-    parse_mode: "Markdown",
-  });
+Pages: Overview • Jobs • Emails • Activity • Outreach • Night Shift • Content`,
+    {
+      parse_mode: "Markdown",
+    },
+  );
 });
 
 // /trigger command - manual golem runs
 claudeComposer.command("trigger", async (ctx) => {
   const arg = ctx.match?.trim().toLowerCase();
   if (!arg || !["email", "jobs", "briefing", "nightshift"].includes(arg)) {
-    await ctx.reply(`⚡ *Trigger Golem Run*
+    await ctx.reply(
+      `⚡ *Trigger Golem Run*
 
 Usage: \`/trigger <service>\`
 
@@ -115,7 +125,9 @@ Available:
 • \`/trigger email\` — Run email check now
 • \`/trigger jobs\` — Run job scrape now
 • \`/trigger briefing\` — Send morning briefing
-• \`/trigger nightshift\` — Run Night Shift now`, { parse_mode: "Markdown" });
+• \`/trigger nightshift\` — Run Night Shift now`,
+      { parse_mode: "Markdown" },
+    );
     return;
   }
 
@@ -124,7 +136,9 @@ Available:
     if (arg === "jobs") {
       const result = await runJobSearch();
       if (result) {
-        await ctx.reply(`✅ Job scrape done: ${result.scraped} scraped, ${result.filtered} filtered, ${result.matched} matched`);
+        await ctx.reply(
+          `✅ Job scrape done: ${result.scraped} scraped, ${result.filtered} filtered, ${result.matched} matched`,
+        );
       } else {
         await ctx.reply("✅ Job scrape completed (no results object)");
       }
@@ -137,7 +151,9 @@ Available:
       await sendBriefing();
       await ctx.reply("✅ Briefing sent");
     } else if (arg === "nightshift") {
-      await ctx.reply("🌙 Night Shift starting... This takes ~15min. I'll report back.");
+      await ctx.reply(
+        "🌙 Night Shift starting... This takes ~15min. I'll report back.",
+      );
       const { nightShift } = await import("@golems/services/night-shift");
       const heartbeat = setInterval(() => {
         ctx.replyWithChatAction("typing").catch(() => {});
@@ -148,12 +164,25 @@ Available:
       } finally {
         clearInterval(heartbeat);
       }
-      const prs = results.filter(r => r.prUrl).map(r => r.prUrl).join("\n");
-      const summary = results.map(r => `${r.success ? "✅" : "—"} ${r.repo}: ${r.improvement || "skipped"}`).join("\n");
-      await ctx.reply(`🌙 *Night Shift Complete*\n\n${summary}${prs ? "\n\n" + prs : ""}`, { parse_mode: "Markdown" });
+      const prs = results
+        .filter((r) => r.prUrl)
+        .map((r) => r.prUrl)
+        .join("\n");
+      const summary = results
+        .map(
+          (r) =>
+            `${r.success ? "✅" : "—"} ${r.repo}: ${r.improvement || "skipped"}`,
+        )
+        .join("\n");
+      await ctx.reply(
+        `🌙 *Night Shift Complete*\n\n${summary}${prs ? "\n\n" + prs : ""}`,
+        { parse_mode: "Markdown" },
+      );
     }
   } catch (err) {
-    await ctx.reply(`❌ Trigger failed: ${err instanceof Error ? err.message : String(err)}`);
+    await ctx.reply(
+      `❌ Trigger failed: ${err instanceof Error ? err.message : String(err)}`,
+    );
   }
 });
 
@@ -173,7 +202,8 @@ claudeComposer.command("fork", async (ctx) => {
   const taskPrompt = ctx.message?.text?.replace("/fork", "").trim();
 
   if (!taskPrompt) {
-    await ctx.reply(`🔀 *Session Fork*
+    await ctx.reply(
+      `🔀 *Session Fork*
 
 Fork a complex task into its own Claude session to keep the main chat clean.
 
@@ -184,7 +214,9 @@ Fork a complex task into its own Claude session to keep the main chat clean.
 • \`/fork analyze the database schema\`
 • \`/fork build a new API endpoint\`
 
-_Forked sessions run independently with their own memory._`, { parse_mode: "Markdown" });
+_Forked sessions run independently with their own memory._`,
+      { parse_mode: "Markdown" },
+    );
     return;
   }
 
@@ -193,12 +225,15 @@ _Forked sessions run independently with their own memory._`, { parse_mode: "Mark
 
   activeForkSessions.set(ctx.chat.id, forkMetadata);
 
-  await ctx.reply(`🔀 *Forked Session Created*
+  await ctx.reply(
+    `🔀 *Forked Session Created*
 
 📋 Task: ${taskName}
 🆔 Session: \`${forkMetadata.sessionId.slice(0, 40)}...\`
 
-_Starting work in forked session..._`, { parse_mode: "Markdown" });
+_Starting work in forked session..._`,
+    { parse_mode: "Markdown" },
+  );
 
   try {
     await ctx.replyWithChatAction("typing");
@@ -206,9 +241,13 @@ _Starting work in forked session..._`, { parse_mode: "Markdown" });
     console.log(`🔀 Spawning Claude fork for: "${taskPrompt.slice(0, 50)}..."`);
     await notify("🔀 Fork Started", `Task: ${taskName}`);
 
-    const response = await askClaudeForked(forkMetadata.sessionId, taskPrompt, async () => {
-      await ctx.replyWithChatAction("typing");
-    });
+    const response = await askClaudeForked(
+      forkMetadata.sessionId,
+      taskPrompt,
+      async () => {
+        await ctx.replyWithChatAction("typing");
+      },
+    );
 
     console.log(`✅ Claude fork completed (${response.length} chars)`);
 
@@ -227,12 +266,14 @@ _Starting work in forked session..._`, { parse_mode: "Markdown" });
       await ctx.reply(response);
     }
 
-    await ctx.reply(`✅ *Fork Complete*
+    await ctx.reply(
+      `✅ *Fork Complete*
 
 Session: \`${forkMetadata.sessionId}\`
 
-_You can continue this task by using \`/fork\` again with the same topic._`, { parse_mode: "Markdown" });
-
+_You can continue this task by using \`/fork\` again with the same topic._`,
+      { parse_mode: "Markdown" },
+    );
   } catch (error) {
     console.error("Fork error:", error);
     forkMetadata.completedAt = new Date().toISOString();
@@ -263,7 +304,8 @@ claudeComposer.command("setup", async (ctx) => {
   const topicArg = ctx.message?.text?.split(" ")[1]?.toLowerCase();
 
   if (!topicArg) {
-    await ctx.reply(`🔧 *Group Setup*
+    await ctx.reply(
+      `🔧 *Group Setup*
 
 Two topics:
 \`/setup alerts\` - in 🔔 Alerts topic
@@ -274,25 +316,34 @@ _Alerts = all one-way notifications (jobs, email, nightshift, health)_
 Current config:
 • Group: ${state.groupChatId || "not set"}
 • General: ClaudeGolem chat (auto)
-• Alerts: ${state.topics?.alerts || "not set"}`, { parse_mode: "Markdown" });
+• Alerts: ${state.topics?.alerts || "not set"}`,
+      { parse_mode: "Markdown" },
+    );
     return;
   }
 
   const validTopics = ["alerts"];
   if (!validTopics.includes(topicArg)) {
-    await ctx.reply(`❌ Unknown topic: ${topicArg}\nValid: alerts\n\n_General = interactive chat (auto), Alerts = all notifications_`, { parse_mode: "Markdown" });
+    await ctx.reply(
+      `❌ Unknown topic: ${topicArg}\nValid: alerts\n\n_General = interactive chat (auto), Alerts = all notifications_`,
+      { parse_mode: "Markdown" },
+    );
     return;
   }
 
   if (!threadId) {
-    await ctx.reply(`⚠️ No thread ID detected. Make sure Topics are enabled in this group and you're in a topic (not General).`);
+    await ctx.reply(
+      `⚠️ No thread ID detected. Make sure Topics are enabled in this group and you're in a topic (not General).`,
+    );
     return;
   }
 
   (state.topics as any)[topicArg] = threadId;
   saveState(state);
 
-  await ctx.reply(`✅ Registered **${topicArg}** topic (thread ${threadId})`, { parse_mode: "Markdown" });
+  await ctx.reply(`✅ Registered **${topicArg}** topic (thread ${threadId})`, {
+    parse_mode: "Markdown",
+  });
 });
 
 // /tonight command
@@ -308,14 +359,14 @@ claudeComposer.command("tonight", async (ctx) => {
   }
 
   const keyboard = new InlineKeyboard();
-  state.rotation.forEach(repo => {
+  state.rotation.forEach((repo) => {
     const current = repo === state.nightShiftTarget ? "✓ " : "";
     keyboard.text(`${current}${repo}`, `tonight:${repo}`);
   });
 
   await ctx.reply(
     `🌙 *Night Shift Target*\nCurrent: \`${state.nightShiftTarget}\`\n\nTap to change:`,
-    { parse_mode: "Markdown", reply_markup: keyboard }
+    { parse_mode: "Markdown", reply_markup: keyboard },
   );
 });
 
@@ -330,7 +381,9 @@ claudeComposer.command("schedule", async (ctx) => {
   if (arg === "clear") {
     delete state.weeklySchedule;
     saveState(state);
-    await ctx.reply("✅ Weekly schedule cleared. Using auto-rotation.", { parse_mode: "Markdown" });
+    await ctx.reply("✅ Weekly schedule cleared. Using auto-rotation.", {
+      parse_mode: "Markdown",
+    });
     return;
   }
 
@@ -343,9 +396,11 @@ claudeComposer.command("schedule", async (ctx) => {
     for (const a of assignments) {
       const [day, repo] = a.split("=");
       const dayLower = day.toLowerCase();
-      const dayIdx = DAYS.findIndex(d => d.toLowerCase() === dayLower);
+      const dayIdx = DAYS.findIndex((d) => d.toLowerCase() === dayLower);
       if (dayIdx >= 0 && state.rotation.includes(repo)) {
-        (state.weeklySchedule as Record<string, string>)[DAYS[dayIdx].toLowerCase()] = repo;
+        (state.weeklySchedule as Record<string, string>)[
+          DAYS[dayIdx].toLowerCase()
+        ] = repo;
       }
     }
     saveState(state);
@@ -353,7 +408,9 @@ claudeComposer.command("schedule", async (ctx) => {
     // Show updated schedule
     let msg = `✅ *Schedule Updated*\n\n`;
     for (const day of DAYS) {
-      const repo = (state.weeklySchedule as Record<string, string>)?.[day.toLowerCase()];
+      const repo = (state.weeklySchedule as Record<string, string>)?.[
+        day.toLowerCase()
+      ];
       msg += `${day}: ${repo ? `\`${repo}\`` : "_auto-rotate_"}\n`;
     }
     await ctx.reply(msg, { parse_mode: "Markdown" });
@@ -366,14 +423,16 @@ claudeComposer.command("schedule", async (ctx) => {
 
   if (state.weeklySchedule && Object.keys(state.weeklySchedule).length > 0) {
     for (const day of DAYS) {
-      const repo = (state.weeklySchedule as Record<string, string>)?.[day.toLowerCase()];
+      const repo = (state.weeklySchedule as Record<string, string>)?.[
+        day.toLowerCase()
+      ];
       const isToday = new Date().getDay() === DAYS.indexOf(day);
       const marker = isToday ? " 👈" : "";
       msg += `${day}: ${repo ? `\`${repo}\`` : "_auto_"}${marker}\n`;
     }
   } else {
     msg += `_No weekly schedule set — using auto-rotation._\n`;
-    msg += `Current rotation: ${state.rotation.map(r => `\`${r}\``).join(" → ")}\n`;
+    msg += `Current rotation: ${state.rotation.map((r) => `\`${r}\``).join(" → ")}\n`;
   }
 
   msg += `\n*Set schedule:*\n\`/schedule sun=golems mon=songscript\`\n`;
@@ -385,7 +444,9 @@ claudeComposer.command("schedule", async (ctx) => {
 // /repos command
 claudeComposer.command("repos", (ctx) => {
   const state = loadState();
-  ctx.reply(`📁 ${state.rotation.map(r => `\`${r}\``).join(" • ")}`, { parse_mode: "Markdown" });
+  ctx.reply(`📁 ${state.rotation.map((r) => `\`${r}\``).join(" • ")}`, {
+    parse_mode: "Markdown",
+  });
 });
 
 // ═══════════════════════════════════════════════════════
@@ -401,7 +462,9 @@ claudeComposer.callbackQuery(/^tonight:/, async (ctx) => {
     state.nightShiftTarget = repo;
     saveState(state);
 
-    await ctx.editMessageText(`🌙 Tonight: \`${repo}\``, { parse_mode: "Markdown" });
+    await ctx.editMessageText(`🌙 Tonight: \`${repo}\``, {
+      parse_mode: "Markdown",
+    });
     await ctx.answerCallbackQuery({ text: `Set to ${repo}` });
   } else {
     await ctx.answerCallbackQuery({ text: "Unknown repo" });
@@ -410,11 +473,15 @@ claudeComposer.callbackQuery(/^tonight:/, async (ctx) => {
 
 // Persona selection
 claudeComposer.callbackQuery(/^persona:/, async (ctx) => {
-  const personaKey = ctx.callbackQuery.data?.replace("persona:", "") || "default";
+  const personaKey =
+    ctx.callbackQuery.data?.replace("persona:", "") || "default";
   if (PERSONAS[personaKey]) {
     setActivePersona(personaKey);
     const persona = PERSONAS[personaKey];
-    await ctx.editMessageText(`🎭 Switched to: ${persona.emoji} *${persona.name}*`, { parse_mode: "Markdown" });
+    await ctx.editMessageText(
+      `🎭 Switched to: ${persona.emoji} *${persona.name}*`,
+      { parse_mode: "Markdown" },
+    );
     await ctx.answerCallbackQuery({ text: `Now: ${persona.name}` });
   } else {
     await ctx.answerCallbackQuery({ text: "Unknown persona" });
@@ -434,7 +501,9 @@ claudeComposer.callbackQuery(/^fork-task:/, async (ctx) => {
   const pending = pendingContentTopics.get(chatId);
   if (!pending || !pending.type.startsWith("fork:")) {
     await ctx.answerCallbackQuery({ text: "Prompt not found" });
-    await ctx.editMessageText("⚠️ Session expired. Please send your message again.");
+    await ctx.editMessageText(
+      "⚠️ Session expired. Please send your message again.",
+    );
     return;
   }
 
@@ -444,12 +513,15 @@ claudeComposer.callbackQuery(/^fork-task:/, async (ctx) => {
   const forkMetadata = createForkSession(taskName, taskPrompt, chatId);
   activeForkSessions.set(chatId, forkMetadata);
 
-  await ctx.editMessageText(`🔀 *Forking Session...*
+  await ctx.editMessageText(
+    `🔀 *Forking Session...*
 
 📋 Task: ${taskName.replace(/-/g, " ")}
 🆔 Session: \`${forkMetadata.sessionId.slice(0, 40)}...\`
 
-_Starting work..._`, { parse_mode: "Markdown" });
+_Starting work..._`,
+    { parse_mode: "Markdown" },
+  );
   await ctx.answerCallbackQuery({ text: "Forking..." });
 
   try {
@@ -458,9 +530,13 @@ _Starting work..._`, { parse_mode: "Markdown" });
     console.log(`🔀 Spawning Claude fork for: "${taskPrompt.slice(0, 50)}..."`);
     await notify("🔀 Fork Started", `Task: ${taskName}`);
 
-    const response = await askClaudeForked(forkMetadata.sessionId, taskPrompt, async () => {
-      await ctx.replyWithChatAction("typing");
-    });
+    const response = await askClaudeForked(
+      forkMetadata.sessionId,
+      taskPrompt,
+      async () => {
+        await ctx.replyWithChatAction("typing");
+      },
+    );
 
     console.log(`✅ Claude fork completed (${response.length} chars)`);
 
@@ -479,10 +555,12 @@ _Starting work..._`, { parse_mode: "Markdown" });
       await ctx.reply(response);
     }
 
-    await ctx.reply(`✅ *Fork Complete*
+    await ctx.reply(
+      `✅ *Fork Complete*
 
-Session: \`${forkMetadata.sessionId}\``, { parse_mode: "Markdown" });
-
+Session: \`${forkMetadata.sessionId}\``,
+      { parse_mode: "Markdown" },
+    );
   } catch (error) {
     console.error("Fork error:", error);
     forkMetadata.completedAt = new Date().toISOString();
@@ -504,14 +582,18 @@ claudeComposer.callbackQuery("fork-decline", async (ctx) => {
   const pending = pendingContentTopics.get(chatId);
   if (!pending || !pending.type.startsWith("fork:")) {
     await ctx.answerCallbackQuery({ text: "Session expired" });
-    await ctx.editMessageText("⚠️ Session expired. Please send your message again.");
+    await ctx.editMessageText(
+      "⚠️ Session expired. Please send your message again.",
+    );
     return;
   }
 
   const taskPrompt = pending.type.replace("fork:", "");
   pendingContentTopics.delete(chatId);
 
-  await ctx.editMessageText("💬 *Using Main Chat*\n\n_Adding to queue..._", { parse_mode: "Markdown" });
+  await ctx.editMessageText("💬 *Using Main Chat*\n\n_Adding to queue..._", {
+    parse_mode: "Markdown",
+  });
   await ctx.answerCallbackQuery({ text: "Queued in main chat" });
 
   queue.push({ ctx, text: taskPrompt });
@@ -550,13 +632,13 @@ claudeComposer.on("message:text", async (ctx) => {
   // Handle Reply Keyboard buttons
   if (text === "🌙 Tonight") {
     const keyboard = new InlineKeyboard();
-    state.rotation.forEach(repo => {
+    state.rotation.forEach((repo) => {
       const current = repo === state.nightShiftTarget ? "✓ " : "";
       keyboard.text(`${current}${repo}`, `tonight:${repo}`);
     });
     await ctx.reply(
       `🌙 *Night Shift Target*\nCurrent: \`${state.nightShiftTarget}\`\n\nTap to change:`,
-      { parse_mode: "Markdown", reply_markup: keyboard }
+      { parse_mode: "Markdown", reply_markup: keyboard },
     );
     return;
   }
@@ -568,7 +650,8 @@ claudeComposer.on("message:text", async (ctx) => {
       getDailyStats(),
     ]);
 
-    await ctx.reply(`📊 *Status*
+    await ctx.reply(
+      `📊 *Status*
 
 🎯 Night Shift: \`${state.nightShiftTarget}\`
 📬 Queue: ${queueLen} messages
@@ -576,14 +659,19 @@ claudeComposer.on("message:text", async (ctx) => {
 🚂 Railway: ${railwayStatus}
 🧠 Bot: ${Math.round(process.uptime() / 60)}min uptime${emailStats}${jobStats}
 
-[Dashboard](https://etanheyman.com/admin/golem)`, { parse_mode: "Markdown" });
+[Dashboard](https://etanheyman.com/admin/golem)`,
+      { parse_mode: "Markdown" },
+    );
     return;
   }
 
   if (text === "📅 Queue") {
     try {
       const supabase = getSupabase();
-      if (!supabase) { await ctx.reply("📅 Supabase not configured."); return; }
+      if (!supabase) {
+        await ctx.reply("📅 Supabase not configured.");
+        return;
+      }
 
       const { data: events } = await supabase
         .from("golem_events")
@@ -598,19 +686,31 @@ claudeComposer.on("message:text", async (ctx) => {
 
       let msg = "📅 *Recent Activity*\n\n";
       for (const ev of events) {
-        const ago = Math.round((Date.now() - new Date(ev.created_at).getTime()) / 60000);
+        const ago = Math.round(
+          (Date.now() - new Date(ev.created_at).getTime()) / 60000,
+        );
         const agoStr = ago < 60 ? `${ago}m` : `${Math.round(ago / 60)}h`;
-        const icon = ev.actor === "emailgolem" ? "📧" : ev.actor === "jobgolem" ? "💼" : ev.actor === "nightshift" ? "🌙" : "🤖";
+        const icon =
+          ev.actor === "emailgolem"
+            ? "📧"
+            : ev.actor === "jobgolem"
+              ? "💼"
+              : ev.actor === "nightshift"
+                ? "🌙"
+                : "🤖";
         msg += `${icon} \`${agoStr}\` ${ev.type.replace(/_/g, " ")}`;
         if (ev.data?.repo) msg += ` (${ev.data.repo})`;
-        if (ev.data?.subject) msg += `: ${String(ev.data.subject).slice(0, 40)}`;
+        if (ev.data?.subject)
+          msg += `: ${String(ev.data.subject).slice(0, 40)}`;
         msg += "\n";
       }
 
       msg += "\n[Full Activity](https://etanheyman.com/admin/golem/alerts)";
       await ctx.reply(msg, { parse_mode: "Markdown" });
     } catch {
-      await ctx.reply("📅 Could not load activity. Check /status for system health.");
+      await ctx.reply(
+        "📅 Could not load activity. Check /status for system health.",
+      );
     }
     return;
   }
@@ -620,11 +720,16 @@ claudeComposer.on("message:text", async (ctx) => {
     try {
       await ctx.replyWithChatAction("typing");
       const { planToday } = await import("@golems/coach/index");
-      const { formatPlanForTelegram } = await import("@golems/coach/schedule-engine");
+      const { formatPlanForTelegram } =
+        await import("@golems/coach/schedule-engine");
       const plan = await planToday();
-      await ctx.reply(`📋 *Today's Plan*\n\n${formatPlanForTelegram(plan)}`, { parse_mode: "Markdown" });
+      await ctx.reply(`📋 *Today's Plan*\n\n${formatPlanForTelegram(plan)}`, {
+        parse_mode: "Markdown",
+      });
     } catch (err) {
-      await ctx.reply(`❌ Plan failed: ${err instanceof Error ? err.message : String(err)}`);
+      await ctx.reply(
+        `❌ Plan failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
     }
     return;
   }
@@ -632,7 +737,8 @@ claudeComposer.on("message:text", async (ctx) => {
   if (text === "🤖 Golems") {
     try {
       await ctx.replyWithChatAction("typing");
-      const { getEcosystemStatus } = await import("@golems/coach/status-aggregator");
+      const { getEcosystemStatus } =
+        await import("@golems/coach/status-aggregator");
       const status = await getEcosystemStatus();
       let msg = `🤖 *Golem Ecosystem*\n\nHealthy: ${status.healthy}/${status.golems.length}\n\n`;
       for (const golem of status.golems) {
@@ -640,7 +746,9 @@ claudeComposer.on("message:text", async (ctx) => {
       }
       await ctx.reply(msg, { parse_mode: "Markdown" });
     } catch (err) {
-      await ctx.reply(`❌ Status failed: ${err instanceof Error ? err.message : String(err)}`);
+      await ctx.reply(
+        `❌ Status failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
     }
     return;
   }
@@ -656,7 +764,10 @@ claudeComposer.on("message:text", async (ctx) => {
       .url("📧 Emails", "https://etanheyman.com/admin/golem/emails")
       .url("📋 Activity", "https://etanheyman.com/admin/golem/alerts")
       .url("🌙 Night Shift", "https://etanheyman.com/admin/golem/nightshift");
-    await ctx.reply("🖥️ *Admin Dashboard*\n\nTap to open:", { parse_mode: "Markdown", reply_markup: keyboard });
+    await ctx.reply("🖥️ *Admin Dashboard*\n\nTap to open:", {
+      parse_mode: "Markdown",
+      reply_markup: keyboard,
+    });
     return;
   }
 
@@ -665,25 +776,39 @@ claudeComposer.on("message:text", async (ctx) => {
   const golemConfig = getGolemFromThreadId(threadId, state);
 
   if (golemConfig) {
-    console.log(`${golemConfig.icon} Routing to ${golemConfig.name} (thread ${threadId})`);
+    console.log(
+      `${golemConfig.icon} Routing to ${golemConfig.name} (thread ${threadId})`,
+    );
     await ctx.replyWithChatAction("typing");
 
     const response = await askGolem(golemConfig, text, async () => {
       await ctx.replyWithChatAction("typing");
     });
 
-    logEvent("golem_telegram_chat", {
-      golem: golemConfig.name,
-      prompt: text.slice(0, 120),
-      responseLength: response.length,
-    }, golemConfig.name.toLowerCase() as any).catch(() => {});
+    logEvent(
+      "golem_telegram_chat",
+      {
+        golem: golemConfig.name,
+        prompt: text.slice(0, 120),
+        responseLength: response.length,
+      },
+      golemConfig.name.toLowerCase() as any,
+    ).catch((err: unknown) => {
+      console.warn(
+        "[Composer] Event log failed:",
+        err instanceof Error ? err.message : err,
+      );
+    });
 
     const prefix = `${golemConfig.icon} ${golemConfig.name}\n\n`;
     const fullResponse = prefix + response;
 
     const sendGolemReply = async (text: string) => {
       try {
-        await ctx.reply(text, { message_thread_id: threadId, parse_mode: "Markdown" });
+        await ctx.reply(text, {
+          message_thread_id: threadId,
+          parse_mode: "Markdown",
+        });
       } catch {
         await ctx.reply(text, { message_thread_id: threadId });
       }
@@ -707,7 +832,8 @@ claudeComposer.on("message:text", async (ctx) => {
       .text("🔀 Fork It", `fork-task:${taskName}`)
       .text("💬 Main Chat", "fork-decline");
 
-    await ctx.reply(`🔀 *Detected Complex Task*
+    await ctx.reply(
+      `🔀 *Detected Complex Task*
 
 This looks like a task that might benefit from its own session:
 "${taskName.replace(/-/g, " ")}"
@@ -717,7 +843,9 @@ This looks like a task that might benefit from its own session:
 • Independent memory for this task
 • Can resume later
 
-*Choose:*`, { parse_mode: "Markdown", reply_markup: keyboard });
+*Choose:*`,
+      { parse_mode: "Markdown", reply_markup: keyboard },
+    );
 
     pendingContentTopics.set(ctx.chat.id, { type: `fork:${text}` });
     return;
@@ -727,10 +855,19 @@ This looks like a task that might benefit from its own session:
   queue.push({ ctx, text });
   console.log(`📥 Queued: "${text.slice(0, 50)}..."`);
 
-  logEvent("telegram_message_in", {
-    preview: text.slice(0, 120),
-    length: text.length,
-  }, "claudegolem").catch(() => {});
+  logEvent(
+    "telegram_message_in",
+    {
+      preview: text.slice(0, 120),
+      length: text.length,
+    },
+    "claudegolem",
+  ).catch((err: unknown) => {
+    console.warn(
+      "[Composer] Event log failed:",
+      err instanceof Error ? err.message : err,
+    );
+  });
 
   if (!isProcessing) {
     processQueue();

@@ -36,10 +36,18 @@ if (!process.env.LLM_BACKEND) process.env.LLM_BACKEND = "haiku";
 if (!process.env.STATE_BACKEND) process.env.STATE_BACKEND = "supabase";
 if (!process.env.TELEGRAM_MODE) process.env.TELEGRAM_MODE = "direct";
 
+// Catch unhandled errors before they crash the worker silently
+import { installProcessGuards } from "@golems/shared/lib/process-guards";
+installProcessGuards("cloud-worker");
+
 // Axiom observability (lazy)
 async function getAxiomHelpers() {
   const mod = await import("@golems/shared/lib/axiom");
-  return { logServiceEvent: mod.logServiceEvent, logError: mod.logError, flushAxiom: mod.flushAxiom };
+  return {
+    logServiceEvent: mod.logServiceEvent,
+    logError: mod.logError,
+    flushAxiom: mod.flushAxiom,
+  };
 }
 
 // ALL imports are lazy — health endpoint must start before any module loads
@@ -50,7 +58,10 @@ async function getSendNotification() {
 
 async function getUsage() {
   const mod = await import("@golems/shared/lib/cloud-llm");
-  return { getUsageStats: mod.getUsageStats, getUsageBySource: mod.getUsageBySource };
+  return {
+    getUsageStats: mod.getUsageStats,
+    getUsageBySource: mod.getUsageBySource,
+  };
 }
 
 async function getCostTracker() {
@@ -92,7 +103,10 @@ async function getServiceRunReporter() {
   return (await import("@golems/shared/lib/supabase-factory")).getSupabase();
 }
 
-async function safeRun(name: string, fn: () => Promise<unknown>): Promise<void> {
+async function safeRun(
+  name: string,
+  fn: () => Promise<unknown>,
+): Promise<void> {
   const start = Date.now();
   const startedAt = new Date().toISOString();
   console.log(`[CloudWorker] Starting ${name}...`);
@@ -122,12 +136,18 @@ async function safeRun(name: string, fn: () => Promise<unknown>): Promise<void> 
       body: message.slice(0, 200),
       source: "healthcheck",
       priority: "high",
-    }).catch(() => {}); // Don't let notification failure cascade
+    }).catch((notifyErr: unknown) => {
+      console.warn(
+        "[CloudWorker] Notification also failed:",
+        notifyErr instanceof Error ? notifyErr.message : notifyErr,
+      );
+    });
   }
 
   // Report to Axiom (fire-and-forget)
   try {
-    const { logServiceEvent, logError: logAxiomError } = await getAxiomHelpers();
+    const { logServiceEvent, logError: logAxiomError } =
+      await getAxiomHelpers();
     const durationMs = Date.now() - start;
     logServiceEvent({
       service: name.toLowerCase().replace(/[^a-z0-9-]/g, "-"),
@@ -164,9 +184,18 @@ async function safeRun(name: string, fn: () => Promise<unknown>): Promise<void> 
           error,
         })
         .then(({ error: dbErr }) => {
-          if (dbErr) console.error("[CloudWorker] service_runs insert failed:", dbErr.message);
+          if (dbErr)
+            console.error(
+              "[CloudWorker] service_runs insert failed:",
+              dbErr.message,
+            );
         })
-        .catch(() => {});
+        .catch((err: unknown) => {
+          console.error(
+            "[CloudWorker] service_runs network error:",
+            err instanceof Error ? err.message : err,
+          );
+        });
 
       // Update golem_state timestamps + status for dashboard service status
       const stateKeyPrefixes: [string, string][] = [
@@ -176,27 +205,60 @@ async function safeRun(name: string, fn: () => Promise<unknown>): Promise<void> 
         ["WhoopSync", "lastWhoopSync"],
         ["CalendarSync", "lastCalendarSync"],
       ];
-      const stateKey = stateKeyPrefixes.find(([prefix]) => name.startsWith(prefix))?.[1];
+      const stateKey = stateKeyPrefixes.find(([prefix]) =>
+        name.startsWith(prefix),
+      )?.[1];
       if (stateKey) {
         // Write plain timestamp to original key (consumers expect ISO string)
         sb.from("golem_state")
-          .upsert({ key: stateKey, value: endedAt, updated_at: endedAt }, { onConflict: "key" })
+          .upsert(
+            { key: stateKey, value: endedAt, updated_at: endedAt },
+            { onConflict: "key" },
+          )
           .then(({ error: stateErr }) => {
-            if (stateErr) console.error(`[CloudWorker] golem_state ${stateKey} upsert failed:`, stateErr.message);
+            if (stateErr)
+              console.error(
+                `[CloudWorker] golem_state ${stateKey} upsert failed:`,
+                stateErr.message,
+              );
           })
-          .catch(() => {});
+          .catch((err: unknown) => {
+            console.error(
+              `[CloudWorker] golem_state ${stateKey} network error:`,
+              err instanceof Error ? err.message : err,
+            );
+          });
         // Write status metadata to separate key for dashboard health display
-        const metaValue = JSON.stringify({ time: endedAt, status, error: error?.slice(0, 200) ?? null });
+        const metaValue = JSON.stringify({
+          time: endedAt,
+          status,
+          error: error?.slice(0, 200) ?? null,
+        });
         sb.from("golem_state")
-          .upsert({ key: `${stateKey}_meta`, value: metaValue, updated_at: endedAt }, { onConflict: "key" })
+          .upsert(
+            { key: `${stateKey}_meta`, value: metaValue, updated_at: endedAt },
+            { onConflict: "key" },
+          )
           .then(({ error: stateErr }) => {
-            if (stateErr) console.error(`[CloudWorker] golem_state ${stateKey}_meta upsert failed:`, stateErr.message);
+            if (stateErr)
+              console.error(
+                `[CloudWorker] golem_state ${stateKey}_meta upsert failed:`,
+                stateErr.message,
+              );
           })
-          .catch(() => {});
+          .catch((err: unknown) => {
+            console.error(
+              `[CloudWorker] golem_state ${stateKey}_meta network error:`,
+              err instanceof Error ? err.message : err,
+            );
+          });
       }
     }
-  } catch {
-    // Non-critical
+  } catch (err) {
+    console.warn(
+      "[CloudWorker] Supabase reporting error:",
+      err instanceof Error ? err.message : err,
+    );
   }
 }
 
@@ -208,7 +270,7 @@ async function safeRun(name: string, fn: () => Promise<unknown>): Promise<void> 
 function getIsraelHour(): number {
   const now = new Date();
   const israelTime = new Date(
-    now.toLocaleString("en-US", { timeZone: "Asia/Jerusalem" })
+    now.toLocaleString("en-US", { timeZone: "Asia/Jerusalem" }),
   );
   return israelTime.getHours();
 }
@@ -217,7 +279,7 @@ function getIsraelHour(): number {
 function getIsraelDay(): number {
   const now = new Date();
   const israelTime = new Date(
-    now.toLocaleString("en-US", { timeZone: "Asia/Jerusalem" })
+    now.toLocaleString("en-US", { timeZone: "Asia/Jerusalem" }),
   );
   return israelTime.getDay();
 }
@@ -249,7 +311,11 @@ function isLateNightCheck(): boolean {
 // ═══════════════════════════════════════════════════════
 
 /** Run a function at a specific hour (Israel time), checked every minute */
-function scheduleDaily(name: string, hour: number, fn: () => Promise<unknown>): void {
+function scheduleDaily(
+  name: string,
+  hour: number,
+  fn: () => Promise<unknown>,
+): void {
   let lastRunDate = "";
 
   setInterval(() => {
@@ -321,7 +387,11 @@ function scheduleJobs(fn: () => Promise<unknown>): void {
     const runKey = `${today}-${hour}`;
 
     // Run at 6am, 9am, or 1pm on Israeli workdays
-    if ((hour === 6 || hour === 9 || hour === 13) && isIsraeliWorkday() && lastRunKey !== runKey) {
+    if (
+      (hour === 6 || hour === 9 || hour === 13) &&
+      isIsraeliWorkday() &&
+      lastRunKey !== runKey
+    ) {
       lastRunKey = runKey;
       safeRun("JobGolem", fn);
     }
@@ -341,8 +411,12 @@ console.log("[CloudWorker] Starting...");
 console.log(`[CloudWorker] LLM_BACKEND=${process.env.LLM_BACKEND}`);
 console.log(`[CloudWorker] STATE_BACKEND=${process.env.STATE_BACKEND}`);
 console.log(`[CloudWorker] TELEGRAM_MODE=${process.env.TELEGRAM_MODE}`);
-console.log(`[CloudWorker] Israel time: ${new Date().toLocaleString("en-US", { timeZone: "Asia/Jerusalem" })}`);
-console.log(`[CloudWorker] Work hours now: ${isActiveHours()}, Workday: ${isIsraeliWorkday()}`);
+console.log(
+  `[CloudWorker] Israel time: ${new Date().toLocaleString("en-US", { timeZone: "Asia/Jerusalem" })}`,
+);
+console.log(
+  `[CloudWorker] Work hours now: ${isActiveHours()}, Workday: ${isIsraeliWorkday()}`,
+);
 
 // ═══════════════════════════════════════════════════════
 // Health endpoint FIRST (Railway healthcheck must respond fast)
@@ -359,23 +433,38 @@ Bun.serve({
     const url = new URL(req.url);
 
     if (url.pathname === "/health") {
-      return Response.json({
-        status: "ok",
-        golemStatus,
-        uptime: Math.round((Date.now() - startTime) / 1000),
-        backend: process.env.LLM_BACKEND,
-        stateBackend: process.env.STATE_BACKEND,
-        telegramMode: process.env.TELEGRAM_MODE,
-        israelTime: new Date().toLocaleString("en-US", { timeZone: "Asia/Jerusalem" }),
-        isWorkHours: isActiveHours(),
-        isWorkday: isIsraeliWorkday(),
-      });
+      const { buildHealthResponse } = await import("./health");
+      const health = buildHealthResponse({ golemStatus, startTime });
+      return Response.json(
+        {
+          ...health.body,
+          backend: process.env.LLM_BACKEND,
+          stateBackend: process.env.STATE_BACKEND,
+          telegramMode: process.env.TELEGRAM_MODE,
+          israelTime: new Date().toLocaleString("en-US", {
+            timeZone: "Asia/Jerusalem",
+          }),
+          isWorkHours: isActiveHours(),
+          isWorkday: isIsraeliWorkday(),
+        },
+        { status: health.status },
+      );
+    }
+
+    if (url.pathname === "/ready") {
+      const { buildReadyResponse, checkDbConnectivity } =
+        await import("./health");
+      const dbConnected = await checkDbConnectivity();
+      const ready = buildReadyResponse({ golemStatus, dbConnected });
+      return Response.json(ready.body, { status: ready.status });
     }
 
     if (url.pathname === "/usage") {
       const validPeriods = ["today", "week", "month", "all"] as const;
       const rawPeriod = url.searchParams.get("period") || "today";
-      const period = validPeriods.includes(rawPeriod as any) ? rawPeriod as typeof validPeriods[number] : "today";
+      const period = validPeriods.includes(rawPeriod as any)
+        ? (rawPeriod as (typeof validPeriods)[number])
+        : "today";
 
       // Try Supabase first (persistent, survives deploys)
       try {
@@ -456,7 +545,9 @@ try {
     }
 
     console.log("[CloudWorker] All services scheduled:");
-    console.log("  - EmailGolem: hourly 6am-7pm (skip lunch), 10pm final, OFF overnight");
+    console.log(
+      "  - EmailGolem: hourly 6am-7pm (skip lunch), 10pm final, OFF overnight",
+    );
     console.log("  - JobGolem: 6am + 9am + 1pm Sun-Thu (Israeli work week)");
     console.log("  - Briefing: 8am Israel");
     console.log("  - WhoopSync: 7am, 10am, 2pm, 5pm, 8pm Israel");
@@ -484,7 +575,12 @@ try {
     body: message.slice(0, 200),
     source: "healthcheck",
     priority: "high",
-  }).catch(() => {});
+  }).catch((notifyErr: unknown) => {
+    console.warn(
+      "[CloudWorker] Load failure notification failed:",
+      notifyErr instanceof Error ? notifyErr.message : notifyErr,
+    );
+  });
 }
 
 // Flush Axiom on shutdown
@@ -493,7 +589,12 @@ process.on("SIGTERM", async () => {
   try {
     const { flushAxiom } = await getAxiomHelpers();
     await flushAxiom();
-  } catch {}
+  } catch (err) {
+    console.warn(
+      "[CloudWorker] Axiom flush on shutdown failed:",
+      err instanceof Error ? err.message : err,
+    );
+  }
   process.exit(0);
 });
 
@@ -503,4 +604,9 @@ await notifyStart({
   title: "Cloud Worker Started",
   body: `Golems: ${golemStatus}`,
   source: "healthcheck",
-}).catch(() => {});
+}).catch((notifyErr: unknown) => {
+  console.warn(
+    "[CloudWorker] Startup notification failed:",
+    notifyErr instanceof Error ? notifyErr.message : notifyErr,
+  );
+});

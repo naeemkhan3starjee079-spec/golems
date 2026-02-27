@@ -13,8 +13,12 @@
  */
 
 import "@golems/shared/lib/load-env";
+import { installProcessGuards } from "@golems/shared/lib/process-guards";
 import { Bot } from "grammy";
 import { GITS } from "./lib/bot-shared";
+
+// Catch unhandled errors before they crash the bot silently
+installProcessGuards("telegram-bot");
 import { startNotifyServer } from "./lib/notify-server";
 
 // Composers
@@ -35,10 +39,10 @@ if (!token) {
 const bot = new Bot(token);
 
 // Security: Whitelist allowed Telegram user IDs
-const ALLOWED_USER_IDS = process.env.TELEGRAM_ALLOWED_IDS
-  ?.split(",")
-  .map((id) => parseInt(id.trim(), 10))
-  .filter((id) => !isNaN(id)) || [];
+const ALLOWED_USER_IDS =
+  process.env.TELEGRAM_ALLOWED_IDS?.split(",")
+    .map((id) => parseInt(id.trim(), 10))
+    .filter((id) => !isNaN(id)) || [];
 
 function isAuthorized(userId: number | undefined): boolean {
   if (ALLOWED_USER_IDS.length === 0) return true;
