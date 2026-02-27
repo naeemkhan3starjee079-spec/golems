@@ -40,7 +40,7 @@ function getClient(): Anthropic {
 }
 
 /** @internal Reset/inject client for testing */
-export function _resetClient(mockClient?: Anthropic | null) {
+export function _resetClient(mockClient?: Anthropic | null): void {
   client = mockClient ?? null;
 }
 
@@ -123,7 +123,13 @@ function estimateCost(): number {
 }
 
 /** Get current usage statistics */
-export function getUsageStats() {
+export function getUsageStats(): {
+  totalCalls: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  estimatedCostUSD: number;
+  recentCalls: typeof usageLog;
+} {
   return {
     totalCalls,
     totalInputTokens,

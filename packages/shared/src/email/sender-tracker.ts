@@ -72,7 +72,7 @@ export function senderCategoryFromEmail(emailCategory: string): string {
  */
 export async function trackSender(
   client: SupabaseClient,
-  update: SenderUpdate
+  update: SenderUpdate,
 ): Promise<void> {
   const senderCategory = senderCategoryFromEmail(update.category);
 
@@ -91,7 +91,7 @@ export async function trackSender(
       ? ((prevAvg * prevTotal + update.score) / newTotal).toFixed(1)
       : update.score.toFixed(1);
 
-  const record: Record<string, any> = {
+  const record: Record<string, unknown> = {
     email_address: update.email_address,
     display_name: update.display_name || null,
     category: senderCategory,
@@ -115,7 +115,7 @@ export async function trackSender(
   if (error) {
     console.error(
       `[SenderTracker] Failed to track ${update.email_address}:`,
-      error.message
+      error.message,
     );
   }
 }
@@ -130,9 +130,14 @@ export async function getSenders(
     userAction?: string | null;
     limit?: number;
     orderBy?: string;
-  } = {}
+  } = {},
 ): Promise<any[]> {
-  const { category, userAction, limit = 50, orderBy = "total_emails" } = options;
+  const {
+    category,
+    userAction,
+    limit = 50,
+    orderBy = "total_emails",
+  } = options;
 
   let query = client
     .from("email_senders")
@@ -168,8 +173,11 @@ async function applyGmailFilter(emailAddress: string): Promise<void> {
     const labelId = await getOrCreateLabel("Golems/Unsubscribed");
     await createSenderFilter(emailAddress, labelId);
     console.log(`[SenderTracker] Gmail filter created for ${emailAddress}`);
-  } catch (err: any) {
-    console.error(`[SenderTracker] Gmail filter failed for ${emailAddress}:`, err.message);
+  } catch (err: unknown) {
+    console.error(
+      `[SenderTracker] Gmail filter failed for ${emailAddress}:`,
+      err instanceof Error ? err.message : String(err),
+    );
   }
 }
 
@@ -179,7 +187,7 @@ async function applyGmailFilter(emailAddress: string): Promise<void> {
 export async function setSenderAction(
   client: SupabaseClient,
   emailAddress: string,
-  action: "keep" | "unsubscribe" | "block"
+  action: "keep" | "unsubscribe" | "block",
 ): Promise<boolean> {
   const { error } = await client
     .from("email_senders")
@@ -192,7 +200,7 @@ export async function setSenderAction(
   if (error) {
     console.error(
       `[SenderTracker] Failed to set action for ${emailAddress}:`,
-      error.message
+      error.message,
     );
     return false;
   }
@@ -211,7 +219,7 @@ export async function setSenderAction(
  */
 export async function attemptUnsubscribe(
   client: SupabaseClient,
-  emailAddress: string
+  emailAddress: string,
 ): Promise<{ success: boolean; method: string; error?: string }> {
   // Get sender's unsubscribe info
   const { data: sender, error: fetchError } = await client
@@ -247,7 +255,16 @@ export async function attemptUnsubscribe(
           .eq("email_address", emailAddress);
 
         await applyGmailFilter(emailAddress);
-        await logEvent("email_unsubscribe_attempt", { sender: emailAddress, method: "http_post", success: true, gmail_filter: true }, "emailgolem");
+        await logEvent(
+          "email_unsubscribe_attempt",
+          {
+            sender: emailAddress,
+            method: "http_post",
+            success: true,
+            gmail_filter: true,
+          },
+          "emailgolem",
+        );
         return { success: true, method: "http-post" };
       }
 
@@ -268,22 +285,50 @@ export async function attemptUnsubscribe(
           .eq("email_address", emailAddress);
 
         await applyGmailFilter(emailAddress);
-        await logEvent("email_unsubscribe_attempt", { sender: emailAddress, method: "http_get", success: true, gmail_filter: true }, "emailgolem");
+        await logEvent(
+          "email_unsubscribe_attempt",
+          {
+            sender: emailAddress,
+            method: "http_get",
+            success: true,
+            gmail_filter: true,
+          },
+          "emailgolem",
+        );
         return { success: true, method: "http-get" };
       }
 
-      await logEvent("email_unsubscribe_attempt", { sender: emailAddress, method: "http", success: false, error: `HTTP ${response.status}` }, "emailgolem");
+      await logEvent(
+        "email_unsubscribe_attempt",
+        {
+          sender: emailAddress,
+          method: "http",
+          success: false,
+          error: `HTTP ${response.status}`,
+        },
+        "emailgolem",
+      );
       return {
         success: false,
         method: "http",
         error: `HTTP ${response.status}: ${response.statusText}`,
       };
-    } catch (err: any) {
-      await logEvent("email_unsubscribe_attempt", { sender: emailAddress, method: "http", success: false, error: err.message }, "emailgolem");
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      await logEvent(
+        "email_unsubscribe_attempt",
+        {
+          sender: emailAddress,
+          method: "http",
+          success: false,
+          error: errMsg,
+        },
+        "emailgolem",
+      );
       return {
         success: false,
         method: "http",
-        error: err.message,
+        error: errMsg,
       };
     }
   }
@@ -300,7 +345,17 @@ export async function attemptUnsubscribe(
       .eq("email_address", emailAddress);
 
     await applyGmailFilter(emailAddress);
-    await logEvent("email_unsubscribe_attempt", { sender: emailAddress, method: "mailto", success: false, gmail_filter: true, unsubscribe_email: sender.unsubscribe_email }, "emailgolem");
+    await logEvent(
+      "email_unsubscribe_attempt",
+      {
+        sender: emailAddress,
+        method: "mailto",
+        success: false,
+        gmail_filter: true,
+        unsubscribe_email: sender.unsubscribe_email,
+      },
+      "emailgolem",
+    );
 
     return {
       success: false,
@@ -309,7 +364,11 @@ export async function attemptUnsubscribe(
     };
   }
 
-  await logEvent("email_unsubscribe_attempt", { sender: emailAddress, method: "none", success: false }, "emailgolem");
+  await logEvent(
+    "email_unsubscribe_attempt",
+    { sender: emailAddress, method: "none", success: false },
+    "emailgolem",
+  );
   return {
     success: false,
     method: "none",

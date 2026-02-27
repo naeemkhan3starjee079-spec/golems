@@ -31,18 +31,21 @@ import {
   getEmailById,
 } from "./db-client";
 import { buildReplyDraft, type ReplyDraftInput } from "./draft-reply";
-import { getSenders, setSenderAction, attemptUnsubscribe } from "./sender-tracker";
 import {
-  generateMonthlyReport,
-  generateTaxReport,
-  formatMonthlyReportText,
-  formatTaxReportText,
-} from "@golems/teller/report";
+  getSenders,
+  setSenderAction,
+  attemptUnsubscribe,
+} from "./sender-tracker";
 import type { Email } from "./types";
+
+// Lazy-imported at call time to break shared↔teller circular dependency
+async function getTellerReport() {
+  return import("@golems/teller/report");
+}
 
 const server = new Server(
   { name: "golems-email", version: "1.0.0" },
-  { capabilities: { tools: {} } }
+  { capabilities: { tools: {} } },
 );
 
 // Lazy DB client (only connect when first tool is called)
@@ -135,8 +138,14 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         properties: {
           golem: {
             type: "string",
-            description: "Target golem: recruitergolem, tellergolem, claudegolem, emailgolem",
-            enum: ["recruitergolem", "tellergolem", "claudegolem", "emailgolem"],
+            description:
+              "Target golem: recruitergolem, tellergolem, claudegolem, emailgolem",
+            enum: [
+              "recruitergolem",
+              "tellergolem",
+              "claudegolem",
+              "emailgolem",
+            ],
           },
           hours: {
             type: "number",
@@ -168,12 +177,20 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           },
           category: {
             type: "string",
-            description: "Email category (interview, job, urgent, subscription, etc.)",
+            description:
+              "Email category (interview, job, urgent, subscription, etc.)",
           },
           intent: {
             type: "string",
-            description: "Reply intent: accept, decline, interested, followup, acknowledge",
-            enum: ["accept", "decline", "interested", "followup", "acknowledge"],
+            description:
+              "Reply intent: accept, decline, interested, followup, acknowledge",
+            enum: [
+              "accept",
+              "decline",
+              "interested",
+              "followup",
+              "acknowledge",
+            ],
           },
           customNote: {
             type: "string",
@@ -192,12 +209,14 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         properties: {
           category: {
             type: "string",
-            description: "Filter by sender category: promo, newsletter, normal, job, tech",
+            description:
+              "Filter by sender category: promo, newsletter, normal, job, tech",
             enum: ["promo", "newsletter", "normal", "job", "tech"],
           },
           userAction: {
             type: "string",
-            description: "Filter by user action: keep, unsubscribe, block. Use 'pending' for senders with no action set.",
+            description:
+              "Filter by user action: keep, unsubscribe, block. Use 'pending' for senders with no action set.",
           },
           limit: {
             type: "number",
@@ -220,7 +239,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           },
           emailId: {
             type: "string",
-            description: "Email ID to look up sender from (alternative to emailAddress)",
+            description:
+              "Email ID to look up sender from (alternative to emailAddress)",
           },
           action: {
             type: "string",
@@ -349,12 +369,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           content: [{ type: "text" as const, text: `Unknown tool: ${name}` }],
         };
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     return {
       content: [
         {
           type: "text" as const,
-          text: `Error in ${name}: ${err.message}`,
+          text: `Error in ${name}: ${err instanceof Error ? err.message : String(err)}`,
         },
       ],
       isError: true,
@@ -371,7 +391,9 @@ function formatEmail(e: Email): string {
   return `- [${score}/10 ${cat}] **${e.subject || "(no subject)"}** from ${e.from_address || "unknown"} (${date})`;
 }
 
-async function handleGetRecent(args: any) {
+type McpArgs = Record<string, unknown> | undefined;
+
+async function handleGetRecent(args: McpArgs) {
   const hours = args?.hours ?? 24;
   const minScore = args?.minScore ?? 0;
   const emails = await getRecentEmails(getDb(), hours, minScore);
@@ -396,7 +418,7 @@ async function handleGetRecent(args: any) {
   return { content: [{ type: "text" as const, text: lines.join("\n") }] };
 }
 
-async function handleSearch(args: any) {
+async function handleSearch(args: McpArgs) {
   const query = args?.query?.toLowerCase();
   const limit = args?.limit ?? 20;
 
@@ -414,7 +436,7 @@ async function handleSearch(args: any) {
     .filter(
       (e) =>
         e.subject?.toLowerCase().includes(query) ||
-        e.from_address?.toLowerCase().includes(query)
+        e.from_address?.toLowerCase().includes(query),
     )
     .slice(0, limit);
 
@@ -446,7 +468,7 @@ async function handleSubscriptions() {
     `**Monthly total: $${summary.totalMonthly.toFixed(2)}**\n`,
     "### Active Services",
     ...summary.services.map(
-      (s) => `- ${s.name}: ${s.currency} ${s.amount} (${s.status})`
+      (s) => `- ${s.name}: ${s.currency} ${s.amount} (${s.status})`,
     ),
   ];
 
@@ -487,7 +509,7 @@ async function handleStats() {
   const last24h = await getRecentEmails(getDb(), 24, 0);
   const urgent = last24h.filter((e) => (e.score ?? 0) >= 10);
   const important = last24h.filter(
-    (e) => (e.score ?? 0) >= 7 && (e.score ?? 0) < 10
+    (e) => (e.score ?? 0) >= 7 && (e.score ?? 0) < 10,
   );
 
   // Category breakdown
@@ -512,12 +534,17 @@ async function handleStats() {
   return { content: [{ type: "text" as const, text: lines.join("\n") }] };
 }
 
-async function handleDraftReply(args: any) {
+async function handleDraftReply(args: McpArgs) {
   const { subject, from, snippet, category, intent, customNote } = args || {};
 
   if (!subject || !from || !intent) {
     return {
-      content: [{ type: "text" as const, text: "Missing required: subject, from, intent" }],
+      content: [
+        {
+          type: "text" as const,
+          text: "Missing required: subject, from, intent",
+        },
+      ],
       isError: true,
     };
   }
@@ -552,7 +579,7 @@ async function handleDraftReply(args: any) {
   return { content: [{ type: "text" as const, text: lines.join("\n") }] };
 }
 
-async function handleGetByGolem(args: any) {
+async function handleGetByGolem(args: McpArgs) {
   const golem = args?.golem;
   const hours = args?.hours ?? 24;
 
@@ -592,7 +619,7 @@ async function handleGetByGolem(args: any) {
   return { content: [{ type: "text" as const, text: lines.join("\n") }] };
 }
 
-async function handleGetSenders(args: any) {
+async function handleGetSenders(args: McpArgs) {
   const category = args?.category;
   const userAction = args?.userAction === "pending" ? null : args?.userAction;
   const limit = args?.limit ?? 50;
@@ -601,14 +628,16 @@ async function handleGetSenders(args: any) {
 
   if (senders.length === 0) {
     return {
-      content: [{ type: "text" as const, text: "No senders found matching filters." }],
+      content: [
+        { type: "text" as const, text: "No senders found matching filters." },
+      ],
     };
   }
 
   const lines = [
     `## Email Senders${category ? ` (${category})` : ""}`,
     `**${senders.length} senders**\n`,
-    ...senders.map((s: any) => {
+    ...senders.map((s: Record<string, unknown>) => {
       const action = s.user_action ? ` [${s.user_action}]` : "";
       const unsub = s.unsubscribe_url ? " (has unsub link)" : "";
       return `- **${s.email_address}** — ${s.total_emails} emails, avg ${s.avg_score}/10 (${s.category})${action}${unsub}`;
@@ -618,7 +647,7 @@ async function handleGetSenders(args: any) {
   return { content: [{ type: "text" as const, text: lines.join("\n") }] };
 }
 
-async function handleSetSenderAction(args: any) {
+async function handleSetSenderAction(args: McpArgs) {
   let { emailAddress, emailId, action } = args || {};
 
   const validActions = ["keep", "unsubscribe", "block"];
@@ -632,7 +661,12 @@ async function handleSetSenderAction(args: any) {
 
   if (!validActions.includes(action)) {
     return {
-      content: [{ type: "text" as const, text: `Invalid action "${action}". Must be one of: ${validActions.join(", ")}` }],
+      content: [
+        {
+          type: "text" as const,
+          text: `Invalid action "${action}". Must be one of: ${validActions.join(", ")}`,
+        },
+      ],
       isError: true,
     };
   }
@@ -642,7 +676,9 @@ async function handleSetSenderAction(args: any) {
     const email = await getEmailById(getDb(), emailId);
     if (!email) {
       return {
-        content: [{ type: "text" as const, text: `Email not found: ${emailId}` }],
+        content: [
+          { type: "text" as const, text: `Email not found: ${emailId}` },
+        ],
         isError: true,
       };
     }
@@ -651,7 +687,12 @@ async function handleSetSenderAction(args: any) {
 
   if (!emailAddress) {
     return {
-      content: [{ type: "text" as const, text: "Missing required: emailAddress or emailId" }],
+      content: [
+        {
+          type: "text" as const,
+          text: "Missing required: emailAddress or emailId",
+        },
+      ],
       isError: true,
     };
   }
@@ -659,21 +700,26 @@ async function handleSetSenderAction(args: any) {
   const success = await setSenderAction(getDb(), emailAddress, action);
 
   return {
-    content: [{
-      type: "text" as const,
-      text: success
-        ? `Set ${emailAddress} to "${action}"`
-        : `Failed to update ${emailAddress}`,
-    }],
+    content: [
+      {
+        type: "text" as const,
+        text: success
+          ? `Set ${emailAddress} to "${action}"`
+          : `Failed to update ${emailAddress}`,
+      },
+    ],
+    ...(!success && { isError: true }),
   };
 }
 
-async function handleUnsubscribe(args: any) {
+async function handleUnsubscribe(args: McpArgs) {
   const { emailAddress } = args || {};
 
   if (!emailAddress) {
     return {
-      content: [{ type: "text" as const, text: "Missing required: emailAddress" }],
+      content: [
+        { type: "text" as const, text: "Missing required: emailAddress" },
+      ],
       isError: true,
     };
   }
@@ -692,7 +738,7 @@ async function handleUnsubscribe(args: any) {
   return { content: [{ type: "text" as const, text: lines.join("\n") }] };
 }
 
-async function handleSendersByCategory(args: any) {
+async function handleSendersByCategory(args: McpArgs) {
   const limit = args?.limit ?? 10;
   const categories = ["promo", "newsletter", "normal", "job", "tech"];
   const sections: string[] = ["## Senders by Category\n"];
@@ -701,10 +747,14 @@ async function handleSendersByCategory(args: any) {
     const senders = await getSenders(getDb(), { category: cat, limit });
     if (senders.length === 0) continue;
 
-    sections.push(`### ${cat.charAt(0).toUpperCase() + cat.slice(1)} (${senders.length})`);
+    sections.push(
+      `### ${cat.charAt(0).toUpperCase() + cat.slice(1)} (${senders.length})`,
+    );
     for (const s of senders) {
       const action = s.user_action ? ` [${s.user_action}]` : "";
-      sections.push(`- **${s.display_name || s.email_address}** — ${s.total_emails} emails, avg ${s.avg_score}/10${action}`);
+      sections.push(
+        `- **${s.display_name || s.email_address}** — ${s.total_emails} emails, avg ${s.avg_score}/10${action}`,
+      );
     }
     sections.push("");
   }
@@ -712,7 +762,7 @@ async function handleSendersByCategory(args: any) {
   return { content: [{ type: "text" as const, text: sections.join("\n") }] };
 }
 
-async function handleUnsubscribeHistory(args: any) {
+async function handleUnsubscribeHistory(args: McpArgs) {
   const limit = args?.limit ?? 50;
 
   // Query golem_events table for unsubscribe attempts
@@ -726,17 +776,21 @@ async function handleUnsubscribeHistory(args: any) {
 
   if (error || !data || data.length === 0) {
     return {
-      content: [{ type: "text" as const, text: "No unsubscribe history found." }],
+      content: [
+        { type: "text" as const, text: "No unsubscribe history found." },
+      ],
     };
   }
 
   const lines = [
     `## Unsubscribe History (${data.length} attempts)\n`,
-    ...data.map((e: any) => {
-      const d = e.data || {};
+    ...data.map((e: Record<string, unknown>) => {
+      const d = (e.data as Record<string, unknown>) || {};
       const status = d.success ? "OK" : "FAIL";
       const filter = d.gmail_filter ? " +filter" : "";
-      const ts = e.timestamp ? new Date(e.timestamp).toLocaleString() : "unknown";
+      const ts = e.timestamp
+        ? new Date(e.timestamp as string).toLocaleString()
+        : "unknown";
       return `- [${status}] ${d.sender || "unknown"} via ${d.method || "?"}${filter} — ${ts}${d.error ? ` (${d.error})` : ""}`;
     }),
   ];
@@ -748,9 +802,11 @@ async function handleUnsubscribeHistory(args: any) {
  * Generate and format a monthly spending report.
  * @param args - Optional month parameter in YYYY-MM format (defaults to current month)
  */
-async function handleMonthlyReport(args: any) {
-  const month = args?.month ?? new Date().toISOString().slice(0, 7);
+async function handleMonthlyReport(args: Record<string, unknown> | undefined) {
+  const month = (args?.month as string) ?? new Date().toISOString().slice(0, 7);
 
+  const { generateMonthlyReport, formatMonthlyReportText } =
+    await getTellerReport();
   const report = await generateMonthlyReport(month);
   const formatted = formatMonthlyReportText(report);
 
@@ -761,9 +817,10 @@ async function handleMonthlyReport(args: any) {
  * Generate and format an annual tax report.
  * @param args - Optional year parameter (defaults to current year)
  */
-async function handleTaxSummary(args: any) {
-  const year = args?.year ?? new Date().getFullYear();
+async function handleTaxSummary(args: Record<string, unknown> | undefined) {
+  const year = (args?.year as number) ?? new Date().getFullYear();
 
+  const { generateTaxReport, formatTaxReportText } = await getTellerReport();
   const report = await generateTaxReport(year);
   const formatted = formatTaxReportText(report);
 

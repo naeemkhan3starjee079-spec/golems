@@ -46,7 +46,7 @@ export function createGmailClient(): gmail_v1.Gmail {
 
   if (!clientId || !clientSecret || !refreshToken) {
     throw new Error(
-      "Missing Gmail credentials. Required: GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN"
+      "Missing Gmail credentials. Required: GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN",
     );
   }
 
@@ -78,7 +78,7 @@ export function parseEmail(raw: RawEmail): GmailEmail {
 
   const getHeader = (name: string): string => {
     const header = headers.find(
-      (h) => h.name.toLowerCase() === name.toLowerCase()
+      (h) => h.name.toLowerCase() === name.toLowerCase(),
     );
     return header?.value || "";
   };
@@ -123,7 +123,7 @@ export function parseEmail(raw: RawEmail): GmailEmail {
  */
 export async function fetchRecentEmails(
   maxResults: number = 20,
-  labelIds: string[] = ["INBOX"]
+  labelIds: string[] = ["INBOX"],
 ): Promise<GmailEmail[]> {
   const gmail = getGmailClient();
 
@@ -164,12 +164,15 @@ export async function fetchRecentEmails(
  */
 export async function fetchEmailsSince(
   sinceTimestamp: Date,
-  maxResults: number = 50
+  maxResults: number = 50,
 ): Promise<GmailEmail[]> {
   const gmail = getGmailClient();
 
   // Gmail query format: after:YYYY/MM/DD
-  const afterDate = sinceTimestamp.toISOString().split("T")[0].replace(/-/g, "/");
+  const afterDate = sinceTimestamp
+    .toISOString()
+    .split("T")[0]
+    .replace(/-/g, "/");
 
   const listResponse = await gmail.users.messages.list({
     userId: "me",
@@ -224,7 +227,7 @@ export async function fetchEmailsSince(
 export async function searchEmails(
   query: string,
   maxResults: number = 20,
-  options?: { includeSpamTrash?: boolean }
+  options?: { includeSpamTrash?: boolean },
 ): Promise<GmailEmail[]> {
   const gmail = getGmailClient();
   const includeSpamTrash = options?.includeSpamTrash ?? false;
@@ -284,7 +287,7 @@ export async function searchEmails(
 export async function listEmailIds(
   query: string,
   maxResults: number = 500,
-  options?: { includeSpamTrash?: boolean }
+  options?: { includeSpamTrash?: boolean },
 ): Promise<string[]> {
   const gmail = getGmailClient();
   const includeSpamTrash = options?.includeSpamTrash ?? false;
@@ -337,7 +340,7 @@ export async function getEmailById(id: string): Promise<GmailEmail> {
  * Extract plain text body from a Gmail message's MIME parts.
  * Handles both simple and multipart messages.
  */
-function extractBodyText(payload: any): string {
+function extractBodyText(payload: gmail_v1.Schema$MessagePart): string {
   // Simple message — body directly on payload (text/plain only, skip HTML)
   if (payload?.body?.data && payload.mimeType === "text/plain") {
     return Buffer.from(payload.body.data, "base64url").toString("utf-8");
@@ -369,7 +372,7 @@ function extractBodyText(payload: any): string {
  */
 export async function getEmailBodyText(
   id: string,
-  maxChars: number = 1000
+  maxChars: number = 1000,
 ): Promise<string> {
   const gmail = getGmailClient();
   const fullMessage = await gmail.users.messages.get({
@@ -414,7 +417,7 @@ export async function getOrCreateLabel(labelName: string): Promise<string> {
  */
 export async function createSenderFilter(
   senderEmail: string,
-  labelId: string
+  labelId: string,
 ): Promise<void> {
   const gmail = getGmailClient();
 

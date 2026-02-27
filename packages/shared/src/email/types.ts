@@ -7,22 +7,22 @@ export type { GmailEmail } from "./gmail-client";
  * Email categories for scoring
  */
 export type EmailCategory =
-  | "interview"       // Score 10 - immediate
-  | "urgent"          // Score 10 - payment failed, action required
-  | "job"             // Score 7-9 - job updates
-  | "subscription"    // Score 5-6 - receipts, new subscriptions
-  | "newsletter"      // Score 2 - ignore
-  | "promo"           // Score 1 - ignore
-  | "other";          // Score 3-4 - log only
+  | "interview" // Score 10 - immediate
+  | "urgent" // Score 10 - payment failed, action required
+  | "job" // Score 7-9 - job updates
+  | "subscription" // Score 5-6 - receipts, new subscriptions
+  | "newsletter" // Score 2 - ignore
+  | "promo" // Score 1 - ignore
+  | "other"; // Score 3-4 - log only
 
 /**
  * Scoring result from scorer.ts
  */
 export interface ScoredEmail {
   email: import("./gmail-client").GmailEmail;
-  score: number;          // 1-10
+  score: number; // 1-10
   category: EmailCategory;
-  reasoning?: string;     // AI's explanation
+  reasoning?: string; // AI's explanation
 }
 
 /** Stored email record in Supabase */
@@ -45,8 +45,8 @@ export interface Subscription {
   service_name: string;
   amount: number | null;
   currency: string;
-  frequency: 'monthly' | 'yearly' | 'one-time' | null;
-  status: 'active' | 'cancelled' | 'paused';
+  frequency: "monthly" | "yearly" | "one-time" | null;
+  status: "active" | "cancelled" | "paused";
   first_seen?: Date;
   last_payment?: Date | null;
   created_at?: Date;
@@ -66,7 +66,7 @@ export interface Payment {
 /** Item queued for offline sync */
 export interface QueuedItem {
   table: string;
-  data: any;
+  data: Record<string, unknown>;
   timestamp: Date;
   id: string;
 }
@@ -88,6 +88,6 @@ export interface SubscriptionSummary {
 export interface SafeResult {
   success: boolean;
   queued?: boolean;
-  data?: any;
+  data?: unknown;
   error?: string;
 }

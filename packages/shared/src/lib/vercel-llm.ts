@@ -55,7 +55,7 @@ function getGroqProvider() {
 }
 
 /** @internal Reset providers for testing */
-export function _resetProviders() {
+export function _resetProviders(): void {
   geminiProvider = null;
   groqProvider = null;
 }
@@ -165,11 +165,13 @@ export async function runCloudFree(
       alertSentForBatch = false;
 
       return result.text.trim();
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errObj = err as Record<string, unknown>;
+      const errMsg = err instanceof Error ? err.message : String(err);
       const isRateLimit =
-        err?.statusCode === 429 ||
-        err?.message?.includes("429") ||
-        err?.message?.includes("rate limit");
+        errObj?.statusCode === 429 ||
+        errMsg?.includes("429") ||
+        errMsg?.includes("rate limit");
       const isLastProvider = providers.indexOf(p) >= providers.length - 1;
       if (isRateLimit && !isLastProvider) {
         console.warn(`[Cloud LLM] ${p.name} rate limited, trying fallback...`);
@@ -179,11 +181,11 @@ export async function runCloudFree(
       if (isLastProvider) consecutiveErrors++;
       console.error(
         `[Cloud LLM] Error from ${p.name} (source: ${source}):`,
-        err?.message || err,
+        errMsg || err,
       );
       logError({
         service: source,
-        error_message: err?.message || String(err),
+        error_message: errMsg || String(err),
         error_type: `${p.name}_api_error`,
       });
 
@@ -194,7 +196,7 @@ export async function runCloudFree(
           .then(({ sendNotification }) => {
             sendNotification({
               title: "LLM Quota Alert",
-              body: `${consecutiveErrors} consecutive LLM failures (${p.name}). Jobs/emails may be degraded. Error: ${err?.message?.slice(0, 100) ?? "unknown"}`,
+              body: `${consecutiveErrors} consecutive LLM failures (${p.name}). Jobs/emails may be degraded. Error: ${errMsg?.slice(0, 100) ?? "unknown"}`,
               source: "healthcheck",
               priority: "high",
             }).catch((notifyErr: unknown) => {
@@ -244,6 +246,10 @@ export async function runCloudFreeJSON<T>(
 }
 
 /** Get usage stats */
-export function getCloudFreeUsageStats() {
+export function getCloudFreeUsageStats(): {
+  totalCalls: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+} {
   return { totalCalls, totalInputTokens, totalOutputTokens };
 }

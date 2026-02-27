@@ -50,7 +50,10 @@ export interface RoutingResult {
  * @returns Routing result with target golem and reason
  */
 // TODO: Use score for priority-based routing (e.g., score 10 → fast-track to ClaudeGolem)
-export function determineTargetGolem(category: string, _score: number): RoutingResult {
+export function determineTargetGolem(
+  category: string,
+  _score: number,
+): RoutingResult {
   const targetGolem = CATEGORY_TO_GOLEM[category] ?? "emailgolem";
 
   if (targetGolem === "emailgolem") {
@@ -78,31 +81,33 @@ export function determineTargetGolem(category: string, _score: number): RoutingR
  * @returns Routing result and processing status
  */
 export async function routeAndProcessEmail(
-  email: ScoredEmail
+  email: ScoredEmail,
 ): Promise<{ result: RoutingResult; success: boolean; error?: string }> {
   const result = determineTargetGolem(email.category, email.score);
 
   try {
     // Invoke domain golem handlers based on target
     if (result.targetGolem === "tellergolem") {
-      const { processSubscriptionEmail } = await import(
-        "@golems/teller/index"
-      );
+      const { processSubscriptionEmail } = await import("@golems/teller/index");
       await processSubscriptionEmail(email);
     } else if (result.targetGolem === "recruitergolem") {
       // RecruiterGolem handler - to be implemented
       // const { processJobEmail } = await import("../recruiter-golem/index");
       // await processJobEmail(email);
-      console.warn(`[router] Job email routed to RecruiterGolem (handler not implemented): ${email.email?.subject || ""}`);
+      console.warn(
+        `[router] Job email routed to RecruiterGolem (handler not implemented): ${email.email?.subject || ""}`,
+      );
     } else if (result.targetGolem === "claudegolem") {
       // ClaudeGolem handler - to be implemented
-      console.warn(`[router] Tech-update/urgent email routed to ClaudeGolem (handler not implemented): ${email.email?.subject || ""}`);
+      console.warn(
+        `[router] Tech-update/urgent email routed to ClaudeGolem (handler not implemented): ${email.email?.subject || ""}`,
+      );
     }
     // emailgolem stays with router (no invocation needed)
 
     return { result, success: true };
-  } catch (err: any) {
-    const errorMsg = err?.message || String(err);
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
     console.error(`[router] Error processing email: ${errorMsg}`);
     return { result, success: false, error: errorMsg };
   }

@@ -22,7 +22,6 @@
     "./*": "./src/*.ts"
   },
   "dependencies": {
-    "@golems/claude": "workspace:*",
     "@golems/recruiter": "workspace:*",
     "@golems/shared": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.26.0",

@@ -15,8 +15,20 @@
 
 import { readFileSync, writeFileSync, existsSync } from "fs";
 import { join } from "path";
-import { fetchRecentEmails, fetchEmailsSince, searchEmails, getEmailBodyText, type GmailEmail } from "./gmail-client";
-import { scoreEmail, shouldNotifyImmediately, shouldTrackSubscription, type ScoredEmail, type EmailInput } from "./scorer";
+import {
+  fetchRecentEmails,
+  fetchEmailsSince,
+  searchEmails,
+  getEmailBodyText,
+  type GmailEmail,
+} from "./gmail-client";
+import {
+  scoreEmail,
+  shouldNotifyImmediately,
+  shouldTrackSubscription,
+  type ScoredEmail,
+  type EmailInput,
+} from "./scorer";
 import {
   createDbClient,
   saveEmail,
@@ -184,14 +196,17 @@ function toDbEmail(scored: ScoredEmail): Email {
 async function processEmail(
   gmail: GmailEmail,
   db: SupabaseClient | null,
-  dryRun: boolean
+  dryRun: boolean,
 ): Promise<ScoredEmail> {
   // Fetch email body for better scoring accuracy (catches rejection vs interview, etc.)
   let bodyText: string | undefined;
   try {
     bodyText = await getEmailBodyText(gmail.id, 1000);
   } catch (err) {
-    console.log(`  ⚠️  Could not fetch body for ${gmail.id} — scoring with subject+snippet only`, (err as Error).message);
+    console.log(
+      `  ⚠️  Could not fetch body for ${gmail.id} — scoring with subject+snippet only`,
+      (err as Error).message,
+    );
   }
 
   const input = toEmailInput(gmail, bodyText);
@@ -199,7 +214,9 @@ async function processEmail(
 
   const scored = await scoreEmail(input);
   const routing = determineTargetGolem(scored.category, scored.score);
-  console.log(`     Score: ${scored.score}/10 (${scored.category}) → ${routing.targetGolem}`);
+  console.log(
+    `     Score: ${scored.score}/10 (${scored.category}) → ${routing.targetGolem}`,
+  );
 
   if (dryRun) {
     console.log(`     [DRY-RUN] Would save to DB`);
@@ -207,7 +224,9 @@ async function processEmail(
       console.log(`     [DRY-RUN] Would notify: ${scored.subject}`);
     }
     if (shouldTrackSubscription(scored)) {
-      console.log(`     [DRY-RUN] Would track subscription: ${scored.subscription?.serviceName}`);
+      console.log(
+        `     [DRY-RUN] Would track subscription: ${scored.subscription?.serviceName}`,
+      );
     }
     return scored;
   }
@@ -240,13 +259,17 @@ async function processEmail(
     // Log routing event (non-blocking, don't fail the pipeline)
     if (routing.targetGolem !== "emailgolem") {
       try {
-        await logEvent("email_routed", {
-          subject: scored.subject,
-          category: scored.category,
-          score: scored.score,
-          targetGolem: routing.targetGolem,
-          reason: routing.reason,
-        }, "emailgolem");
+        await logEvent(
+          "email_routed",
+          {
+            subject: scored.subject,
+            category: scored.category,
+            score: scored.score,
+            targetGolem: routing.targetGolem,
+            reason: routing.reason,
+          },
+          "emailgolem",
+        );
       } catch (err) {
         console.error("[EventLog] Failed to log email routing:", err);
       }
@@ -282,7 +305,10 @@ async function processEmail(
         service_name: scored.subscription.serviceName,
         amount: scored.subscription.amount,
         currency: "USD",
-        frequency: scored.subscription.frequency === "unknown" ? null : scored.subscription.frequency,
+        frequency:
+          scored.subscription.frequency === "unknown"
+            ? null
+            : scored.subscription.frequency,
         status: "active",
         last_payment: new Date(),
       };
@@ -309,10 +335,12 @@ async function processEmail(
 /**
  * Main processing loop
  */
-async function processEmails(options: { dryRun?: boolean; maxEmails?: number } = {}) {
+async function processEmails(
+  options: { dryRun?: boolean; maxEmails?: number } = {},
+) {
   const { dryRun = false, maxEmails = 20 } = options;
 
-  const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 19);
+  const timestamp = new Date().toISOString().replace("T", " ").slice(0, 19);
   console.log(`\n[${timestamp}] 📧 EmailGolem - Starting...\n`);
 
   if (dryRun) {
@@ -352,8 +380,11 @@ async function processEmails(options: { dryRun?: boolean; maxEmails?: number } =
       emails = await fetchRecentEmails(maxEmails);
     }
     console.log(`✓ Found ${emails.length} emails`);
-  } catch (err: any) {
-    console.error("❌ Gmail fetch failed:", err.message);
+  } catch (err: unknown) {
+    console.error(
+      "❌ Gmail fetch failed:",
+      err instanceof Error ? err.message : String(err),
+    );
     // Still report that service ran (even on failure) so dashboard shows activity
     if (!dryRun) await reportServiceRun("lastEmailCheck");
     return;
@@ -406,7 +437,7 @@ async function processEmails(options: { dryRun?: boolean; maxEmails?: number } =
     console.log("\n✓ State saved");
   }
 
-  const endTime = new Date().toISOString().replace('T', ' ').slice(0, 19);
+  const endTime = new Date().toISOString().replace("T", " ").slice(0, 19);
   console.log(`\n[${endTime}] 📧 EmailGolem - Done!\n`);
 }
 
@@ -437,14 +468,19 @@ async function runSearch(query: string, maxResults: number) {
 
     console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     console.log(`Total: ${results.length} emails`);
-  } catch (err: any) {
-    console.error("❌ Search failed:", err.message);
+  } catch (err: unknown) {
+    console.error(
+      "❌ Search failed:",
+      err instanceof Error ? err.message : String(err),
+    );
     process.exit(1);
   }
 }
 
 /** Standard status interface for dashboard/Telegram */
-export async function getStatus(): Promise<import("../lib/shared-types").GolemStatus> {
+export async function getStatus(): Promise<
+  import("../lib/shared-types").GolemStatus
+> {
   const lastRun = await getState<string>("lastEmailCheck");
   const summary = lastRun
     ? `Last check: ${new Date(lastRun).toLocaleString()}`
@@ -460,7 +496,10 @@ async function main() {
 
   // Handle search subcommand
   if (args[0] === "search") {
-    const query = args.slice(1).filter(a => !a.startsWith("--")).join(" ");
+    const query = args
+      .slice(1)
+      .filter((a) => !a.startsWith("--"))
+      .join(" ");
     const maxArg = args.find((a) => a.startsWith("--max="));
     const maxResults = maxArg ? parseInt(maxArg.split("=")[1], 10) : 20;
 
@@ -483,7 +522,9 @@ Examples:
 
   const dryRun = args.includes("--dry-run") || args.includes("-n");
   const maxEmailsArg = args.find((a) => a.startsWith("--max="));
-  const maxEmails = maxEmailsArg ? parseInt(maxEmailsArg.split("=")[1], 10) : 20;
+  const maxEmails = maxEmailsArg
+    ? parseInt(maxEmailsArg.split("=")[1], 10)
+    : 20;
 
   if (args.includes("--help") || args.includes("-h")) {
     console.log(`

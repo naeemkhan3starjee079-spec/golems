@@ -5,7 +5,12 @@
  * Designed to run on a cron schedule (Cloud Worker or local).
  */
 
-import { getLatestRecovery, getLatestSleep, getTodayStrain, whoopGet } from "./client";
+import {
+  getLatestRecovery,
+  getLatestSleep,
+  getTodayStrain,
+  whoopGet,
+} from "./client";
 import { getSupabase } from "../lib/supabase-factory";
 import type { WhoopPaginatedResponse } from "./types";
 
@@ -25,7 +30,9 @@ export async function syncWhoopToSupabase(): Promise<{
   const s = sleep.status === "fulfilled" ? sleep.value : null;
   const c = strain.status === "fulfilled" ? strain.value : null;
 
-  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Jerusalem" }); // YYYY-MM-DD
+  const today = new Date().toLocaleDateString("en-CA", {
+    timeZone: "Asia/Jerusalem",
+  }); // YYYY-MM-DD
 
   // Build snapshot with ONLY non-null fields to avoid overwriting
   // previously synced data with nulls (e.g., recovery scores later than sleep)
@@ -79,7 +86,9 @@ export async function syncWhoopToSupabase(): Promise<{
   return {
     date: today,
     recovery: r?.score ?? null,
-    sleep_hours: s?.durationMs ? Math.round(s.durationMs / 3600000 * 10) / 10 : null,
+    sleep_hours: s?.durationMs
+      ? Math.round((s.durationMs / 3600000) * 10) / 10
+      : null,
     strain: c?.strain ?? null,
   };
 }
@@ -101,21 +110,30 @@ export async function backfillWhoopSnapshots(days = 7): Promise<{
   // Convert UTC ISO string to Israel local date (YYYY-MM-DD)
   // Whoop returns UTC timestamps — we need Israel dates for snapshot alignment
   const toIsraelDate = (iso: string): string => {
-    return new Date(iso).toLocaleDateString("en-CA", { timeZone: "Asia/Jerusalem" });
+    return new Date(iso).toLocaleDateString("en-CA", {
+      timeZone: "Asia/Jerusalem",
+    });
   };
 
   // Fetch recent records from each endpoint
   // AIDEV-NOTE: Uses raw API responses (any) because backfill needs N records
   // while typed client functions (getLatestRecovery etc.) fetch only 1.
   const [recoveries, sleeps, cycles] = await Promise.allSettled([
-    whoopGet<WhoopPaginatedResponse<any>>("/recovery", { limit: String(days) }),
-    whoopGet<WhoopPaginatedResponse<any>>("/activity/sleep", { limit: String(days) }),
-    whoopGet<WhoopPaginatedResponse<any>>("/cycle", { limit: String(days) }),
+    whoopGet<WhoopPaginatedResponse<Record<string, unknown>>>("/recovery", {
+      limit: String(days),
+    }),
+    whoopGet<WhoopPaginatedResponse<Record<string, unknown>>>(
+      "/activity/sleep",
+      { limit: String(days) },
+    ),
+    whoopGet<WhoopPaginatedResponse<Record<string, unknown>>>("/cycle", {
+      limit: String(days),
+    }),
   ]);
 
   // Index cycles by date — use cycle.end (wake time) to align with sleep.end
   // For in-progress cycles (end is null), fall back to start date
-  const cyclesByDate = new Map<string, any>();
+  const cyclesByDate = new Map<string, Record<string, unknown>>();
   if (cycles.status === "fulfilled") {
     for (const c of cycles.value.records) {
       const raw = c.end ?? c.start;
@@ -153,8 +171,10 @@ export async function backfillWhoopSnapshots(days = 7): Promise<{
       snapshot.recovery_state = "SCORED";
       snapshot.hrv_rmssd = rec.score.hrv_rmssd_milli;
       snapshot.resting_heart_rate = rec.score.resting_heart_rate;
-      if (rec.score.spo2_percentage != null) snapshot.spo2 = rec.score.spo2_percentage;
-      if (rec.score.skin_temp_celsius != null) snapshot.skin_temp = rec.score.skin_temp_celsius;
+      if (rec.score.spo2_percentage != null)
+        snapshot.spo2 = rec.score.spo2_percentage;
+      if (rec.score.skin_temp_celsius != null)
+        snapshot.skin_temp = rec.score.skin_temp_celsius;
     }
 
     // Sleep
@@ -162,7 +182,9 @@ export async function backfillWhoopSnapshots(days = 7): Promise<{
     if (slp?.score_state === "SCORED" && slp.score) {
       const stages = slp.score.stage_summary;
       snapshot.sleep_duration_ms = stages.total_in_bed_time_milli ?? 0;
-      snapshot.sleep_quality_ms = (stages.total_in_bed_time_milli ?? 0) - (stages.total_awake_time_milli ?? 0);
+      snapshot.sleep_quality_ms =
+        (stages.total_in_bed_time_milli ?? 0) -
+        (stages.total_awake_time_milli ?? 0);
       snapshot.rem_ms = stages.total_rem_sleep_time_milli ?? 0;
       snapshot.deep_ms = stages.total_slow_wave_sleep_time_milli ?? 0;
       snapshot.light_ms = stages.total_light_sleep_time_milli ?? 0;

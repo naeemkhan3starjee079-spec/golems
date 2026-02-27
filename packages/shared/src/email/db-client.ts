@@ -8,28 +8,41 @@
 // IMPORTANT: Load env FIRST - fixes launchd cwd issues
 import "../lib/load-env";
 
-import { createClient } from '@supabase/supabase-js';
-import type { SupabaseClient } from '@supabase/supabase-js';
-import { getSupabase } from '../lib/supabase-factory';
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
-import { dirname } from 'path';
-import type { Email, Subscription, Payment, QueuedItem, SubscriptionSummary, SafeResult } from './types';
-import { GOLEM_CATEGORIES } from './router';
+import { createClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { getSupabase } from "../lib/supabase-factory";
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
+import { dirname } from "path";
+import type {
+  Email,
+  Subscription,
+  Payment,
+  QueuedItem,
+  SubscriptionSummary,
+  SafeResult,
+} from "./types";
+import { GOLEM_CATEGORIES } from "./router";
 
 /** Offline queue path for storing failed DB operations */
-export const OFFLINE_QUEUE_PATH = process.env.HOME + '/.golems-zikaron/offline-queue.json';
+export const OFFLINE_QUEUE_PATH =
+  process.env.HOME + "/.golems-zikaron/offline-queue.json";
 
 /**
  * Create Supabase client with credentials from env or custom config.
  * Uses shared factory for default case, custom createClient for overrides.
  */
-export function createDbClient(config?: { url: string; key: string }): SupabaseClient {
+export function createDbClient(config?: {
+  url: string;
+  key: string;
+}): SupabaseClient {
   if (config) {
     return createClient(config.url, config.key);
   }
   const client = getSupabase();
   if (!client) {
-    throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_KEY in environment');
+    throw new Error(
+      "Missing SUPABASE_URL or SUPABASE_SERVICE_KEY in environment",
+    );
   }
   return client;
 }
@@ -40,11 +53,11 @@ export function createDbClient(config?: { url: string; key: string }): SupabaseC
 export function loadLocalQueue(): QueuedItem[] {
   try {
     if (existsSync(OFFLINE_QUEUE_PATH)) {
-      const content = readFileSync(OFFLINE_QUEUE_PATH, 'utf-8');
+      const content = readFileSync(OFFLINE_QUEUE_PATH, "utf-8");
       return JSON.parse(content);
     }
   } catch (err) {
-    console.error('[db-client] Failed to load offline queue:', err);
+    console.error("[db-client] Failed to load offline queue:", err);
   }
   return [];
 }
@@ -60,18 +73,18 @@ function saveLocalQueue(queue: QueuedItem[]): void {
     }
     writeFileSync(OFFLINE_QUEUE_PATH, JSON.stringify(queue, null, 2));
   } catch (err) {
-    console.error('[db-client] Failed to save offline queue:', err);
+    console.error("[db-client] Failed to save offline queue:", err);
   }
 }
 
 /**
  * Append an item to the offline queue
  */
-function appendToLocalQueue(item: Omit<QueuedItem, 'id'>): void {
+function appendToLocalQueue(item: Omit<QueuedItem, "id">): void {
   const queue = loadLocalQueue();
   const queuedItem: QueuedItem = {
     ...item,
-    id: `queue-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    id: `queue-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
   };
   queue.push(queuedItem);
   saveLocalQueue(queue);
@@ -82,7 +95,7 @@ function appendToLocalQueue(item: Omit<QueuedItem, 'id'>): void {
  */
 function removeFromQueue(id: string): void {
   const queue = loadLocalQueue();
-  const filtered = queue.filter(item => item.id !== id);
+  const filtered = queue.filter((item) => item.id !== id);
   saveLocalQueue(filtered);
 }
 
@@ -104,7 +117,7 @@ export function clearLocalQueue(): void {
 export async function safeInsert(
   client: SupabaseClient,
   table: string,
-  data: any
+  data: Record<string, unknown>,
 ): Promise<SafeResult> {
   try {
     const { error, data: result } = await client.from(table).insert(data);
@@ -117,11 +130,17 @@ export async function safeInsert(
     }
 
     return { success: true, data: result };
-  } catch (err: any) {
+  } catch (err: unknown) {
     // Network error - queue for later
     appendToLocalQueue({ table, data, timestamp: new Date() });
-    console.log(`[db-client] Network error: Queued ${table} insert for later sync`);
-    return { success: false, queued: true, error: err.message };
+    console.log(
+      `[db-client] Network error: Queued ${table} insert for later sync`,
+    );
+    return {
+      success: false,
+      queued: true,
+      error: err instanceof Error ? err.message : String(err),
+    };
   }
 }
 
@@ -137,8 +156,8 @@ export async function safeInsert(
 export async function safeUpsert(
   client: SupabaseClient,
   table: string,
-  data: any,
-  conflictColumn: string
+  data: Record<string, unknown>,
+  conflictColumn: string,
 ): Promise<SafeResult> {
   try {
     const { error, data: result } = await client
@@ -151,9 +170,13 @@ export async function safeUpsert(
     }
 
     return { success: true, data: result };
-  } catch (err: any) {
+  } catch (err: unknown) {
     appendToLocalQueue({ table, data, timestamp: new Date() });
-    return { success: false, queued: true, error: err.message };
+    return {
+      success: false,
+      queued: true,
+      error: err instanceof Error ? err.message : String(err),
+    };
   }
 }
 
@@ -164,7 +187,7 @@ export async function safeUpsert(
  * @returns Sync results
  */
 export async function syncOfflineQueue(
-  client: SupabaseClient
+  client: SupabaseClient,
 ): Promise<{ synced: number; failed: number }> {
   const queue = loadLocalQueue();
   let synced = 0;
@@ -181,7 +204,10 @@ export async function syncOfflineQueue(
       const { error } = await client.from(item.table).insert(item.data);
 
       if (error) {
-        console.error(`[db-client] Failed to sync item ${item.id}:`, error.message);
+        console.error(
+          `[db-client] Failed to sync item ${item.id}:`,
+          error.message,
+        );
         failed++;
       } else {
         console.log(`[db-client] Synced item ${item.id} to ${item.table}`);
@@ -205,50 +231,50 @@ export async function syncOfflineQueue(
  * @returns Subscription summary
  */
 export async function getSubscriptionSummary(
-  client: SupabaseClient
+  client: SupabaseClient,
 ): Promise<SubscriptionSummary> {
   const emptyResult: SubscriptionSummary = {
     totalMonthly: 0,
     services: [],
     newThisMonth: [],
-    cancelledThisMonth: []
+    cancelledThisMonth: [],
   };
 
   // Get active subscriptions
-  let subs: any[] = [];
+  let subs: Record<string, unknown>[] = [];
   try {
     const { data, error } = await client
-      .from('subscriptions')
-      .select('*')
-      .eq('status', 'active');
+      .from("subscriptions")
+      .select("*")
+      .eq("status", "active");
 
     if (error) {
-      console.error('[db-client] Failed to get subscriptions:', error?.message);
+      console.error("[db-client] Failed to get subscriptions:", error?.message);
       return emptyResult;
     }
 
     subs = data || [];
   } catch (err) {
-    console.error('[db-client] Error fetching subscriptions:', err);
+    console.error("[db-client] Error fetching subscriptions:", err);
     return emptyResult;
   }
 
   // Calculate monthly total (convert yearly to monthly)
   let totalMonthly = 0;
-  const services = subs.map((sub: any) => {
-    let monthlyAmount = sub.amount || 0;
+  const services = subs.map((sub: Record<string, unknown>) => {
+    let monthlyAmount = (sub.amount as number) || 0;
 
-    if (sub.frequency === 'yearly') {
+    if (sub.frequency === "yearly") {
       monthlyAmount = monthlyAmount / 12;
     }
 
     totalMonthly += monthlyAmount;
 
     return {
-      name: sub.service_name,
-      amount: sub.amount,
-      currency: sub.currency || 'USD',
-      status: sub.status
+      name: sub.service_name as string,
+      amount: sub.amount as number,
+      currency: (sub.currency as string) || "USD",
+      status: sub.status as string,
     };
   });
 
@@ -260,11 +286,13 @@ export async function getSubscriptionSummary(
   let newThisMonth: string[] = [];
   try {
     const { data: newSubs } = await client
-      .from('subscriptions')
-      .select('service_name')
-      .gte('first_seen', startOfMonth.toISOString());
+      .from("subscriptions")
+      .select("service_name")
+      .gte("first_seen", startOfMonth.toISOString());
 
-    newThisMonth = (newSubs || []).map((s: any) => s.service_name);
+    newThisMonth = (newSubs || []).map(
+      (s: Record<string, unknown>) => s.service_name as string,
+    );
   } catch (err) {
     // Ignore - optional data
   }
@@ -273,12 +301,14 @@ export async function getSubscriptionSummary(
   let cancelledThisMonth: string[] = [];
   try {
     const { data: cancelledSubs } = await client
-      .from('subscriptions')
-      .select('service_name')
-      .eq('status', 'cancelled')
-      .gte('created_at', startOfMonth.toISOString());
+      .from("subscriptions")
+      .select("service_name")
+      .eq("status", "cancelled")
+      .gte("created_at", startOfMonth.toISOString());
 
-    cancelledThisMonth = (cancelledSubs || []).map((s: any) => s.service_name);
+    cancelledThisMonth = (cancelledSubs || []).map(
+      (s: Record<string, unknown>) => s.service_name as string,
+    );
   } catch (err) {
     // Ignore - optional data
   }
@@ -287,7 +317,7 @@ export async function getSubscriptionSummary(
     totalMonthly,
     services,
     newThisMonth,
-    cancelledThisMonth
+    cancelledThisMonth,
   };
 }
 
@@ -302,30 +332,30 @@ export async function getSubscriptionSummary(
 export async function getRecentEmails(
   client: SupabaseClient,
   hours: number = 24,
-  minScore: number = 0
+  minScore: number = 0,
 ): Promise<Email[]> {
   try {
     const since = new Date(Date.now() - hours * 60 * 60 * 1000);
 
     let query = client
-      .from('emails')
-      .select('*')
-      .gte('received_at', since.toISOString());
+      .from("emails")
+      .select("*")
+      .gte("received_at", since.toISOString());
 
     if (minScore > 0) {
-      query = query.gte('score', minScore);
+      query = query.gte("score", minScore);
     }
 
-    const { data, error } = await query.order('score', { ascending: false });
+    const { data, error } = await query.order("score", { ascending: false });
 
     if (error || !data) {
-      console.error('[db-client] Failed to get recent emails:', error?.message);
+      console.error("[db-client] Failed to get recent emails:", error?.message);
       return [];
     }
 
     return data as Email[];
   } catch (err) {
-    console.error('[db-client] Error getting recent emails:', err);
+    console.error("[db-client] Error getting recent emails:", err);
     return [];
   }
 }
@@ -335,9 +365,9 @@ export async function getRecentEmails(
  */
 export async function saveEmail(
   client: SupabaseClient,
-  email: Email
+  email: Email,
 ): Promise<SafeResult> {
-  return safeUpsert(client, 'emails', email, 'gmail_id');
+  return safeUpsert(client, "emails", email, "gmail_id");
 }
 
 /**
@@ -345,9 +375,9 @@ export async function saveEmail(
  */
 export async function trackSubscription(
   client: SupabaseClient,
-  subscription: Subscription
+  subscription: Subscription,
 ): Promise<SafeResult> {
-  return safeUpsert(client, 'subscriptions', subscription, 'service_name');
+  return safeUpsert(client, "subscriptions", subscription, "service_name");
 }
 
 /**
@@ -355,9 +385,9 @@ export async function trackSubscription(
  */
 export async function recordPayment(
   client: SupabaseClient,
-  payment: Payment
+  payment: Payment,
 ): Promise<SafeResult> {
-  return safeInsert(client, 'payments', payment);
+  return safeInsert(client, "payments", payment);
 }
 
 /**
@@ -365,21 +395,24 @@ export async function recordPayment(
  */
 export async function markNotified(
   client: SupabaseClient,
-  emailId: string
+  emailId: string,
 ): Promise<SafeResult> {
   try {
     const { error } = await client
-      .from('emails')
+      .from("emails")
       .update({ notified: true })
-      .eq('id', emailId);
+      .eq("id", emailId);
 
     if (error) {
       return { success: false, error: error.message };
     }
 
     return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err.message };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : String(err),
+    };
   }
 }
 
@@ -387,15 +420,15 @@ export async function markNotified(
  * Get emails that need notification (score >= 10, not yet notified)
  */
 export async function getUnnotifiedUrgentEmails(
-  client: SupabaseClient
+  client: SupabaseClient,
 ): Promise<Email[]> {
   try {
     const { data, error } = await client
-      .from('emails')
-      .select('*')
-      .gte('score', 10)
-      .eq('notified', false)
-      .order('received_at', { ascending: false });
+      .from("emails")
+      .select("*")
+      .gte("score", 10)
+      .eq("notified", false)
+      .order("received_at", { ascending: false });
 
     if (error || !data) {
       return [];
@@ -414,7 +447,7 @@ export async function getUnnotifiedUrgentEmails(
 export async function getEmailsByGolem(
   client: SupabaseClient,
   golem: string,
-  hours: number = 24
+  hours: number = 24,
 ): Promise<Email[]> {
   const categories = GOLEM_CATEGORIES[golem];
   if (!categories) return [];
@@ -429,7 +462,11 @@ export async function getEmailsByGolem(
       .order("score", { ascending: false });
 
     if (error || !data) {
-      if (error) console.error("[db-client] Failed to get emails by golem:", error.message);
+      if (error)
+        console.error(
+          "[db-client] Failed to get emails by golem:",
+          error.message,
+        );
       return [];
     }
     return data as Email[];
@@ -444,7 +481,7 @@ export async function getEmailsByGolem(
  */
 export async function getEmailById(
   client: SupabaseClient,
-  emailId: string
+  emailId: string,
 ): Promise<Email | null> {
   try {
     const { data, error } = await client
@@ -476,5 +513,5 @@ export default {
   getEmailsByGolem,
   getEmailById,
   loadLocalQueue,
-  clearLocalQueue
+  clearLocalQueue,
 };

@@ -27,12 +27,16 @@ import { runGLM, runGLMJSON } from "../lib/glm-llm";
 import { runMLX, runMLXJSON } from "../lib/mlx-llm";
 
 // Auto-detect: default to MLX on Apple Silicon (macOS arm64), Ollama otherwise
-const isAppleSilicon = process.arch === "arm64" && process.platform === "darwin";
+const isAppleSilicon =
+  process.arch === "arm64" && process.platform === "darwin";
 const defaultBackend = isAppleSilicon ? "mlx" : "ollama";
 const GLM_BACKEND = process.env.GLM_BACKEND || defaultBackend;
 
 // Dispatch with fallback: MLX primary → Ollama fallback on arm64
-async function runLocalWithFallback(prompt: string, source: string): Promise<string> {
+async function runLocalWithFallback(
+  prompt: string,
+  source: string,
+): Promise<string> {
   if (GLM_BACKEND === "mlx") {
     try {
       const result = await runMLX(prompt, source);
@@ -45,7 +49,10 @@ async function runLocalWithFallback(prompt: string, source: string): Promise<str
   return runGLM(prompt, source);
 }
 
-async function runLocalJSONWithFallback<T>(prompt: string, source: string): Promise<T | null> {
+async function runLocalJSONWithFallback<T>(
+  prompt: string,
+  source: string,
+): Promise<T | null> {
   if (GLM_BACKEND === "mlx") {
     try {
       const result = await runMLXJSON<T>(prompt, source);
@@ -60,7 +67,7 @@ async function runLocalJSONWithFallback<T>(prompt: string, source: string): Prom
 
 const server = new Server(
   { name: "golems-glm", version: "1.0.0" },
-  { capabilities: { tools: {} } }
+  { capabilities: { tools: {} } },
 );
 
 // --- Tool definitions ---
@@ -80,7 +87,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           },
           maxSentences: {
             type: "number",
-            description: "Maximum number of sentences in the summary (default: 3)",
+            description:
+              "Maximum number of sentences in the summary (default: 3)",
             default: 3,
           },
         },
@@ -100,11 +108,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           },
           prompt: {
             type: "string",
-            description: "Instructions for scoring/classification (what to extract, how to score, etc.)",
+            description:
+              "Instructions for scoring/classification (what to extract, how to score, etc.)",
           },
           schema: {
             type: "object",
-            description: "JSON schema object describing the expected output shape (e.g. { score: number, category: string })",
+            description:
+              "JSON schema object describing the expected output shape (e.g. { score: number, category: string })",
           },
         },
         required: ["text", "prompt", "schema"],
@@ -129,12 +139,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           content: [{ type: "text" as const, text: `Unknown tool: ${name}` }],
         };
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     return {
       content: [
         {
           type: "text" as const,
-          text: `Error in ${name}: ${err.message}`,
+          text: `Error in ${name}: ${err instanceof Error ? err.message : String(err)}`,
         },
       ],
       isError: true,
@@ -142,7 +152,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   }
 });
 
-async function handleSummarize(args: any) {
+async function handleSummarize(args: Record<string, unknown> | undefined) {
   const text = args?.text;
   const maxSentences = args?.maxSentences ?? 3;
 
@@ -179,8 +189,16 @@ SUMMARY:`;
   };
 }
 
-async function handleScore(args: any) {
-  const { text, prompt: userPrompt, schema } = args || {};
+async function handleScore(args: Record<string, unknown> | undefined) {
+  const {
+    text,
+    prompt: userPrompt,
+    schema,
+  } = (args || {}) as {
+    text?: string;
+    prompt?: string;
+    schema?: Record<string, unknown>;
+  };
 
   if (!text) {
     return {
@@ -198,7 +216,12 @@ async function handleScore(args: any) {
 
   if (!schema || typeof schema !== "object") {
     return {
-      content: [{ type: "text" as const, text: "Missing required: schema (must be a JSON object)" }],
+      content: [
+        {
+          type: "text" as const,
+          text: "Missing required: schema (must be a JSON object)",
+        },
+      ],
       isError: true,
     };
   }
@@ -216,7 +239,10 @@ ${schemaStr}
 
 JSON OUTPUT:`;
 
-  const result = await runLocalJSONWithFallback<Record<string, unknown>>(prompt, "glm-mcp-score");
+  const result = await runLocalJSONWithFallback<Record<string, unknown>>(
+    prompt,
+    "glm-mcp-score",
+  );
 
   if (!result) {
     return {
@@ -245,7 +271,9 @@ JSON OUTPUT:`;
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error(`[golems-glm] MCP server running on stdio (backend: ${GLM_BACKEND}, arch: ${process.arch})`);
+  console.error(
+    `[golems-glm] MCP server running on stdio (backend: ${GLM_BACKEND}, arch: ${process.arch})`,
+  );
 }
 
 main().catch((err) => {

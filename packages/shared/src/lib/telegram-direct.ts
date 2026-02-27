@@ -40,7 +40,10 @@ const SOURCE_TO_TOPIC: Record<string, string> = {
 };
 
 /** Source → icon + formatter (matches telegram-bot.ts) */
-const SOURCE_FORMAT: Record<string, { icon: string; format: (t: string, b: string) => string }> = {
+const SOURCE_FORMAT: Record<
+  string,
+  { icon: string; format: (t: string, b: string) => string }
+> = {
   claude: { icon: "🤖", format: (t, b) => `🤖 *${t}*\n${b}` },
   ralph: { icon: "🔄", format: (t, b) => `🔄 *Ralph*: ${t}\n\n${b}` },
   nightshift: { icon: "🌙", format: (t, b) => `🌙 *Night Shift*\n${t}\n${b}` },
@@ -126,7 +129,9 @@ async function resolveTopics(): Promise<Record<string, number>> {
  * Checks env vars first, then falls back to state-store (Supabase/file).
  * Returns undefined for "general" (no thread = main chat).
  */
-async function getTopicThreadId(topicName: string): Promise<number | undefined> {
+async function getTopicThreadId(
+  topicName: string,
+): Promise<number | undefined> {
   if (topicName === "general") return undefined;
 
   // Try env var first (fast path)
@@ -143,7 +148,9 @@ async function getTopicThreadId(topicName: string): Promise<number | undefined> 
  * Send notification - routes to local server or direct Telegram API
  * based on TELEGRAM_MODE environment variable.
  */
-export async function sendNotification(payload: NotificationPayload): Promise<boolean> {
+export async function sendNotification(
+  payload: NotificationPayload,
+): Promise<boolean> {
   const mode = process.env.TELEGRAM_MODE || "local";
 
   if (mode === "direct") {
@@ -181,7 +188,9 @@ async function sendDirect(payload: NotificationPayload): Promise<boolean> {
     console.error(
       "[TelegramDirect] TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID required for direct mode.",
       !botToken ? "Missing TELEGRAM_BOT_TOKEN." : "",
-      !chatId ? "Missing TELEGRAM_CHAT_ID (not in env, Supabase, or state.json)." : ""
+      !chatId
+        ? "Missing TELEGRAM_CHAT_ID (not in env, Supabase, or state.json)."
+        : "",
     );
     return false;
   }
@@ -248,7 +257,7 @@ async function sendDirect(payload: NotificationPayload): Promise<boolean> {
 }
 
 /** Reset cached values (for testing) */
-export function _resetCache() {
+export function _resetCache(): void {
   cachedChatId = null;
   cachedTopics = null;
 }

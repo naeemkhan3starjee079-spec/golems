@@ -30,29 +30,61 @@ import {
   updateOutreachStatus,
   formatOutreachStats,
 } from "./outreach-db";
-import { queue, isProcessing, processQueue } from "@golems/claude/lib/bot-shared";
-
 export const recruiterComposer = new Composer();
 
+// Dependency injection to break claude↔recruiter circular dependency
+let _queue: Array<{ ctx: unknown; text: string }>;
+let _processQueue: () => void;
+
+export function initRecruiterComposer(deps: {
+  queue: Array<{ ctx: unknown; text: string }>;
+  processQueue: () => void;
+}): void {
+  _queue = deps.queue;
+  _processQueue = deps.processQueue;
+}
+
+function assertInitialized(): void {
+  if (!_queue || !_processQueue) {
+    throw new Error(
+      "initRecruiterComposer() must be called before using recruiter composer",
+    );
+  }
+}
+
 // Track pending practice sessions for pass/fail input
-const pendingPracticeSessions = new Map<number, { sessionId: string; mode: InterviewMode }>();
+const pendingPracticeSessions = new Map<
+  number,
+  { sessionId: string; mode: InterviewMode }
+>();
 
 // Initialize practice database at import time
 initPracticeDb();
 
 // /practice command - start interview practice
 recruiterComposer.command("practice", async (ctx) => {
-  const args = ctx.message?.text?.replace("/practice", "").trim().split(/\s+/) || [];
+  const args =
+    ctx.message?.text?.replace("/practice", "").trim().split(/\s+/) || [];
   const modeArg = args[0]?.toLowerCase() as InterviewMode;
 
   if (!modeArg) {
     const keyboard = new InlineKeyboard();
-    keyboard.text("💻 Leetcode", "practice:leetcode").text("🏗️ System Design", "practice:system-design").row();
-    keyboard.text("🐛 Debugging", "practice:debugging").text("📝 Code Review", "practice:code-review").row();
-    keyboard.text("🗣️ Behavioral", "practice:behavioral").text("⚡ Optimization", "practice:optimization").row();
+    keyboard
+      .text("💻 Leetcode", "practice:leetcode")
+      .text("🏗️ System Design", "practice:system-design")
+      .row();
+    keyboard
+      .text("🐛 Debugging", "practice:debugging")
+      .text("📝 Code Review", "practice:code-review")
+      .row();
+    keyboard
+      .text("🗣️ Behavioral", "practice:behavioral")
+      .text("⚡ Optimization", "practice:optimization")
+      .row();
     keyboard.text("📊 Complexity", "practice:complexity");
 
-    await ctx.reply(`🎯 *Interview Practice*
+    await ctx.reply(
+      `🎯 *Interview Practice*
 
 Choose a mode to practice:
 
@@ -65,14 +97,19 @@ Choose a mode to practice:
 • *Complexity* - Big O analysis
 
 Your Elo ratings:
-${getStatsSummary()}`, { parse_mode: "Markdown", reply_markup: keyboard });
+${getStatsSummary()}`,
+      { parse_mode: "Markdown", reply_markup: keyboard },
+    );
     return;
   }
 
   if (!ALL_MODES.includes(modeArg)) {
-    await ctx.reply(`❌ Unknown mode: ${modeArg}
+    await ctx.reply(
+      `❌ Unknown mode: ${modeArg}
 
-Valid modes: ${ALL_MODES.join(", ")}`, { parse_mode: "Markdown" });
+Valid modes: ${ALL_MODES.join(", ")}`,
+      { parse_mode: "Markdown" },
+    );
     return;
   }
 
@@ -82,9 +119,12 @@ Valid modes: ${ALL_MODES.join(", ")}`, { parse_mode: "Markdown" });
       .text("✅ I Passed", `practice-result:${existing.id}:pass`)
       .text("❌ I Failed", `practice-result:${existing.id}:fail`);
 
-    await ctx.reply(`⚠️ You have an active ${modeArg} session!
+    await ctx.reply(
+      `⚠️ You have an active ${modeArg} session!
 
-When you're done, mark your result:`, { parse_mode: "Markdown", reply_markup: keyboard });
+When you're done, mark your result:`,
+      { parse_mode: "Markdown", reply_markup: keyboard },
+    );
     return;
   }
 
@@ -92,7 +132,10 @@ When you're done, mark your result:`, { parse_mode: "Markdown", reply_markup: ke
   const rating = getCandidateRating(modeArg);
   const session = createSession(modeArg, difficulty);
 
-  pendingPracticeSessions.set(ctx.chat.id, { sessionId: session.id, mode: modeArg });
+  pendingPracticeSessions.set(ctx.chat.id, {
+    sessionId: session.id,
+    mode: modeArg,
+  });
 
   const company = args[1] || "a top tech company";
   const level = args[2] || "senior engineer";
@@ -107,7 +150,8 @@ Current rating: ${rating}
 Use the /interview-practice skill prompt for ${modeArg} mode.
 Stay in character as the interviewer. One question at a time.`;
 
-  await ctx.reply(`🎯 *Starting ${modeArg} Practice*
+  await ctx.reply(
+    `🎯 *Starting ${modeArg} Practice*
 
 📊 Your rating: ${rating}
 📈 Difficulty: ${difficulty}
@@ -116,23 +160,30 @@ Stay in character as the interviewer. One question at a time.`;
 
 _Claude will now act as your interviewer..._
 
-When you're done, use the buttons to record your result.`, { parse_mode: "Markdown" });
+When you're done, use the buttons to record your result.`,
+    { parse_mode: "Markdown" },
+  );
 
-  queue.push({ ctx, text: practicePrompt });
-  processQueue();
+  assertInitialized();
+  _queue.push({ ctx, text: practicePrompt });
+  _processQueue();
 });
 
 // /stats command - show practice statistics
 recruiterComposer.command("stats", async (ctx) => {
-  const args = ctx.message?.text?.replace("/stats", "").trim().split(/\s+/) || [];
+  const args =
+    ctx.message?.text?.replace("/stats", "").trim().split(/\s+/) || [];
   const modeArg = args[0]?.toLowerCase() as InterviewMode | undefined;
 
   if (modeArg && !ALL_MODES.includes(modeArg)) {
-    await ctx.reply(`❌ Unknown mode: ${modeArg}
+    await ctx.reply(
+      `❌ Unknown mode: ${modeArg}
 
 Valid modes: ${ALL_MODES.join(", ")}
 
-Or use \`/stats\` for overall stats.`, { parse_mode: "Markdown" });
+Or use \`/stats\` for overall stats.`,
+      { parse_mode: "Markdown" },
+    );
     return;
   }
 
@@ -157,7 +208,9 @@ recruiterComposer.command("outreach", async (ctx) => {
     if (followups.length > 0) {
       msg += `\n\n⏰ *Pending Follow-ups (${followups.length})*\n`;
       for (const f of followups.slice(0, 5)) {
-        const daysSince = Math.floor((Date.now() - new Date(f.sentAt!).getTime()) / (1000 * 60 * 60 * 24));
+        const daysSince = Math.floor(
+          (Date.now() - new Date(f.sentAt!).getTime()) / (1000 * 60 * 60 * 24),
+        );
         msg += `• Job ${f.jobId} - ${daysSince} days ago\n`;
       }
       if (followups.length > 5) {
@@ -186,8 +239,15 @@ recruiterComposer.command("followup", async (ctx) => {
     let msg = `⏰ *Outreach Needing Follow-up* (>${daysArg} days)\n\n`;
 
     for (const f of followups.slice(0, 10)) {
-      const daysSince = Math.floor((Date.now() - new Date(f.sentAt!).getTime()) / (1000 * 60 * 60 * 24));
-      const typeEmoji = f.messageType === "email" ? "📧" : f.messageType === "linkedin_connect" ? "🔗" : "💬";
+      const daysSince = Math.floor(
+        (Date.now() - new Date(f.sentAt!).getTime()) / (1000 * 60 * 60 * 24),
+      );
+      const typeEmoji =
+        f.messageType === "email"
+          ? "📧"
+          : f.messageType === "linkedin_connect"
+            ? "🔗"
+            : "💬";
 
       msg += `${typeEmoji} *Job:* ${f.jobId}\n`;
       msg += `📅 Sent ${daysSince} days ago\n`;
@@ -200,8 +260,14 @@ recruiterComposer.command("followup", async (ctx) => {
 
     const keyboard = new InlineKeyboard();
     if (followups.length > 0) {
-      keyboard.text("✅ Mark Responded", `followup:responded:${followups[0].id}`);
-      keyboard.text("❌ No Response", `followup:no_response:${followups[0].id}`);
+      keyboard.text(
+        "✅ Mark Responded",
+        `followup:responded:${followups[0].id}`,
+      );
+      keyboard.text(
+        "❌ No Response",
+        `followup:no_response:${followups[0].id}`,
+      );
     }
 
     await ctx.reply(msg, { parse_mode: "Markdown", reply_markup: keyboard });
@@ -227,7 +293,9 @@ recruiterComposer.callbackQuery(/^followup:/, async (ctx) => {
 
     const emoji = action === "responded" ? "✅" : "❌";
     await ctx.answerCallbackQuery({ text: `${emoji} Status updated!` });
-    await ctx.editMessageText(`${emoji} Outreach marked as: ${action.replace("_", " ")}`);
+    await ctx.editMessageText(
+      `${emoji} Outreach marked as: ${action.replace("_", " ")}`,
+    );
   } catch (err) {
     await ctx.answerCallbackQuery({ text: "Error updating status" });
   }
@@ -235,7 +303,10 @@ recruiterComposer.callbackQuery(/^followup:/, async (ctx) => {
 
 // Practice mode selection callback
 recruiterComposer.callbackQuery(/^practice:/, async (ctx) => {
-  const mode = ctx.callbackQuery.data?.replace("practice:", "") as InterviewMode;
+  const mode = ctx.callbackQuery.data?.replace(
+    "practice:",
+    "",
+  ) as InterviewMode;
 
   if (!ALL_MODES.includes(mode)) {
     await ctx.answerCallbackQuery({ text: "Unknown mode" });
@@ -248,9 +319,12 @@ recruiterComposer.callbackQuery(/^practice:/, async (ctx) => {
       .text("✅ I Passed", `practice-result:${existing.id}:pass`)
       .text("❌ I Failed", `practice-result:${existing.id}:fail`);
 
-    await ctx.editMessageText(`⚠️ You have an active ${mode} session!
+    await ctx.editMessageText(
+      `⚠️ You have an active ${mode} session!
 
-When you're done, mark your result:`, { parse_mode: "Markdown", reply_markup: keyboard });
+When you're done, mark your result:`,
+      { parse_mode: "Markdown", reply_markup: keyboard },
+    );
     await ctx.answerCallbackQuery();
     return;
   }
@@ -272,14 +346,17 @@ Current rating: ${rating}
 Use the /interview-practice skill prompt for ${mode} mode.
 Stay in character as the interviewer. One question at a time.`;
 
-  await ctx.editMessageText(`🎯 *Starting ${mode} Practice*
+  await ctx.editMessageText(
+    `🎯 *Starting ${mode} Practice*
 
 📊 Your rating: ${rating}
 📈 Difficulty: ${difficulty}
 
 _Claude will now act as your interviewer..._
 
-When you're done, reply with "pass" or "fail" to record your result.`, { parse_mode: "Markdown" });
+When you're done, reply with "pass" or "fail" to record your result.`,
+    { parse_mode: "Markdown" },
+  );
   await ctx.answerCallbackQuery({ text: `Starting ${mode} practice` });
 
   if (chatId) {
@@ -318,7 +395,8 @@ recruiterComposer.callbackQuery(/^practice-result:/, async (ctx) => {
   const emoji = passed ? "✅" : "❌";
   const changeEmoji = eloResult.change > 0 ? "📈" : "📉";
 
-  await ctx.editMessageText(`${emoji} *Session Complete*
+  await ctx.editMessageText(
+    `${emoji} *Session Complete*
 
 Mode: ${session.mode}
 Difficulty: ${session.difficulty}
@@ -326,6 +404,10 @@ Result: ${passed ? "PASSED" : "FAILED"}
 
 ${changeEmoji} Rating: ${eloResult.oldRating} → ${eloResult.newRating} (${eloResult.change > 0 ? "+" : ""}${eloResult.change})
 
-Use \`/stats ${session.mode}\` to see your progress.`, { parse_mode: "Markdown" });
-  await ctx.answerCallbackQuery({ text: passed ? "Great job!" : "Keep practicing!" });
+Use \`/stats ${session.mode}\` to see your progress.`,
+    { parse_mode: "Markdown" },
+  );
+  await ctx.answerCallbackQuery({
+    text: passed ? "Great job!" : "Keep practicing!",
+  });
 });

@@ -220,7 +220,9 @@ export async function whoopGet<T>(
 
 /** Get latest recovery (v2 uses /recovery endpoint directly) */
 export async function getLatestRecovery(): Promise<WhoopRecovery | null> {
-  const recoveries = await whoopGet<WhoopPaginatedResponse<any>>("/recovery", {
+  const recoveries = await whoopGet<
+    WhoopPaginatedResponse<Record<string, unknown>>
+  >("/recovery", {
     limit: "1",
   });
   if (recoveries.records.length === 0) return null;
@@ -251,10 +253,9 @@ export async function getLatestRecovery(): Promise<WhoopRecovery | null> {
 
 /** Get latest sleep */
 export async function getLatestSleep(): Promise<WhoopSleep | null> {
-  const sleeps = await whoopGet<WhoopPaginatedResponse<any>>(
-    "/activity/sleep",
-    { limit: "1" },
-  );
+  const sleeps = await whoopGet<
+    WhoopPaginatedResponse<Record<string, unknown>>
+  >("/activity/sleep", { limit: "1" });
   if (sleeps.records.length === 0) return null;
 
   const s = sleeps.records[0];
@@ -298,7 +299,9 @@ export async function getLatestSleep(): Promise<WhoopSleep | null> {
 
 /** Get current cycle strain */
 export async function getTodayStrain(): Promise<WhoopCycle | null> {
-  const cycles = await whoopGet<WhoopPaginatedResponse<any>>("/cycle", {
+  const cycles = await whoopGet<
+    WhoopPaginatedResponse<Record<string, unknown>>
+  >("/cycle", {
     limit: "1",
   });
   if (cycles.records.length === 0) return null;
@@ -319,14 +322,13 @@ export async function getTodayStrain(): Promise<WhoopCycle | null> {
 
 /** Get recent workouts */
 export async function getRecentWorkouts(limit = 5): Promise<WhoopWorkout[]> {
-  const workouts = await whoopGet<WhoopPaginatedResponse<any>>(
-    "/activity/workout",
-    { limit: String(limit) },
-  );
+  const workouts = await whoopGet<
+    WhoopPaginatedResponse<Record<string, unknown>>
+  >("/activity/workout", { limit: String(limit) });
 
   return workouts.records
-    .filter((w: any) => w.score_state === "SCORED")
-    .map((w: any) => ({
+    .filter((w) => w.score_state === "SCORED")
+    .map((w) => ({
       id: w.id,
       sportName: w.sport_name ?? "Activity",
       start: w.start,

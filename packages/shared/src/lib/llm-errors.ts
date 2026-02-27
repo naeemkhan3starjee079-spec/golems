@@ -30,9 +30,10 @@ const NETWORK_PATTERNS = [
 export function classifyLLMError(err: unknown): LLMErrorType {
   if (!err) return LLMErrorType.UNKNOWN;
 
-  const status = (err as any)?.status ?? (err as any)?.statusCode;
+  const errObj = err as Record<string, unknown>;
+  const status = (errObj?.status as number) ?? (errObj?.statusCode as number);
   const message = err instanceof Error ? err.message : String(err);
-  const code = (err as any)?.code;
+  const code = errObj?.code as string | undefined;
 
   // Status-based classification
   if (

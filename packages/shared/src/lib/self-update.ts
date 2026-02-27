@@ -39,7 +39,11 @@ export interface VersionInfo {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function shellExec(cmd: string, cwd?: string, timeout = 30000): { ok: boolean; output: string } {
+function shellExec(
+  cmd: string,
+  cwd?: string,
+  timeout = 30000,
+): { ok: boolean; output: string } {
   try {
     const output = execSync(cmd, {
       encoding: "utf8",
@@ -48,8 +52,14 @@ function shellExec(cmd: string, cwd?: string, timeout = 30000): { ok: boolean; o
       stdio: ["pipe", "pipe", "pipe"],
     }).trim();
     return { ok: true, output };
-  } catch (err: any) {
-    return { ok: false, output: err?.stderr?.toString()?.trim() || err?.message || "" };
+  } catch (err: unknown) {
+    const e = err as Record<string, unknown>;
+    return {
+      ok: false,
+      output:
+        String(e?.stderr ?? "").trim() ||
+        (err instanceof Error ? err.message : ""),
+    };
   }
 }
 
@@ -98,14 +108,19 @@ export function checkForUpdates(repoPath: string): UpdateResult {
   const upToDate = status.ok && status.output.includes("up to date");
 
   if (upToDate) {
-    return { step: "check", success: true, output: "Already up to date", skipped: true };
+    return {
+      step: "check",
+      success: true,
+      output: "Already up to date",
+      skipped: true,
+    };
   }
 
   if (behind) {
     // Get count of new commits
     const count = shellExec(
       "git rev-list HEAD..origin/master --count 2>/dev/null || git rev-list HEAD..origin/main --count 2>/dev/null",
-      repoPath
+      repoPath,
     );
     return {
       step: "check",
@@ -144,7 +159,12 @@ export function pullLatest(repoPath: string): UpdateResult {
 export function installDeps(repoPath: string): UpdateResult {
   const pkgPath = join(repoPath, "package.json");
   if (!existsSync(pkgPath)) {
-    return { step: "install", success: true, output: "No package.json", skipped: true };
+    return {
+      step: "install",
+      success: true,
+      output: "No package.json",
+      skipped: true,
+    };
   }
 
   // Detect package manager
@@ -155,14 +175,16 @@ export function installDeps(repoPath: string): UpdateResult {
   return {
     step: "install",
     success: install.ok,
-    output: install.ok ? `Dependencies installed (${hasBunLock ? "bun" : "npm"})` : install.output,
+    output: install.ok
+      ? `Dependencies installed (${hasBunLock ? "bun" : "npm"})`
+      : install.output,
   };
 }
 
 export function restartServices(): UpdateResult {
   // Use golems latest which restarts all services
   const restart = shellExec(
-    "launchctl list 2>/dev/null | grep golemszikaron | awk '{print $3}' | while read svc; do launchctl kickstart -k \"gui/$(id -u)/$svc\" 2>/dev/null; done"
+    "launchctl list 2>/dev/null | grep golemszikaron | awk '{print $3}' | while read svc; do launchctl kickstart -k \"gui/$(id -u)/$svc\" 2>/dev/null; done",
   );
 
   if (restart.ok) {
@@ -270,10 +292,13 @@ export function formatUpdateReport(report: UpdateReport): string {
 const UPDATE_HISTORY_PATH = join(
   process.env.HOME || "~",
   ".golems",
-  "update-history.json"
+  "update-history.json",
 );
 
-export function saveUpdateHistory(report: UpdateReport, historyPath?: string): void {
+export function saveUpdateHistory(
+  report: UpdateReport,
+  historyPath?: string,
+): void {
   const p = historyPath || UPDATE_HISTORY_PATH;
   const dir = dirname(p);
   if (!existsSync(dir)) {

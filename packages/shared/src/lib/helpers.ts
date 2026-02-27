@@ -10,7 +10,13 @@ import { runGLM as runLocalGLM } from "./glm-llm";
 import { logCost } from "./cost-tracker";
 
 /** Available external CLI helper backends */
-export type HelperBackend = "gemini" | "cursor" | "codex" | "kiro" | "glm" | "haiku";
+export type HelperBackend =
+  | "gemini"
+  | "cursor"
+  | "codex"
+  | "kiro"
+  | "glm"
+  | "haiku";
 
 /** Result from running an external helper */
 export interface HelperResult {
@@ -36,13 +42,30 @@ interface RateLimitEntry {
 
 type RateLimitsFile = Record<HelperBackend, RateLimitEntry>;
 
-const ALL_BACKENDS: HelperBackend[] = ["gemini", "kiro", "codex", "cursor", "glm", "haiku"];
+const ALL_BACKENDS: HelperBackend[] = [
+  "gemini",
+  "kiro",
+  "codex",
+  "cursor",
+  "glm",
+  "haiku",
+];
 
 /** Default fallback order when a backend is rate-limited */
-export const FALLBACK_CHAIN: HelperBackend[] = ["gemini", "kiro", "codex", "cursor", "glm", "haiku"];
+export const FALLBACK_CHAIN: HelperBackend[] = [
+  "gemini",
+  "kiro",
+  "codex",
+  "cursor",
+  "glm",
+  "haiku",
+];
 
 function getStateDir(): string {
-  return process.env.GOLEMS_STATE_DIR || join(process.env.HOME || "~", ".golems-zikaron");
+  return (
+    process.env.GOLEMS_STATE_DIR ||
+    join(process.env.HOME || "~", ".golems-zikaron")
+  );
 }
 
 function getRateLimitsPath(): string {
@@ -78,7 +101,10 @@ function writeRateLimits(limits: RateLimitsFile): void {
 /**
  * Compute resets_at timestamp for a given backend.
  */
-function computeResetsAt(backend: HelperBackend, now: Date = new Date()): string {
+function computeResetsAt(
+  backend: HelperBackend,
+  now: Date = new Date(),
+): string {
   switch (backend) {
     case "gemini": {
       // Resets at midnight UTC
@@ -92,7 +118,9 @@ function computeResetsAt(backend: HelperBackend, now: Date = new Date()): string
       const year = now.getUTCFullYear();
       const month = now.getUTCMonth();
       // Day 0 of next month = last day of current month
-      return new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999)).toISOString();
+      return new Date(
+        Date.UTC(year, month + 1, 0, 23, 59, 59, 999),
+      ).toISOString();
     }
     case "codex": {
       // 1 minute RPM
@@ -116,7 +144,10 @@ function computeResetsAt(backend: HelperBackend, now: Date = new Date()): string
 /**
  * Mark a backend as rate-limited. Call when you get a 429.
  */
-export function helperLimitReached(backend: HelperBackend, now: Date = new Date()): void {
+export function helperLimitReached(
+  backend: HelperBackend,
+  now: Date = new Date(),
+): void {
   const limits = readRateLimits();
   limits[backend] = {
     limited: true,
@@ -130,7 +161,10 @@ export function helperLimitReached(backend: HelperBackend, now: Date = new Date(
  * Check if a backend is available (not rate-limited, or limit has expired).
  * Auto-clears expired limits.
  */
-export function isHelperAvailable(backend: HelperBackend, now: Date = new Date()): boolean {
+export function isHelperAvailable(
+  backend: HelperBackend,
+  now: Date = new Date(),
+): boolean {
   const limits = readRateLimits();
   const entry = limits[backend];
 
@@ -149,9 +183,14 @@ export function isHelperAvailable(backend: HelperBackend, now: Date = new Date()
 /**
  * Get status of all backends.
  */
-export function getHelperStatus(now: Date = new Date()): Record<HelperBackend, { available: boolean; resets_at: string | null }> {
+export function getHelperStatus(
+  now: Date = new Date(),
+): Record<HelperBackend, { available: boolean; resets_at: string | null }> {
   const limits = readRateLimits();
-  const result: Record<string, { available: boolean; resets_at: string | null }> = {};
+  const result: Record<
+    string,
+    { available: boolean; resets_at: string | null }
+  > = {};
 
   for (const backend of ALL_BACKENDS) {
     const entry = limits[backend];
@@ -167,7 +206,10 @@ export function getHelperStatus(now: Date = new Date()): Record<HelperBackend, {
   }
 
   writeRateLimits(limits);
-  return result as Record<HelperBackend, { available: boolean; resets_at: string | null }>;
+  return result as Record<
+    HelperBackend,
+    { available: boolean; resets_at: string | null }
+  >;
 }
 
 /** Whether a backend takes the prompt as a CLI argument (vs stdin) */
@@ -178,14 +220,27 @@ const PROMPT_VIA_ARG: Set<HelperBackend> = new Set(["cursor", "codex"]);
  * Backends in PROMPT_VIA_ARG get the prompt appended as the last arg.
  * Others receive the prompt via stdin.
  */
-function buildCommand(backend: HelperBackend, prompt: string, opts: HelperOptions): string[] {
+function buildCommand(
+  backend: HelperBackend,
+  prompt: string,
+  opts: HelperOptions,
+): string[] {
   switch (backend) {
     case "gemini":
       // Reads prompt from stdin
       return ["gemini"];
     case "cursor":
       // -p = non-interactive mode, prompt as last arg
-      return ["cursor", "agent", "-p", "--model", "gpt-5.2-codex-high", "--output-format", "text", prompt];
+      return [
+        "cursor",
+        "agent",
+        "-p",
+        "--model",
+        "gpt-5.2-codex-high",
+        "--output-format",
+        "text",
+        prompt,
+      ];
     case "codex":
       // npx codex exec --full-auto, prompt as last arg
       return ["npx", "codex", "exec", "--full-auto", prompt];
@@ -205,7 +260,11 @@ function buildCommand(backend: HelperBackend, prompt: string, opts: HelperOption
  * Run a CLI helper command via subprocess.
  * Gemini and Kiro receive prompt via stdin; Cursor and Codex via CLI arg.
  */
-async function runCliHelper(backend: HelperBackend, prompt: string, opts: HelperOptions): Promise<string> {
+async function runCliHelper(
+  backend: HelperBackend,
+  prompt: string,
+  opts: HelperOptions,
+): Promise<string> {
   const args = buildCommand(backend, prompt, opts);
   const timeout = opts.timeout || 120_000;
   const usesStdin = !PROMPT_VIA_ARG.has(backend);
@@ -230,10 +289,16 @@ async function runCliHelper(backend: HelperBackend, prompt: string, opts: Helper
     const exitCode = await proc.exited;
 
     if (exitCode !== 0) {
-      if (stderr.includes("429") || stderr.includes("rate limit") || stderr.toLowerCase().includes("quota")) {
+      if (
+        stderr.includes("429") ||
+        stderr.includes("rate limit") ||
+        stderr.toLowerCase().includes("quota")
+      ) {
         throw new Error("RATE_LIMITED");
       }
-      throw new Error(`${backend} failed (exit ${exitCode}): ${stderr.slice(0, 500)}`);
+      throw new Error(
+        `${backend} failed (exit ${exitCode}): ${stderr.slice(0, 500)}`,
+      );
     }
 
     return stdout.trim();
@@ -245,7 +310,10 @@ async function runCliHelper(backend: HelperBackend, prompt: string, opts: Helper
 /**
  * Run a helper, with automatic fallback on rate limit.
  */
-export async function runHelper(prompt: string, opts: HelperOptions = {}): Promise<HelperResult> {
+export async function runHelper(
+  prompt: string,
+  opts: HelperOptions = {},
+): Promise<HelperResult> {
   const now = new Date();
 
   // If specific backend requested, try it first then fall back
@@ -295,19 +363,20 @@ export async function runHelper(prompt: string, opts: HelperOptions = {}): Promi
         backend,
         durationMs,
       };
-    } catch (err: any) {
-      if (err.message === "RATE_LIMITED") {
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      if (errMsg === "RATE_LIMITED") {
         helperLimitReached(backend, new Date());
         errors.push({ backend, error: "Rate limited" });
         continue;
       }
       // Non-rate-limit error, collect and try next backend
-      errors.push({ backend, error: err.message || String(err) });
+      errors.push({ backend, error: errMsg });
       continue;
     }
   }
 
   throw new Error(
-    `All backends failed: ${errors.map((e) => `${e.backend}: ${e.error}`).join(", ")}`
+    `All backends failed: ${errors.map((e) => `${e.backend}: ${e.error}`).join(", ")}`,
   );
 }

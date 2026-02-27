@@ -140,15 +140,15 @@ export async function readFromSupabase(
   const { data, error } = await query;
   if (error || !data) return [];
 
-  return data.map((row: any) => ({
-    timestamp: row.created_at,
-    model: row.model,
-    source: row.source,
-    input_tokens: row.input_tokens,
-    output_tokens: row.output_tokens,
-    cost_usd: Number(row.cost_usd),
-    tier: row.tier as CostEntry["tier"],
-    duration_ms: row.duration_ms,
+  return data.map((row: Record<string, unknown>) => ({
+    timestamp: String(row.created_at ?? ""),
+    model: String(row.model ?? ""),
+    source: String(row.source ?? ""),
+    input_tokens: Number(row.input_tokens ?? 0),
+    output_tokens: Number(row.output_tokens ?? 0),
+    cost_usd: Number(row.cost_usd ?? 0),
+    tier: String(row.tier ?? "free") as CostEntry["tier"],
+    duration_ms: row.duration_ms != null ? Number(row.duration_ms) : undefined,
   }));
 }
 

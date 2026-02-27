@@ -132,7 +132,7 @@ let cachedConfig: GolemsConfig | null = null;
 
 export function deepMerge<T extends Record<string, unknown>>(
   defaults: T,
-  overrides: Partial<T>
+  overrides: Partial<T>,
 ): T {
   const result = { ...defaults };
   for (const key of Object.keys(overrides) as (keyof T)[]) {
@@ -147,7 +147,7 @@ export function deepMerge<T extends Record<string, unknown>>(
     ) {
       result[key] = deepMerge(
         defaults[key] as Record<string, unknown>,
-        val as Record<string, unknown>
+        val as Record<string, unknown>,
       ) as T[keyof T];
     } else if (val !== undefined) {
       result[key] = val as T[keyof T];
@@ -185,7 +185,7 @@ export function loadConfig(): GolemsConfig {
 }
 
 /** Reset cached config (for testing) */
-export function resetConfig() {
+export function resetConfig(): void {
   cachedConfig = null;
 }
 

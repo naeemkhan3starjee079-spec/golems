@@ -15,7 +15,7 @@
 import "@golems/shared/lib/load-env";
 import { installProcessGuards } from "@golems/shared/lib/process-guards";
 import { Bot } from "grammy";
-import { GITS } from "./lib/bot-shared";
+import { GITS, askClaude, queue, processQueue } from "./lib/bot-shared";
 
 // Catch unhandled errors before they crash the bot silently
 installProcessGuards("telegram-bot");
@@ -23,10 +23,17 @@ import { startNotifyServer } from "./lib/notify-server";
 
 // Composers
 import { claudeComposer } from "./composers/claude-composer";
-import { jobComposer } from "@golems/jobs/composer";
-import { recruiterComposer } from "@golems/recruiter/composer";
+import { jobComposer, initJobComposer } from "@golems/jobs/composer";
+import {
+  recruiterComposer,
+  initRecruiterComposer,
+} from "@golems/recruiter/composer";
 import { coachComposer } from "@golems/coach/composer";
 import { tellerComposer } from "@golems/teller/composer";
+
+// Wire up composer dependencies (breaks circular imports)
+initJobComposer({ askClaude });
+initRecruiterComposer({ queue, processQueue });
 
 // ═══════════════════════════════════════════════════════
 // Bot Setup

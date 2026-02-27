@@ -100,7 +100,7 @@ export interface GolemEvent {
   timestamp: string;
   actor: GolemActor;
   type: EventType;
-  data: Record<string, any>;
+  data: Record<string, unknown>;
 }
 
 /**
@@ -108,7 +108,7 @@ export interface GolemEvent {
  */
 export async function logEvent(
   type: EventType,
-  data: Record<string, any>,
+  data: Record<string, unknown>,
   actor: GolemActor = "claudegolem",
   logPath: string = DEFAULT_EVENT_LOG_PATH,
 ): Promise<void> {

@@ -8,11 +8,29 @@
 import { Composer, InlineKeyboard } from "grammy";
 import { join } from "path";
 import { readFileSync, readdirSync } from "fs";
-import { HOME, askClaude } from "@golems/claude/lib/bot-shared";
+import { homedir } from "os";
 
 export const jobComposer = new Composer();
 
+// Dependency injection to break claude↔jobs circular dependency
+const HOME = process.env.HOME || homedir();
+let _askClaude: (message: string, onHeartbeat?: () => void) => Promise<string>;
+
+export function initJobComposer(deps: {
+  askClaude: (message: string, onHeartbeat?: () => void) => Promise<string>;
+}): void {
+  _askClaude = deps.askClaude;
+}
+
 const RESULTS_DIR = join(HOME, ".golems-zikaron/job-golem/results");
+
+function assertInitialized(): void {
+  if (!_askClaude) {
+    throw new Error(
+      "initJobComposer() must be called before using job composer",
+    );
+  }
+}
 
 function loadLatestMatches(): any[] | null {
   try {
@@ -30,7 +48,10 @@ function loadLatestMatches(): any[] | null {
   }
 }
 
-function formatJobPage(matches: any[], page: number): { msg: string; keyboard: InlineKeyboard } {
+function formatJobPage(
+  matches: any[],
+  page: number,
+): { msg: string; keyboard: InlineKeyboard } {
   const perPage = 5;
   const start = (page - 1) * perPage;
   const end = start + perPage;
@@ -86,7 +107,10 @@ jobComposer.command("jobq", async (ctx) => {
   const question = ctx.message?.text?.replace("/jobq", "").trim();
 
   if (!question) {
-    await ctx.reply("Usage: `/jobq <question>`\n\nExamples:\n• `/jobq which companies use React?`\n• `/jobq best AI/ML roles`\n• `/jobq tell me about the Taboola job`", { parse_mode: "Markdown" });
+    await ctx.reply(
+      "Usage: `/jobq <question>`\n\nExamples:\n• `/jobq which companies use React?`\n• `/jobq best AI/ML roles`\n• `/jobq tell me about the Taboola job`",
+      { parse_mode: "Markdown" },
+    );
     return;
   }
 
@@ -102,15 +126,20 @@ jobComposer.command("jobq", async (ctx) => {
 
     console.log(`[jobq] Loaded ${matches.length} job matches`);
 
-    const jobContext = matches.slice(0, 15).map((m: any, i: number) =>
-      `[${i + 1}] ${m.score}/10 - ${m.job.title} @ ${m.job.company}\n   ${m.job.location} | ${m.job.source}\n   ${m.reason || "No reason"}\n   ${m.job.url}`
-    ).join("\n\n");
+    const jobContext = matches
+      .slice(0, 15)
+      .map(
+        (m: any, i: number) =>
+          `[${i + 1}] ${m.score}/10 - ${m.job.title} @ ${m.job.company}\n   ${m.job.location} | ${m.job.source}\n   ${m.reason || "No reason"}\n   ${m.job.url}`,
+      )
+      .join("\n\n");
 
     await ctx.replyWithChatAction("typing");
 
     const prompt = `Here are my latest job matches:\n\n${jobContext}\n\nQuestion: ${question}\n\nAnswer briefly and helpfully.`;
+    assertInitialized();
     console.log("[jobq] Calling Claude...");
-    const response = await askClaude(prompt);
+    const response = await _askClaude(prompt);
     console.log(`[jobq] Claude responded: ${response.slice(0, 50)}...`);
 
     await ctx.reply(response);
@@ -133,7 +162,10 @@ jobComposer.callbackQuery(/^jobs:/, async (ctx) => {
 
     const { msg, keyboard } = formatJobPage(matches, page);
 
-    await ctx.editMessageText(msg, { parse_mode: "Markdown", reply_markup: keyboard });
+    await ctx.editMessageText(msg, {
+      parse_mode: "Markdown",
+      reply_markup: keyboard,
+    });
     await ctx.answerCallbackQuery();
   } catch (err) {
     await ctx.answerCallbackQuery({ text: "Error loading jobs" });
