@@ -1,36 +1,60 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Golems Dashboard
 
-## Getting Started
+> Next.js web dashboard for the Golems AI agent ecosystem — 3D knowledge graph, ops monitoring, job tracking, and more.
 
-First, run the development server:
+**Live at [etanheyman.com](https://etanheyman.com)** | Deployed on Vercel
+
+## What It Does
+
+A multi-page web app that visualizes and manages the entire Golems ecosystem:
+
+| Page | What You See |
+|------|-------------|
+| **Brain View** | Interactive 3D knowledge graph (react-force-graph-3d / Three.js) with search, minimap, and PNG export |
+| **Ops** | Service health, golem events, Night Shift status |
+| **Jobs** | Job listings with LLM match scores and scrape activity |
+| **Emails** | Inbox with AI scoring, sender profiles, category filters |
+| **Recruiter** | Outreach pipeline, LinkedIn network stats |
+| **Teller** | Subscription tracker, payment history |
+| **Backlog** | Kanban board with drag-and-drop |
+| **Content** | Content pipeline runs and routing stats |
+| **Tokens** | LLM usage by model, daily costs |
+| **Docs** | 24 interactive documentation pages |
+
+## Tech Stack
+
+- **Next.js 16** (App Router, route groups, server components)
+- **Supabase** (Postgres + Auth + Storage + RLS)
+- **react-force-graph-3d** + **Three.js** (3D knowledge graph)
+- **Tailwind CSS 4** (styling)
+- **gray-matter** + **marked** (markdown docs)
+- **lucide-react** (icons)
+
+## Quick Start
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cd packages/dashboard
+cp .env.example .env.local   # Add Supabase credentials
+bun dev                       # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Architecture
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Two route groups keep auth and dashboard layouts separate:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `(auth)/` — minimal centered layout for login/signup
+- `(dashboard)/` — sidebar + topbar + mobile nav + search overlay (Cmd+K)
 
-## Learn More
+All pages query Supabase directly (no backend required). Two pages (`/enrichment`, `/session`) optionally connect to a local BrainLayer daemon for real-time data.
 
-To learn more about Next.js, take a look at the following resources:
+## Deployment
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Deployed on Vercel with auto-builds from the monorepo root:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Setting | Value |
+|---------|-------|
+| Root Directory | `packages/dashboard` |
+| Framework | Next.js (auto-detected) |
+| Install Command | `bun install` |
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Requires `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` env vars.

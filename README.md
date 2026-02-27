@@ -56,6 +56,44 @@ golems status      # See what's running
 
 Four **domain golems** + an **orchestrator** + **tools** + **infrastructure**.
 
+```mermaid
+graph TB
+    subgraph Surfaces["Access Surfaces"]
+        CC[Claude Code]
+        TG[Telegram]
+        CLI[CLI]
+        CW[Cowork]
+    end
+
+    subgraph Golems["Domain Golems"]
+        RG["RecruiterGolem<br/>Outreach + Practice"]
+        TL["TellerGolem<br/>Finance + Tax"]
+        CG["CoachGolem<br/>Calendar + Plans"]
+        CT["ContentGolem<br/>Publishing"]
+    end
+
+    subgraph Tools["Tools & Layers"]
+        JB["JobGolem<br/>Scraping + Matching"]
+        EM["Email<br/>Scoring + Routing"]
+        BL["BrainLayer<br/>328K+ chunks"]
+        VL["VoiceLayer<br/>TTS + STT"]
+    end
+
+    subgraph Infra["Infrastructure"]
+        CW2["Cloud Worker<br/>Railway"]
+        NS["Night Shift<br/>4am autonomous"]
+        SH["Shared<br/>Supabase + LLM"]
+    end
+
+    CC & TG & CLI & CW --> RG & TL & CG & CT
+    RG --> JB
+    RG & TL & CG & CT --> SH
+    JB & EM --> CW2
+    CW2 --> SH
+    NS --> SH
+    RG & CG & CT --> BL
+```
+
 ### Golems (Domain Agents)
 
 | | Golem | Domain | What it does |
@@ -129,7 +167,7 @@ golems/
 | **Cloud** | Railway (Docker) |
 | **Local** | macOS launchd services |
 | **Bot** | grammY (Telegram) |
-| **Testing** | Bun test (1,196 tests, 2,914 assertions) |
+| **Testing** | Bun test (1,199 tests, 2,928 assertions) |
 | **CI/CD** | GitHub Actions + CodeRabbit + DeepSource |
 
 ---
