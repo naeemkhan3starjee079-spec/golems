@@ -1,1 +1,0 @@
-"use strict";(globalThis.webpackChunk_golems_docsite=globalThis.webpackChunk_golems_docsite||[]).push([[5901],{5901(e,s,a){a.d(s,{createTreemapServices:()=>c.d});var c=a(1633);a(7960)}}]);

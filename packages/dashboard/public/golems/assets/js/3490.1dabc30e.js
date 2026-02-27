@@ -1,1 +1,0 @@
-"use strict";(globalThis.webpackChunk_golems_docsite=globalThis.webpackChunk_golems_docsite||[]).push([[3490],{3490(e,s,c){c.d(s,{createInfoServices:()=>o.v});var o=c(1885);c(7960)}}]);

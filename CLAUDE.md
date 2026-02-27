@@ -2,7 +2,7 @@
 
 @~/Gits/orchestrator/standards/autonomous-workflow.md
 
-> Autonomous AI agent ecosystem — Bun workspace with 12 packages + 3 external repos. Each golem is a self-contained CC plugin.
+> Autonomous AI agent ecosystem — Bun workspace with 11 packages + 4 external repos. Each golem is a self-contained CC plugin.
 
 ## Packages
 
@@ -16,7 +16,7 @@
 | **@golems/content** | Visual content factory (Remotion, ComfyUI, dataviz) + HTTP render service + n8n workflows |
 | **@golems/coach** | Calendar, schedule, life planning |
 | **@golems/services** | Night Shift, Briefing, Cloud Worker, Doctor, Wizard |
-| **dashboard** | Next.js web dashboard (brain view, ops, backlog, content, tokens) |
+| **dashboard** | Next.js web dashboard — external repo (brain view, ops, backlog, content, tokens) |
 | **docsite** | Docusaurus documentation site |
 | **golems-tui** | React Ink terminal dashboard |
 | **tax-helper** | Schedule C transaction categorization (Sophtron MCP) |
