@@ -29,7 +29,9 @@ const PORT = parseInt(process.env.RENDER_SERVICE_PORT ?? "3001", 10);
 
 // --- Route Handlers ---
 
-async function handleComfyGenerate(body: Record<string, unknown>): Promise<Response> {
+async function handleComfyGenerate(
+  body: Record<string, unknown>,
+): Promise<Response> {
   const opts: GenerateOptions = {
     prompt: body.prompt as string,
     style: (body.style as FluxWorkflowStyle) ?? "base",
@@ -59,10 +61,7 @@ async function handleComfyGenerate(body: Record<string, unknown>): Promise<Respo
       qualityPassed: result.qualityPassed,
     });
   } catch (err) {
-    return Response.json(
-      { error: (err as Error).message },
-      { status: 500 },
-    );
+    return Response.json({ error: (err as Error).message }, { status: 500 });
   }
 }
 
@@ -74,14 +73,19 @@ async function handleComfyStatus(): Promise<Response> {
   });
 }
 
-async function handleRemotionRender(body: Record<string, unknown>): Promise<Response> {
+async function handleRemotionRender(
+  body: Record<string, unknown>,
+): Promise<Response> {
   // Dynamic import to avoid loading Remotion deps if not needed
   try {
     const { renderVideo } = await import("@golems/content/render");
 
     const compositionId = body.compositionId as string;
     if (!compositionId) {
-      return Response.json({ error: "compositionId is required" }, { status: 400 });
+      return Response.json(
+        { error: "compositionId is required" },
+        { status: 400 },
+      );
     }
 
     const job = await renderVideo({
@@ -92,20 +96,22 @@ async function handleRemotionRender(body: Record<string, unknown>): Promise<Resp
 
     return Response.json(job);
   } catch (err) {
-    return Response.json(
-      { error: (err as Error).message },
-      { status: 500 },
-    );
+    return Response.json({ error: (err as Error).message }, { status: 500 });
   }
 }
 
-async function handleRemotionStill(body: Record<string, unknown>): Promise<Response> {
+async function handleRemotionStill(
+  body: Record<string, unknown>,
+): Promise<Response> {
   try {
     const { renderThumbnail } = await import("@golems/content/render");
 
     const compositionId = body.compositionId as string;
     if (!compositionId) {
-      return Response.json({ error: "compositionId is required" }, { status: 400 });
+      return Response.json(
+        { error: "compositionId is required" },
+        { status: 400 },
+      );
     }
 
     const job = await renderThumbnail({
@@ -117,10 +123,7 @@ async function handleRemotionStill(body: Record<string, unknown>): Promise<Respo
 
     return Response.json(job);
   } catch (err) {
-    return Response.json(
-      { error: (err as Error).message },
-      { status: 500 },
-    );
+    return Response.json({ error: (err as Error).message }, { status: 500 });
   }
 }
 
@@ -154,7 +157,9 @@ async function handlePipelines(): Promise<Response> {
   });
 }
 
-async function handlePipelineRoute(body: Record<string, unknown>): Promise<Response> {
+async function handlePipelineRoute(
+  body: Record<string, unknown>,
+): Promise<Response> {
   const { routeIdea } = await import("@golems/content/pipeline");
 
   const idea = body.idea as string;
@@ -172,7 +177,9 @@ async function handlePipelineRoute(body: Record<string, unknown>): Promise<Respo
   return Response.json(result);
 }
 
-async function handlePipelineExecute(body: Record<string, unknown>): Promise<Response> {
+async function handlePipelineExecute(
+  body: Record<string, unknown>,
+): Promise<Response> {
   const { routeIdea, executePlan } = await import("@golems/content/pipeline");
 
   const idea = body.idea as string;
@@ -205,21 +212,32 @@ async function handlePipelineStats(): Promise<Response> {
   return Response.json({ stats });
 }
 
-async function handleDataVizRender(body: Record<string, unknown>): Promise<Response> {
-  const type = body.type as string ?? "jobs";
-  const format = body.format as string ?? "linkedin";
+async function handleDataVizRender(
+  body: Record<string, unknown>,
+): Promise<Response> {
+  const type = (body.type as string) ?? "jobs";
+  const format = (body.format as string) ?? "linkedin";
 
   // Dynamic import to avoid loading dataviz deps at startup
-  const { fetchJobMarketData } = await import("@golems/content/dataviz/fetchers/jobs");
-  const { fetchFinanceData } = await import("@golems/content/dataviz/fetchers/finance");
-  const { fetchBrainData } = await import("@golems/content/dataviz/fetchers/brain");
-  const { fetchActivityData } = await import("@golems/content/dataviz/fetchers/activity");
+  const { fetchJobMarketData } =
+    await import("@golems/content/dataviz/fetchers/jobs");
+  const { fetchFinanceData } =
+    await import("@golems/content/dataviz/fetchers/finance");
+  const { fetchBrainData } =
+    await import("@golems/content/dataviz/fetchers/brain");
+  const { fetchActivityData } =
+    await import("@golems/content/dataviz/fetchers/activity");
   const { renderBarChart } = await import("@golems/content/dataviz/charts/bar");
-  const { renderDonutChart } = await import("@golems/content/dataviz/charts/donut");
-  const { renderLineChart } = await import("@golems/content/dataviz/charts/line");
-  const { renderStatCards } = await import("@golems/content/dataviz/charts/stat-card");
-  const { renderLinkedInCard } = await import("@golems/content/dataviz/templates/linkedin-card");
-  const { renderSvgToBuffer } = await import("@golems/content/dataviz/renderer");
+  const { renderDonutChart } =
+    await import("@golems/content/dataviz/charts/donut");
+  const { renderLineChart } =
+    await import("@golems/content/dataviz/charts/line");
+  const { renderStatCards } =
+    await import("@golems/content/dataviz/charts/stat-card");
+  const { renderLinkedInCard } =
+    await import("@golems/content/dataviz/templates/linkedin-card");
+  const { renderSvgToBuffer } =
+    await import("@golems/content/dataviz/renderer");
 
   let chartSvg: string;
   let title: string;
@@ -230,15 +248,18 @@ async function handleDataVizRender(body: Record<string, unknown>): Promise<Respo
       const data = await fetchJobMarketData();
       title = "Job Market Overview";
       chartSvg = renderBarChart({
-        title: "Top Tags", data: data.topTags.map((t) => ({ label: t.tag, value: t.count })),
-        horizontal: true, maxBars: 8,
+        title: "Top Tags",
+        data: data.topTags.map((t) => ({ label: t.tag, value: t.count })),
+        horizontal: true,
+        maxBars: 8,
       });
       statsSvg = renderStatCards({
         stats: [
           { label: "Total Jobs", value: data.totalJobs },
           { label: "Sources", value: data.scrapeStats.length },
         ],
-        columns: 2, width: 600,
+        columns: 2,
+        width: 600,
       });
       break;
     }
@@ -246,9 +267,11 @@ async function handleDataVizRender(body: Record<string, unknown>): Promise<Respo
       const data = await fetchFinanceData();
       title = "Monthly Finance";
       chartSvg = renderDonutChart({
-        data: data.llmCostsByModel.filter((m) => m.totalCost > 0)
+        data: data.llmCostsByModel
+          .filter((m) => m.totalCost > 0)
           .map((m) => ({ label: m.model, value: m.totalCost })),
-        centerValue: `$${data.totalLLMCost.toFixed(2)}`, centerLabel: "Total",
+        centerValue: `$${data.totalLLMCost.toFixed(2)}`,
+        centerLabel: "Total",
       });
       break;
     }
@@ -256,7 +279,10 @@ async function handleDataVizRender(body: Record<string, unknown>): Promise<Respo
       const data = await fetchBrainData();
       title = "Brain Growth";
       chartSvg = renderLineChart({
-        data: data.monthlyGrowth.map((g) => ({ date: g.month, value: g.chunks })),
+        data: data.monthlyGrowth.map((g) => ({
+          date: g.month,
+          value: g.chunks,
+        })),
         showArea: true,
       });
       statsSvg = renderStatCards({
@@ -264,7 +290,8 @@ async function handleDataVizRender(body: Record<string, unknown>): Promise<Respo
           { label: "Chunks", value: data.totalChunks },
           { label: "Enriched", value: `${data.enrichmentPercent}%` },
         ],
-        columns: 2, width: 600,
+        columns: 2,
+        width: 600,
       });
       break;
     }
@@ -272,7 +299,9 @@ async function handleDataVizRender(body: Record<string, unknown>): Promise<Respo
       const data = await fetchActivityData();
       title = "Golem Activity";
       chartSvg = renderBarChart({
-        data: data.golemActivity.slice(0, 6).map((g) => ({ label: g.actor, value: g.eventCount })),
+        data: data.golemActivity
+          .slice(0, 6)
+          .map((g) => ({ label: g.actor, value: g.eventCount })),
         horizontal: true,
       });
       break;
@@ -296,101 +325,105 @@ async function handleDataVizRender(body: Record<string, unknown>): Promise<Respo
 
 // --- Server ---
 
-const server = Bun.serve({
-  port: PORT,
-  async fetch(req) {
-    const url = new URL(req.url);
-    const path = url.pathname;
-    const method = req.method;
+export async function handleRequest(req: Request): Promise<Response> {
+  const url = new URL(req.url);
+  const pathname = url.pathname;
+  const method = req.method;
 
-    // CORS headers for n8n
-    const corsHeaders = {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-    };
+  // CORS headers for n8n
+  const corsHeaders = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+  };
 
-    if (method === "OPTIONS") {
-      return new Response(null, { status: 204, headers: corsHeaders });
+  if (method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: corsHeaders });
+  }
+
+  try {
+    let response: Response;
+
+    switch (true) {
+      case method === "POST" && pathname === "/api/comfyui/generate": {
+        const body = (await req.json()) as Record<string, unknown>;
+        response = await handleComfyGenerate(body);
+        break;
+      }
+      case method === "GET" && pathname === "/api/comfyui/status":
+        response = await handleComfyStatus();
+        break;
+      case method === "POST" && pathname === "/api/remotion/render": {
+        const body = (await req.json()) as Record<string, unknown>;
+        response = await handleRemotionRender(body);
+        break;
+      }
+      case method === "POST" && pathname === "/api/remotion/still": {
+        const body = (await req.json()) as Record<string, unknown>;
+        response = await handleRemotionStill(body);
+        break;
+      }
+      case method === "GET" && pathname === "/api/health":
+        response = handleHealth();
+        break;
+      case method === "POST" && pathname === "/api/dataviz/render": {
+        const body = (await req.json()) as Record<string, unknown>;
+        response = await handleDataVizRender(body);
+        break;
+      }
+      case method === "GET" && pathname === "/api/pipelines":
+        response = await handlePipelines();
+        break;
+      case method === "POST" && pathname === "/api/pipeline/route": {
+        const body = (await req.json()) as Record<string, unknown>;
+        response = await handlePipelineRoute(body);
+        break;
+      }
+      case method === "POST" && pathname === "/api/pipeline/execute": {
+        const body = (await req.json()) as Record<string, unknown>;
+        response = await handlePipelineExecute(body);
+        break;
+      }
+      case method === "GET" && pathname === "/api/pipeline/stats":
+        response = await handlePipelineStats();
+        break;
+      default:
+        response = Response.json(
+          { error: "Not found", path: pathname },
+          { status: 404 },
+        );
     }
 
-    try {
-      let response: Response;
-
-      switch (true) {
-        case method === "POST" && path === "/api/comfyui/generate": {
-          const body = await req.json() as Record<string, unknown>;
-          response = await handleComfyGenerate(body);
-          break;
-        }
-        case method === "GET" && path === "/api/comfyui/status":
-          response = await handleComfyStatus();
-          break;
-        case method === "POST" && path === "/api/remotion/render": {
-          const body = await req.json() as Record<string, unknown>;
-          response = await handleRemotionRender(body);
-          break;
-        }
-        case method === "POST" && path === "/api/remotion/still": {
-          const body = await req.json() as Record<string, unknown>;
-          response = await handleRemotionStill(body);
-          break;
-        }
-        case method === "GET" && path === "/api/health":
-          response = handleHealth();
-          break;
-        case method === "POST" && path === "/api/dataviz/render": {
-          const body = await req.json() as Record<string, unknown>;
-          response = await handleDataVizRender(body);
-          break;
-        }
-        case method === "GET" && path === "/api/pipelines":
-          response = await handlePipelines();
-          break;
-        case method === "POST" && path === "/api/pipeline/route": {
-          const body = await req.json() as Record<string, unknown>;
-          response = await handlePipelineRoute(body);
-          break;
-        }
-        case method === "POST" && path === "/api/pipeline/execute": {
-          const body = await req.json() as Record<string, unknown>;
-          response = await handlePipelineExecute(body);
-          break;
-        }
-        case method === "GET" && path === "/api/pipeline/stats":
-          response = await handlePipelineStats();
-          break;
-        default:
-          response = Response.json(
-            { error: "Not found", path },
-            { status: 404 },
-          );
-      }
-
-      // Add CORS headers to all responses
-      for (const [key, value] of Object.entries(corsHeaders)) {
-        response.headers.set(key, value);
-      }
-
-      return response;
-    } catch (err) {
-      return Response.json(
-        { error: "Internal server error", message: (err as Error).message },
-        { status: 500, headers: corsHeaders },
-      );
+    // Add CORS headers to all responses
+    for (const [key, value] of Object.entries(corsHeaders)) {
+      response.headers.set(key, value);
     }
-  },
-});
 
-console.log(`Render service running on http://localhost:${PORT}`);
-console.log("Routes:");
-console.log("  POST /api/comfyui/generate   — Flux image generation");
-console.log("  GET  /api/comfyui/status     — ComfyUI server status");
-console.log("  POST /api/remotion/render    — Video rendering");
-console.log("  POST /api/remotion/still     — Single frame capture");
-console.log("  POST /api/dataviz/render     — Data visualization");
-console.log("  POST /api/pipeline/route     — AI-route idea to pipeline");
-console.log("  POST /api/pipeline/execute   — Route + execute in one call");
-console.log("  GET  /api/pipeline/stats     — Pipeline performance stats");
-console.log("  GET  /api/pipelines          — List pipelines");
-console.log("  GET  /api/health             — Health check");
+    return response;
+  } catch (err) {
+    return Response.json(
+      { error: "Internal server error", message: (err as Error).message },
+      { status: 500, headers: corsHeaders },
+    );
+  }
+}
+
+if (import.meta.main) {
+  const server = Bun.serve({
+    port: PORT,
+    fetch: handleRequest,
+  });
+
+  console.log(`Render service running on http://localhost:${PORT}`);
+  console.log("Routes:");
+  console.log("  POST /api/comfyui/generate   — Flux image generation");
+  console.log("  GET  /api/comfyui/status     — ComfyUI server status");
+  console.log("  POST /api/remotion/render    — Video rendering");
+  console.log("  POST /api/remotion/still     — Single frame capture");
+  console.log("  POST /api/dataviz/render     — Data visualization");
+  console.log("  POST /api/pipeline/route     — AI-route idea to pipeline");
+  console.log("  POST /api/pipeline/execute   — Route + execute in one call");
+  console.log("  GET  /api/pipeline/stats     — Pipeline performance stats");
+  console.log("  GET  /api/pipelines          — List pipelines");
+  console.log("  GET  /api/health             — Health check");
+}
