@@ -11,7 +11,6 @@ Jobs is a **service layer**, not an autonomous golem. It provides background job
 ```text
 packages/jobs/
 ├── src/
-│   ├── composer.ts              # Grammy Composer: /jobs, /jobq, jobs:* pagination
 │   ├── index.ts                 # getStatus() + main entry point
 │   ├── scraper.ts               # Job board scraper (LinkedIn, Indeed, etc.)
 │   ├── matcher.ts               # Job-to-profile matching (LLM-scored)
@@ -50,14 +49,6 @@ Jobs **discovers**, Recruiter **acts**:
 | `job_getRecent` | Recent job matches above score threshold |
 | `job_search` | Search jobs by keyword/company |
 | `job_stats` | Match statistics by category |
-
-## Telegram Commands
-
-| Command | Description |
-|---------|-------------|
-| `/jobs` | Show recent high-score matches |
-| `/jobq` | Quick job summary |
-| `jobs:*` | Pagination callbacks for job lists |
 
 ## Supabase Tables
 

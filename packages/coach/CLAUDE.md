@@ -12,7 +12,6 @@ CoachGolem is the **health-aware life planner**: it pulls live biometric data fr
 packages/coach/
 ├── src/
 │   ├── index.ts                 # Main entry — planToday(), planTodayWithHealth(), getStatus()
-│   ├── composer.ts              # Grammy Composer: /plan, /schedule, /golems
 │   ├── coaching-engine.ts       # LLM coaching (Gemini Flash-Lite) + rule-based fallback
 │   ├── protocol.ts              # Huberman protocols + personal context (shoulder, sleep phase)
 │   ├── calendar-client.ts       # Google Calendar API (reuses Gmail OAuth2)
@@ -58,14 +57,6 @@ packages/coach/
 | `EcosystemStatus` | status-aggregator | `{ timestamp, golems, healthy, unhealthy, summary }` |
 | `WhoopRecovery` | @golems/shared/whoop | Recovery score, HRV, SpO2, skin temp |
 | `WhoopSleep` | @golems/shared/whoop | Sleep stages, performance, efficiency |
-
-## Telegram Commands
-
-| Command | Description |
-|---------|-------------|
-| `/schedule` | Health-aware daily plan (Whoop + Huberman + LLM coaching) |
-| `/plan` | Basic daily plan (calendar + golem statuses, no health data) |
-| `/golems` | Ecosystem status overview |
 
 ## Dependencies
 

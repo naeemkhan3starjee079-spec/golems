@@ -11,7 +11,6 @@ RecruiterGolem handles the **active job search** side: finding contacts at compa
 ```text
 packages/recruiter/
 ├── src/
-│   ├── composer.ts              # Grammy Composer: /practice, /stats, /outreach, /followup + callbacks
 │   ├── index.ts                 # getStatus() for CoachGolem reads
 │   ├── contact-finder.ts        # Find hiring managers via web search
 │   ├── draft-outreach.ts        # Style-adapted outreach messages
@@ -54,15 +53,6 @@ packages/recruiter/
 - 7 interview modes (behavioral, technical, system design, etc.)
 - Elo rating tracks skill progression per category
 - Practice sessions stored in Supabase for cross-device continuity
-
-## Telegram Commands
-
-| Command | Description |
-|---------|-------------|
-| `/practice` | Start interview practice session |
-| `/stats` | Show Elo ratings and practice history |
-| `/outreach` | View/manage outreach pipeline |
-| `/followup` | Check overdue follow-ups |
 
 ## LinkedIn Connections (Supabase)
 

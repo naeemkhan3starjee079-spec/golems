@@ -22,7 +22,6 @@
     "./*": "./src/*.ts"
   },
   "dependencies": {
-    "@golems/shared": "workspace:*",
-    "grammy": "^1.21.1"
+    "@golems/shared": "workspace:*"
   }
 }

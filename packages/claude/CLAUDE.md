@@ -1,24 +1,22 @@
 # ClaudeGolem
 
-> Orchestrator, Telegram router, and external face of the Golems ecosystem.
+> CLI remote control via Telegram + notification server.
 
 ## Role
 
-ClaudeGolem is the **central hub** — it receives all Telegram messages, routes domain-specific requests to other golems via Grammy Composers, and handles anything that doesn't belong to a specific domain golem. It's the "general intelligence" that coordinates the ecosystem.
+ClaudeGolem receives Telegram messages, routes them to Claude CLI, and sends notifications. Simplified to a command-only bot — no conversational UX, no domain composers, no personas.
 
 ## Architecture
 
 ```text
 packages/claude/
 ├── src/
-│   ├── telegram-bot.ts          # Thin router: auth → composers → startup/shutdown
+│   ├── telegram-bot.ts          # Auth (fail-closed) + rate limit → composer → shutdown
 │   ├── composers/
-│   │   └── claude-composer.ts   # /start, /status, /admin, /trigger, /fork, /setup, /tonight, /repos + free text
+│   │   └── claude-composer.ts   # /status, /trigger, /tonight, /schedule + free text → Claude CLI
 │   └── lib/
-│       ├── bot-shared.ts        # Shared bot utilities (auth, keyboard, state)
-│       ├── chat-queue.ts        # Message queue for Claude CLI spawns
-│       ├── notify-server.ts     # HTTP notification server (port 3847)
-│       └── session-fork.ts      # Per-golem Claude session forking
+│       ├── bot-shared.ts        # State, Claude CLI spawning, queue processing
+│       └── notify-server.ts     # HTTP notification server (port 3847)
 ├── .claude-plugin/plugin.json
 ├── CLAUDE.md                    # This file
 └── package.json                 # @golems/claude
@@ -26,25 +24,21 @@ packages/claude/
 
 ## Dependencies
 
-- `@golems/shared` — Supabase, event log, state store, LLM, email infra
-- `@golems/jobs` — JobGolem Composer (registered in telegram-bot.ts)
-- `@golems/recruiter` — RecruiterGolem Composer
-- `@golems/coach` — CoachGolem Composer (/plan, /golems)
-- `@golems/teller` — TellerGolem Composer (/spending)
-- `@golems/services` — Cloud worker, night shift, briefing
+- `@golems/shared` — Supabase, event log, state store, Axiom, email infra
+- `@golems/jobs` — runJobSearch (used by /trigger jobs)
+- `@golems/services` — Night shift, briefing (used by /trigger)
 - `grammy` — Telegram Bot Framework
 
 ## Key Patterns
 
-### Telegram Bot Lifecycle
-1. `telegram-bot.ts` creates bot, applies auth middleware, registers composers
-2. Each golem's composer handles its own commands + callbacks
-3. Free-text messages go to ClaudeGolem composer → spawns `claude --print`
-4. Notification server on port 3847 receives POST from Claude hooks
+### Auth (Fail-Closed)
+- `TELEGRAM_ALLOWED_IDS` must contain owner user ID
+- Empty list = reject all users (fail-closed)
+- Rate limit: 10 messages per minute per user
 
 ### Claude CLI Spawning
 - **ALWAYS strip `ANTHROPIC_API_KEY`** from env when spawning `claude --print`
-- Uses `--continue` for main chat, `--resume <uuid>` for per-golem sessions
+- Uses `--continue` for main chat with system prompt (SOUL.md + recent events)
 - 5-minute timeout with 60s typing heartbeat
 
 ### SIGTERM Handling
@@ -54,41 +48,26 @@ packages/claude/
 
 ## Telegram Commands
 
-| Command | Handler | Description |
-|---------|---------|-------------|
-| `/start` | claude-composer | Welcome v6 + persistent menu |
-| `/status` | claude-composer | Health, queue, Railway, stats |
-| `/admin` | claude-composer | Dashboard links |
-| `/trigger` | claude-composer | Manual runs (email/jobs/briefing/nightshift) |
-| `/fork` | claude-composer | Fork Claude session for task |
-| `/setup` | claude-composer | Register topic thread IDs |
-| `/tonight` | claude-composer | Night Shift target selection |
-| `/schedule` | claude-composer | Weekly Night Shift rotation |
-| `/repos` | claude-composer | List available repos |
-| `/plan` | coach-composer | Today's schedule + pending tasks |
-| `/golems` | coach-composer | All golem ecosystem statuses |
-| `/spending` | teller-composer | Monthly/tax financial reports |
-| `/jobs` | job-composer | Job matches with pagination |
-| `/jobq` | job-composer | Ask questions about jobs |
-| `/practice` | recruiter-composer | Interview practice (Elo-rated) |
-| `/stats` | recruiter-composer | Practice statistics |
-| `/outreach` | recruiter-composer | Outreach pipeline |
-| `/followup` | recruiter-composer | Overdue follow-ups |
-| Free text | claude-composer | Spawn Claude CLI |
+| Command | Description |
+|---------|-------------|
+| `/start` | Welcome + command list |
+| `/status` | Health, queue, Railway, daily stats |
+| `/trigger <svc>` | Manual runs (email/jobs/briefing/nightshift) |
+| `/morning` | Morning briefing |
+| `/tonight` | Night Shift target selection |
+| `/schedule` | Weekly Night Shift rotation |
+| `/repos` | List available repos |
+| Free text | Spawn Claude CLI |
 
-### Keyboard Buttons
+## Notify Server
 
-| Button | Action |
-|--------|--------|
-| 📊 Status | System health + stats |
-| 📋 Plan | Today's daily plan |
-| 🌙 Tonight | Night Shift target picker |
-| 🤖 Golems | Ecosystem golem statuses |
+HTTP on `127.0.0.1:3847`:
+- `POST /notify` — Send notification to Telegram (validated: title required, body truncated, source-based routing)
+- `GET /health` — Health check
 
 ## Communication Style
 
-See `../autonomous/SOUL.md` for full persona. Key traits:
+See `SOUL.md` for full persona. Key traits:
 - Formality: 2/10 — very casual
-- Brief, direct messages (it's mobile chat)
-- Hebrew ↔ English code-switching
-- Emojis sparingly (🫶)
+- Brief, direct messages (mobile chat)
+- Hebrew/English code-switching

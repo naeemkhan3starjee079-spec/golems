@@ -1,21 +1,20 @@
 #!/usr/bin/env bun
 /**
- * ClaudeGolem Telegram Bot — Thin Router
+ * ClaudeGolem Telegram Bot — CLI Remote Control
  *
- * All domain logic lives in Composer modules:
- * - composers/claude-composer.ts  — System commands + interactive chat
- * - composers/job-composer.ts     — Job viewing + /jobq
- * - composers/recruiter-composer.ts — Interview practice + outreach
+ * Simplified bot: auth middleware → claude-composer → notify server.
+ * No domain composers, no conversational UX, no personas.
  *
  * Infrastructure:
- * - lib/bot-shared.ts     — Shared state, Claude CLI spawning, queue
- * - lib/notify-server.ts  — HTTP notification server (port 3847)
+ * - composers/claude-composer.ts  — /status, /trigger, /tonight, /schedule + free text → Claude CLI
+ * - lib/bot-shared.ts             — Shared state, Claude CLI spawning, queue
+ * - lib/notify-server.ts          — HTTP notification server (port 3847)
  */
 
 import "@golems/shared/lib/load-env";
 import { installProcessGuards } from "@golems/shared/lib/process-guards";
 import { Bot } from "grammy";
-import { GITS, askClaude, queue, processQueue } from "./lib/bot-shared";
+import { GITS } from "./lib/bot-shared";
 
 // Catch unhandled errors before they crash the bot silently
 installProcessGuards("telegram-bot");
@@ -23,17 +22,6 @@ import { startNotifyServer } from "./lib/notify-server";
 
 // Composers
 import { claudeComposer } from "./composers/claude-composer";
-import { jobComposer, initJobComposer } from "@golems/jobs/composer";
-import {
-  recruiterComposer,
-  initRecruiterComposer,
-} from "@golems/recruiter/composer";
-import { coachComposer } from "@golems/coach/composer";
-import { tellerComposer } from "@golems/teller/composer";
-
-// Wire up composer dependencies (breaks circular imports)
-initJobComposer({ askClaude });
-initRecruiterComposer({ queue, processQueue });
 
 // ═══════════════════════════════════════════════════════
 // Bot Setup
@@ -45,37 +33,58 @@ if (!token) {
 }
 const bot = new Bot(token);
 
-// Security: Whitelist allowed Telegram user IDs
+// Security: Whitelist allowed Telegram user IDs (FAIL-CLOSED)
 const ALLOWED_USER_IDS =
   process.env.TELEGRAM_ALLOWED_IDS?.split(",")
     .map((id) => parseInt(id.trim(), 10))
     .filter((id) => !isNaN(id)) || [];
 
+if (ALLOWED_USER_IDS.length === 0) {
+  console.warn(
+    "[Auth] TELEGRAM_ALLOWED_IDS is empty — bot will reject ALL users (fail-closed)",
+  );
+}
+
 function isAuthorized(userId: number | undefined): boolean {
-  if (ALLOWED_USER_IDS.length === 0) return true;
+  if (ALLOWED_USER_IDS.length === 0) return false; // Fail-closed: no IDs = reject all
   if (!userId) return false;
   return ALLOWED_USER_IDS.includes(userId);
 }
 
-// Global auth middleware
+// Rate limiting: per-user, max 10 messages per minute
+const rateLimitMap = new Map<number, number[]>();
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX = 10;
+
+function isRateLimited(userId: number): boolean {
+  const now = Date.now();
+  const timestamps = rateLimitMap.get(userId) || [];
+  const recent = timestamps.filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
+  recent.push(now);
+  rateLimitMap.set(userId, recent);
+  return recent.length > RATE_LIMIT_MAX;
+}
+
+// Global auth + rate-limit middleware
 bot.use(async (ctx, next) => {
   const userId = ctx.from?.id;
   if (!isAuthorized(userId)) {
     console.log(`[Auth] Blocked user ${userId} from ${ctx.chat?.id}`);
     return;
   }
+  if (userId && isRateLimited(userId)) {
+    console.log(`[RateLimit] Throttled user ${userId}`);
+    await ctx.reply("Slow down — too many messages. Try again in a minute.");
+    return;
+  }
   await next();
 });
 
 // ═══════════════════════════════════════════════════════
-// Register Composers (order matters — specific before general)
+// Register Composers
 // ═══════════════════════════════════════════════════════
 
-bot.use(jobComposer);
-bot.use(recruiterComposer);
-bot.use(coachComposer);
-bot.use(tellerComposer);
-bot.use(claudeComposer); // Must be last — has catch-all message:text handler
+bot.use(claudeComposer);
 
 // ═══════════════════════════════════════════════════════
 // Infrastructure
@@ -85,12 +94,12 @@ bot.use(claudeComposer); // Must be last — has catch-all message:text handler
 const notifyServer = startNotifyServer(bot);
 
 // Start Telegram bot
-console.log("🤖 ClaudeGolem v6 (Composer Architecture)");
-console.log("📍 Working dir:", GITS);
+console.log("ClaudeGolem v7 (CLI Remote Control)");
+console.log("Working dir:", GITS);
 
 bot.start({
   onStart: (botInfo) => {
-    console.log(`✅ @${botInfo.username} running`);
+    console.log(`@${botInfo.username} running`);
   },
 });
 
