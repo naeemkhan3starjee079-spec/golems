@@ -82,15 +82,15 @@ async function main() {
       console.log(`  Access token expires in: ${tokens.expires_in}s`);
       console.log(`  Refresh token: ${tokens.refresh_token.slice(0, 10)}...`);
 
-      // Write tokens to temp file for immediate testing
+      // Write tokens to config dir (not /tmp — symlink attack risk)
       const tokenData = JSON.stringify({
         access_token: tokens.access_token,
         refresh_token: tokens.refresh_token,
         expires_at: Date.now() + tokens.expires_in * 1000,
       });
-      const { writeFileSync } = await import("fs");
-      writeFileSync("/tmp/whoop-tokens.json", tokenData);
-      console.log("  Tokens written to /tmp/whoop-tokens.json");
+      const { safeWriteTokens, TOKEN_CACHE_PATH } = await import("./client");
+      safeWriteTokens(TOKEN_CACHE_PATH, tokenData);
+      console.log(`  Tokens written to ${TOKEN_CACHE_PATH}`);
 
       // Persist refresh token to Supabase (survives reboots + deploys)
       try {

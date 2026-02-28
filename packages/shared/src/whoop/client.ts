@@ -6,7 +6,16 @@
  * Whoop uses rotating refresh tokens — each use invalidates the old one.
  */
 
-import { readFileSync, existsSync, writeFileSync } from "fs";
+import {
+  readFileSync,
+  existsSync,
+  writeFileSync,
+  mkdirSync,
+  lstatSync,
+  chmodSync,
+} from "fs";
+import { join } from "path";
+import { homedir } from "os";
 import type {
   WhoopTokens,
   WhoopRecovery,
@@ -19,7 +28,37 @@ import type {
 const BASE_URL = "https://api.prod.whoop.com/developer/v2";
 const TOKEN_URL = "https://api.prod.whoop.com/oauth/oauth2/token";
 const TOKEN_BUFFER_MS = 5 * 60 * 1000; // Refresh 5min before expiry
-const TOKEN_CACHE_PATH = "/tmp/whoop-tokens.json";
+
+const HOME = process.env.HOME ?? homedir();
+if (!HOME) {
+  throw new Error("[Whoop] Unable to resolve HOME for token cache path");
+}
+const CONFIG_DIR = join(HOME, ".config", "golems");
+export const TOKEN_CACHE_PATH = join(CONFIG_DIR, "whoop-tokens.json");
+
+/**
+ * Safe write that refuses to follow symlinks and sets 0o600 permissions.
+ * Prevents symlink attacks on predictable token cache paths.
+ */
+export function safeWriteTokens(filePath: string, content: string): void {
+  if (existsSync(filePath)) {
+    try {
+      const stat = lstatSync(filePath);
+      if (stat.isSymbolicLink()) {
+        console.error(`[Whoop] Refusing to write: ${filePath} is a symlink`);
+        return;
+      }
+    } catch {}
+  }
+  // Ensure parent directory exists
+  const dir = filePath.substring(0, filePath.lastIndexOf("/"));
+  if (dir && !existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
+  }
+  writeFileSync(filePath, content, { mode: 0o600 });
+  // mode option only applies on file creation — explicitly chmod for existing files
+  chmodSync(filePath, 0o600);
+}
 
 let cachedTokens: WhoopTokens | null = null;
 
@@ -41,10 +80,18 @@ function getCredentials(): {
   return { clientId, clientSecret, refreshToken };
 }
 
-/** Try loading cached tokens from /tmp/whoop-tokens.json */
+/** Try loading cached tokens from ~/.config/golems/whoop-tokens.json */
 function loadCachedTokensFromFile(): boolean {
   try {
     if (!existsSync(TOKEN_CACHE_PATH)) return false;
+    // Refuse to read through a symlink
+    const stat = lstatSync(TOKEN_CACHE_PATH);
+    if (stat.isSymbolicLink()) {
+      console.error(
+        `[Whoop] Refusing to read: ${TOKEN_CACHE_PATH} is a symlink`,
+      );
+      return false;
+    }
     const data = JSON.parse(readFileSync(TOKEN_CACHE_PATH, "utf-8"));
     if (data.access_token && data.expires_at > Date.now() + TOKEN_BUFFER_MS) {
       cachedTokens = data;
@@ -60,10 +107,10 @@ function loadCachedTokensFromFile(): boolean {
   }
 }
 
-/** Save tokens to cache file */
+/** Save tokens to cache file (symlink-safe, 0o600 permissions) */
 function saveTokensToFile(tokens: WhoopTokens): void {
   try {
-    writeFileSync(TOKEN_CACHE_PATH, JSON.stringify(tokens));
+    safeWriteTokens(TOKEN_CACHE_PATH, JSON.stringify(tokens));
   } catch {
     // Non-critical — tokens still work from memory
   }
