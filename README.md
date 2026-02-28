@@ -138,12 +138,9 @@ golems/
 │   ├── shared/         # Supabase, LLM, email, state, notifications
 │   ├── services/       # Night Shift, Briefing, Cloud Worker, Doctor, Wizard
 │   ├── content/        # Visual content factory (Remotion, ComfyUI, dataviz) + publishing
-│   ├── dashboard/      # Next.js web dashboard (Vercel)
 │   ├── orchestrator/   # n8n orchestration + Bun render microservice
 │   ├── tax-helper/     # Schedule C transaction categorization (Sophtron MCP)
 │   ├── golems-tui/     # React Ink terminal dashboard
-│   ├── autonomous/     # Legacy test host (test files only)
-│   ├── ralph/          # Autonomous coding loop (PRD → stories → code → review)
 │   └── (voicelayer)    # Voice I/O layer — external repo (github.com/EtanHey/voicelayer)
 ├── .claude/agents/     # 7 named agent profiles (/agents)
 ├── .claude/rules/      # Auto-loaded rules (survives compaction)
@@ -167,7 +164,7 @@ golems/
 | **Cloud** | Railway (Docker) |
 | **Local** | macOS launchd services |
 | **Bot** | grammY (Telegram) |
-| **Testing** | Bun test (1,199 tests, 2,928 assertions) |
+| **Testing** | Bun test (912 tests, 2,227 assertions) |
 | **CI/CD** | GitHub Actions + CodeRabbit + DeepSource |
 
 ---

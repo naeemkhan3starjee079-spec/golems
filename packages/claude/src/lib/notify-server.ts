@@ -27,11 +27,6 @@ const SOURCE_CONFIG: Record<
     topic: "general",
     format: (t, b) => `${t}\n${b}`,
   },
-  ralph: {
-    icon: "cycle",
-    topic: "alerts",
-    format: (t, b) => `Ralph: ${t}\n\n${b}`,
-  },
   nightshift: {
     icon: "moon",
     topic: "alerts",

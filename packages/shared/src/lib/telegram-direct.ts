@@ -27,7 +27,6 @@ let cachedTopics: Record<string, number> | null = null;
 /** Source → topic mapping (matches telegram-bot.ts SOURCE_CONFIG) */
 const SOURCE_TO_TOPIC: Record<string, string> = {
   claude: "general",
-  ralph: "alerts",
   nightshift: "nightshift",
   email: "email",
   jobs: "jobs",
@@ -45,7 +44,6 @@ const SOURCE_FORMAT: Record<
   { icon: string; format: (t: string, b: string) => string }
 > = {
   claude: { icon: "🤖", format: (t, b) => `🤖 *${t}*\n${b}` },
-  ralph: { icon: "🔄", format: (t, b) => `🔄 *Ralph*: ${t}\n\n${b}` },
   nightshift: { icon: "🌙", format: (t, b) => `🌙 *Night Shift*\n${t}\n${b}` },
   email: { icon: "📧", format: (t, b) => `📧 *${t}*\n\n${b}` },
   jobs: { icon: "🎯", format: (t, b) => `🎯 *${t}*\n\n${b}` },

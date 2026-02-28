@@ -3,7 +3,16 @@
   "title": "Golems Registry",
   "description": "Typed registry for the Golems ecosystem — packages, golems, services, MCP servers, infrastructure, and skills",
   "type": "object",
-  "required": ["version", "updatedAt", "packages", "golems", "services", "mcpServers", "infrastructure", "skills"],
+  "required": [
+    "version",
+    "updatedAt",
+    "packages",
+    "golems",
+    "services",
+    "mcpServers",
+    "infrastructure",
+    "skills"
+  ],
   "additionalProperties": false,
   "properties": {
     "$schema": { "type": "string" },
@@ -54,7 +63,7 @@
     },
     "skills": {
       "type": "array",
-      "description": "Available skill names (in packages/ralph/skills/golem-powers/)",
+      "description": "Available skill names (in skills/golem-powers/)",
       "items": { "type": "string" },
       "uniqueItems": true
     }
@@ -65,7 +74,10 @@
       "required": ["path", "description", "runtime", "entrypoints"],
       "additionalProperties": false,
       "properties": {
-        "path": { "type": "string", "description": "Relative path from monorepo root" },
+        "path": {
+          "type": "string",
+          "description": "Relative path from monorepo root"
+        },
         "description": { "type": "string" },
         "runtime": {
           "type": "string",
@@ -85,10 +97,19 @@
       "additionalProperties": false,
       "properties": {
         "name": { "type": "string", "description": "PascalCase golem name" },
-        "package": { "type": "string", "description": "Key in packages object" },
+        "package": {
+          "type": "string",
+          "description": "Key in packages object"
+        },
         "description": { "type": "string" },
-        "entrypoint": { "type": "string", "description": "Entry file relative to package path" },
-        "schedule": { "type": "string", "description": "When it runs (if scheduled)" }
+        "entrypoint": {
+          "type": "string",
+          "description": "Entry file relative to package path"
+        },
+        "schedule": {
+          "type": "string",
+          "description": "When it runs (if scheduled)"
+        }
       }
     },
     "Service": {
@@ -96,14 +117,20 @@
       "required": ["plist", "description", "type"],
       "additionalProperties": false,
       "properties": {
-        "plist": { "type": "string", "description": "Launchd plist label (without .plist)" },
+        "plist": {
+          "type": "string",
+          "description": "Launchd plist label (without .plist)"
+        },
         "description": { "type": "string" },
         "type": {
           "type": "string",
           "enum": ["keepAlive", "interval", "calendar"],
           "description": "Service scheduling type"
         },
-        "intervalSeconds": { "type": "integer", "description": "Interval for 'interval' type services" }
+        "intervalSeconds": {
+          "type": "integer",
+          "description": "Interval for 'interval' type services"
+        }
       }
     },
     "McpServer": {

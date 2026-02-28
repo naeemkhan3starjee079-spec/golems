@@ -13,23 +13,21 @@ Each package has its own setup:
 
 | Package | Setup |
 |---------|-------|
-| **autonomous** | `cd packages/autonomous && bun install` |
 | **docsite** | `cd packages/docsite && npm install` |
-| **ralph** | `cd packages/ralph` (zsh scripts, no install needed) |
 | **brainlayer** | `pip install git+https://github.com/EtanHey/brainlayer.git` (external repo) |
 
 ## Development Workflow
 
 1. Create a branch from `master`
 2. Make your changes
-3. Run tests: `bun test` (autonomous) or `npm test` (docsite)
+3. Run tests: `bun test` or `npm test` (docsite)
 4. Create a PR — CodeRabbit, Cursor Bugbot, and DeepSource will review automatically
 5. Address review feedback
 6. Merge when all checks pass
 
 ## Code Style
 
-- TypeScript for all new code in `autonomous` and `ralph`
+- TypeScript for all new code
 - No `any` types — use proper interfaces
 - JSDoc on exported functions
 - Tests live next to source files: `foo.ts` has `foo.test.ts`
