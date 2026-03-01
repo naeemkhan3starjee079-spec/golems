@@ -23,6 +23,7 @@ import {
 } from "fs";
 import { join } from "path";
 import { execSync } from "child_process";
+import { decodeProjectPath } from "../session-archiver";
 
 // Test directories (isolated from production)
 const TEST_BASE = "/tmp/session-archiver-test";
@@ -263,20 +264,137 @@ describe("Session Archiver - Activity Days Logic", () => {
 });
 
 describe("Session Archiver - Path Decoding", () => {
-  it("should decode Claude path encoding correctly", () => {
-    // Test the decoding logic
-    const testCases = [
-      { encoded: "-Users-test-project", expected: "/Users/test/project" },
-      { encoded: "-home-user-code", expected: "/home/user/code" },
-      { encoded: "-", expected: "/" },
-    ];
+  // Mock filesystem: defines which paths exist as directories
+  function mockFs(existingDirs: string[]): (path: string) => boolean {
+    const dirs = new Set(existingDirs);
+    return (path: string) => dirs.has(path);
+  }
 
-    for (const { encoded, expected } of testCases) {
-      // Decode: leading dash becomes /, remaining dashes become /
-      const decoded =
-        encoded === "-" ? "/" : "/" + encoded.slice(1).replace(/-/g, "/");
-      expect(decoded).toBe(expected);
-    }
+  it("should decode simple paths without dashes in directory names", () => {
+    const validator = mockFs(["/Users", "/Users/test", "/home", "/home/user"]);
+    expect(decodeProjectPath("-Users-test-project", validator)).toBe(
+      "/Users/test/project",
+    );
+    expect(decodeProjectPath("-home-user-code", validator)).toBe(
+      "/home/user/code",
+    );
+  });
+
+  it("should decode root path", () => {
+    expect(decodeProjectPath("-")).toBe("/");
+  });
+
+  it("should decode single-segment path", () => {
+    const validator = mockFs([]);
+    expect(decodeProjectPath("-project", validator)).toBe("/project");
+  });
+
+  it("should decode paths with dashes in directory names (the bug)", () => {
+    const validator = mockFs([
+      "/Users",
+      "/Users/etanheyman",
+      "/Users/etanheyman/Gits",
+      "/Users/etanheyman/Gits/6pm-mini",
+    ]);
+
+    // BUG: old code would return "/Users/etanheyman/Gits/6pm/mini"
+    expect(
+      decodeProjectPath("-Users-etanheyman-Gits-6pm-mini", validator),
+    ).toBe("/Users/etanheyman/Gits/6pm-mini");
+  });
+
+  it("should decode rudy-monorepo correctly", () => {
+    const validator = mockFs([
+      "/Users",
+      "/Users/etanheyman",
+      "/Users/etanheyman/Gits",
+      "/Users/etanheyman/Gits/rudy-monorepo",
+    ]);
+
+    expect(
+      decodeProjectPath("-Users-etanheyman-Gits-rudy-monorepo", validator),
+    ).toBe("/Users/etanheyman/Gits/rudy-monorepo");
+  });
+
+  it("should decode nested dashed path (rudy-monorepo/apps/mysudra)", () => {
+    const validator = mockFs([
+      "/Users",
+      "/Users/etanheyman",
+      "/Users/etanheyman/Gits",
+      "/Users/etanheyman/Gits/rudy-monorepo",
+      "/Users/etanheyman/Gits/rudy-monorepo/apps",
+    ]);
+
+    expect(
+      decodeProjectPath(
+        "-Users-etanheyman-Gits-rudy-monorepo-apps-mysudra",
+        validator,
+      ),
+    ).toBe("/Users/etanheyman/Gits/rudy-monorepo/apps/mysudra");
+  });
+
+  it("should decode etanheyman-com correctly", () => {
+    const validator = mockFs([
+      "/Users",
+      "/Users/etanheyman",
+      "/Users/etanheyman/Gits",
+      "/Users/etanheyman/Gits/etanheyman-com",
+    ]);
+
+    expect(
+      decodeProjectPath("-Users-etanheyman-Gits-etanheyman-com", validator),
+    ).toBe("/Users/etanheyman/Gits/etanheyman-com");
+  });
+
+  it("should handle multiple dashes in a single directory name", () => {
+    const validator = mockFs([
+      "/Users",
+      "/Users/dev",
+      "/Users/dev/my-cool-project",
+    ]);
+
+    expect(decodeProjectPath("-Users-dev-my-cool-project", validator)).toBe(
+      "/Users/dev/my-cool-project",
+    );
+  });
+
+  it("should handle dashes in intermediate path components", () => {
+    const validator = mockFs([
+      "/Users",
+      "/Users/john-doe",
+      "/Users/john-doe/Gits",
+    ]);
+
+    expect(decodeProjectPath("-Users-john-doe-Gits-myproject", validator)).toBe(
+      "/Users/john-doe/Gits/myproject",
+    );
+  });
+
+  it("should prefer single-segment match when ambiguous (documented limitation)", () => {
+    // When BOTH /Gits/6pm AND /Gits/6pm-mini exist, the greedy algorithm
+    // picks the shorter match first. This is an inherent limitation of the
+    // lossy encoding (dashes and slashes are conflated). In practice this
+    // scenario is extremely rare.
+    const validator = mockFs([
+      "/Users",
+      "/Users/etanheyman",
+      "/Users/etanheyman/Gits",
+      "/Users/etanheyman/Gits/6pm",
+      "/Users/etanheyman/Gits/6pm-mini",
+    ]);
+
+    // Greedy picks /6pm first, then /mini as leaf
+    expect(
+      decodeProjectPath("-Users-etanheyman-Gits-6pm-mini", validator),
+    ).toBe("/Users/etanheyman/Gits/6pm/mini");
+  });
+
+  it("should fall back to naive decode when filesystem has no matching dirs", () => {
+    // No directories exist — validator always returns false
+    const validator = mockFs([]);
+
+    // Should fall through to last-segment logic, producing the naive split
+    expect(decodeProjectPath("-a-b-c", validator)).toBe("/a/b/c");
   });
 });
 
