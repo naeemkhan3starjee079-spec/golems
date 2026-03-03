@@ -9,7 +9,11 @@ import type { GolemStatus } from "@golems/shared/lib/shared-types";
 import { getLatestRecovery, getLatestSleep } from "@golems/shared/whoop/client";
 import { getTodayEvents } from "./calendar-client";
 import { generateDailyPlan } from "./schedule-engine";
-import { getEcosystemStatus, registerAllGolems, getPendingWork } from "./status-aggregator";
+import {
+  getEcosystemStatus,
+  registerAllGolems,
+  getPendingWork,
+} from "./status-aggregator";
 import { sendMorningNudge } from "./nudger";
 import { recordDay, getWeeklySummary } from "./tracker";
 import { loadProtocol } from "./protocol";
@@ -99,8 +103,13 @@ export type { CoachingOutput } from "./coaching-engine";
 export type { CoachProtocol } from "./protocol";
 export { getEcosystemStatus } from "./status-aggregator";
 export { getTodayEvents } from "./calendar-client";
-export { generateDailyPlan, formatPlanForTelegram, formatHealthPlanForTelegram } from "./schedule-engine";
+export {
+  generateDailyPlan,
+  formatPlanForTelegram,
+  formatHealthPlanForTelegram,
+} from "./schedule-engine";
 export { getWeeklySummary } from "./tracker";
 export { generateCoaching } from "./coaching-engine";
 export { loadProtocol, saveProtocol } from "./protocol";
 export { syncCalendarToSupabase } from "./calendar-sync";
+export { generateDailyNote, type DailyData } from "./daily-brief";
