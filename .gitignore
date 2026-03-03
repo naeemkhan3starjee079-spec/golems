@@ -39,6 +39,9 @@ skills/golem-powers/tax-helper/
 packages/ralph/skills/golem-powers/tax-helper
 docs/tax-helper-plan.md
 
+# NDA — contract feedback skill (client-specific pricing + terms)
+skills/golem-powers/contract-feedback/
+
 # DeepSource CLI
 packages/docsite/bin/
 .vercel
