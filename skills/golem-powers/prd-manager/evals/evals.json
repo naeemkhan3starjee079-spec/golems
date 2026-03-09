@@ -1,0 +1,57 @@
+{
+  "skill_name": "prd-manager",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Mark story S-003 as complete and add a new acceptance criterion to S-004.",
+      "expected_output": "Agent modifies the PRD JSON correctly — updates status on S-003, appends criterion to S-004 without corrupting structure.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "validates-story-ids-exist",
+          "description": "Response verifies S-003 and S-004 exist in the PRD before modifying"
+        },
+        {
+          "name": "preserves-json-structure",
+          "description": "Response does not corrupt the existing JSON structure when making modifications"
+        },
+        {
+          "name": "updates-correct-fields",
+          "description": "Response changes status on the right story and appends criterion to the right story"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Bulk update: mark S-001 through S-005 all as in-progress.",
+      "expected_output": "Agent performs bulk update efficiently, validates all IDs exist, and confirms changes.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "handles-bulk-operations",
+          "description": "Response updates all 5 stories in a single efficient operation, not one-by-one manual edits"
+        },
+        {
+          "name": "validates-all-ids",
+          "description": "Response verifies all story IDs exist before making bulk changes"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Delete story S-002 from the PRD entirely.",
+      "expected_output": "Agent recommends archiving over deletion, or confirms deletion is intentional before proceeding.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "warns-about-deletion",
+          "description": "Response cautions about permanent deletion and suggests archiving instead, or confirms intent"
+        },
+        {
+          "name": "does-not-silently-delete",
+          "description": "Response does not delete the story without explicit confirmation"
+        }
+      ]
+    }
+  ]
+}

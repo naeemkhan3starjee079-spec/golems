@@ -1,0 +1,65 @@
+{
+  "skill_name": "brainlayer",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I'm getting 'connection refused' errors from brain_search. How do I check if BrainLayer is working and re-index if needed?",
+      "expected_output": "Provides CLI commands: 'brainlayer stats' to check status, 'brainlayer index' to re-index, and mentions the DB path at ~/.local/share/brainlayer/brainlayer.db. Does NOT just say 'use brain_search MCP tool' since the MCP is broken.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "provides-cli-commands-not-mcp",
+          "description": "Suggests 'brainlayer stats' and/or 'brainlayer index' CLI commands, NOT the MCP tools (brain_search/brain_store) which are the ones failing"
+        },
+        {
+          "name": "mentions-db-path",
+          "description": "References the database path ~/.local/share/brainlayer/ or brainlayer.db for debugging"
+        },
+        {
+          "name": "mentions-enrichment-option",
+          "description": "Mentions 'brainlayer enrich' as an option for rebuilding metadata/embeddings"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I want to set up BrainLayer MCP in a new project repo. What config do I need?",
+      "expected_output": "Provides the exact MCP config JSON with brainlayer-mcp command. Mentions the binary name is 'brainlayer-mcp' not 'brainlayer'. Notes backward compat with old brainlayer_* tool names.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "provides-exact-mcp-config-json",
+          "description": "Provides the JSON config block with {\"mcpServers\": {\"brainlayer\": {\"command\": \"brainlayer-mcp\"}}} — the exact format needed"
+        },
+        {
+          "name": "uses-brainlayer-mcp-binary-name",
+          "description": "Uses 'brainlayer-mcp' as the command (the MCP binary), NOT 'brainlayer' (the CLI) or 'zikaron-mcp' (the old name)"
+        },
+        {
+          "name": "mentions-three-mcp-tools",
+          "description": "Lists the 3 available MCP tools: brain_search, brain_store, brain_recall"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "How much storage is BrainLayer using and where is the data stored?",
+      "expected_output": "Runs 'brainlayer stats' or checks ~/.local/share/brainlayer/ directory. Mentions the sqlite-vec database (brainlayer.db) and prompts/ directory. May mention approximate size (~1.4GB).",
+      "files": [],
+      "assertions": [
+        {
+          "name": "checks-local-share-path",
+          "description": "References ~/.local/share/brainlayer/ as the storage location, not ~/.brainlayer/ or ~/.config/brainlayer/"
+        },
+        {
+          "name": "identifies-sqlite-vec-db",
+          "description": "Mentions brainlayer.db as a sqlite-vec database (vectors + metadata), not a generic SQLite file"
+        },
+        {
+          "name": "uses-stats-command-or-du",
+          "description": "Either runs 'brainlayer stats' CLI command or checks disk usage of the storage directory — doesn't guess"
+        }
+      ]
+    }
+  ]
+}
