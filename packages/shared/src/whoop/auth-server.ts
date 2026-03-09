@@ -9,7 +9,23 @@ import { execSync } from "child_process";
 
 const WHOOP_AUTH_URL = "https://api.prod.whoop.com/oauth/oauth2/auth";
 const WHOOP_TOKEN_URL = "https://api.prod.whoop.com/oauth/oauth2/token";
-const REDIRECT_URI = "http://localhost:3000/callback";
+const AUTH_PORT = 3000;
+const REDIRECT_URI = `http://localhost:${AUTH_PORT}/callback`;
+
+/** Kill any process holding the given port. No-op if port is free. */
+export function killPort(port: number): void {
+  try {
+    const pid = execSync(`lsof -ti tcp:${port} 2>/dev/null`, {
+      encoding: "utf-8",
+    }).trim();
+    if (pid) {
+      execSync(`kill -9 ${pid} 2>/dev/null`);
+      console.log(`[Whoop] Killed zombie process ${pid} on port ${port}`);
+    }
+  } catch {
+    // No process on port — fine
+  }
+}
 const SCOPES =
   "read:recovery read:cycles read:workout read:sleep read:profile read:body_measurement offline";
 
@@ -41,8 +57,10 @@ async function main() {
   console.log(`If browser doesn't open, visit:\n${authUrl}\n`);
   execSync(`open "${authUrl}"`);
 
+  killPort(AUTH_PORT);
+
   const server = Bun.serve({
-    port: 3000,
+    port: AUTH_PORT,
     async fetch(req) {
       const url = new URL(req.url);
       if (url.pathname !== "/callback") {
@@ -94,7 +112,7 @@ async function main() {
 
       // Persist refresh token to Supabase (survives reboots + deploys)
       try {
-        const { getSupabase } = await import("../../lib/supabase-factory");
+        const { getSupabase } = await import("../lib/supabase-factory");
         const sb = getSupabase();
         const { error: sbError } = await sb.from("golem_state").upsert(
           {
@@ -134,7 +152,9 @@ async function main() {
     },
   });
 
-  console.log(`Waiting for callback on http://localhost:3000/callback\n`);
+  console.log(
+    `Waiting for callback on http://localhost:${AUTH_PORT}/callback\n`,
+  );
 }
 
 if (import.meta.main) {

@@ -61,6 +61,8 @@ export function safeWriteTokens(filePath: string, content: string): void {
 }
 
 let cachedTokens: WhoopTokens | null = null;
+/** Mutex: prevents parallel refresh races (Whoop rotates tokens — only one refresh can win) */
+let refreshPromise: Promise<string> | null = null;
 
 /** Read credentials from env vars (required: WHOOP_CLIENT_ID, WHOOP_CLIENT_SECRET, WHOOP_REFRESH_TOKEN) */
 function getCredentials(): {
@@ -97,13 +99,29 @@ function loadCachedTokensFromFile(): boolean {
       cachedTokens = data;
       return true;
     }
-    // Even if access token expired, keep the refresh token
-    if (data.refresh_token && !cachedTokens?.refresh_token) {
-      cachedTokens = data;
-    }
+    // Access token expired — don't trust the file's refresh token.
+    // Supabase has the latest one (Whoop rotates on each use).
     return false;
   } catch {
     return false;
+  }
+}
+
+/**
+ * Read refresh token from cache file (even if access token is expired).
+ * Returns null if file doesn't exist, is a symlink, or has no refresh_token.
+ */
+export function loadRefreshTokenFromFile(
+  filePath: string = TOKEN_CACHE_PATH,
+): string | null {
+  try {
+    if (!existsSync(filePath)) return null;
+    const stat = lstatSync(filePath);
+    if (stat.isSymbolicLink()) return null;
+    const data = JSON.parse(readFileSync(filePath, "utf-8"));
+    return data.refresh_token || null;
+  } catch {
+    return null;
   }
 }
 
@@ -172,7 +190,7 @@ function saveRefreshTokenToSupabase(refreshToken: string): void {
     });
 }
 
-/** Get the best available refresh token: memory > Supabase > env var */
+/** Get the best available refresh token: memory > Supabase > local file > env var */
 async function getBestRefreshToken(): Promise<string> {
   // 1. In-memory (current session, most recent)
   if (cachedTokens?.refresh_token) {
@@ -186,7 +204,14 @@ async function getBestRefreshToken(): Promise<string> {
     return supabaseToken;
   }
 
-  // 3. Env var (initial setup only — will be stale after first refresh)
+  // 3. Local file (has refresh token even when access token expired)
+  const fileToken = loadRefreshTokenFromFile();
+  if (fileToken) {
+    console.log("[Whoop] Using refresh token from local cache file");
+    return fileToken;
+  }
+
+  // 4. Env var (initial setup only — will be stale after first refresh)
   const { refreshToken } = getCredentials();
   console.log("[Whoop] Using refresh token from env var (first use)");
   return refreshToken;
@@ -203,6 +228,21 @@ async function getAccessToken(): Promise<string> {
     return cachedTokens!.access_token;
   }
 
+  // Mutex: only one refresh at a time (Whoop rotates tokens — parallel refreshes race)
+  if (refreshPromise) {
+    return refreshPromise;
+  }
+
+  refreshPromise = doRefresh();
+  try {
+    return await refreshPromise;
+  } finally {
+    refreshPromise = null;
+  }
+}
+
+/** Actually perform the OAuth2 token refresh */
+async function doRefresh(): Promise<string> {
   const { clientId, clientSecret } = getCredentials();
   const refreshToken = await getBestRefreshToken();
 
