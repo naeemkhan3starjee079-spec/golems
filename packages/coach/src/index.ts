@@ -113,3 +113,21 @@ export { generateCoaching } from "./coaching-engine";
 export { loadProtocol, saveProtocol } from "./protocol";
 export { syncCalendarToSupabase } from "./calendar-sync";
 export { generateDailyNote, type DailyData } from "./daily-brief";
+export {
+  synthesizeBriefing,
+  formatForTelegram,
+  formatForVoice,
+} from "./morning-briefing";
+export type {
+  MorningBriefingData,
+  MorningBriefing,
+  HealthSummary,
+  CalendarOverview,
+  EmailTriage,
+} from "./morning-briefing";
+export { runMorningBriefing } from "./morning-briefing-runner";
+export type {
+  BriefingDeps,
+  BriefingOptions,
+  BriefingResult,
+} from "./morning-briefing-runner";

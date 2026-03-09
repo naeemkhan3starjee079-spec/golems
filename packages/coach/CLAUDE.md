@@ -17,6 +17,9 @@ packages/coach/
 │   ├── calendar-client.ts       # Google Calendar API (reuses Gmail OAuth2)
 │   ├── schedule-engine.ts       # Merge calendar + golem states → DailyPlan + health formatting
 │   ├── status-aggregator.ts     # Read getStatus() from all golems
+│   ├── morning-briefing.ts      # Morning briefing synthesis + dual formatting (Telegram/Voice)
+│   ├── morning-briefing-runner.ts # Entry point — data gathering, output routing
+│   ├── morning-briefing-cli.ts  # CLI entry: bun morning-briefing-cli.ts [--voice]
 │   ├── nudger.ts                # Morning Telegram nudge + evening wrap-up
 │   ├── tracker.ts               # Compliance tracking + weekly summary
 │   └── __tests__/               # Tests
