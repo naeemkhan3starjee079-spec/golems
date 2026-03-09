@@ -23,7 +23,8 @@ globalThis.fetch = mock(async (url: string | URL | Request, options?: any) => {
   return new Response("not found", { status: 404 });
 }) as any;
 
-const { sendNotification, _resetCache } = await import("@golems/shared/lib/telegram-direct");
+const { sendNotification, _resetCache } =
+  await import("@golems/shared/lib/telegram-direct");
 
 describe("telegram-direct", () => {
   beforeEach(() => {
@@ -31,7 +32,11 @@ describe("telegram-direct", () => {
     (globalThis.fetch as any).mockClear?.();
     // Reset env
     Object.keys(process.env).forEach((key) => {
-      if (key.startsWith("TELEGRAM_") || key === "LLM_BACKEND" || key === "STATE_BACKEND") {
+      if (
+        key.startsWith("TELEGRAM_") ||
+        key === "LLM_BACKEND" ||
+        key === "STATE_BACKEND"
+      ) {
         delete process.env[key];
       }
     });
@@ -93,8 +98,6 @@ describe("telegram-direct", () => {
       process.env.TELEGRAM_CHAT_ID = "-1003791473584";
       process.env.TELEGRAM_TOPIC_ALERTS = "3";
       process.env.TELEGRAM_TOPIC_NIGHTSHIFT = "4";
-      process.env.TELEGRAM_TOPIC_EMAIL = "5";
-      process.env.TELEGRAM_TOPIC_JOBS = "7";
       process.env.TELEGRAM_TOPIC_RECRUITER = "126";
     });
 
@@ -106,31 +109,13 @@ describe("telegram-direct", () => {
       });
 
       expect(result).toBe(true);
-      expect(fetchCalls[0].url).toContain("api.telegram.org/bottest-token-123/sendMessage");
+      expect(fetchCalls[0].url).toContain(
+        "api.telegram.org/bottest-token-123/sendMessage",
+      );
     });
 
-    it("routes email source to email topic thread", async () => {
-      await sendNotification({
-        title: "Urgent Email",
-        body: "Interview at 3pm",
-        source: "email",
-      });
-
-      const body = JSON.parse(fetchCalls[0].options.body);
-      expect(body.chat_id).toBe("-1003791473584");
-      expect(body.message_thread_id).toBe(5);
-    });
-
-    it("routes jobs source to jobs topic thread", async () => {
-      await sendNotification({
-        title: "New Job",
-        body: "Match found",
-        source: "jobs",
-      });
-
-      const body = JSON.parse(fetchCalls[0].options.body);
-      expect(body.message_thread_id).toBe(7);
-    });
+    // Old tests for email→5 and jobs→7 removed — those topics no longer exist
+    // in the Telegram group. New routing tests are in the "direct mode" block below.
 
     it("routes claude source to general (no thread ID)", async () => {
       await sendNotification({
@@ -211,6 +196,102 @@ describe("telegram-direct", () => {
       });
 
       expect(result).toBe(false);
+    });
+
+    it("routes email source to alerts topic (not dedicated email topic)", async () => {
+      await sendNotification({
+        title: "Urgent Email",
+        body: "Interview at 3pm",
+        source: "email",
+      });
+
+      const body = JSON.parse(fetchCalls[0].options.body);
+      expect(body.chat_id).toBe("-1003791473584");
+      // email should route to alerts (3), not a dedicated email topic
+      expect(body.message_thread_id).toBe(3);
+    });
+
+    it("routes jobs source to alerts topic (not dedicated jobs topic)", async () => {
+      await sendNotification({
+        title: "New Job",
+        body: "Match found",
+        source: "jobs",
+      });
+
+      const body = JSON.parse(fetchCalls[0].options.body);
+      // jobs should route to alerts (3), not a dedicated jobs topic
+      expect(body.message_thread_id).toBe(3);
+    });
+  });
+
+  describe("thread fallback on error", () => {
+    beforeEach(() => {
+      process.env.TELEGRAM_MODE = "direct";
+      process.env.TELEGRAM_BOT_TOKEN = "test-token-123";
+      process.env.TELEGRAM_CHAT_ID = "-1003791473584";
+      process.env.TELEGRAM_TOPIC_ALERTS = "3";
+      process.env.TELEGRAM_TOPIC_NIGHTSHIFT = "4";
+    });
+
+    /** Mock fetch that fails on thread_id, succeeds without */
+    function mockThreadNotFound() {
+      return (async (url: string | URL | Request, options?: any) => {
+        const urlStr = typeof url === "string" ? url : url.toString();
+        fetchCalls.push({ url: urlStr, options });
+
+        if (urlStr.includes("api.telegram.org")) {
+          const bodyObj = JSON.parse(options?.body || "{}");
+          if (bodyObj.message_thread_id) {
+            return new Response(
+              JSON.stringify({
+                ok: false,
+                description: "Bad Request: message thread not found",
+              }),
+              { status: 400 },
+            );
+          }
+          return new Response(JSON.stringify({ ok: true }), { status: 200 });
+        }
+        return new Response("not found", { status: 404 });
+      }) as typeof globalThis.fetch;
+    }
+
+    it("retries without thread ID when Telegram returns thread not found", async () => {
+      const savedFetch = globalThis.fetch;
+      globalThis.fetch = mockThreadNotFound();
+      try {
+        const result = await sendNotification({
+          title: "Alert",
+          body: "Something happened",
+          source: "healthcheck", // routes to alerts topic
+        });
+
+        // Should succeed via fallback (without thread ID)
+        expect(result).toBe(true);
+
+        // The last successful call should NOT have message_thread_id
+        const lastCall = fetchCalls[fetchCalls.length - 1];
+        const lastBody = JSON.parse(lastCall.options.body);
+        expect(lastBody.message_thread_id).toBeUndefined();
+      } finally {
+        globalThis.fetch = savedFetch;
+      }
+    });
+
+    it("returns true when thread fallback succeeds", async () => {
+      const savedFetch = globalThis.fetch;
+      globalThis.fetch = mockThreadNotFound();
+      try {
+        const result = await sendNotification({
+          title: "Jobs Alert",
+          body: "New match",
+          source: "healthcheck",
+        });
+
+        expect(result).toBe(true);
+      } finally {
+        globalThis.fetch = savedFetch;
+      }
     });
   });
 });

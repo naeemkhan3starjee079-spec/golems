@@ -24,17 +24,21 @@ const LOCAL_NOTIFY_URL = "http://localhost:3847/notify";
 let cachedChatId: string | null = null;
 let cachedTopics: Record<string, number> | null = null;
 
-/** Source → topic mapping (matches telegram-bot.ts SOURCE_CONFIG) */
+/**
+ * Source → topic mapping (aligned with notify-server.ts SOURCE_CONFIG).
+ * The Telegram group has: general, alerts, nightshift, recruiter.
+ * Most sources route to "alerts" — only interactive chat goes to "general".
+ */
 const SOURCE_TO_TOPIC: Record<string, string> = {
   claude: "general",
   nightshift: "nightshift",
-  email: "email",
-  jobs: "jobs",
+  email: "alerts",
+  jobs: "alerts",
   recruiter: "recruiter",
   briefing: "alerts",
   healthcheck: "alerts",
-  uptime: "uptime",
-  monitoring: "uptime",
+  uptime: "alerts",
+  monitoring: "alerts",
   default: "alerts",
 };
 
@@ -221,8 +225,17 @@ async function sendDirect(payload: NotificationPayload): Promise<boolean> {
       signal: AbortSignal.timeout(10000),
     });
 
-    if (!response.ok) {
-      // Markdown failed - retry with plain text
+    if (response.ok) {
+      console.log(`[TelegramDirect] Sent: ${payload.title} → ${topicName}`);
+      return true;
+    }
+
+    // Markdown failed — check if it's a thread error
+    const errText = await response.text();
+    const isThreadError = errText.includes("thread not found");
+
+    if (!isThreadError) {
+      // Markdown issue — retry with plain text (keep thread ID)
       const plainMessage = message.replace(/[*_`\[\]]/g, "");
       const plainBody: Record<string, unknown> = {
         chat_id: chatId,
@@ -239,15 +252,54 @@ async function sendDirect(payload: NotificationPayload): Promise<boolean> {
         signal: AbortSignal.timeout(10000),
       });
 
-      if (!retryResponse.ok) {
-        const err = await retryResponse.text();
-        console.error(`[TelegramDirect] Send failed: ${err}`);
+      if (retryResponse.ok) {
+        console.log(
+          `[TelegramDirect] Sent (plain): ${payload.title} → ${topicName}`,
+        );
+        return true;
+      }
+
+      // Plain text also failed — check if THIS is a thread error
+      const plainErrText = await retryResponse.text();
+      if (!plainErrText.includes("thread not found")) {
+        console.error(`[TelegramDirect] Send failed: ${plainErrText}`);
         return false;
       }
     }
 
-    console.log(`[TelegramDirect] Sent: ${payload.title} → ${topicName}`);
-    return true;
+    // Thread not found — fall back to sending without thread ID (General)
+    if (threadId) {
+      // Invalidate cached topics so next send re-resolves from state-store
+      cachedTopics = null;
+      console.warn(
+        `[TelegramDirect] Thread ${threadId} not found for topic "${topicName}", falling back to General`,
+      );
+      const fallbackBody: Record<string, unknown> = {
+        chat_id: chatId,
+        text: message.replace(/[*_`\[\]]/g, ""),
+      };
+
+      const fallbackResponse = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(fallbackBody),
+        signal: AbortSignal.timeout(10000),
+      });
+
+      if (fallbackResponse.ok) {
+        console.log(
+          `[TelegramDirect] Sent (fallback to General): ${payload.title}`,
+        );
+        return true;
+      }
+
+      const fallbackErr = await fallbackResponse.text();
+      console.error(`[TelegramDirect] Fallback also failed: ${fallbackErr}`);
+      return false;
+    }
+
+    console.error(`[TelegramDirect] Send failed: ${errText}`);
+    return false;
   } catch (err) {
     console.error("[TelegramDirect] Error:", err);
     return false;
