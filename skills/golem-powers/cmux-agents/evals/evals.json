@@ -1,0 +1,101 @@
+{
+  "skill_name": "cmux-agents",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I need you to run a cursor CLI audit on the golems repo to check for unused imports. Open it in a cmux pane so I can see it working.",
+      "expected_output": "Creates a terminal pane using cmux new-pane (NOT new-split), starts cursor interactively (NOT headless), approves MCP servers, then sends the audit prompt. Uses --workspace flag if needed.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "uses-new-pane-not-new-split",
+          "description": "Creates terminal with cmux new-pane --type terminal, NOT cmux new-split"
+        },
+        {
+          "name": "extracts-surface-id-correctly",
+          "description": "Parses surface:N from new-pane output using grep -oE, not awk"
+        },
+        {
+          "name": "renames-tab-with-descriptive-name",
+          "description": "Calls cmux rename-tab with a meaningful name like 'Cursor: audit'"
+        },
+        {
+          "name": "starts-cursor-interactively",
+          "description": "Runs cursor agent without -p and without --trust (interactive mode)"
+        },
+        {
+          "name": "approves-mcp-with-send-not-send-key",
+          "description": "Sends 'a' via cmux send (text), NOT cmux send-key (which fails for letters)"
+        },
+        {
+          "name": "specifies-workspace-flag",
+          "description": "Includes --workspace on send/read-screen commands when targeting another workspace"
+        },
+        {
+          "name": "does-not-redirect-output",
+          "description": "Does NOT pipe cursor output to a file (> file.md) — lets it show in terminal"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Spawn 2 Claude workers: one in the brainlayer repo to fix search ranking, one in golems to add retry wrapper. Set them up in cmux so they run in parallel.",
+      "expected_output": "Creates two separate terminal panes using cmux new-pane, launches Claude with --dangerously-skip-permissions in each, waits 3s between for biometric, names each pane appropriately.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "creates-two-separate-panes",
+          "description": "Calls cmux new-pane --type terminal twice (not new-split)"
+        },
+        {
+          "name": "uses-dangerously-skip-permissions",
+          "description": "Both claude invocations include --dangerously-skip-permissions"
+        },
+        {
+          "name": "sequential-launch-with-delay",
+          "description": "Waits 2-3s between launching the two workers (for 1Password biometric)"
+        },
+        {
+          "name": "targets-correct-repos",
+          "description": "First worker cds to ~/Gits/brainlayer, second to ~/Gits/golems"
+        },
+        {
+          "name": "names-both-panes",
+          "description": "Both panes get descriptive names via cmux rename-tab"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Open T3 Code pointed at the orchestrator repo and ask it to create a TypeScript utility for skill eval aggregation.",
+      "expected_output": "Checks if T3 is already running on port 3773, opens browser, adds orchestrator project if needed, creates new thread, types prompt using execCommand, submits, and includes handoff request.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "checks-t3-running-first",
+          "description": "Checks lsof -i :3773 before trying to start T3"
+        },
+        {
+          "name": "opens-browser-pane",
+          "description": "Uses cmux browser open to open T3 UI"
+        },
+        {
+          "name": "creates-new-thread",
+          "description": "Creates a new thread via sidebar button, does NOT type into existing thread"
+        },
+        {
+          "name": "uses-execcommand-for-lexical",
+          "description": "Types into T3 editor using document.execCommand('insertText'), not cmux type/fill"
+        },
+        {
+          "name": "includes-handoff-request",
+          "description": "Prompt includes handoff summary request (files modified, decisions, TODOs, test commands)"
+        },
+        {
+          "name": "submits-via-aria-label",
+          "description": "Clicks send button using querySelector with aria-label, not ref IDs"
+        }
+      ]
+    }
+  ]
+}

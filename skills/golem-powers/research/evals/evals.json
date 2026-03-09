@@ -1,0 +1,71 @@
+{
+  "skill_name": "research",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Research the feature flag vendor landscape for a migration decision. I do not need an immediate answer; use the default /research workflow.",
+      "expected_output": "Agent checks BrainLayer first, launches the researcher subagent in the background, states where the report will land, and plans to digest useful findings for later retrieval.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "checks-brainlayer-first",
+          "description": "Response begins by checking existing BrainLayer knowledge before spending time on fresh research"
+        },
+        {
+          "name": "uses-researcher-subagent-for-default-mode",
+          "description": "Response routes standard research to the researcher subagent instead of doing everything inline"
+        },
+        {
+          "name": "runs-research-in-background",
+          "description": "Response treats default research as an asynchronous/background task rather than blocking for a long inline answer"
+        },
+        {
+          "name": "plans-to-store-keepable-results",
+          "description": "Response includes digesting or storing worthwhile results after reading the generated report"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Quick question: use /research --quick to compare Linear vs Height for a small product team and answer inline.",
+      "expected_output": "Agent uses inline web search/fetch in parallel, synthesizes a concise answer directly, and does not spin up a background report workflow.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "uses-inline-web-research-for-quick-mode",
+          "description": "Response chooses direct WebSearch/WebFetch style research instead of the researcher subagent"
+        },
+        {
+          "name": "parallelizes-search-queries",
+          "description": "Response reflects the quick-mode pattern of running several searches in parallel"
+        },
+        {
+          "name": "returns-inline-without-report-file",
+          "description": "Response answers in the current context rather than describing a saved report or long-running job"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Before I open a PR, use /research --audit on this diff summary: /Users/etanheyman/Gits/orchestrator/skill-evals/research/evals/fixtures/diff-summary.txt.",
+      "expected_output": "Agent routes the pre-PR audit to CLI research backends such as Gemini and Cursor in parallel, compares their findings, and uses that synthesis as extra review before the PR loop.",
+      "files": [
+        "/Users/etanheyman/Gits/orchestrator/skill-evals/research/evals/fixtures/diff-summary.txt"
+      ],
+      "assertions": [
+        {
+          "name": "routes-audit-mode-to-cli-agents",
+          "description": "Response uses the audit-specific CLI agent path rather than the generic researcher subagent"
+        },
+        {
+          "name": "uses-multiple-audit-backends-in-parallel",
+          "description": "Response invokes both Gemini and Cursor style audit backends in parallel for extra coverage"
+        },
+        {
+          "name": "compares-findings-before-conclusion",
+          "description": "Response synthesizes or cross-checks the multiple audit outputs instead of trusting a single backend"
+        }
+      ]
+    }
+  ]
+}

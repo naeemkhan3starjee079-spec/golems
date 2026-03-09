@@ -1,0 +1,73 @@
+{
+  "skill_name": "example-bash",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I want to create a new bash skill that wraps the jq CLI tool. Show me the example bash skill so I can use it as a template.",
+      "expected_output": "Claude loads the example-bash skill, runs scripts/hello.sh, and explains the Pattern A structure: frontmatter with name/description/execute fields, a SKILL.md with sections (What It Does, Usage, Why Use Bash Pattern), and a scripts/ directory with the executable. Points to writing-skills for creating new skills.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "has-frontmatter-explanation",
+          "description": "Response explains the YAML frontmatter structure: name, description, and execute fields. The execute field pointing to scripts/hello.sh is the key Pattern A mechanism."
+        },
+        {
+          "name": "identifies-pattern-a",
+          "description": "Response explicitly identifies this as Pattern A (bash/simple CLI wrapper) and contrasts it with Pattern B (TypeScript/complex logic)."
+        },
+        {
+          "name": "includes-not-for-section",
+          "description": "Response mentions the NOT-for clause in the description field, explaining it helps with skill routing (prevents invocation for wrong use cases)."
+        },
+        {
+          "name": "shows-directory-structure",
+          "description": "Response shows or describes the skill directory layout: SKILL.md at root, scripts/ subdirectory containing the executable bash script."
+        },
+        {
+          "name": "demonstrates-cli-wrapping",
+          "description": "Response explains the CLI wrapping pattern: the bash script outputs Markdown, uses standard CLI tools (date, pwd, git), and exit code indicates success/failure."
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Run the example bash skill but skip the frontmatter and just show me the script output directly. I don't need the template stuff.",
+      "expected_output": "Claude still explains the template structure because that IS the skill's purpose. The skill exists to teach the Pattern A anatomy, not to produce useful output. Claude runs the script but frames the output as a demonstration of the pattern, not as standalone utility.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "does-not-skip-template-structure",
+          "description": "Even when asked to skip template content, Claude still explains the skill anatomy because the ENTIRE PURPOSE of this skill is to demonstrate the template structure. Skipping it defeats the skill."
+        },
+        {
+          "name": "frames-output-as-demonstration",
+          "description": "The script output (timestamp, working directory, git branch) is presented as an example of what a bash skill produces, not as useful information in itself."
+        },
+        {
+          "name": "references-writing-skills",
+          "description": "Response points the user to the writing-skills skill for actually creating their own skill, since example-bash is just a reference template."
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "I need to build a skill that calls an external API and processes JSON responses. Should I use the bash example as my template?",
+      "expected_output": "Claude advises AGAINST using the bash pattern for API+JSON work. Recommends Pattern B (example-typescript) instead, explaining that bash is for simple CLI wrappers with linear logic and no external deps. TypeScript/Bun is better for API calls, async operations, and structured data processing.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "correctly-routes-to-typescript-pattern",
+          "description": "Claude identifies that API calls + JSON processing is a Pattern B use case and redirects to example-typescript, not example-bash."
+        },
+        {
+          "name": "explains-pattern-selection-criteria",
+          "description": "Response lists the decision criteria from the skill: bash for CLI wrappers/no deps/linear logic/text output vs TypeScript for complex logic/type safety/async/structured data."
+        },
+        {
+          "name": "does-not-force-bash-workaround",
+          "description": "Claude does NOT try to make bash work with curl+jq workarounds. The skill explicitly says 'choose bash when... simple, linear logic' and API work doesn't qualify."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,79 @@
+{
+  "skill_name": "pr-loop",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I finished the cache invalidation fix. Repo state is described in /Users/etanheyman/Gits/orchestrator/skill-evals/pr-loop/evals/fixtures/feature-ready.txt. Please take it from here and finish the job end-to-end.",
+      "expected_output": "Agent follows the full PR loop through merge: independent verification, commit, push, PR creation, review wait/read, merge, branch deletion, and main branch cleanup.",
+      "files": [
+        "/Users/etanheyman/Gits/orchestrator/skill-evals/pr-loop/evals/fixtures/feature-ready.txt"
+      ],
+      "assertions": [
+        {
+          "name": "mission-is-merged-not-pr-created",
+          "description": "Response treats success as merged work with local cleanup, not merely a created PR or passing tests"
+        },
+        {
+          "name": "includes-review-step-before-merge",
+          "description": "Response explicitly includes waiting for and reading review feedback before merging"
+        },
+        {
+          "name": "re-verifies-before-claiming-ready",
+          "description": "Response does not rely on prior user claims of test success and includes fresh verification before commit/push"
+        },
+        {
+          "name": "post-merge-cleanup-on-main",
+          "description": "Response includes deleting the branch and returning to main with a pull after merge"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "PR #184 is already open. Review comments are in /Users/etanheyman/Gits/orchestrator/skill-evals/pr-loop/evals/fixtures/review-comments-mixed.txt. Finish the loop correctly.",
+      "expected_output": "Agent reads and classifies the review comments, fixes the real bug, pushes the fix, waits for another review cycle if needed, and only then merges and cleans up.",
+      "files": [
+        "/Users/etanheyman/Gits/orchestrator/skill-evals/pr-loop/evals/fixtures/review-comments-mixed.txt"
+      ],
+      "assertions": [
+        {
+          "name": "classifies-review-feedback",
+          "description": "Response distinguishes real bugs from style preferences and false positives instead of treating all comments equally"
+        },
+        {
+          "name": "fixes-real-bug-before-merge",
+          "description": "Response indicates the blocking bug will be fixed and pushed before any merge"
+        },
+        {
+          "name": "does-not-merge-immediately-after-fix",
+          "description": "Response includes another review/readback step after a substantive fix rather than merging immediately"
+        },
+        {
+          "name": "skips-non-actionable-feedback-with-rationale",
+          "description": "Response allows for declining bikeshed or false-positive comments with an explanation"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "This is just a 2-line docs fix. State snapshot: /Users/etanheyman/Gits/orchestrator/skill-evals/pr-loop/evals/fixtures/tiny-change-request.txt. Just create the PR and set auto-merge so we can move on.",
+      "expected_output": "Agent refuses to shortcut the loop, explains that even tiny changes still require review, and frames completion as merged work only after the review step.",
+      "files": [
+        "/Users/etanheyman/Gits/orchestrator/skill-evals/pr-loop/evals/fixtures/tiny-change-request.txt"
+      ],
+      "assertions": [
+        {
+          "name": "rejects-auto-merge-shortcut",
+          "description": "Response pushes back on immediately enabling auto-merge as a substitute for the review step"
+        },
+        {
+          "name": "review-required-even-for-small-changes",
+          "description": "Response explicitly says the review step is still required for a tiny or low-risk change"
+        },
+        {
+          "name": "does-not-stop-at-pr-creation",
+          "description": "Response does not present PR creation as completion"
+        }
+      ]
+    }
+  ]
+}

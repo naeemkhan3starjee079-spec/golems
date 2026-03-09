@@ -1,0 +1,73 @@
+{
+  "skill_name": "large-plan",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I need to rebuild the auth system from scratch. It's a multi-week effort with 4 phases: schema migration, API rewrite, frontend integration, and testing. Scaffold a plan.",
+      "expected_output": "Agent creates folder-based plan structure with phase files, dependencies between phases, quality gates, and PR loop per phase.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "scaffolds-folder-structure",
+          "description": "Response creates a plan directory with per-phase files (phase-1.md, phase-2.md, etc.)"
+        },
+        {
+          "name": "includes-phase-dependencies",
+          "description": "Response defines which phases block others and what must complete before next phase starts"
+        },
+        {
+          "name": "pr-loop-per-phase",
+          "description": "Response includes a PR loop (branch, test, PR, review, merge) for each phase, not one big PR"
+        },
+        {
+          "name": "includes-quality-gates",
+          "description": "Response defines quality gates between phases (test coverage, review approval, etc.)"
+        },
+        {
+          "name": "references-tdd",
+          "description": "Response includes TDD (test-driven development) as part of the implementation approach"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Phase 2 is taking too long. Let's skip the tests and just merge it so we can start phase 3.",
+      "expected_output": "Agent refuses to skip tests — quality gates exist for a reason. Suggests scoping down phase 2 instead.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "refuses-to-skip-quality-gate",
+          "description": "Response does not agree to skip tests or quality gates under time pressure"
+        },
+        {
+          "name": "suggests-scope-reduction",
+          "description": "Response suggests reducing phase 2 scope rather than skipping quality steps"
+        },
+        {
+          "name": "maintains-pr-loop",
+          "description": "Response insists on the PR loop even for reduced scope"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Phase 1 is done. Two tasks in phase 2 are independent. Can we parallelize them?",
+      "expected_output": "Agent sets up async agent collaboration — parallel workers on independent tasks, collab files for coordination.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "spawns-parallel-agents",
+          "description": "Response sets up parallel workers for the independent tasks"
+        },
+        {
+          "name": "uses-collab-files",
+          "description": "Response creates collab files or tracking for inter-agent coordination"
+        },
+        {
+          "name": "defines-merge-strategy",
+          "description": "Response explains how parallel work will be merged (separate branches, sequential PRs, etc.)"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "skill_name": "example-typescript",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Show me how to structure a TypeScript skill that has multiple actions. I want to build a skill with setup, run, and teardown modes.",
+      "expected_output": "Claude loads the example-typescript skill and explains Pattern B: SKILL.md frontmatter with execute pointing to scripts/run.sh --action=default, the action-based CLI pattern (--action=default, --action=random, --action=env), Bun runtime requirement, src/ for TypeScript source, and package.json for dependencies.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "shows-action-based-cli-pattern",
+          "description": "Response explains the --action= flag pattern that enables multiple modes in a single skill. Shows how execute field passes --action=default and how other actions can be invoked manually."
+        },
+        {
+          "name": "identifies-bun-runtime",
+          "description": "Response specifies Bun as the runtime (not Node.js) and mentions the install command (brew install oven-sh/bun/bun)."
+        },
+        {
+          "name": "shows-full-directory-anatomy",
+          "description": "Response describes the complete skill structure: SKILL.md, scripts/run.sh (shell wrapper), src/ (TypeScript source), package.json (dependencies)."
+        },
+        {
+          "name": "explains-pattern-b-use-cases",
+          "description": "Response lists when to choose Pattern B: complex business logic, type safety, API calls, async operations, structured data, npm ecosystem."
+        },
+        {
+          "name": "contrasts-with-pattern-a",
+          "description": "Response references Pattern A (example-bash) as the simpler alternative and explains why Pattern B is appropriate for multi-action skills."
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Just run the typescript example skill, I want to see what it outputs. Don't explain anything.",
+      "expected_output": "Claude runs scripts/run.sh --action=default and shows the output. But since this is a template/example skill, it still frames the output as a demonstration of the pattern, noting the action being executed and runtime info are part of the demo.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "executes-via-scripts-run-sh",
+          "description": "Claude runs the skill through scripts/run.sh (the shell wrapper), not by directly invoking bun or the TypeScript file. The execute field in frontmatter defines the entry point."
+        },
+        {
+          "name": "uses-default-action",
+          "description": "The execution uses --action=default as specified in the frontmatter execute field, not a random or custom action."
+        },
+        {
+          "name": "preserves-educational-framing",
+          "description": "Even when asked not to explain, the output itself demonstrates the pattern (showing action name, runtime info, structured data). Claude recognizes this IS the skill's purpose."
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "I want to create a simple skill that just echoes 'hello world'. Should I use the TypeScript template? I also want it to work without installing anything.",
+      "expected_output": "Claude redirects to Pattern A (example-bash) since: no dependencies needed, simple linear logic, no structured data processing. TypeScript pattern requires Bun runtime installation, which violates the 'no install' requirement. A bash skill with echo is the simplest possible implementation.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "redirects-to-bash-pattern",
+          "description": "Claude recommends example-bash (Pattern A) over example-typescript (Pattern B) for a simple echo skill. Over-engineering with TypeScript for trivial tasks is an anti-pattern."
+        },
+        {
+          "name": "flags-bun-dependency",
+          "description": "Response identifies that TypeScript pattern requires Bun runtime to be installed, which conflicts with the user's 'no install' constraint."
+        },
+        {
+          "name": "explains-pattern-selection-honestly",
+          "description": "Claude does not try to make the TypeScript template work for this case. The skill has clear criteria for when each pattern applies and Claude follows them."
+        }
+      ]
+    }
+  ]
+}
