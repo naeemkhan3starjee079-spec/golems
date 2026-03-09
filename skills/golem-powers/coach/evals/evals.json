@@ -1,0 +1,335 @@
+{
+  "skill_name": "coach",
+  "evals": [
+    {
+      "id": 0,
+      "name": "whoop-recovery-adaptation",
+      "prompt": "My WHOOP shows 45% recovery today. Should I still do my morning workout? I was planning to do a heavy leg day.",
+      "expected_output": "Should brain_search for WHOOP thresholds and workout preferences BEFORE answering. Should know that 45% = yellow zone = moderate intensity. Should suggest adapting the workout (reduce volume, switch to lighter session) rather than generic advice. Should reference the scheduling rules about WHOOP-adapted intensity.",
+      "root_cause_tested": "never_searched — tests whether skill forces BrainLayer lookup before giving health advice",
+      "files": [],
+      "assertions": [
+        {
+          "name": "brain_search_before_answer",
+          "description": "Agent calls brain_search at least once before providing workout advice",
+          "type": "tool_usage"
+        },
+        {
+          "name": "recovery_zone_awareness",
+          "description": "Response mentions yellow/moderate zone or adapting intensity (not just 'listen to your body')",
+          "type": "content"
+        },
+        {
+          "name": "specific_adaptation",
+          "description": "Suggests concrete changes (reduce weight, fewer sets, switch exercise type) not just generic 'take it easy'",
+          "type": "content"
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "name": "credential-recovery-1password-first",
+      "prompt": "I'm trying to create calendar events but getting auth errors. The .env file seems to be missing Gmail credentials. Can you help me fix this?",
+      "expected_output": "Should go to 1Password FIRST (op item get 'Gmail OAuth (EmailGolem)'). Should NOT start grepping the codebase for credentials. Should know the fallback: write schedule to local markdown if Calendar API can't be fixed.",
+      "root_cause_tested": "never_searched + no_fallback — tests 1Password-first pattern and calendar fallback",
+      "files": [],
+      "assertions": [
+        {
+          "name": "1password_first",
+          "description": "Agent uses or mentions 'op item get' or 1Password before any grep/find/search for credentials",
+          "type": "tool_usage"
+        },
+        {
+          "name": "no_grep_for_creds",
+          "description": "Agent does NOT grep or search the filesystem for credential strings",
+          "type": "negative"
+        },
+        {
+          "name": "knows_item_name",
+          "description": "Agent references the specific 1Password item 'Gmail OAuth (EmailGolem)'",
+          "type": "content"
+        },
+        {
+          "name": "fallback_mentioned",
+          "description": "Agent mentions the local markdown fallback path if Calendar API can't be restored",
+          "type": "content"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "personalized-schedule-creation",
+      "prompt": "Build me a schedule for tomorrow. I have a client call at 2pm and a dentist appointment at 10am.",
+      "expected_output": "Should brain_search for scheduling preferences and recent patterns. Should apply personalized rules: zero gaps, sleep as event, no breakfast (first meal ~13:00), caffeine delay 90min after waking, workout in morning (before dentist), WHOOP-adapted intensity, wind-down routine. Should color-code by priority. Should NOT produce a generic schedule template.",
+      "root_cause_tested": "knowledge_in_wrong_layer — tests whether skill makes scheduling rules accessible vs hardcoded",
+      "files": [],
+      "assertions": [
+        {
+          "name": "brain_search_preferences",
+          "description": "Agent calls brain_search for scheduling rules or preferences before building the schedule",
+          "type": "tool_usage"
+        },
+        {
+          "name": "zero_gaps",
+          "description": "Schedule has no empty/unaccounted time blocks between events",
+          "type": "content"
+        },
+        {
+          "name": "intermittent_fasting",
+          "description": "No breakfast scheduled; first meal at or after ~13:00",
+          "type": "content"
+        },
+        {
+          "name": "caffeine_delay",
+          "description": "Caffeine not scheduled immediately on waking; respects 90min delay",
+          "type": "content"
+        },
+        {
+          "name": "sleep_as_event",
+          "description": "Sleep is explicitly blocked as a calendar event with times",
+          "type": "content"
+        },
+        {
+          "name": "color_coding",
+          "description": "Events are assigned priority colors (Basil/Peacock/Banana/Grape or equivalent)",
+          "type": "content"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "post-interaction-storage",
+      "prompt": "Just finished an interview with Wix for a senior fullstack role. They asked about distributed systems and React architecture. I think it went OK but I fumbled the CAP theorem question. The interviewer was Yael from the platform team.",
+      "expected_output": "Should brain_search for any prior Wix/interview context AND connect to existing job search pipeline. Should brain_store the debrief with 'coach' tag. Should store Yael as a contact. Should suggest concrete follow-up. The key differentiator is connecting this interview to existing pipeline context (outreach sessions, other applications).",
+      "root_cause_tested": "never_stored — tests persistent storage AND contextual richness from prior pipeline data",
+      "files": [],
+      "assertions": [
+        {
+          "name": "brain_search_first",
+          "description": "Agent calls brain_search for prior Wix or interview context before responding",
+          "type": "tool_usage"
+        },
+        {
+          "name": "brain_store_debrief",
+          "description": "Agent calls brain_store with the interview details (company, role, questions, outcome, interviewer)",
+          "type": "tool_usage"
+        },
+        {
+          "name": "coach_tag_in_store",
+          "description": "brain_store tags include 'coach' prefix (not just generic 'interview', 'wix' tags)",
+          "type": "content"
+        },
+        {
+          "name": "connects_to_pipeline",
+          "description": "References or searches for existing job search pipeline, outreach sessions, or prior applications (not treating this as an isolated event)",
+          "type": "content"
+        },
+        {
+          "name": "actionable_followup",
+          "description": "Suggests specific next steps (study CAP theorem, thank-you email, prep for next round)",
+          "type": "content"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "freelance-invoice-with-context",
+      "prompt": "I need to send an invoice to the client I was working with last month. Can you help me draft it? It was a React consulting project.",
+      "expected_output": "Should brain_search AND brain_entity for client data. Should know Israeli invoicing requirements from reference file (9 mandatory fields, heshbonit mas). Should ask for missing details rather than fabricating. Key differentiator: entity graph lookup and reference to specific pricing tiers from memory.",
+      "root_cause_tested": "never_searched + knowledge_in_wrong_layer — tests entity graph AND Israeli reference file",
+      "files": [],
+      "assertions": [
+        {
+          "name": "brain_search_client",
+          "description": "Agent calls brain_search for recent client or freelance work before drafting",
+          "type": "tool_usage"
+        },
+        {
+          "name": "entity_or_deep_search",
+          "description": "Agent uses brain_entity for knowledge graph lookup OR performs 3+ targeted brain_search calls narrowing to specific client details",
+          "type": "tool_usage"
+        },
+        {
+          "name": "nine_mandatory_fields",
+          "description": "Mentions or includes 3+ of the 9 mandatory Israeli invoice fields (business number/mispar osek, invoice number, date, buyer details, description, amount, VAT, total, signature)",
+          "type": "content"
+        },
+        {
+          "name": "asks_for_specifics",
+          "description": "Agent asks for missing details (exact hours, rate, client business details) rather than fabricating them",
+          "type": "content"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "journal-stream-parsing",
+      "prompt": "ok so yesterday was rough. ate one meal around 2am, had soup and chicken. one coffee around 11pm. took magnesium at 11:30pm, creatine 15g in the morning. smoked weed once and stopped around 1am. tobacco maybe 3-4 times. anxiety was through the roof all day because of that recruiter call. took a hot shower at 1:30am, no mouth tape, went to sleep around 3:30am.",
+      "expected_output": "Should parse all 10+ tracked variables from the stream. Should write a structured Obsidian diary entry at the correct path with callout blocks. Should generate coach notes with observation->reference->recommendation pattern. Should store summary in BrainLayer. Should NOT ask 'what variables do you want to track' — the skill defines the schema.",
+      "root_cause_tested": "knowledge_in_wrong_layer — tests whether skill provides the journal schema and Obsidian format",
+      "files": [],
+      "assertions": [
+        {
+          "name": "parses_all_variables",
+          "description": "Extracts at least 8 of the mentioned variables: meal (1, 2AM), caffeine (1, 11PM), magnesium (11:30PM), creatine (15g), weed (1x, 1AM), tobacco (3-4x), anxiety (high), shower (hot, 1:30AM), sleep time (3:30AM), mouth tape (no)",
+          "type": "content"
+        },
+        {
+          "name": "obsidian_diary_path",
+          "description": "Writes to or references the Obsidian diary path ~/Library/Mobile Documents/iCloud~md~obsidian/Documents/personal/Personal/Diary/",
+          "type": "content"
+        },
+        {
+          "name": "callout_block_format",
+          "description": "Uses Obsidian callout blocks ([!info], [!abstract], [!note] or similar) in the diary entry",
+          "type": "content"
+        },
+        {
+          "name": "coach_notes_with_numbers",
+          "description": "Generates coach notes that include specific numbers and timing analysis (e.g., meal-to-sleep gap, substance timing) not just 'you should eat earlier'",
+          "type": "content"
+        },
+        {
+          "name": "brain_store_journal",
+          "description": "Calls brain_store with journal summary tagged with 'coach' and 'journal'",
+          "type": "tool_usage"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "dynamic-schedule-late-waker",
+      "prompt": "I just woke up, it's 10:45am. WHOOP says 82% recovery, 7h12m sleep. Build me a schedule for today — I have nothing on my calendar.",
+      "expected_output": "Should use 10:45 as wake time, NOT a 06:30 default. Caffeine at ~12:15 (wake+90min). First meal at 13:15+ (wake+2.5h AND after 13:00). Full workout (green zone 82%). Every minute accounted for. Sleep as event. The key test: does the schedule start at 10:45 or at some hardcoded morning time?",
+      "root_cause_tested": "knowledge_in_wrong_layer — tests dynamic schedule calculation vs hardcoded template",
+      "files": [],
+      "assertions": [
+        {
+          "name": "starts_at_actual_wake",
+          "description": "Schedule starts at or near 10:45, not at 06:30 or other hardcoded early morning time",
+          "type": "content"
+        },
+        {
+          "name": "caffeine_after_noon",
+          "description": "Caffeine scheduled at ~12:15 or later (10:45 + 90min), not in early morning",
+          "type": "content"
+        },
+        {
+          "name": "first_meal_13_plus",
+          "description": "First meal at 13:00 or later (respects both wake+2.5h AND 13:00 minimum)",
+          "type": "content"
+        },
+        {
+          "name": "full_intensity_workout",
+          "description": "Workout at full intensity (82% = green zone, no reduction needed)",
+          "type": "content"
+        },
+        {
+          "name": "sleep_as_event",
+          "description": "Sleep blocked as a calendar event with specific start time (not just 'go to bed')",
+          "type": "content"
+        },
+        {
+          "name": "zero_gaps",
+          "description": "Every time block from wake to sleep is accounted for (no empty periods)",
+          "type": "content"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "name": "hebrew-style-no-em-dash",
+      "prompt": "Draft a short WhatsApp message to a recruiter at an Israeli startup. Her name is Dana, she posted about a senior React role on LinkedIn. I want to express interest and ask for a call.",
+      "expected_output": "Should load references/hebrew-style.md BEFORE drafting. Should brain_search for past Hebrew corrections. Output should be: 3 lines max, no em dashes, casual Israeli tone, no formal openers like 'שלום' or closers like 'בברכה'. Should NOT use — anywhere in the Hebrew text.",
+      "root_cause_tested": "hebrew-style-guide — tests whether skill enforces Hebrew formatting rules before drafting",
+      "files": [],
+      "assertions": [
+        {
+          "name": "loads_hebrew_style",
+          "description": "Agent reads references/hebrew-style.md OR explicitly references Hebrew style rules before drafting",
+          "type": "tool_usage"
+        },
+        {
+          "name": "brain_search_corrections",
+          "description": "Agent calls brain_search for past Hebrew corrections or user-correction before drafting",
+          "type": "tool_usage"
+        },
+        {
+          "name": "no_em_dash",
+          "description": "Draft contains no em dash character (—) in the Hebrew text",
+          "type": "negative"
+        },
+        {
+          "name": "three_lines_max",
+          "description": "Hebrew draft is 3 lines or fewer",
+          "type": "content"
+        },
+        {
+          "name": "casual_tone",
+          "description": "Uses casual Hebrew (היי, ספר/ספרי, informal forms) not formal/corporate language",
+          "type": "content"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "name": "correction-learning-loop",
+      "prompt": "Draft a LinkedIn outreach message to a CTO at a fintech company. [User responds: 'Too long, this isn't corporate America. Make it 2 lines, no sign-off.' Coach redrafts.] Now: next time I ask for outreach to a CTO, what will you do differently?",
+      "expected_output": "Should brain_store the correction immediately after the user feedback (what was wrong, what they wanted). When asked what it will do differently, should explain it stored the correction and will brain_search for 'user-correction outreach' before drafting next time. The correction should survive as a durable preference.",
+      "root_cause_tested": "correction-learning-loop — tests whether corrections are stored and surfaced proactively",
+      "files": [],
+      "assertions": [
+        {
+          "name": "brain_store_on_correction",
+          "description": "After user says 'too long/not like that', agent calls brain_store with the correction tagged 'user-correction'",
+          "type": "tool_usage"
+        },
+        {
+          "name": "correction_tagged_coach",
+          "description": "brain_store call includes 'coach' and 'user-correction' in tags",
+          "type": "content"
+        },
+        {
+          "name": "explains_future_search",
+          "description": "Agent explicitly says it will brain_search for 'user-correction' before drafting next time (not just 'I'll remember')",
+          "type": "content"
+        },
+        {
+          "name": "applies_correction_immediately",
+          "description": "Redrafted message is shorter (2 lines or fewer) and matches the corrected preference",
+          "type": "content"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "name": "voice-mode-persistence",
+      "prompt": "Use voice for this session. What's my top priority today based on my job search status?",
+      "expected_output": "Should switch to voice_speak for the response. Should brain_search for job search context. Should NOT revert to text for follow-up answers. If asked a follow-up question in this session, should use voice_ask. Voice mode is durable until user says 'text mode' or 'stop voice'.",
+      "root_cause_tested": "voice-preference-enforcement — tests whether skill makes voice mode sticky within a session",
+      "files": [],
+      "assertions": [
+        {
+          "name": "switches_to_voice",
+          "description": "Agent calls voice_speak or voice_ask tool (not just text output) after user requests voice mode",
+          "type": "tool_usage"
+        },
+        {
+          "name": "brain_search_job_context",
+          "description": "Agent calls brain_search for job search or priority context before answering",
+          "type": "tool_usage"
+        },
+        {
+          "name": "voice_not_reverted",
+          "description": "Agent does NOT switch back to text-only responses within the same session without explicit user instruction",
+          "type": "negative"
+        },
+        {
+          "name": "voice_questions_as_voice_ask",
+          "description": "Any clarifying questions are delivered via voice_ask not text",
+          "type": "tool_usage"
+        }
+      ]
+    }
+  ]
+}
