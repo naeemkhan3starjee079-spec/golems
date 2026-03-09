@@ -131,3 +131,21 @@ export type {
   BriefingOptions,
   BriefingResult,
 } from "./morning-briefing-runner";
+export {
+  NudgeSchema,
+  createNudge,
+  readQueue,
+  appendNudge,
+  markSent,
+  markDismissed,
+  getPending,
+  clearSent,
+} from "./nudge-queue";
+export type {
+  Nudge,
+  NudgeType,
+  NudgePriority,
+  NudgeStatus,
+  NudgeChannel,
+  CreateNudgeInput,
+} from "./nudge-queue";

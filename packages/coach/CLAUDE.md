@@ -20,6 +20,7 @@ packages/coach/
 │   ├── morning-briefing.ts      # Morning briefing synthesis + dual formatting (Telegram/Voice)
 │   ├── morning-briefing-runner.ts # Entry point — data gathering, output routing
 │   ├── morning-briefing-cli.ts  # CLI entry: bun morning-briefing-cli.ts [--voice]
+│   ├── nudge-queue.ts           # Zod-validated JSONL nudge queue (reminder/check-in/insight/alert)
 │   ├── nudger.ts                # Morning Telegram nudge + evening wrap-up
 │   ├── tracker.ts               # Compliance tracking + weekly summary
 │   └── __tests__/               # Tests
