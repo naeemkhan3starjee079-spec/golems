@@ -126,10 +126,11 @@ CLAUDE_MODEL=sonnet myLauncher -s
 ## Pre-Flight Checklist
 
 **Before spawning ANY agent:**
-1. Read collab/handoff file if one exists (may have reserved panes)
-2. Map surfaces: `cmux list-panes` → `cmux list-pane-surfaces --pane pane:N`
-3. Check for idle/reserved panes — reuse before creating new
-4. If sending to an existing pane, clear it first (Ctrl-C + clear)
+1. **Prompt audit** — Read [workflows/prompt-audit.md](workflows/prompt-audit.md) (MANDATORY — re-read if compacted) and run the checklist on every agent prompt. Checks: prior work, skill combos, TDD/PR-loop mandates, merge policy, BrainLayer checkpoints, monitoring instructions. Skip only for trivial one-off tasks.
+2. Read collab/handoff file if one exists (may have reserved panes)
+3. Map surfaces: `cmux list-panes` → `cmux list-pane-surfaces --pane pane:N`
+4. Check for idle/reserved panes — reuse before creating new
+5. If sending to an existing pane, clear it first (Ctrl-C + clear)
 
 ### Terminal State Validation (before sending to existing pane)
 
