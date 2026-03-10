@@ -429,6 +429,18 @@ describe("wizard MCP recommendations", () => {
     expect(mcpNames).toContain("google-calendar");
     expect(mcpNames).toContain("whoop");
     expect(mcpNames).toContain("sophtron");
+    expect(mcpNames).toContain("brainlayer");
+    expect(mcpNames).toContain("supabase");
+  });
+
+  test("mcp-map is the single source of truth for both wizard and update", async () => {
+    const { SKILL_MCP_MAP: fromWizard } = await import("../wizard");
+    const { SKILL_MCP_MAP: fromUpdate } = await import("../update");
+    const { SKILL_MCP_MAP: fromMap } = await import("../mcp-map");
+
+    // All three should reference the same object
+    expect(fromWizard).toBe(fromMap);
+    expect(fromUpdate).toBe(fromMap);
   });
 });
 

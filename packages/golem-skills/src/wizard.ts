@@ -2,7 +2,6 @@ import { writeFile, mkdir, readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { createInterface } from "node:readline";
-import { readFile } from "node:fs/promises";
 import {
   loadConfig,
   autoDetectTools,
@@ -16,6 +15,7 @@ import {
   DEFAULT_COMMANDS_DIR,
 } from "./install";
 import { listRemoteSkills } from "./list";
+import { SKILL_MCP_MAP, getConfiguredMcps, recommendMcps } from "./mcp-map";
 
 // --- Execution mode detection (Task 4) ---
 
@@ -26,23 +26,8 @@ export function detectExecutionMode(): ExecutionMode {
   return process.env.CLAUDE_CODE ? "skill" : "cli";
 }
 
-// --- MCP recommendation map (Task 2) ---
-
-export const SKILL_MCP_MAP: Record<
-  string,
-  { required?: string[]; complement?: string[] }
-> = {
-  coach: {
-    required: ["google-calendar"],
-    complement: ["whoop", "sophtron"],
-  },
-  research: { complement: ["exa"] },
-  "youtube-pipeline": { required: ["exa"] },
-  "voice-sessions": { required: ["voicelayer"] },
-  "1password": { required: ["1password"] },
-  railway: { complement: ["railway"] },
-  convex: { required: ["convex"] },
-};
+// Re-export for backward compat (tests import from wizard)
+export { SKILL_MCP_MAP, recommendMcps } from "./mcp-map";
 
 // --- Fallback skill categories (Task 5) ---
 
@@ -82,59 +67,13 @@ export async function getSkillCategories(): Promise<Record<string, string[]>> {
   }
 }
 
-// --- MCP helpers (Task 2) ---
-
-async function getConfiguredMcps(): Promise<Set<string>> {
-  const configured = new Set<string>();
-  const paths = [
-    join(homedir(), ".claude", ".mcp.json"),
-    join(homedir(), ".claude", "mcp.json"),
-  ];
-  for (const p of paths) {
-    try {
-      const raw = await readFile(p, "utf8");
-      const data = JSON.parse(raw);
-      const servers = data.mcpServers || data;
-      if (typeof servers === "object") {
-        for (const key of Object.keys(servers)) configured.add(key);
-      }
-    } catch {
-      // file not found — skip
-    }
-  }
-  return configured;
-}
-
-export function recommendMcps(
-  installedSkills: string[],
-  configuredMcps: Set<string>,
-): Array<{ skill: string; mcp: string; type: "required" | "complement" }> {
-  const recommendations: Array<{
-    skill: string;
-    mcp: string;
-    type: "required" | "complement";
-  }> = [];
-  for (const skill of installedSkills) {
-    const mapping = SKILL_MCP_MAP[skill];
-    if (!mapping) continue;
-    for (const mcp of mapping.required || []) {
-      if (!configuredMcps.has(mcp))
-        recommendations.push({ skill, mcp, type: "required" });
-    }
-    for (const mcp of mapping.complement || []) {
-      if (!configuredMcps.has(mcp))
-        recommendations.push({ skill, mcp, type: "complement" });
-    }
-  }
-  return recommendations;
-}
-
 async function runMcpRecommendationStep(): Promise<void> {
   let installedSkills: string[];
   try {
-    const { readdir } = await import("node:fs/promises");
-    const entries = await readdir(DEFAULT_COMMANDS_DIR);
-    installedSkills = entries;
+    const entries = await readdir(DEFAULT_COMMANDS_DIR, {
+      withFileTypes: true,
+    });
+    installedSkills = entries.filter((e) => e.isDirectory()).map((e) => e.name);
   } catch {
     installedSkills = [];
   }

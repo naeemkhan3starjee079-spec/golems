@@ -1,4 +1,4 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import {
@@ -9,76 +9,23 @@ import {
 } from "./config";
 import { listInstalledSkills } from "./list";
 import { installAllSkills, DEFAULT_COMMANDS_DIR } from "./install";
+import {
+  SKILL_MCP_MAP,
+  getConfiguredMcps,
+  recommendMcps as sharedRecommendMcps,
+} from "./mcp-map";
 
-/** Skill → MCP dependency mapping */
-export const SKILL_MCP_MAP: Record<
-  string,
-  { required: string[]; complement: string[] }
-> = {
-  research: { required: ["exa"], complement: ["brainlayer"] },
-  coach: { required: [], complement: ["brainlayer", "supabase"] },
-  catchup: { required: ["brainlayer"], complement: [] },
-  "cmux-agents": { required: [], complement: ["voicelayer"] },
-  convex: { required: ["supabase"], complement: [] },
-  "voice-sessions": { required: ["voicelayer"], complement: [] },
-  "ecosystem-health": { required: ["supabase"], complement: ["brainlayer"] },
-};
+// Re-export for backward compat
+export { SKILL_MCP_MAP };
 
-/** Check which MCPs are already configured in .mcp.json */
-async function getConfiguredMcps(reposPath: string): Promise<Set<string>> {
-  const configured = new Set<string>();
-  const expanded = reposPath.replace(/^~/, homedir());
-
-  const mcpPaths = [
-    join(expanded, ".mcp.json"),
-    join(homedir(), ".claude", ".mcp.json"),
-  ];
-
-  for (const mcpPath of mcpPaths) {
-    try {
-      const raw = await readFile(mcpPath, "utf8");
-      const parsed = JSON.parse(raw);
-      if (parsed.mcpServers) {
-        for (const key of Object.keys(parsed.mcpServers)) {
-          configured.add(key);
-        }
-      }
-    } catch {
-      // file doesn't exist or isn't valid JSON — skip
-    }
-  }
-
-  return configured;
-}
-
-/** Check for MCP recommendations based on installed skills */
+/** Check for MCP recommendations based on installed skills (update-specific wrapper). */
 export async function recommendMcps(
   installedSkills: Set<string>,
   reposPath: string,
 ): Promise<string[]> {
   const configured = await getConfiguredMcps(reposPath);
-  const needed = new Map<string, { skills: string[]; type: string }>();
-
-  for (const skill of installedSkills) {
-    const mapping = SKILL_MCP_MAP[skill];
-    if (!mapping) continue;
-
-    for (const mcp of mapping.required) {
-      if (!configured.has(mcp)) {
-        if (!needed.has(mcp)) needed.set(mcp, { skills: [], type: "required" });
-        needed.get(mcp)!.skills.push(skill);
-      }
-    }
-    for (const mcp of mapping.complement) {
-      if (!configured.has(mcp)) {
-        if (!needed.has(mcp))
-          needed.set(mcp, { skills: [], type: "complement" });
-        needed.get(mcp)!.skills.push(skill);
-      }
-    }
-  }
-
-  return Array.from(needed.keys());
+  const recs = sharedRecommendMcps(installedSkills, configured);
+  return [...new Set(recs.map((r) => r.mcp))];
 }
 
 export interface UpdateOptions {
