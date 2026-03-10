@@ -10,8 +10,12 @@ CLI Detection (via which):
   gemini    : not found
   codex     : not found
   kiro-cli  : not found
+  windsurf  : not found
+  aider     : not found
+  copilot   : not found
+  cline     : not found
 
-Detected tools: 1/5
+Detected tools: 1/9
 
 Config file: /home/devuser/.golems/config.json
   Status: NOT FOUND (first-time setup needed)

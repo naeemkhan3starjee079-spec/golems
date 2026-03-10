@@ -2,6 +2,40 @@ import { readFile, writeFile, mkdir, access } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { homedir } from "node:os";
 
+/** Returns the platform-appropriate CLI lookup command. */
+export function getWhichCommand(): string {
+  return process.platform === "win32" ? "where" : "which";
+}
+
+/** Checks whether Claude Desktop app is installed (macOS .app or Windows exe). */
+export async function detectClaudeDesktop(): Promise<boolean> {
+  if (process.platform === "darwin") {
+    try {
+      await access("/Applications/Claude.app");
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  if (process.platform === "win32") {
+    try {
+      const appPath = join(
+        homedir(),
+        "AppData",
+        "Local",
+        "Programs",
+        "Claude",
+        "Claude.exe",
+      );
+      await access(appPath);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
+
 export interface GolemConfig {
   reposPath?: string;
   tools?: Record<string, string>;
@@ -53,9 +87,15 @@ export async function autoDetectTools(): Promise<Record<string, string>> {
 
   for (const [key, names] of Object.entries(candidates)) {
     for (const name of names) {
-      const proc = Bun.spawnSync(["which", name]);
+      const proc = Bun.spawnSync([getWhichCommand(), name]);
       if (proc.exitCode === 0) {
-        tools[key] = proc.stdout.toString().trim();
+        // `where` on Windows may return multiple lines; take the first match
+        const firstHit = proc.stdout
+          .toString()
+          .split("\n")
+          .map((l) => l.trim())
+          .find(Boolean);
+        if (firstHit) tools[key] = firstHit;
         break;
       }
     }

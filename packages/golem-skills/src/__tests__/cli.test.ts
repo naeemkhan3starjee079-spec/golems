@@ -70,14 +70,22 @@ describe("golems-cli routing", () => {
   });
 
   test("wizard starts interactive setup", async () => {
-    const { stdout } = await run("wizard");
-    expect(stdout).toContain("Golems Setup Wizard");
-    // On machines with existing config, wizard shows reconfigure prompt instead of detection
-    const hasConfig = stdout.includes("Existing configuration found");
-    if (!hasConfig) {
+    // Use temp HOME so we always get fresh-machine flow regardless of host config
+    const { mkdtemp, rm } = await import("node:fs/promises");
+    const { tmpdir } = await import("node:os");
+    const tmpHome = await mkdtemp(join(tmpdir(), "wizard-cli-"));
+    try {
+      const proc = Bun.spawn(["bun", CLI, "wizard"], {
+        stdout: "pipe",
+        stderr: "pipe",
+        env: { ...process.env, HOME: tmpHome },
+      });
+      const stdout = await new Response(proc.stdout).text();
+      await proc.exited;
+      expect(stdout).toContain("Golems Setup Wizard");
       expect(stdout).toContain("Detecting installed AI CLIs");
-    } else {
-      expect(stdout).toContain("(r)econfigure");
+    } finally {
+      await rm(tmpHome, { recursive: true, force: true });
     }
   });
 

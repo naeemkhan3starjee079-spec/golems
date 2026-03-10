@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach, afterEach, mock } from "bun:test";
+import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 import { mkdtemp, rm, writeFile, readFile, mkdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -331,7 +331,7 @@ describe("evals.json structure", () => {
     }
   });
 
-  test("total assertion count is 22", async () => {
+  test("total assertion count is 87", async () => {
     const evalsPath = join(
       import.meta.dir,
       "..",
@@ -351,5 +351,151 @@ describe("evals.json structure", () => {
       totalAssertions += ev.assertions.length;
     }
     expect(totalAssertions).toBe(87);
+  });
+});
+
+describe("config.ts platform support", () => {
+  test("getWhichCommand returns which on non-Windows", async () => {
+    const { getWhichCommand } = await import("../config");
+    // On macOS/Linux this should be "which"
+    if (process.platform !== "win32") {
+      expect(getWhichCommand()).toBe("which");
+    }
+  });
+
+  test("autoDetectTools returns object with string values", async () => {
+    const { autoDetectTools } = await import("../config");
+    const tools = await autoDetectTools();
+    expect(typeof tools).toBe("object");
+    for (const [key, val] of Object.entries(tools)) {
+      expect(typeof key).toBe("string");
+      expect(typeof val).toBe("string");
+      expect(val.length).toBeGreaterThan(0);
+    }
+  });
+
+  test("detectClaudeDesktop returns boolean", async () => {
+    const { detectClaudeDesktop } = await import("../config");
+    const result = await detectClaudeDesktop();
+    expect(typeof result).toBe("boolean");
+  });
+});
+
+describe("wizard MCP recommendations", () => {
+  test("SKILL_MCP_MAP has correct structure", async () => {
+    const { SKILL_MCP_MAP } = await import("../wizard");
+    expect(typeof SKILL_MCP_MAP).toBe("object");
+
+    for (const [skill, mapping] of Object.entries(SKILL_MCP_MAP)) {
+      expect(typeof skill).toBe("string");
+      if (mapping.required) {
+        expect(Array.isArray(mapping.required)).toBe(true);
+        for (const mcp of mapping.required) {
+          expect(typeof mcp).toBe("string");
+        }
+      }
+      if (mapping.complement) {
+        expect(Array.isArray(mapping.complement)).toBe(true);
+        for (const mcp of mapping.complement) {
+          expect(typeof mcp).toBe("string");
+        }
+      }
+    }
+  });
+
+  test("recommendMcps returns needed MCPs filtering configured ones", async () => {
+    const { recommendMcps } = await import("../wizard");
+    const configured = new Set<string>(["google-calendar"]);
+    const recs = recommendMcps(["coach"], configured);
+
+    // google-calendar is configured, should not appear
+    expect(recs.find((r) => r.mcp === "google-calendar")).toBeUndefined();
+    // whoop and sophtron are complements for coach, should appear
+    const mcpNames = recs.map((r) => r.mcp);
+    expect(mcpNames).toContain("whoop");
+    expect(mcpNames).toContain("sophtron");
+  });
+
+  test("recommendMcps returns empty for non-MCP skills", async () => {
+    const { recommendMcps } = await import("../wizard");
+    const recs = recommendMcps(["commit", "github"], new Set());
+    expect(recs).toHaveLength(0);
+  });
+
+  test("recommendMcps includes all unconfigured MCPs", async () => {
+    const { recommendMcps } = await import("../wizard");
+    const recs = recommendMcps(["coach"], new Set());
+    const mcpNames = recs.map((r) => r.mcp);
+    expect(mcpNames).toContain("google-calendar");
+    expect(mcpNames).toContain("whoop");
+    expect(mcpNames).toContain("sophtron");
+  });
+});
+
+describe("wizard skill categories", () => {
+  test("getSkillCategories returns categories with skills", async () => {
+    const { getSkillCategories } = await import("../wizard");
+    const categories = await getSkillCategories();
+    expect(typeof categories).toBe("object");
+    expect(Object.keys(categories).length).toBeGreaterThan(0);
+
+    // Should have at least the static categories
+    expect(categories.Development).toBeDefined();
+    expect(categories.Research).toBeDefined();
+    expect(categories.Infrastructure).toBeDefined();
+
+    // Infrastructure should include vercel (added in this PR)
+    expect(categories.Infrastructure).toContain("vercel");
+  });
+});
+
+describe("execution mode detection", () => {
+  test("detectExecutionMode returns cli when CLAUDE_CODE not set", async () => {
+    const { detectExecutionMode } = await import("../wizard");
+    const original = process.env.CLAUDE_CODE;
+    delete process.env.CLAUDE_CODE;
+    expect(detectExecutionMode()).toBe("cli");
+    if (original !== undefined) process.env.CLAUDE_CODE = original;
+  });
+
+  test("detectExecutionMode returns skill when CLAUDE_CODE is set", async () => {
+    const { detectExecutionMode } = await import("../wizard");
+    const original = process.env.CLAUDE_CODE;
+    process.env.CLAUDE_CODE = "1";
+    expect(detectExecutionMode()).toBe("skill");
+    if (original !== undefined) {
+      process.env.CLAUDE_CODE = original;
+    } else {
+      delete process.env.CLAUDE_CODE;
+    }
+  });
+});
+
+describe("fixture consistency", () => {
+  test("all CLI fixtures show 9 tools in detection", async () => {
+    const fixturesDir = join(
+      import.meta.dir,
+      "..",
+      "..",
+      "..",
+      "..",
+      "skills",
+      "golem-powers",
+      "wizard",
+      "evals",
+      "fixtures",
+    );
+    const cliFixtures = [
+      "linux-user.txt",
+      "windows-user.txt",
+      "path-with-spaces.txt",
+      "vscode-terminal.txt",
+    ];
+
+    for (const fixture of cliFixtures) {
+      const content = await readFile(join(fixturesDir, fixture), "utf8");
+      // Each should reference /9 in detected tools count
+      expect(content).toMatch(/Detected tools: \d+\/9/);
+    }
   });
 });

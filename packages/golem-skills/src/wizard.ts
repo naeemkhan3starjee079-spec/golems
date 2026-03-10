@@ -2,9 +2,11 @@ import { writeFile, mkdir, readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { createInterface } from "node:readline";
+import { readFile } from "node:fs/promises";
 import {
   loadConfig,
   autoDetectTools,
+  detectClaudeDesktop,
   DEFAULT_CONFIG_PATH,
   type GolemConfig,
 } from "./config";
@@ -14,6 +16,185 @@ import {
   DEFAULT_COMMANDS_DIR,
 } from "./install";
 import { listRemoteSkills } from "./list";
+
+// --- Execution mode detection (Task 4) ---
+
+export type ExecutionMode = "cli" | "skill";
+
+/** Detect if running as a Claude Code skill (CLAUDE_CODE env) vs CLI. */
+export function detectExecutionMode(): ExecutionMode {
+  return process.env.CLAUDE_CODE ? "skill" : "cli";
+}
+
+// --- MCP recommendation map (Task 2) ---
+
+export const SKILL_MCP_MAP: Record<
+  string,
+  { required?: string[]; complement?: string[] }
+> = {
+  coach: {
+    required: ["google-calendar"],
+    complement: ["whoop", "sophtron"],
+  },
+  research: { complement: ["exa"] },
+  "youtube-pipeline": { required: ["exa"] },
+  "voice-sessions": { required: ["voicelayer"] },
+  "1password": { required: ["1password"] },
+  railway: { complement: ["railway"] },
+  convex: { required: ["convex"] },
+};
+
+// --- Fallback skill categories (Task 5) ---
+
+const FALLBACK_SKILL_CATEGORIES: Record<string, string[]> = {
+  Development: [
+    "commit",
+    "github",
+    "pr-loop",
+    "test-plan",
+    "code-review",
+    "simplify",
+  ],
+  Research: ["research", "youtube-pipeline", "call-debrief"],
+  Operations: ["coach", "catchup", "ecosystem-health", "orchestrator-status"],
+  Infrastructure: ["1password", "railway", "convex", "vercel"],
+  Voice: ["voice-sessions"],
+  Content: ["video-showcase", "presentation-builder"],
+};
+
+/** Tries remote registry, falls back to static list. Adds "Other" for uncategorized. */
+export async function getSkillCategories(): Promise<Record<string, string[]>> {
+  try {
+    const remoteSkills = await listRemoteSkills();
+    if (remoteSkills.length === 0) return { ...FALLBACK_SKILL_CATEGORIES };
+
+    const categorized = new Set<string>();
+    for (const skills of Object.values(FALLBACK_SKILL_CATEGORIES)) {
+      for (const s of skills) categorized.add(s);
+    }
+
+    const other = remoteSkills.filter((s) => !categorized.has(s));
+    const result = { ...FALLBACK_SKILL_CATEGORIES };
+    if (other.length > 0) result.Other = other;
+    return result;
+  } catch {
+    return { ...FALLBACK_SKILL_CATEGORIES };
+  }
+}
+
+// --- MCP helpers (Task 2) ---
+
+async function getConfiguredMcps(): Promise<Set<string>> {
+  const configured = new Set<string>();
+  const paths = [
+    join(homedir(), ".claude", ".mcp.json"),
+    join(homedir(), ".claude", "mcp.json"),
+  ];
+  for (const p of paths) {
+    try {
+      const raw = await readFile(p, "utf8");
+      const data = JSON.parse(raw);
+      const servers = data.mcpServers || data;
+      if (typeof servers === "object") {
+        for (const key of Object.keys(servers)) configured.add(key);
+      }
+    } catch {
+      // file not found — skip
+    }
+  }
+  return configured;
+}
+
+export function recommendMcps(
+  installedSkills: string[],
+  configuredMcps: Set<string>,
+): Array<{ skill: string; mcp: string; type: "required" | "complement" }> {
+  const recommendations: Array<{
+    skill: string;
+    mcp: string;
+    type: "required" | "complement";
+  }> = [];
+  for (const skill of installedSkills) {
+    const mapping = SKILL_MCP_MAP[skill];
+    if (!mapping) continue;
+    for (const mcp of mapping.required || []) {
+      if (!configuredMcps.has(mcp))
+        recommendations.push({ skill, mcp, type: "required" });
+    }
+    for (const mcp of mapping.complement || []) {
+      if (!configuredMcps.has(mcp))
+        recommendations.push({ skill, mcp, type: "complement" });
+    }
+  }
+  return recommendations;
+}
+
+async function runMcpRecommendationStep(): Promise<void> {
+  let installedSkills: string[];
+  try {
+    const { readdir } = await import("node:fs/promises");
+    const entries = await readdir(DEFAULT_COMMANDS_DIR);
+    installedSkills = entries;
+  } catch {
+    installedSkills = [];
+  }
+
+  if (installedSkills.length === 0) return;
+
+  const configuredMcps = await getConfiguredMcps();
+  const recs = recommendMcps(installedSkills, configuredMcps);
+
+  if (recs.length === 0) {
+    console.log("MCP servers: all recommended MCPs are already configured.\n");
+    return;
+  }
+
+  console.log("Recommended MCP servers for your installed skills:\n");
+  const required = recs.filter((r) => r.type === "required");
+  const complement = recs.filter((r) => r.type === "complement");
+
+  if (required.length > 0) {
+    console.log("  Required:");
+    for (const r of required) {
+      console.log(`    - ${r.mcp} (needed by ${r.skill})`);
+    }
+  }
+  if (complement.length > 0) {
+    console.log("  Optional:");
+    for (const r of complement) {
+      console.log(`    - ${r.mcp} (enhances ${r.skill})`);
+    }
+  }
+  console.log(
+    "\nConfigure MCPs in ~/.claude/.mcp.json or via: npx golems-cli mcp\n",
+  );
+}
+
+// --- Claude Code helpers (Task 8) ---
+
+function hasClaudeCode(tools: Record<string, string>): boolean {
+  return !!tools.claude;
+}
+
+function getClaudeCodeInstallInstructions(): string {
+  const lines = [
+    "Claude Code CLI is required for golem skills.",
+    "Skills are SKILL.md files in ~/.claude/commands/ — they only work with Claude Code.",
+    "",
+    "To install Claude Code:",
+  ];
+  if (process.platform === "darwin") {
+    lines.push("  brew install claude          # macOS (recommended)");
+    lines.push("  npm install -g @anthropic-ai/claude-code  # alternative");
+  } else if (process.platform === "win32") {
+    lines.push("  npm install -g @anthropic-ai/claude-code  # Windows");
+    lines.push("  # WSL recommended: install inside WSL for best experience");
+  } else {
+    lines.push("  npm install -g @anthropic-ai/claude-code  # Linux");
+  }
+  lines.push("", "Then run this wizard again.");
+  return lines.join("\n");
+}
 
 const FEATURES = ["proactiveNudges", "nightShift", "telegram"] as const;
 
@@ -53,21 +234,8 @@ async function countInstalledSkills(): Promise<number> {
   }
 }
 
-const SKILL_CATEGORIES: Record<string, string[]> = {
-  Development: [
-    "commit",
-    "github",
-    "pr-loop",
-    "test-plan",
-    "code-review",
-    "simplify",
-  ],
-  Research: ["research", "youtube-pipeline", "call-debrief"],
-  Operations: ["coach", "catchup", "ecosystem-health", "orchestrator-status"],
-  Infrastructure: ["1password", "railway", "convex"],
-  Voice: ["voice-sessions"],
-  Content: ["video-showcase", "presentation-builder"],
-};
+// SKILL_CATEGORIES kept as alias for backward compat (tests reference it)
+const SKILL_CATEGORIES: Record<string, string[]> = FALLBACK_SKILL_CATEGORIES;
 
 async function listInstalledSkillNames(): Promise<Set<string>> {
   try {
@@ -122,8 +290,9 @@ async function installSkillsInteractive(): Promise<void> {
     installChoice.toLowerCase() === "browse"
   ) {
     const installed = await listInstalledSkillNames();
+    const categories = await getSkillCategories();
     console.log("\nAvailable skills by category:\n");
-    for (const [category, skills] of Object.entries(SKILL_CATEGORIES)) {
+    for (const [category, skills] of Object.entries(categories)) {
       console.log(`  ${category}:`);
       for (const skill of skills) {
         const status = installed.has(skill) ? " [installed]" : "";
@@ -167,6 +336,14 @@ async function installSkillsInteractive(): Promise<void> {
 }
 
 export async function runWizard(): Promise<void> {
+  // Skill mode: emit guidance and exit (no interactive prompts)
+  if (detectExecutionMode() === "skill") {
+    console.log(
+      "Running as a Claude Code skill. Use the CLI for interactive setup:\n  npx golems-cli wizard",
+    );
+    return;
+  }
+
   console.log("=== Golems Setup Wizard ===\n");
 
   // Step 1: Check existing config
@@ -184,8 +361,17 @@ export async function runWizard(): Promise<void> {
       choice.toLowerCase() === "add" ||
       choice.toLowerCase() === "add skills"
     ) {
-      // Jump to skill installation
+      // Always re-detect tools live (config may be stale)
+      const detectedTools = await autoDetectTools();
+      if (!hasClaudeCode(detectedTools)) {
+        console.log(
+          "\nClaude Code CLI is required to install skills.\n" +
+            getClaudeCodeInstallInstructions(),
+        );
+        return;
+      }
       await installSkillsInteractive();
+      await runMcpRecommendationStep();
       return;
     }
     if (
@@ -222,16 +408,18 @@ export async function runWizard(): Promise<void> {
   }
   console.log(`\nFound ${toolCount} of ${allClis.length} supported CLIs.\n`);
 
+  // Claude Desktop detection
+  const hasDesktop = await detectClaudeDesktop();
+  if (hasDesktop && !tools.claude) {
+    console.log(
+      "Claude Desktop detected but Claude Code CLI not found.\n" +
+        "Skills require the CLI, not just the Desktop app.\n",
+    );
+  }
+
   // Claude Code gate — skills require Claude Code
   if (!tools.claude) {
-    console.log(
-      "Claude Code CLI is required for golem skills.\n" +
-        "Skills are SKILL.md files in ~/.claude/commands/ — they only work with Claude Code.\n\n" +
-        "To install Claude Code:\n" +
-        "  brew install claude          # macOS (recommended)\n" +
-        "  npm install -g @anthropic-ai/claude-code  # any platform\n\n" +
-        "Then run this wizard again.",
-    );
+    console.log(getClaudeCodeInstallInstructions());
 
     const proceed = await ask(
       "\nWould you like to continue setup anyway (config only, no skills)? [n]: ",
@@ -318,6 +506,11 @@ export async function runWizard(): Promise<void> {
       "Skipping skill installation (Claude Code not detected).\n" +
         "Install Claude Code first, then run: npx golems-cli skills install <name>\n",
     );
+  }
+
+  // Step 7: MCP recommendations
+  if (tools.claude) {
+    await runMcpRecommendationStep();
   }
 
   // Summary
