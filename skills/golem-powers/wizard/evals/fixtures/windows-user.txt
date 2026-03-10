@@ -1,0 +1,24 @@
+=== Golems Wizard — Environment Detection ===
+
+Platform: win32
+Shell: cmd.exe (C:\Windows\System32\cmd.exe)
+Home: C:\Users\devuser
+
+CLI Detection (via where):
+  claude    : C:\Users\devuser\AppData\Local\npm\claude.cmd
+  cursor    : not found
+  gemini    : not found
+  codex     : not found
+  kiro-cli  : not found
+
+Detected tools: 1/5
+
+Config file: C:\Users\devuser\.golems\config.json
+  Status: NOT FOUND (first-time setup needed)
+
+Node.js: v22.12.0 (available)
+npm: 10.9.0 (available)
+
+User workspace: C:\Users\devuser\Projects
+
+=== Windows environment — path separators and shell differences apply ===

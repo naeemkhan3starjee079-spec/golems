@@ -1,11 +1,4 @@
-import {
-  readFile,
-  writeFile,
-  mkdir,
-  access,
-  readdir,
-  stat,
-} from "node:fs/promises";
+import { writeFile, mkdir, readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { createInterface } from "node:readline";
@@ -43,15 +36,6 @@ function ask(question: string): Promise<string> {
   });
 }
 
-async function pathExists(path: string): Promise<boolean> {
-  try {
-    await access(path);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 async function isDirectory(path: string): Promise<boolean> {
   try {
     return (await stat(path)).isDirectory();
@@ -69,6 +53,119 @@ async function countInstalledSkills(): Promise<number> {
   }
 }
 
+const SKILL_CATEGORIES: Record<string, string[]> = {
+  Development: [
+    "commit",
+    "github",
+    "pr-loop",
+    "test-plan",
+    "code-review",
+    "simplify",
+  ],
+  Research: ["research", "youtube-pipeline", "call-debrief"],
+  Operations: ["coach", "catchup", "ecosystem-health", "orchestrator-status"],
+  Infrastructure: ["1password", "railway", "convex"],
+  Voice: ["voice-sessions"],
+  Content: ["video-showcase", "presentation-builder"],
+};
+
+async function listInstalledSkillNames(): Promise<Set<string>> {
+  try {
+    const entries = await readdir(DEFAULT_COMMANDS_DIR);
+    return new Set(entries);
+  } catch {
+    return new Set();
+  }
+}
+
+async function installSkillsInteractive(): Promise<void> {
+  const installChoice = await ask(
+    "Install skills?\n  (a)ll — install all skills\n  (r)ecommended — install popular skills\n  (b)rowse — browse by category\n  (s)kip — install later\nChoice [s]: ",
+  );
+
+  const recommended = ["commit", "coach", "github", "catchup", "research"];
+  const failedInstalls: string[] = [];
+
+  if (
+    installChoice.toLowerCase() === "a" ||
+    installChoice.toLowerCase() === "all"
+  ) {
+    console.log("\nInstalling all skills...");
+    try {
+      const allSkillNames = await listRemoteSkills();
+      await installAllSkills(allSkillNames);
+      console.log("All skills installed.");
+    } catch (err) {
+      console.error(`Failed to install all skills: ${(err as Error).message}`);
+      failedInstalls.push("all");
+    }
+  } else if (
+    installChoice.toLowerCase() === "r" ||
+    installChoice.toLowerCase() === "recommended"
+  ) {
+    console.log("\nInstalling recommended skills...");
+    for (const skill of recommended) {
+      try {
+        const result = await installSkill(skill);
+        if (result?.skipped) {
+          console.log(`  ${skill}: already installed (skipping)`);
+        } else {
+          console.log(`  ${skill}: installed`);
+        }
+      } catch (err) {
+        console.error(`  ${skill}: failed (${(err as Error).message})`);
+        failedInstalls.push(skill);
+      }
+    }
+  } else if (
+    installChoice.toLowerCase() === "b" ||
+    installChoice.toLowerCase() === "browse"
+  ) {
+    const installed = await listInstalledSkillNames();
+    console.log("\nAvailable skills by category:\n");
+    for (const [category, skills] of Object.entries(SKILL_CATEGORIES)) {
+      console.log(`  ${category}:`);
+      for (const skill of skills) {
+        const status = installed.has(skill) ? " [installed]" : "";
+        console.log(`    - ${skill}${status}`);
+      }
+    }
+    console.log();
+    const picks = await ask(
+      "Enter skill names to install (comma-separated), or press Enter to skip: ",
+    );
+    if (picks) {
+      for (const name of picks
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)) {
+        try {
+          const result = await installSkill(name);
+          if (result?.skipped) {
+            console.log(`  ${name}: already installed (skipping)`);
+          } else {
+            console.log(`  ${name}: installed`);
+          }
+        } catch (err) {
+          console.error(`  ${name}: failed (${(err as Error).message})`);
+          failedInstalls.push(name);
+        }
+      }
+    }
+  } else {
+    console.log(
+      "\nSkipping skill installation. Install later with: npx golems-cli skills install <name>",
+    );
+  }
+
+  if (failedInstalls.length > 0) {
+    console.log(
+      `\nNote: ${failedInstalls.length} skill(s) failed to install: ${failedInstalls.join(", ")}`,
+    );
+    console.log("Retry with: npx golems-cli skills install <name>");
+  }
+}
+
 export async function runWizard(): Promise<void> {
   console.log("=== Golems Setup Wizard ===\n");
 
@@ -80,8 +177,17 @@ export async function runWizard(): Promise<void> {
     console.log();
 
     const choice = await ask(
-      "Would you like to (r)econfigure or (s)kip? [s]: ",
+      "Would you like to (r)econfigure, (a)dd skills, or (s)kip? [s]: ",
     );
+    if (
+      choice.toLowerCase() === "a" ||
+      choice.toLowerCase() === "add" ||
+      choice.toLowerCase() === "add skills"
+    ) {
+      // Jump to skill installation
+      await installSkillsInteractive();
+      return;
+    }
     if (
       choice.toLowerCase() !== "r" &&
       choice.toLowerCase() !== "reconfigure"
@@ -92,16 +198,52 @@ export async function runWizard(): Promise<void> {
     console.log();
   }
 
-  // Step 2: Detect CLIs
+  // Step 2: Detect platform and CLIs
+  const platform = process.platform;
+  console.log(`Platform: ${platform}\n`);
   console.log("Detecting installed AI CLIs...\n");
   const tools = await autoDetectTools();
   const toolCount = Object.keys(tools).length;
 
-  for (const cli of ["claude", "cursor", "gemini", "codex", "kiro-cli"]) {
+  const allClis = [
+    "claude",
+    "cursor",
+    "gemini",
+    "codex",
+    "kiro-cli",
+    "windsurf",
+    "aider",
+    "copilot",
+    "cline",
+  ];
+  for (const cli of allClis) {
     const path = tools[cli];
     console.log(`  ${cli.padEnd(10)}: ${path || "not found"}`);
   }
-  console.log(`\nFound ${toolCount} of 5 supported CLIs.\n`);
+  console.log(`\nFound ${toolCount} of ${allClis.length} supported CLIs.\n`);
+
+  // Claude Code gate — skills require Claude Code
+  if (!tools.claude) {
+    console.log(
+      "Claude Code CLI is required for golem skills.\n" +
+        "Skills are SKILL.md files in ~/.claude/commands/ — they only work with Claude Code.\n\n" +
+        "To install Claude Code:\n" +
+        "  brew install claude          # macOS (recommended)\n" +
+        "  npm install -g @anthropic-ai/claude-code  # any platform\n\n" +
+        "Then run this wizard again.",
+    );
+
+    const proceed = await ask(
+      "\nWould you like to continue setup anyway (config only, no skills)? [n]: ",
+    );
+    if (proceed.toLowerCase() !== "y" && proceed.toLowerCase() !== "yes") {
+      console.log("Install Claude Code first, then re-run the wizard.");
+      return;
+    }
+    console.log(
+      "\nContinuing with config-only setup (skills will not be available until Claude Code is installed).\n",
+    );
+  }
 
   // Step 3: Ask workspace root
   let reposPath = "";
@@ -169,58 +311,14 @@ export async function runWizard(): Promise<void> {
   console.log();
 
   // Step 6: Install skills
-  const installChoice = await ask(
-    "Install skills?\n  (a)ll — install all skills\n  (r)ecommended — install popular skills\n  (s)kip — install later\nChoice [s]: ",
-  );
-
-  const recommended = ["commit", "coach", "github", "catchup", "research"];
-
-  const failedInstalls: string[] = [];
-
-  if (
-    installChoice.toLowerCase() === "a" ||
-    installChoice.toLowerCase() === "all"
-  ) {
-    console.log("\nInstalling all skills...");
-    try {
-      const allSkillNames = await listRemoteSkills();
-      await installAllSkills(allSkillNames);
-      console.log("All skills installed.");
-    } catch (err) {
-      console.error(`Failed to install all skills: ${(err as Error).message}`);
-      failedInstalls.push("all");
-    }
-  } else if (
-    installChoice.toLowerCase() === "r" ||
-    installChoice.toLowerCase() === "recommended"
-  ) {
-    console.log("\nInstalling recommended skills...");
-    for (const skill of recommended) {
-      try {
-        const result = await installSkill(skill);
-        if (result?.skipped) {
-          console.log(`  ${skill}: already installed (skipping)`);
-        } else {
-          console.log(`  ${skill}: installed`);
-        }
-      } catch (err) {
-        console.error(`  ${skill}: failed (${(err as Error).message})`);
-        failedInstalls.push(skill);
-      }
-    }
+  if (tools.claude) {
+    await installSkillsInteractive();
   } else {
     console.log(
-      "\nSkipping skill installation. Install later with: npx golems-cli skills install <name>",
+      "Skipping skill installation (Claude Code not detected).\n" +
+        "Install Claude Code first, then run: npx golems-cli skills install <name>\n",
     );
   }
-
-  if (failedInstalls.length > 0) {
-    console.log(
-      `\nNote: ${failedInstalls.length} skill(s) failed to install: ${failedInstalls.join(", ")}`,
-    );
-    console.log("Retry with: npx golems-cli skills install <name>");
-  }
-  console.log();
 
   // Summary
   const skillCount = await countInstalledSkills();

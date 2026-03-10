@@ -45,6 +45,10 @@ export async function autoDetectTools(): Promise<Record<string, string>> {
     cursor: ["cursor"],
     codex: ["codex"],
     "kiro-cli": ["kiro-cli"],
+    windsurf: ["windsurf"],
+    aider: ["aider"],
+    copilot: ["github-copilot-cli"],
+    cline: ["cline"],
   };
 
   for (const [key, names] of Object.entries(candidates)) {

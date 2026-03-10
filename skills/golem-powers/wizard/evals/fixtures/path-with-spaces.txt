@@ -1,0 +1,28 @@
+=== Golems Wizard — Environment Detection ===
+
+CLI Detection (via which):
+  claude    : /usr/local/bin/claude
+  cursor    : not found
+  gemini    : not found
+  codex     : not found
+  kiro-cli  : not found
+
+Detected tools: 1/5
+
+Config file: ~/.golems/config.json
+  Status: NOT FOUND (first-time setup needed)
+
+User provides workspace paths:
+  Attempt 1: "~/My Projects/code repos"
+    Expanded: /Users/devuser/My Projects/code repos
+    ls result: directory exists (valid, has spaces)
+
+  Attempt 2: "~"
+    Expanded: /Users/devuser
+    ls result: directory exists (valid, but home dir — too broad?)
+
+  Attempt 3: "~/Projects"
+    Expanded: /Users/devuser/Projects
+    ls result: directory exists (valid)
+
+=== Path validation with edge cases ===

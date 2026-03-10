@@ -6,8 +6,12 @@ CLI Detection (via which):
   gemini    : /opt/homebrew/bin/gemini
   codex     : not found
   kiro-cli  : not found
+  windsurf  : not found
+  aider     : not found
+  copilot   : not found
+  cline     : not found
 
-Detected tools: 3/5
+Detected tools: 3/9
 
 Config file: ~/.golems/config.json
   Status: NOT FOUND (first-time setup needed)

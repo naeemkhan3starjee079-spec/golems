@@ -1,0 +1,15 @@
+=== Golems Wizard — MCP Declined ===
+
+Config: ~/.golems/config.json EXISTS (valid)
+  reposPath: ~/Projects
+  tools: { claude: "/home/devuser/.npm-global/bin/claude" }
+
+User installed: research skill
+  research requires: exa MCP (web search)
+
+User response to MCP prompt: "No thanks, I don't want to set up any MCPs right now"
+
+.mcp.json in ~/Projects:
+  Status: NOT FOUND (no MCPs configured)
+
+=== User declined MCP — skill works but with reduced functionality ===

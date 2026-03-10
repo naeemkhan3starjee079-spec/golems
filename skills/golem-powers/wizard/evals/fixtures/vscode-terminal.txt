@@ -1,0 +1,26 @@
+=== Golems Wizard — Environment Detection ===
+
+Platform: darwin
+Shell: /bin/zsh (VS Code integrated terminal)
+Terminal: vscode (TERM_PROGRAM=vscode)
+VS Code version: 1.96.2
+
+CLI Detection (via which):
+  claude    : /usr/local/bin/claude
+  cursor    : /usr/local/bin/cursor
+  gemini    : not found
+  codex     : not found
+  kiro-cli  : not found
+
+Detected tools: 2/5
+
+Config file: ~/.golems/config.json
+  Status: NOT FOUND (first-time setup needed)
+
+VS Code Extensions (relevant):
+  - GitHub.copilot
+  - saoudrizwan.claude-dev (Cline)
+
+Current VS Code workspace: ~/Gits/my-project
+
+=== Running from VS Code integrated terminal ===

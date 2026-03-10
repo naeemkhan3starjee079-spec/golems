@@ -1,4 +1,4 @@
-=== Golems Wizard — Environment Detection ===
+=== Golems Wizard — First Contact ===
 
 CLI Detection (via which):
   claude    : /usr/local/bin/claude
@@ -16,10 +16,7 @@ Detected tools: 1/9
 Config file: ~/.golems/config.json
   Status: NOT FOUND (first-time setup needed)
 
-Installed skills: ~/.claude/commands/
-  Status: directory exists, 0 skills installed
+User context: Has Claude Code installed but is unfamiliar with the golems ecosystem.
+User asks: "What are skills? What does this wizard actually do? I just installed Claude Code and someone told me to run this."
 
-golems-cli:
-  Status: available (npx golems-cli)
-
-=== Ready for wizard setup ===
+=== User needs explanation of skills and the golems ecosystem ===

@@ -72,7 +72,13 @@ describe("golems-cli routing", () => {
   test("wizard starts interactive setup", async () => {
     const { stdout } = await run("wizard");
     expect(stdout).toContain("Golems Setup Wizard");
-    expect(stdout).toContain("Detecting installed AI CLIs");
+    // On machines with existing config, wizard shows reconfigure prompt instead of detection
+    const hasConfig = stdout.includes("Existing configuration found");
+    if (!hasConfig) {
+      expect(stdout).toContain("Detecting installed AI CLIs");
+    } else {
+      expect(stdout).toContain("(r)econfigure");
+    }
   });
 
   test("help text distinguishes install workflows", async () => {

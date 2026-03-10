@@ -201,7 +201,7 @@ describe("evals.json structure", () => {
 
     expect(data.skill_name).toBe("wizard");
     expect(data.evals).toBeArray();
-    expect(data.evals).toHaveLength(5);
+    expect(data.evals).toHaveLength(18);
 
     for (const ev of data.evals) {
       expect(ev.id).toBeNumber();
@@ -350,6 +350,6 @@ describe("evals.json structure", () => {
     for (const ev of data.evals) {
       totalAssertions += ev.assertions.length;
     }
-    expect(totalAssertions).toBe(22);
+    expect(totalAssertions).toBe(87);
   });
 });
