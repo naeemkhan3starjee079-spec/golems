@@ -1,0 +1,24 @@
+=== Golems Wizard — Environment Detection ===
+
+Platform: linux
+Shell: /bin/bash
+Home: /home/devuser
+
+CLI Detection (via which):
+  claude    : /home/devuser/.npm-global/bin/claude
+  cursor    : not found
+  gemini    : not found
+  codex     : not found
+  kiro-cli  : not found
+
+Detected tools: 1/5
+
+Config file: /home/devuser/.golems/config.json
+  Status: NOT FOUND (first-time setup needed)
+
+Node.js: v22.12.0 (available via nvm)
+npm: 10.9.0 (available)
+
+Note: Linux paths use forward slashes. ~/.claude/ is at /home/devuser/.claude/
+
+=== Linux environment — different paths from macOS ===

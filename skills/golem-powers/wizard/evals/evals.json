@@ -9,7 +9,7 @@
       "assertions": [
         {
           "name": "detects-claude-only",
-          "description": "Agent runs which/detection for all 5 CLIs (claude, cursor, gemini, codex, kiro-cli) and correctly identifies only Claude as installed"
+          "description": "Agent runs which/detection for supported CLIs (claude, cursor, gemini, codex, kiro-cli, windsurf, aider, copilot, cline) and correctly identifies only Claude as installed"
         },
         {
           "name": "asks-workspace-root",
@@ -126,6 +126,370 @@
         {
           "name": "does-not-duplicate-install",
           "description": "Agent does NOT install a second copy or overwrite without consent"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "A non-technical user runs /wizard. They only use Claude via the claude.ai web interface and have never used a terminal before. No AI CLIs are installed (all 'which' commands return not found). They don't know what Claude Code is. Simulate from the fixture file.",
+      "expected_output": "Agent detects no CLIs installed, explains that golem skills require Claude Code CLI (not Claude web), explains what Claude Code is in plain language, provides installation instructions (npm install -g @anthropic-ai/claude-code), and offers to guide them through installing it before proceeding with wizard setup.",
+      "files": ["evals/fixtures/no-claude-code-web-only.txt"],
+      "assertions": [
+        {
+          "name": "detects-no-claude-code",
+          "description": "Agent detects that Claude Code CLI is not installed (which claude returns not found)"
+        },
+        {
+          "name": "explains-claude-code-requirement",
+          "description": "Agent explains that golem skills require Claude Code CLI and that the web interface (claude.ai) alone is not sufficient"
+        },
+        {
+          "name": "explains-what-claude-code-is",
+          "description": "Agent explains what Claude Code is in plain, non-technical language — a command-line tool that extends Claude with skills and automation"
+        },
+        {
+          "name": "provides-install-instructions",
+          "description": "Agent provides clear installation instructions for Claude Code (brew install claude on macOS, or npm install -g @anthropic-ai/claude-code)"
+        },
+        {
+          "name": "does-not-proceed-without-claude",
+          "description": "Agent does NOT proceed with full wizard setup (config, features, skills) without Claude Code being available"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "A developer runs /wizard. They use Cursor IDE daily and have GitHub Copilot, but do NOT have Claude Code CLI installed. Cursor is detected at /usr/local/bin/cursor. They want to use golem skills with Cursor. Simulate from the fixture file.",
+      "expected_output": "Agent detects Cursor but not Claude Code. Explains that golem skills are built on Claude Code's skill system (SKILL.md files in ~/.claude/commands/) and require Claude Code CLI for full functionality. Notes that some skill prompts can be partially adapted as Cursor rules (.cursorrules), but this is limited — skills with tool usage, workflows, and bash commands won't work in Cursor. Offers to help install Claude Code so they can use skills alongside Cursor.",
+      "files": ["evals/fixtures/cursor-no-claude.txt"],
+      "assertions": [
+        {
+          "name": "detects-cursor-without-claude",
+          "description": "Agent detects Cursor is installed but Claude Code is missing, and highlights this as the key issue"
+        },
+        {
+          "name": "explains-skill-system-requirements",
+          "description": "Agent explains that golem skills use Claude Code's skill system (SKILL.md in ~/.claude/commands/) and require Claude Code for full functionality"
+        },
+        {
+          "name": "mentions-partial-cursor-compatibility",
+          "description": "Agent mentions that some skill prompts can be partially adapted as Cursor rules (.cursorrules), but with significant limitations"
+        },
+        {
+          "name": "offers-claude-code-install",
+          "description": "Agent offers to help install Claude Code (brew install claude or npm) so the user can use golem skills alongside Cursor"
+        },
+        {
+          "name": "acknowledges-cursor-coexistence",
+          "description": "Agent explains Claude Code and Cursor can coexist — installing Claude Code doesn't replace or conflict with Cursor"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "A Windows user runs /wizard. Platform is win32, shell is cmd.exe. Claude is installed at C:\\Users\\devuser\\AppData\\Local\\npm\\claude.cmd. The user's workspace is at C:\\Users\\devuser\\Projects. Simulate from the fixture file.",
+      "expected_output": "Agent detects Windows environment, uses appropriate path separators (backslashes), handles Windows-specific paths for config (~/.golems becomes C:\\Users\\devuser\\.golems), and uses 'where' instead of 'which' for CLI detection. Proceeds with wizard setup using Windows-compatible paths.",
+      "files": ["evals/fixtures/windows-user.txt"],
+      "assertions": [
+        {
+          "name": "detects-windows-platform",
+          "description": "Agent recognizes Windows (win32) platform and adapts path handling accordingly"
+        },
+        {
+          "name": "uses-windows-paths",
+          "description": "Agent uses backslash paths or accepts Windows path format (C:\\Users\\...) for workspace and config locations"
+        },
+        {
+          "name": "handles-windows-cli-detection",
+          "description": "Agent uses 'where' instead of 'which' for Windows CLI detection, or accepts Windows .cmd/.exe paths"
+        },
+        {
+          "name": "writes-valid-windows-config",
+          "description": "Agent writes config.json with valid Windows paths that will work on the user's system"
+        },
+        {
+          "name": "does-not-use-unix-assumptions",
+          "description": "Agent does NOT use Unix-only patterns like /usr/local/bin or assume bash shell on Windows"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "prompt": "A Linux user runs /wizard. Platform is linux, shell is /bin/bash. Claude is installed at /home/devuser/.npm-global/bin/claude. The user's workspace is at /home/devuser/projects. Simulate from the fixture file.",
+      "expected_output": "Agent detects Linux environment, handles Linux-specific paths (/home/ instead of /Users/), uses which for CLI detection. Proceeds with wizard setup normally — Linux is fully supported.",
+      "files": ["evals/fixtures/linux-user.txt"],
+      "assertions": [
+        {
+          "name": "detects-linux-platform",
+          "description": "Agent recognizes Linux platform and adapts home directory paths (/home/devuser instead of /Users/devuser)"
+        },
+        {
+          "name": "uses-linux-paths",
+          "description": "Agent uses forward-slash paths and correctly resolves ~ to /home/devuser/"
+        },
+        {
+          "name": "proceeds-with-setup",
+          "description": "Agent proceeds with full wizard setup since Claude Code is available on Linux"
+        },
+        {
+          "name": "writes-valid-linux-config",
+          "description": "Agent writes config.json with valid Linux paths for reposPath and tool paths"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "prompt": "A user runs /wizard and provides a workspace path with spaces: '~/My Projects/code repos'. The path actually exists on disk. Then they try just '~' as workspace. Simulate from the fixture file.",
+      "expected_output": "Agent accepts the path with spaces since it exists on disk — properly quotes/handles it. For '~' alone (home directory), agent warns this is unusually broad and asks if they meant a subdirectory, but still accepts it if the user confirms. Agent correctly expands ~ to the full home path.",
+      "files": ["evals/fixtures/path-with-spaces.txt"],
+      "assertions": [
+        {
+          "name": "accepts-path-with-spaces",
+          "description": "Agent accepts a workspace path containing spaces ('~/My Projects/code repos') if it exists on disk"
+        },
+        {
+          "name": "expands-tilde",
+          "description": "Agent correctly expands ~ to the user's home directory when validating the path"
+        },
+        {
+          "name": "warns-about-home-as-workspace",
+          "description": "Agent warns or asks for confirmation when the user provides ~ (home directory) as workspace root, since it's unusually broad"
+        },
+        {
+          "name": "handles-path-quoting",
+          "description": "Agent properly handles/quotes paths with spaces when writing config and running commands"
+        },
+        {
+          "name": "validates-before-accepting",
+          "description": "Agent validates each path exists on disk before accepting it, regardless of special characters"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "prompt": "A user wants to install golem skills for Cline (VS Code extension), Windsurf, and Aider. None of the standard CLIs are detected. The user does NOT have Claude Code. Simulate from the fixture file.",
+      "expected_output": "Agent detects no Claude Code. When the user mentions Cline, Windsurf, and Aider, the agent explains the compatibility landscape accurately: Cline uses .clinerules (similar concept, different format — some prompts could be adapted), Windsurf has its own cascade rules system (partial adaptation possible), Aider uses .aider.conf.yml (not compatible). All require Claude Code for full golem skill support. Offers to help install Claude Code.",
+      "files": ["evals/fixtures/other-ai-tools.txt"],
+      "assertions": [
+        {
+          "name": "explains-per-tool-compatibility",
+          "description": "Agent explains compatibility for EACH tool specifically: Cline (.clinerules), Windsurf (cascade rules), Aider (.aider.conf.yml) — not a blanket 'incompatible'"
+        },
+        {
+          "name": "explains-claude-code-dependency",
+          "description": "Agent clearly explains that golem skills are SKILL.md files in ~/.claude/commands/ and require Claude Code for full functionality"
+        },
+        {
+          "name": "does-not-promise-full-compatibility",
+          "description": "Agent does NOT claim golem skills work fully with Cline, Windsurf, or Aider — honest about limitations while noting partial adaptation is possible for some"
+        },
+        {
+          "name": "explains-each-tools-system",
+          "description": "Agent explains each tool's own prompt/rules system so the user understands WHY compatibility varies"
+        },
+        {
+          "name": "offers-claude-code-path",
+          "description": "Agent offers a clear path forward: install Claude Code (brew install claude or npm) to use golem skills, mentions other tools can coexist"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "prompt": "A user is running /wizard from VS Code's integrated terminal. TERM_PROGRAM=vscode. Claude and Cursor are both installed. The user also has the Cline extension in VS Code. Simulate from the fixture file.",
+      "expected_output": "Agent detects VS Code terminal environment. Proceeds normally with wizard setup since Claude Code is available. Notes that skills will work in Claude Code sessions (terminal or VS Code integrated terminal). Does not confuse Cline extension with Claude Code CLI.",
+      "files": ["evals/fixtures/vscode-terminal.txt"],
+      "assertions": [
+        {
+          "name": "detects-vscode-terminal",
+          "description": "Agent recognizes the VS Code integrated terminal environment (TERM_PROGRAM=vscode)"
+        },
+        {
+          "name": "proceeds-normally",
+          "description": "Agent proceeds with full wizard setup since Claude Code CLI is available, regardless of VS Code context"
+        },
+        {
+          "name": "distinguishes-cline-from-claude",
+          "description": "Agent does NOT confuse the Cline VS Code extension with Claude Code CLI — they are separate tools"
+        },
+        {
+          "name": "explains-where-skills-work",
+          "description": "Agent explains that golem skills will work in any Claude Code session, whether launched from VS Code terminal or standalone"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "prompt": "A user already has config and 5 skills installed (commit, coach, github, catchup, research). They run /wizard again and say 'I want to add more skills. What else is available?' They want to browse categories and install specific ones. Simulate from the fixture file.",
+      "expected_output": "Agent detects existing config and installed skills. Instead of re-running full wizard, it enters skill management mode. Lists available skills grouped by category, shows which are already installed, and lets the user pick additional skills to install. Uses golems-cli for installation.",
+      "files": ["evals/fixtures/add-more-skills.txt"],
+      "assertions": [
+        {
+          "name": "detects-existing-setup",
+          "description": "Agent detects the existing config and 5 installed skills, and does NOT restart the full wizard flow"
+        },
+        {
+          "name": "lists-available-skills",
+          "description": "Agent shows available skills that are NOT yet installed, so the user can browse what's available"
+        },
+        {
+          "name": "shows-categories-or-grouping",
+          "description": "Agent groups or categorizes available skills to make browsing easier (development, research, operations, etc.)"
+        },
+        {
+          "name": "marks-already-installed",
+          "description": "Agent clearly marks which skills are already installed so the user doesn't select duplicates"
+        },
+        {
+          "name": "supports-selective-install",
+          "description": "Agent lets the user pick specific skills to install rather than forcing all-or-nothing"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "prompt": "A user has Claude Code installed but has never heard of 'skills' or the 'golems ecosystem'. They run /wizard and ask: 'What are skills? What does this wizard actually do? I just installed Claude Code and someone told me to run this.' Simulate from the fixture file.",
+      "expected_output": "Agent pauses the wizard flow to explain the concept. Explains that skills are reusable prompt templates that give Claude Code specialized capabilities (like /commit for git workflows, /coach for life planning, /research for web research). Explains they're SKILL.md files installed to ~/.claude/commands/. Uses simple analogies. Then asks if the user wants to proceed with setup.",
+      "files": ["evals/fixtures/what-is-a-skill.txt"],
+      "assertions": [
+        {
+          "name": "explains-what-skills-are",
+          "description": "Agent explains skills in plain language — reusable prompt templates that give Claude Code specialized capabilities"
+        },
+        {
+          "name": "gives-concrete-examples",
+          "description": "Agent provides 2-3 concrete examples of skills (e.g., /commit for git, /coach for planning, /research for web research)"
+        },
+        {
+          "name": "explains-how-skills-work",
+          "description": "Agent explains the mechanism: skills are SKILL.md files in ~/.claude/commands/ that Claude reads when invoked"
+        },
+        {
+          "name": "explains-wizard-purpose",
+          "description": "Agent explains what the wizard does: detects your environment, writes a config file, and installs skills"
+        },
+        {
+          "name": "does-not-assume-knowledge",
+          "description": "Agent uses beginner-friendly language, avoids jargon, and does not assume the user knows about CLI tools or monorepos"
+        },
+        {
+          "name": "offers-to-proceed",
+          "description": "Agent asks if the user wants to proceed with setup after the explanation"
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "prompt": "A user pastes the contents of an INSTALL_PROMPT.md into their Claude Code session. The INSTALL_PROMPT references the wizard skill. The user is NOT running golems-cli — they're in a regular Claude Code conversation. Claude Code has Bash, Read, Write, Edit tools. Simulate from the fixture file.",
+      "expected_output": "Agent detects it's running as a Claude Code skill (not CLI). Uses Bash tool to detect environment instead of interactive prompts. Asks the user questions through normal conversation instead of readline prompts. Runs the wizard steps using Claude's native tools (Bash for detection, Write for config, conversation for questions).",
+      "files": ["evals/fixtures/install-prompt-mode.txt"],
+      "assertions": [
+        {
+          "name": "detects-skill-mode",
+          "description": "Agent recognizes it's running inside a Claude Code session as a skill, not as a standalone CLI"
+        },
+        {
+          "name": "uses-claude-tools-for-detection",
+          "description": "Agent uses Bash tool to run 'which claude', 'which cursor', etc. instead of expecting interactive terminal prompts"
+        },
+        {
+          "name": "asks-via-conversation",
+          "description": "Agent asks the user questions (workspace root, features) through normal Claude conversation text, not readline"
+        },
+        {
+          "name": "writes-config-via-tools",
+          "description": "Agent uses Write/Bash tools to create ~/.golems/ directory and write config.json"
+        },
+        {
+          "name": "completes-full-setup",
+          "description": "Agent completes the full wizard flow (detection, config, skill install) even though it's running in skill mode"
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "prompt": "A user has Claude Desktop app installed (macOS) with MCP servers configured (brainlayer, filesystem). They do NOT have Claude Code CLI. They want to use golem skills. Simulate from the fixture file.",
+      "expected_output": "Agent detects no Claude Code CLI. Recognizes the user has Claude Desktop (which supports MCP but NOT skills). Explains the difference: Claude Desktop can use MCP servers (brainlayer, voicelayer, supabase) but cannot run skills (SKILL.md in ~/.claude/commands/). Skills require Claude Code CLI. Offers install instructions and notes that MCP servers they already configured will also work in Claude Code.",
+      "files": ["evals/fixtures/claude-desktop-only.txt"],
+      "assertions": [
+        {
+          "name": "detects-no-claude-code",
+          "description": "Agent detects Claude Code CLI is not installed despite Claude Desktop being present"
+        },
+        {
+          "name": "distinguishes-desktop-from-code",
+          "description": "Agent clearly distinguishes Claude Desktop (chat app with MCP) from Claude Code (CLI with skills + MCP)"
+        },
+        {
+          "name": "explains-mcp-vs-skills",
+          "description": "Agent explains that Claude Desktop supports MCP servers but NOT skills — skills are a Claude Code feature"
+        },
+        {
+          "name": "offers-claude-code-install",
+          "description": "Agent provides Claude Code install instructions (brew install claude or npm install -g @anthropic-ai/claude-code)"
+        },
+        {
+          "name": "notes-mcp-compatibility",
+          "description": "Agent reassures user that MCP servers they already have configured will also work with Claude Code"
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "prompt": "After installing recommended skills (commit, coach, github, catchup, research), the wizard should recommend complementary MCP servers. The user already has supabase MCP configured. Simulate from the fixture file.",
+      "expected_output": "Agent recognizes which installed skills benefit from MCP servers. Recommends brainlayer (for coach, catchup, research) and exa (for research). Notes supabase is already configured. Explains what each MCP adds. Offers to set them up in .mcp.json. Does NOT auto-configure without consent.",
+      "files": ["evals/fixtures/skill-mcp-recommendation.txt"],
+      "assertions": [
+        {
+          "name": "identifies-skill-mcp-links",
+          "description": "Agent knows which skills benefit from which MCPs: coach→brainlayer+supabase, research→exa+brainlayer, catchup→brainlayer"
+        },
+        {
+          "name": "recommends-missing-mcps",
+          "description": "Agent recommends brainlayer and exa MCPs that are NOT yet configured, skipping supabase which is already set up"
+        },
+        {
+          "name": "explains-mcp-value",
+          "description": "Agent explains what each recommended MCP adds to the skill experience (e.g., 'brainlayer gives coach persistent memory across sessions')"
+        },
+        {
+          "name": "asks-before-configuring",
+          "description": "Agent asks the user before adding any MCP to .mcp.json — does NOT auto-configure"
+        },
+        {
+          "name": "skips-already-configured",
+          "description": "Agent detects supabase is already in .mcp.json and does not re-recommend it"
+        },
+        {
+          "name": "does-not-block-on-mcp",
+          "description": "Agent makes MCP setup optional — skills are installed regardless of whether user sets up MCPs"
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "prompt": "A user installed the 'research' skill. The wizard recommends exa MCP for web search. The user says 'No thanks, I don't want to set up any MCPs right now'. Simulate from the fixture file.",
+      "expected_output": "Agent respects the user's choice and does NOT configure any MCPs. Notes that the research skill will still work but with reduced functionality (no web search without exa). Explains how to set up MCPs later if they change their mind.",
+      "files": ["evals/fixtures/mcp-declined.txt"],
+      "assertions": [
+        {
+          "name": "respects-decline",
+          "description": "Agent accepts the user's 'no' and does NOT configure any MCP servers"
+        },
+        {
+          "name": "explains-reduced-functionality",
+          "description": "Agent notes that research skill works but web search features require exa MCP — clearly explains what's limited"
+        },
+        {
+          "name": "provides-later-setup-instructions",
+          "description": "Agent tells the user how to set up MCPs later (npx golems-cli mcp install exa, or manual .mcp.json edit)"
+        },
+        {
+          "name": "does-not-nag",
+          "description": "Agent does NOT repeatedly ask or pressure the user to install MCPs after they declined"
+        },
+        {
+          "name": "skill-still-installed",
+          "description": "Agent confirms the research skill is installed and usable even without the MCP"
         }
       ]
     }

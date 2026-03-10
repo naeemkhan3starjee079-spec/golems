@@ -1,0 +1,26 @@
+=== Golems Wizard — Environment Detection ===
+
+CLI Detection (via which):
+  claude    : not found
+  cursor    : /usr/local/bin/cursor
+  gemini    : not found
+  codex     : not found
+  kiro-cli  : not found
+  windsurf  : not found
+  aider     : not found
+  copilot   : not found
+  cline     : not found
+
+Detected tools: 1/9 (cursor only — no Claude Code)
+
+Config file: ~/.golems/config.json
+  Status: NOT FOUND (first-time setup needed)
+
+Node.js: v22.12.0 (available)
+npm: 10.9.0 (available)
+
+User context: Uses Cursor IDE daily. Has GitHub Copilot subscription.
+Does not have Claude Code CLI installed.
+Note: Cursor uses .cursorrules for custom prompts — some skill prompts could be adapted as rules.
+
+=== Claude Code not detected — skills require Claude Code (partial Cursor compatibility via rules) ===

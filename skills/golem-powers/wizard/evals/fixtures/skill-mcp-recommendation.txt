@@ -1,0 +1,28 @@
+=== Golems Wizard — Skill + MCP Recommendation ===
+
+Config: ~/.golems/config.json EXISTS (valid)
+  reposPath: ~/Gits
+  tools: { claude: "/usr/local/bin/claude" }
+
+User chose to install recommended skills:
+  Installing: commit, coach, github, catchup, research
+
+MCP dependencies/complements for selected skills:
+  coach:
+    - brainlayer (complement): Persistent memory for coaching history, decisions, patterns
+    - supabase (complement): Calendar data, nudge queue, habit tracking
+  research:
+    - exa (required): Web search and content extraction for research
+    - brainlayer (complement): Store research findings persistently
+  catchup:
+    - brainlayer (required): Retrieves past context and recent work
+  commit:
+    - No MCP dependencies
+  github:
+    - No MCP dependencies (uses gh CLI)
+
+Current .mcp.json in ~/Gits:
+  Status: EXISTS
+  Configured MCPs: supabase (already configured)
+
+=== Skills installed — recommend complementary MCPs ===

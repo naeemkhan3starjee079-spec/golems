@@ -1,0 +1,22 @@
+=== Golems Wizard — Skill Management ===
+
+Config: ~/.golems/config.json EXISTS (valid)
+  reposPath: ~/Gits
+  tools: { claude: "/usr/local/bin/claude" }
+
+Installed skills: ~/.claude/commands/
+  Status: 5 skills installed
+  Existing: commit, coach, github, catchup, research
+
+User request: "I want to add more skills. What's available?"
+
+Available skills (remote):
+  Total: 55 skills
+  Not installed: 50 skills
+  Categories:
+    - Development: commit, github, pr-loop, test-plan, code-review, ...
+    - Research: research, youtube-pipeline, call-debrief, ...
+    - Operations: coach, catchup, ecosystem-health, ...
+    - Infrastructure: 1password, railway, convex, ...
+
+=== User wants to browse and install additional skills ===

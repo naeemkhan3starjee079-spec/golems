@@ -1,0 +1,27 @@
+=== Golems Wizard — Environment Detection ===
+
+CLI Detection (via which):
+  claude    : not found
+  cursor    : not found
+  gemini    : not found
+  codex     : not found
+  kiro-cli  : not found
+  windsurf  : not found
+  aider     : not found
+  copilot   : not found
+  cline     : not found
+
+Detected tools: 0/9
+
+Config file: ~/.golems/config.json
+  Status: NOT FOUND (first-time setup needed)
+
+Claude Desktop app: INSTALLED (detected at /Applications/Claude.app)
+Claude Desktop MCP config: ~/Library/Application Support/Claude/claude_desktop_config.json EXISTS
+
+User context: Has Claude Desktop app (macOS). Uses it daily for chat.
+Has MCP servers configured in Claude Desktop (brainlayer, filesystem).
+Does NOT have Claude Code CLI installed.
+Wants to use golem skills.
+
+=== Claude Desktop detected — MCP only, no skill support ===

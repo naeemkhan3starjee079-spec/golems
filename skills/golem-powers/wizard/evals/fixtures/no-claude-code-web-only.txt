@@ -1,7 +1,7 @@
 === Golems Wizard — Environment Detection ===
 
 CLI Detection (via which):
-  claude    : /usr/local/bin/claude
+  claude    : not found
   cursor    : not found
   gemini    : not found
   codex     : not found
@@ -11,15 +11,15 @@ CLI Detection (via which):
   copilot   : not found
   cline     : not found
 
-Detected tools: 1/9
+Detected tools: 0/9
 
 Config file: ~/.golems/config.json
   Status: NOT FOUND (first-time setup needed)
 
-Installed skills: ~/.claude/commands/
-  Status: directory exists, 0 skills installed
+Node.js: v22.12.0 (available)
+npm: 10.9.0 (available)
 
-golems-cli:
-  Status: available (npx golems-cli)
+User context: Non-technical user. Only uses Claude via claude.ai web interface.
+Has never used a terminal/command line before.
 
-=== Ready for wizard setup ===
+=== No AI CLIs detected — guidance needed ===

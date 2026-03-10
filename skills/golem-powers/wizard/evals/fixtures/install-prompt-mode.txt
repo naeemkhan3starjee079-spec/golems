@@ -1,0 +1,23 @@
+=== Golems Wizard — INSTALL_PROMPT Mode ===
+
+Context: User is NOT running golems-cli.
+User has pasted the contents of an INSTALL_PROMPT.md file into a Claude Code session.
+The INSTALL_PROMPT says to run the wizard skill.
+
+The Claude session has access to:
+  - Bash tool (can run shell commands)
+  - Read/Write/Edit tools (can modify files)
+  - The skill system (~/.claude/commands/)
+
+The user's environment:
+  claude    : /usr/local/bin/claude (running in it now)
+  Node.js   : v22.12.0
+  npm       : 10.9.0
+
+The wizard should:
+  1. Detect it's running inside Claude Code (not as CLI)
+  2. Use Claude's tools instead of interactive prompts
+  3. Auto-detect environment via Bash tool
+  4. Ask the user questions via normal Claude conversation
+
+=== INSTALL_PROMPT paste mode — wizard runs as Claude skill, not CLI ===

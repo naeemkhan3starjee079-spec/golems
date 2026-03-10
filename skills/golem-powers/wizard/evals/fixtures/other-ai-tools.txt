@@ -1,0 +1,30 @@
+=== Golems Wizard — Environment Detection ===
+
+CLI Detection (via which):
+  claude    : not found
+  cursor    : not found
+  gemini    : not found
+  codex     : not found
+  kiro-cli  : not found
+  windsurf  : /usr/local/bin/windsurf
+  aider     : /opt/homebrew/bin/aider
+  copilot   : not found
+  cline     : not found
+
+Detected tools: 2/9 (windsurf, aider — no Claude Code)
+
+Additional VS Code extension detection:
+  cline     : VS Code extension (detected via code --list-extensions | grep cline)
+  copilot   : VS Code extension (GitHub Copilot)
+
+Config file: ~/.golems/config.json
+  Status: NOT FOUND (first-time setup needed)
+
+User context: Uses Cline in VS Code, Windsurf IDE, and Aider from terminal.
+Wants to install golem skills for their AI tools.
+Note: Each tool has its own prompt/rules system:
+  - Cline: .clinerules files
+  - Windsurf: cascade rules
+  - Aider: .aider.conf.yml
+
+=== Non-Claude AI tools detected — compatibility varies by tool ===
