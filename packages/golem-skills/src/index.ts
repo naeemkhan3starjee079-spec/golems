@@ -15,10 +15,12 @@ import {
   DEFAULT_CONFIG_PATH,
 } from "./config";
 import { runWizard } from "./wizard";
+import { runUpdate, printUpdateHelp } from "./update";
 
 const VERSION = "0.1.0";
 
-const SKILLS_SUBCOMMANDS = ["install", "list", "update", "uninstall", "status"];
+// "update" excluded — it's now a top-level command
+const SKILLS_SUBCOMMANDS = ["install", "list", "uninstall", "status"];
 
 function printHelp() {
   console.log(`golems-cli v${VERSION} — The Golems ecosystem CLI
@@ -27,6 +29,7 @@ Usage: golems-cli <command> [options]
 
 Commands:
   skills    Copy skill files to ~/.claude/commands/
+  update    Re-sync CLIs, config, skills, and MCP recommendations
   mcp       Add MCP servers to .mcp.json + install deps (coming soon)
   agent     Composite install: skills + MCPs + CLAUDE.md + launcher (coming soon)
   wizard    Interactive setup wizard
@@ -83,6 +86,10 @@ function parseArgs(argv: string[]) {
     installed: flags.has("--installed"),
     help: flags.has("--help") || flags.has("-h"),
     version: flags.has("--version") || flags.has("-v"),
+    yes: flags.has("--yes") || flags.has("-y"),
+    dryRun: flags.has("--dry-run"),
+    verbose: flags.has("--verbose"),
+    update: flags.has("--update"),
     commandsDir,
   };
 }
@@ -298,6 +305,18 @@ async function main() {
     case "skills":
       await handleSkills(opts);
       break;
+    case "update":
+      if (opts.help) {
+        printUpdateHelp();
+      } else {
+        await runUpdate({
+          yes: opts.yes,
+          dryRun: opts.dryRun,
+          verbose: opts.verbose,
+          commandsDir: opts.commandsDir,
+        });
+      }
+      break;
     case "mcp":
       console.log(
         "golems-cli mcp — Coming soon.\n\n" +
@@ -313,11 +332,20 @@ async function main() {
       );
       break;
     case "wizard":
-      if (opts.help) {
+      if (opts.update) {
+        // `wizard --update` is an alias for `update`
+        await runUpdate({
+          yes: opts.yes,
+          dryRun: opts.dryRun,
+          verbose: opts.verbose,
+          commandsDir: opts.commandsDir,
+        });
+      } else if (opts.help) {
         console.log(
           "golems-cli wizard — Interactive setup wizard\n\n" +
             "Detects installed AI CLIs, configures workspace, and installs skills.\n\n" +
-            "Usage: golems-cli wizard",
+            "Usage: golems-cli wizard\n" +
+            "       golems-cli wizard --update  (alias for 'golems-cli update')",
         );
       } else {
         await runWizard();
