@@ -1,0 +1,33 @@
+=== Golems Wizard — Environment Detection ===
+
+CLI Detection (via which):
+  claude    : /usr/local/bin/claude
+  cursor    : not found
+  gemini    : not found
+  codex     : not found
+  kiro-cli  : not found
+
+Detected tools: 1/5
+
+Config file: ~/.golems/config.json
+  Status: EXISTS
+  Contents:
+    {
+      "reposPath": "~/Gits",
+      "tools": {
+        "claude": "/usr/local/bin/claude"
+      },
+      "features": {
+        "proactiveNudges": true,
+        "nightShift": false,
+        "telegram": false
+      }
+    }
+
+Installed skills: ~/.claude/commands/
+  Status: 12 skills installed
+
+golems-cli:
+  Status: available (npx golems-cli)
+
+=== Config already exists — reconfigure or skip? ===

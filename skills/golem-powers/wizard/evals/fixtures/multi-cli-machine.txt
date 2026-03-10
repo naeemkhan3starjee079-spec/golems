@@ -1,0 +1,21 @@
+=== Golems Wizard — Environment Detection ===
+
+CLI Detection (via which):
+  claude    : /usr/local/bin/claude
+  cursor    : /usr/local/bin/cursor
+  gemini    : /opt/homebrew/bin/gemini
+  codex     : not found
+  kiro-cli  : not found
+
+Detected tools: 3/5
+
+Config file: ~/.golems/config.json
+  Status: NOT FOUND (first-time setup needed)
+
+Installed skills: ~/.claude/commands/
+  Status: directory exists, 0 skills installed
+
+golems-cli:
+  Status: available (npx golems-cli)
+
+=== Ready for wizard setup ===

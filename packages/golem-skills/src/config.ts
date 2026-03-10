@@ -44,7 +44,7 @@ export async function autoDetectTools(): Promise<Record<string, string>> {
     gemini: ["gemini"],
     cursor: ["cursor"],
     codex: ["codex"],
-    kiro: ["kiro-cli"],
+    "kiro-cli": ["kiro-cli"],
   };
 
   for (const [key, names] of Object.entries(candidates)) {

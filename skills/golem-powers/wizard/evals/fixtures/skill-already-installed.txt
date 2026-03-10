@@ -1,0 +1,15 @@
+=== Golems Wizard — Skill Installation ===
+
+Config: ~/.golems/config.json EXISTS (valid)
+
+Requested skill: coach
+  Check: ls ~/.claude/commands/coach/
+  Status: ALREADY INSTALLED
+  Location: ~/.claude/commands/coach/
+  Files: SKILL.md, workflows/, references/
+
+golems-cli:
+  Status: available (npx golems-cli)
+  golems-cli skills list --installed: coach (installed), commit (installed), ...
+
+=== Skill 'coach' already installed — update or skip? ===

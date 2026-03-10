@@ -1,0 +1,133 @@
+{
+  "skill_name": "wizard",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Run /wizard on a fresh machine. Only Claude CLI is installed (which claude returns /usr/local/bin/claude). No ~/.golems/config.json exists. The user's workspace root is ~/Projects. The user declines all opt-in features. Simulate the tool detection output from the fixture file.",
+      "expected_output": "Agent detects only Claude is installed, asks for workspace root, asks about opt-in features (all default OFF), writes a minimal ~/.golems/config.json with tools.claude and reposPath, then offers to install skills via golems-cli.",
+      "files": ["evals/fixtures/fresh-machine-claude-only.txt"],
+      "assertions": [
+        {
+          "name": "detects-claude-only",
+          "description": "Agent runs which/detection for all 5 CLIs (claude, cursor, gemini, codex, kiro-cli) and correctly identifies only Claude as installed"
+        },
+        {
+          "name": "asks-workspace-root",
+          "description": "Agent asks the user for their workspace root directory before writing config"
+        },
+        {
+          "name": "asks-opt-in-features",
+          "description": "Agent asks about opt-in features (proactive nudges, night shift, telegram notifications) with all defaulting to OFF"
+        },
+        {
+          "name": "writes-minimal-config",
+          "description": "Agent writes ~/.golems/config.json containing reposPath and tools.claude path, with all features disabled"
+        },
+        {
+          "name": "offers-skill-install",
+          "description": "Agent offers to install recommended skills via golems-cli after config is written"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Run /wizard on a machine with multiple AI CLIs installed. Claude is at /usr/local/bin/claude, Cursor at /usr/local/bin/cursor, Gemini at /opt/homebrew/bin/gemini. No ~/.golems/config.json exists. The user's workspace root is ~/Gits. The user enables proactive nudges but declines other features. Simulate detection from the fixture file.",
+      "expected_output": "Agent detects all three CLIs, asks for workspace root, presents opt-in features with defaults OFF, user enables nudges only. Writes full config.json with all detected tools and features.proactiveNudges: true. Offers skill installation.",
+      "files": ["evals/fixtures/multi-cli-machine.txt"],
+      "assertions": [
+        {
+          "name": "detects-all-three-clis",
+          "description": "Agent correctly identifies Claude, Cursor, and Gemini as installed with their paths, and Codex and Kiro as not found"
+        },
+        {
+          "name": "asks-workspace-root",
+          "description": "Agent asks for workspace root and accepts ~/Gits"
+        },
+        {
+          "name": "presents-features-with-defaults-off",
+          "description": "Agent lists opt-in features with all defaults shown as OFF/disabled, making it clear these are opt-in"
+        },
+        {
+          "name": "writes-full-config",
+          "description": "Agent writes config.json with all 3 detected tools, reposPath, and features.proactiveNudges set to true while other features remain false"
+        },
+        {
+          "name": "offers-skill-install",
+          "description": "Agent offers to install skills after config is written, mentioning golems-cli"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Run /wizard on a machine that already has ~/.golems/config.json with reposPath: ~/Gits and tools.claude: /usr/local/bin/claude. The existing config also has features.proactiveNudges: true. Simulate from the fixture file.",
+      "expected_output": "Agent detects existing config.json, displays current configuration to the user, and offers two choices: reconfigure (re-run wizard from scratch) or skip (keep current config). Does NOT overwrite without asking.",
+      "files": ["evals/fixtures/already-configured.txt"],
+      "assertions": [
+        {
+          "name": "detects-existing-config",
+          "description": "Agent checks for ~/.golems/config.json and finds it exists before proceeding"
+        },
+        {
+          "name": "displays-current-config",
+          "description": "Agent shows the user their current configuration (reposPath, tools, features) so they know what's already set up"
+        },
+        {
+          "name": "offers-reconfigure-or-skip",
+          "description": "Agent offers clear choice: reconfigure from scratch OR skip and keep current settings"
+        },
+        {
+          "name": "does-not-overwrite-silently",
+          "description": "Agent does NOT overwrite or modify the existing config.json without explicit user consent"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Run /wizard on a fresh machine. The user provides an invalid workspace path /nonexistent/path/projects that does not exist on disk. Simulate from the fixture file.",
+      "expected_output": "Agent validates the workspace path, detects it does not exist, informs the user the path is invalid, and re-asks for a valid workspace root. Does NOT write config with an invalid path.",
+      "files": ["evals/fixtures/invalid-workspace-path.txt"],
+      "assertions": [
+        {
+          "name": "validates-workspace-path",
+          "description": "Agent checks that the provided workspace path exists on disk before accepting it"
+        },
+        {
+          "name": "reports-invalid-path",
+          "description": "Agent clearly tells the user the path does not exist or is not a valid directory"
+        },
+        {
+          "name": "re-asks-for-valid-path",
+          "description": "Agent asks the user to provide a different, valid workspace path instead of proceeding with the invalid one"
+        },
+        {
+          "name": "does-not-write-invalid-config",
+          "description": "Agent does NOT write config.json with an invalid/nonexistent reposPath"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Run /wizard after config is written. The user wants to install the 'coach' skill but it is already installed at ~/.claude/commands/coach/. Golems-cli is available. Simulate from the fixture file.",
+      "expected_output": "Agent detects the skill is already installed, informs the user, and offers to update it (re-download latest version) or skip. Does NOT duplicate the installation.",
+      "files": ["evals/fixtures/skill-already-installed.txt"],
+      "assertions": [
+        {
+          "name": "checks-skill-existence",
+          "description": "Agent checks if the requested skill already exists at ~/.claude/commands/coach/ before attempting install"
+        },
+        {
+          "name": "reports-already-installed",
+          "description": "Agent informs the user the skill is already installed with its current location"
+        },
+        {
+          "name": "offers-update-or-skip",
+          "description": "Agent offers to update the skill to the latest version OR skip the installation"
+        },
+        {
+          "name": "does-not-duplicate-install",
+          "description": "Agent does NOT install a second copy or overwrite without consent"
+        }
+      ]
+    }
+  ]
+}

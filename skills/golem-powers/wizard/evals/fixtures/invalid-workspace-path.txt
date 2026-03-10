@@ -1,0 +1,20 @@
+=== Golems Wizard — Environment Detection ===
+
+CLI Detection (via which):
+  claude    : /usr/local/bin/claude
+  cursor    : not found
+  gemini    : not found
+  codex     : not found
+  kiro-cli  : not found
+
+Detected tools: 1/5
+
+Config file: ~/.golems/config.json
+  Status: NOT FOUND (first-time setup needed)
+
+Workspace path validation:
+  User provided: /nonexistent/path/projects
+  ls /nonexistent/path/projects: No such file or directory
+  INVALID — path does not exist on disk
+
+=== Wizard needs a valid workspace path to continue ===

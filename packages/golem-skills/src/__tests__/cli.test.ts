@@ -69,11 +69,10 @@ describe("golems-cli routing", () => {
     expect(exitCode).toBe(0);
   });
 
-  test("wizard explains interactive setup", async () => {
-    const { stdout, exitCode } = await run("wizard");
-    expect(stdout).toContain("Coming soon");
-    expect(stdout).toContain("Interactive");
-    expect(exitCode).toBe(0);
+  test("wizard starts interactive setup", async () => {
+    const { stdout } = await run("wizard");
+    expect(stdout).toContain("Golems Setup Wizard");
+    expect(stdout).toContain("Detecting installed AI CLIs");
   });
 
   test("help text distinguishes install workflows", async () => {

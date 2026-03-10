@@ -14,6 +14,7 @@ import {
   autoDetectTools,
   DEFAULT_CONFIG_PATH,
 } from "./config";
+import { runWizard } from "./wizard";
 
 const VERSION = "0.1.0";
 
@@ -28,7 +29,7 @@ Commands:
   skills    Copy skill files to ~/.claude/commands/
   mcp       Add MCP servers to .mcp.json + install deps (coming soon)
   agent     Composite install: skills + MCPs + CLAUDE.md + launcher (coming soon)
-  wizard    Interactive setup wizard (coming soon)
+  wizard    Interactive setup wizard
 
 Options:
   --version, -v  Show version
@@ -312,11 +313,15 @@ async function main() {
       );
       break;
     case "wizard":
-      console.log(
-        "golems-cli wizard — Coming soon.\n\n" +
-          "Interactive setup that detects your environment, installs recommended\n" +
-          "skills/MCPs/agents, and configures everything.",
-      );
+      if (opts.help) {
+        console.log(
+          "golems-cli wizard — Interactive setup wizard\n\n" +
+            "Detects installed AI CLIs, configures workspace, and installs skills.\n\n" +
+            "Usage: golems-cli wizard",
+        );
+      } else {
+        await runWizard();
+      }
       break;
     default:
       console.error(`Unknown command: ${opts.namespace}`);
