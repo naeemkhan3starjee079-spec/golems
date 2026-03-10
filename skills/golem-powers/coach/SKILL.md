@@ -109,7 +109,7 @@ Check in this order:
 2. **Obsidian** (secondary) — diary entries, client notes, memos:
 
    ```text
-   /Users/etanheyman/Library/Mobile Documents/iCloud~md~obsidian/Documents/personal/
+   $OBSIDIAN_VAULT   # Set in your shell profile, e.g. ~/Library/Mobile Documents/iCloud~md~obsidian/Documents/<vault>
    ```
 
 3. **Google Calendar** (MCP) — existing events, availability
